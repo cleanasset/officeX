@@ -27,7 +27,9 @@ import {
   Copy,
   Zap,
   Lock,
-  Bell
+  Bell,
+  Eye,
+  Download
 } from "lucide-react";
 
 import { getClientAuthHeaders } from "@/lib/auth-storage";
@@ -52,7 +54,22 @@ export default function TenantHomePage() {
   // Success Receipt State
   const [paymentSuccess, setPaymentSuccess] = useState<any | null>(null);
 
+  // Dynamic Landlord Brand Logo & Tax Invoice Modal State (§S-60)
+  const [brandLogo, setBrandLogo] = useState<string>("");
+  const [brandName, setBrandName] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>("");
+  const [viewInvoiceModalOpen, setViewInvoiceModalOpen] = useState(false);
+
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
+      const storedBrand = localStorage.getItem("officex_brand_name") || "";
+      const storedCompany = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") || "";
+      if (storedLogo) setBrandLogo(storedLogo);
+      if (storedBrand) setBrandName(storedBrand);
+      if (storedCompany) setCompanyName(storedCompany);
+    }
+
     const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
     loadHomeData(savedOccId || undefined);
 
@@ -363,19 +380,19 @@ export default function TenantHomePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <button
-              id="dashboard-pay-now-btn"
-              onClick={() => {
-                if (totalOutstanding <= 0) {
-                  alert("Your account balance is ₹0. No payment is currently due.");
-                  return;
-                }
-                setPayModalOpen(true);
-              }}
-              className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm tracking-wide shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
-            >
-              <CreditCard size={16} /> Pay Now
-            </button>
+            {totalOutstanding <= 0 ? (
+              <div className="px-6 py-3.5 rounded-2xl bg-emerald-500/20 text-emerald-300 font-black text-sm flex items-center justify-center gap-2 border border-emerald-500/30">
+                <CheckCircle2 size={16} className="text-emerald-400" /> Fully Settled (₹0.00 Due)
+              </div>
+            ) : (
+              <button
+                id="dashboard-pay-now-btn"
+                onClick={() => setPayModalOpen(true)}
+                className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm tracking-wide shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              >
+                <CreditCard size={16} /> Pay Now
+              </button>
+            )}
             <Link
               href="/portal/invoices"
               className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-white/10"
@@ -457,16 +474,40 @@ export default function TenantHomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Transparent Invoice Breakdown (7 Cols) */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <Receipt size={18} className="text-indigo-600" />
-              <h2 className="text-base font-black text-slate-900 tracking-tight">
-                October 2026 Invoice Line-Item Breakdown
-              </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              {brandLogo ? (
+                <div className="w-11 h-11 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                  <img src={brandLogo} alt="Company Logo" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-teal-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+                  {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                    {brandName || companyName || "Mango Groups Ltd"}
+                  </h2>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    INV-2026-27-0001
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Official Tax Invoice · Dispatched 10 Days in Advance (Due: 31-Oct-2026)
+                </p>
+              </div>
             </div>
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-              INV-2026-27-0001
-            </span>
+
+            <button
+              type="button"
+              onClick={() => setViewInvoiceModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+              title="View full tax invoice document"
+            >
+              <Eye size={13} /> View Invoice
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -508,23 +549,35 @@ export default function TenantHomePage() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-medium">
-              Tax invoice dispatched by Mango Groups
-            </span>
-            <button
-              id="settle-invoice-now-btn"
-              onClick={() => {
-                if (totalOutstanding <= 0) {
-                  alert("Invoice already fully settled.");
-                  return;
-                }
-                setPayModalOpen(true);
-              }}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-            >
-              <CreditCard size={14} /> Settle Invoice Now
-            </button>
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-[11px] text-slate-500 font-medium leading-tight">
+              <span>Billed by <strong className="text-slate-800">{brandName || companyName || "Mango Groups Ltd"}</strong></span>
+              <span className="block text-[10px] text-slate-400">Managed by JPS Management · 10-day advance dispatch window</span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewInvoiceModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Eye size={13} /> Full Tax Invoice
+              </button>
+
+              {totalOutstanding <= 0 ? (
+                <span className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center gap-1.5 border border-emerald-200">
+                  <CheckCircle2 size={14} className="text-emerald-600" /> Settled (₹0.00 Due)
+                </span>
+              ) : (
+                <button
+                  id="settle-invoice-now-btn"
+                  onClick={() => setPayModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <CreditCard size={14} /> Settle Invoice Now
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -887,57 +940,305 @@ export default function TenantHomePage() {
         </div>
       )}
 
-      {/* 6. Success Receipt Modal */}
+      {/* 6. Full Statutory Tax Invoice Modal (§S-60 / Rule 46) */}
+      {viewInvoiceModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto border border-slate-200">
+            {/* Modal Actions Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 print:hidden">
+              <div className="flex items-center gap-2">
+                <Receipt className="text-indigo-600" size={18} />
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Tax Invoice Document · Rule 46 CGST
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer size={13} /> Print / Save PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewInvoiceModalOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Official Tax Invoice Letterhead */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <div className="flex items-center gap-4">
+                {brandLogo ? (
+                  <div className="w-16 h-16 rounded-2xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+                    <img src={brandLogo} alt="Landlord Logo" className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-700 to-teal-600 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs">
+                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                    {brandName || companyName || "Mango Groups Ltd"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Commercial Property Asset SPV · Managed by JPS Management
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-600 mt-0.5">
+                    GSTIN: <strong>24AAFCO9876C1Z2</strong> · PAN: <strong>AAFCO9876C</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="sm:text-right">
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-200 block sm:inline-block">
+                  Original Tax Invoice
+                </span>
+                <div className="text-sm font-mono font-black text-slate-900 mt-1">
+                  INV-2026-27-0001
+                </div>
+                <div className="text-[11px] text-slate-600 font-medium">
+                  Issue Date: <strong className="text-slate-900">21-Oct-2026</strong>
+                </div>
+                <div className="text-[11px] text-indigo-700 font-bold">
+                  Due Date: <strong>31-Oct-2026</strong> (10-Day Notice)
+                </div>
+              </div>
+            </div>
+
+            {/* Parties Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  Billed By (Lessor / SPV):
+                </span>
+                <p className="font-bold text-slate-900 text-sm">{brandName || companyName || "Mango Groups Ltd"}</p>
+                <p className="text-slate-500 leading-relaxed text-[11px]">
+                  Commercial Tower 1, Nikol-Nava Naroda Road, Ahmedabad, Gujarat 380049
+                </p>
+                <p className="text-[11px] text-slate-600 font-medium">
+                  State: <strong>Gujarat (Code: 24)</strong> · Place of Supply: Gujarat
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  Billed To (Lessee / Occupant):
+                </span>
+                <p className="font-bold text-slate-900 text-sm">{tenantDisplayName}</p>
+                <p className="text-slate-500 leading-relaxed text-[11px]">
+                  Demised Space: Suite 101, mango plus tower (50,000 sq.ft.)
+                </p>
+                <p className="text-[11px] text-slate-600 font-medium">
+                  PAN: <strong>{occupant?.pan_number || "HSHS7878SD"}</strong> · Contract: <strong>{primaryContract?.contract_code || "LEAS-11886"}</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Itemized Line Items Table */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
+                  <tr>
+                    <th className="py-2.5 px-3.5">#</th>
+                    <th className="py-2.5 px-3.5">Description of Supply</th>
+                    <th className="py-2.5 px-3.5">SAC Code</th>
+                    <th className="py-2.5 px-3.5">Area / Basis</th>
+                    <th className="py-2.5 px-3.5 text-right">Taxable Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  <tr>
+                    <td className="py-3 px-3.5 text-slate-400 font-mono">01</td>
+                    <td className="py-3 px-3.5 font-bold">
+                      Commercial Office Base Rent
+                      <span className="block text-[10px] text-slate-400 font-normal">Suite 101 Monthly Covenanted Lease</span>
+                    </td>
+                    <td className="py-3 px-3.5 font-mono text-slate-600">997212</td>
+                    <td className="py-3 px-3.5 text-slate-600">50,000 sq.ft. @ ₹20.00</td>
+                    <td className="py-3 px-3.5 font-bold text-right">₹10,00,000.00</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3.5 text-slate-400 font-mono">02</td>
+                    <td className="py-3 px-3.5 font-bold">
+                      Common Area Maintenance (CAM)
+                      <span className="block text-[10px] text-slate-400 font-normal">HVAC, 24/7 Security, Lifts, Common Areas</span>
+                    </td>
+                    <td className="py-3 px-3.5 font-mono text-slate-600">997212</td>
+                    <td className="py-3 px-3.5 text-slate-600">50,000 sq.ft. @ ₹5.00</td>
+                    <td className="py-3 px-3.5 font-bold text-right">₹2,50,000.00</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3.5 text-slate-400 font-mono">03</td>
+                    <td className="py-3 px-3.5 font-bold">
+                      Metered Power & Utilities
+                      <span className="block text-[10px] text-slate-400 font-normal">Check-meter verified consumption for Suite 101</span>
+                    </td>
+                    <td className="py-3 px-3.5 font-mono text-slate-600">9969</td>
+                    <td className="py-3 px-3.5 text-slate-600">3,500 kWh @ ₹10.00</td>
+                    <td className="py-3 px-3.5 font-bold text-right">₹35,000.00</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="bg-slate-50/70 p-4 border-t border-slate-200 space-y-1.5 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Total Taxable Value:</span>
+                  <span className="font-bold text-slate-900">₹12,85,000.00</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Central GST (CGST @ 9%):</span>
+                  <span className="font-mono font-bold text-slate-800">₹1,15,650.00</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>State GST (SGST @ 9%):</span>
+                  <span className="font-mono font-bold text-slate-800">₹1,15,650.00</span>
+                </div>
+                <div className="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-slate-200">
+                  <span>Gross Invoice Total (INR):</span>
+                  <span className="text-indigo-700 text-base">₹15,16,300.00</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Remittance Details Box */}
+            <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-black uppercase text-teal-800 block">Bank Wire Remittance Instructions:</span>
+                <p className="font-bold text-teal-950 mt-0.5">HDFC Bank Ltd · Current A/c 50200088991234 · IFSC HDFC0000060</p>
+                <p className="text-[11px] text-teal-700 font-medium">Beneficiary: Mango Groups Ltd · Remit via Corporate RTGS / NEFT before 31-Oct-2026</p>
+              </div>
+              <div className="sm:text-right shrink-0">
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-white text-teal-800 border border-teal-200 font-mono">
+                  SAC 997212 (TDS §194-I)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Executive Certified Rent Settlement Receipt Modal */}
       {paymentSuccess && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle2 size={36} />
-            </div>
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto border border-slate-200">
+            {/* Receipt Letterhead */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                {brandLogo ? (
+                  <div className="w-14 h-14 rounded-2xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                    <img src={brandLogo} alt="Company Logo" className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
+                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+                    {brandName || companyName || "Mango Groups Ltd"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Commercial Property Asset SPV · Managed by JPS Management
+                  </p>
+                  <p className="text-[10px] font-mono text-slate-400">
+                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
+                  </p>
+                </div>
+              </div>
 
-            <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
-                Payment Settled & Verified
-              </span>
-              <h3 className="text-xl font-black text-slate-900 mt-2">
-                ₹{Number(paymentSuccess.amount).toLocaleString("en-IN")} Received!
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Allocated to Invoice {paymentSuccess.invoice_number}
-              </p>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Payment Reference:</span>
-                <span className="font-mono font-bold text-slate-900">{paymentSuccess.ref}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Channel:</span>
-                <span className="font-bold text-slate-800">{paymentSuccess.channel}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Date & Time:</span>
-                <span className="font-bold text-slate-800">{paymentSuccess.date}</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-semibold">Updated Balance:</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  ₹0.00 (Fully Paid)
+              <div className="text-right">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 block">
+                  Official Receipt
+                </span>
+                <span className="text-[10px] font-mono font-bold text-slate-400 block mt-1">
+                  RCT-2026-10-{Date.now().toString().slice(-5)}
                 </span>
               </div>
             </div>
 
+            {/* Receipt Summary Card */}
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                Commercial Rent Payment Settled
+              </span>
+              <div className="text-3xl font-black text-emerald-950">
+                ₹{Number(paymentSuccess.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-emerald-700 font-medium">
+                Allocated to Tax Invoice <strong>{paymentSuccess.invoice_number}</strong>
+              </p>
+            </div>
+
+            {/* Detailed Transaction Ledger Table */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5">
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Tenant / Payee:</span>
+                <span className="font-bold text-slate-900">{tenantDisplayName}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Demised Premises:</span>
+                <span className="font-bold text-slate-800">Suite 101, mango plus tower (50,000 sq.ft.)</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Transaction / UTR Reference:</span>
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {paymentSuccess.ref}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Payment Channel:</span>
+                <span className="font-bold text-slate-800">{paymentSuccess.channel}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Remitted Into Account:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  HDFC Bank Ltd · A/c 50200088991234
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Date & Timestamp:</span>
+                <span className="font-bold text-slate-800">{paymentSuccess.date}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Updated Balance Due:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  ₹0.00 (Fully Paid · Account in Good Standing)
+                </span>
+              </div>
+            </div>
+
+            {/* Statutory Compliance Footer Strip */}
+            <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+                <ShieldCheck size={14} className="text-emerald-600" />
+                Verified & Recorded in PostgreSQL Rent Roll Ledger
+              </span>
+              <span className="font-mono text-[10px] text-slate-400">Rule 46 CGST Compliant</span>
+            </div>
+
+            {/* Actions */}
             <div className="flex items-center gap-3 pt-2">
               <button
-                onClick={() => {
-                  window.print();
-                }}
+                type="button"
+                onClick={() => window.print()}
                 className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Printer size={14} /> Print Receipt
               </button>
               <button
+                type="button"
                 onClick={() => setPaymentSuccess(null)}
                 className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors cursor-pointer"
               >

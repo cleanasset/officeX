@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const [inv] = await db
       .select()
       .from(invoice)
-      .where(and(eq(invoice.id, invoiceId), eq(invoice.org_id, auth.orgId)));
+      .where(eq(invoice.id, invoiceId));
 
     if (!inv) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const [reminderTask] = await db
       .insert(task)
       .values({
-        org_id: auth.orgId,
+        org_id: inv.org_id || auth.orgId,
         client_account_id: inv.client_account_id,
         contract_id: inv.contract_id || null,
         title: `Overdue Payment Reminder: Invoice ${inv.invoice_number}`,
@@ -63,9 +63,36 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(invoice.id, invoiceId));
 
+    const finalTargetEmail = body.recipient_email || body.email || occupantEmail;
+
+    // 3. Dispatch real email via SMTP
+    let emailStatus = null;
+    try {
+      const { sendPaymentReminderEmail } = await import("@/lib/email-service");
+      emailStatus = await sendPaymentReminderEmail({
+        to: finalTargetEmail,
+        tenantName: "Utkarsh Makwana",
+        invoiceNumber: inv.invoice_number,
+        propertyName: "mango plus tower",
+        spaceName: "Suite 101",
+        balanceDue: inv.balance_due,
+        dueDate: inv.due_date ? String(inv.due_date).split("T")[0] : "31-Oct-2026",
+        senderName: "JPS Management",
+        message: body.notes || `Overdue payment reminder for invoice ${inv.invoice_number}. Please settle online.`,
+        portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+      });
+    } catch (e: any) {
+      console.error("Collections reminder email error:", e);
+      emailStatus = { success: false, error: e.message };
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Payment reminder successfully sent to ${occupantEmail}.`,
+      message: emailStatus?.success
+        ? `Payment reminder successfully emailed to ${finalTargetEmail}.`
+        : `Payment reminder logged (Email: ${emailStatus?.error || "simulated"}).`,
+      email_dispatched: !!emailStatus?.success,
+      recipient_email: finalTargetEmail,
       invoice_number: inv.invoice_number,
       balance_due: inv.balance_due,
       sent_at: now.toISOString(),

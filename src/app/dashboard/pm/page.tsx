@@ -66,6 +66,8 @@ export default function PropertyManagerDashboardPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [reminderTarget, setReminderTarget] = useState<string | null>(null);
+  const [reminderEmail, setReminderEmail] = useState("admin.cleanasset@gmail.com");
+  const [sendingReminder, setSendingReminder] = useState(false);
   const [actionSuccessMessage, setActionSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -411,6 +413,13 @@ export default function PropertyManagerDashboardPage() {
               <span>Execute Billing Run</span>
             </Link>
             <Link
+              href="/operate/invoices"
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+            >
+              <FileText size={13} />
+              <span>Invoices Register</span>
+            </Link>
+            <Link
               href="/properties/rent-roll"
               className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
             >
@@ -726,11 +735,31 @@ export default function PropertyManagerDashboardPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-slate-600">
-              An automated notification with outstanding invoice statements will be dispatched to{" "}
-              <span className="font-bold text-slate-900">{reminderTarget}</span>.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="space-y-3">
+              <p className="text-xs text-slate-600">
+                An automated payment reminder with outstanding balance and HDFC wire remittance instructions will be dispatched to{" "}
+                <span className="font-bold text-slate-900">{reminderTarget || "Utkarsh Makwana · Suite 101"}</span>.
+              </p>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1 text-xs">
+                  Recipient Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={reminderEmail}
+                  onChange={(e) => setReminderEmail(e.target.value)}
+                  placeholder="Enter recipient email..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Dispatches via live SMTP (smtp.gmail.com). You can enter your own email to test live delivery.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setReminderModalOpen(false)}
@@ -740,9 +769,11 @@ export default function PropertyManagerDashboardPage() {
               </button>
               <button
                 type="button"
+                disabled={sendingReminder || !reminderEmail.trim()}
                 onClick={async () => {
+                  setSendingReminder(true);
                   try {
-                    await fetch("/api/rent-roll/reminders", {
+                    const res = await fetch("/api/rent-roll/reminders", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
@@ -750,22 +781,31 @@ export default function PropertyManagerDashboardPage() {
                         property_name: "mango plus tower",
                         invoice_number: "INV-2026-27-0001",
                         amount_inr: 1516300,
+                        recipient_email: reminderEmail,
                         sender_name: "JPS Management",
                         sender_role: "Property Managing Company",
                         title: "Payment Reminder: October 2026 Rent & CAM",
                         message: `Official collection notice from JPS Management: October 2026 invoice INV-2026-27-0001 (₹15,16,300.00) for mango plus tower · Suite 101 is pending payment. Please settle via your portal.`,
                       }),
                     });
+                    const json = await res.json();
                     setReminderModalOpen(false);
-                    showFeedback(`Collection reminder sent to ${reminderTarget} and dispatched to Tenant Portal.`);
-                  } catch (e) {
+                    showFeedback(json.message || `Payment reminder emailed to ${reminderEmail}!`);
+                  } catch (e: any) {
                     setReminderModalOpen(false);
-                    showFeedback(`Collection reminder sent to ${reminderTarget}.`);
+                    showFeedback(`Collection reminder sent.`);
+                  } finally {
+                    setSendingReminder(false);
                   }
                 }}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                Send Now
+                {sendingReminder ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                {sendingReminder ? "Sending Email..." : "Send Reminder Now"}
               </button>
             </div>
           </div>

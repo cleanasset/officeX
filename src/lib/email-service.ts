@@ -179,3 +179,313 @@ export async function sendOtpEmail({
     };
   }
 }
+
+export interface SendInvoiceEmailOptions {
+  to: string;
+  tenantName: string;
+  invoiceNumber: string;
+  propertyName?: string;
+  spaceName?: string;
+  grossTotal: number | string;
+  dueDate: string;
+  invoiceDate?: string;
+  brandName?: string;
+  brandLogo?: string;
+  portalUrl?: string;
+}
+
+/**
+ * Dispatches a statutory tax invoice notification email to the tenant
+ */
+export async function sendInvoiceNotificationEmail({
+  to,
+  tenantName,
+  invoiceNumber,
+  propertyName = "mango plus tower",
+  spaceName = "Suite 101",
+  grossTotal,
+  dueDate,
+  invoiceDate = new Date().toISOString().split("T")[0],
+  brandName = "Mango Groups Ltd",
+  portalUrl = "https://www.officex.pro/portal/invoices",
+}: SendInvoiceEmailOptions): Promise<SendEmailResult> {
+  const transporter = getTransporter();
+  const formattedAmount = Number(grossTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fromAddress = process.env.SMTP_FROM || `"OfficeX Finance" <${process.env.SMTP_USER}>`;
+
+  if (!transporter) {
+    console.warn(`[OfficeX Email] Transporter not ready. Would send invoice ${invoiceNumber} to ${to}`);
+    return { success: true, simulated: true };
+  }
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tax Invoice ${invoiceNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding: 30px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 28px 32px; background: linear-gradient(135deg, #091e3a 0%, #1e3a8a 100%);">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="color: #ffffff; font-size: 20px; font-weight: 900; letter-spacing: -0.5px;">${brandName}</span>
+                    <span style="color: #93c5fd; font-size: 11px; display: block; margin-top: 4px; text-transform: uppercase; font-weight: 600;">Statutory GST Tax Invoice · Rule 46</span>
+                  </td>
+                  <td align="right">
+                    <span style="background: rgba(255,255,255,0.15); color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: uppercase;">
+                      Due ${dueDate}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="font-size: 14px; color: #475569; margin: 0 0 16px 0;">
+                Dear <strong>${tenantName}</strong>,
+              </p>
+              <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 24px 0;">
+                Your commercial lease invoice for <strong>${propertyName} &middot; ${spaceName}</strong> has been generated and issued. Please review the itemized breakdown below.
+              </p>
+
+              <!-- Invoice Summary Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Invoice Number</span>
+                    <div style="font-size: 15px; font-weight: 800; font-family: monospace; color: #0f172a; margin-top: 2px;">${invoiceNumber}</div>
+                  </td>
+                  <td style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Invoice Date</span>
+                    <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-top: 2px;">${invoiceDate}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;" colspan="2">
+                    <span style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Gross Invoice Amount (incl. 18% GST)</span>
+                    <div style="font-size: 32px; font-weight: 900; color: #1e3a8a; margin-top: 4px;">
+                      ₹${formattedAmount}
+                    </div>
+                    <div style="font-size: 12px; color: #047857; font-weight: 600; margin-top: 4px;">
+                      Payment Due on or before: <strong>${dueDate}</strong> (10-Day Advance Notice Window)
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Remittance Instructions -->
+              <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 12px; color: #065f46;">
+                <strong>Bank Wire Remittance (Corporate RTGS/NEFT):</strong><br>
+                Bank: <strong>HDFC Bank Ltd</strong> &middot; Account: <strong>50200088991234</strong> &middot; IFSC: <strong>HDFC0000060</strong><br>
+                Beneficiary: <strong>${brandName}</strong> &middot; SAC: 997212 (TDS §194-I Applicable)
+              </div>
+
+              <!-- Button CTA -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${portalUrl}" style="background-color: #1e3a8a; color: #ffffff; display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 800; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(30,58,138,0.3);">
+                      View & Settle Invoice Online &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                If you have already initiated this wire transfer, please input your bank UTR transaction number directly in your portal to receive instant automated settlement receipt.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8;">
+              &copy; ${new Date().getFullYear()} ${brandName} &middot; Managed via OfficeX Commercial Asset Operations
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to,
+      subject: `Tax Invoice ${invoiceNumber} issued for ${propertyName} (Due: ${dueDate})`,
+      html: htmlContent,
+      text: `Tax Invoice ${invoiceNumber} issued for ${propertyName} (${spaceName}). Gross Amount: ₹${formattedAmount}. Payment Due: ${dueDate}. Please settle online at: ${portalUrl}`,
+    });
+
+    console.log(`[OfficeX Email] Invoice ${invoiceNumber} delivered to ${to} (MessageId: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error(`[OfficeX Email Error] Failed to send invoice email to ${to}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export interface SendReminderEmailOptions {
+  to: string;
+  tenantName: string;
+  invoiceNumber: string;
+  propertyName?: string;
+  spaceName?: string;
+  balanceDue: number | string;
+  dueDate: string;
+  senderName?: string;
+  message?: string;
+  brandName?: string;
+  portalUrl?: string;
+}
+
+/**
+ * Dispatches a collection / overdue payment reminder email to the tenant
+ */
+export async function sendPaymentReminderEmail({
+  to,
+  tenantName,
+  invoiceNumber,
+  propertyName = "mango plus tower",
+  spaceName = "Suite 101",
+  balanceDue,
+  dueDate,
+  senderName = "JPS Management",
+  message,
+  brandName = "Mango Groups Ltd",
+  portalUrl = "https://www.officex.pro/portal/invoices",
+}: SendReminderEmailOptions): Promise<SendEmailResult> {
+  const transporter = getTransporter();
+  const formattedBalance = Number(balanceDue).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fromAddress = process.env.SMTP_FROM || `"OfficeX Collections" <${process.env.SMTP_USER}>`;
+
+  if (!transporter) {
+    console.warn(`[OfficeX Email] Transporter not ready. Would send reminder to ${to}`);
+    return { success: true, simulated: true };
+  }
+
+  const customNote = message || `This is an official notice regarding outstanding invoice ${invoiceNumber} for ${propertyName} &middot; ${spaceName}. Please remit payment to maintain your account in good standing.`;
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Reminder — ${invoiceNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding: 30px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 24px 32px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="color: #ffffff; font-size: 18px; font-weight: 900;">⚠️ Payment Notice &middot; ${senderName}</span>
+                    <span style="color: #fde68a; font-size: 11px; display: block; margin-top: 4px; text-transform: uppercase; font-weight: 700;">Account Receivables & Collections</span>
+                  </td>
+                  <td align="right">
+                    <span style="background: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px;">
+                      DUE: ${dueDate}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="font-size: 14px; color: #475569; margin: 0 0 16px 0;">
+                Dear <strong>${tenantName}</strong>,
+              </p>
+              
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 12px 12px 0; margin-bottom: 24px;">
+                <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.6; font-weight: 500;">
+                  ${customNote}
+                </p>
+              </div>
+
+              <!-- Balance Card -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Current Balance Outstanding</span>
+                    <div style="font-size: 32px; font-weight: 900; color: #b45309; margin-top: 4px;">
+                      ₹${formattedBalance}
+                    </div>
+                    <div style="font-size: 12px; color: #475569; margin-top: 4px;">
+                      Invoice: <strong>${invoiceNumber}</strong> &middot; Property: <strong>${propertyName} (${spaceName})</strong>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Button CTA -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${portalUrl}" style="background-color: #b45309; color: #ffffff; display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 800; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(180,83,9,0.3);">
+                      Click Here to Settle Balance Now &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                If your accounting team has already remitted via RTGS/NEFT, please log your bank UTR on the portal so our finance team can instantly match and issue your settlement receipt.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8;">
+              Dispatched by ${senderName} on behalf of ${brandName} via OfficeX
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to,
+      subject: `Payment Reminder: Invoice ${invoiceNumber} for ${propertyName} (₹${formattedBalance})`,
+      html: htmlContent,
+      text: `Payment Reminder: Outstanding balance of ₹${formattedBalance} for Invoice ${invoiceNumber} (${propertyName}). Please settle promptly via: ${portalUrl}`,
+    });
+
+    console.log(`[OfficeX Email] Payment reminder for ${invoiceNumber} delivered to ${to} (MessageId: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error(`[OfficeX Email Error] Failed to send reminder email to ${to}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+

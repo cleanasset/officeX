@@ -231,7 +231,15 @@ export async function POST(req: Request) {
       include_groups = ["rent", "cam", "electricity"],
       consolidate = false, // Default false: Split Invoices Mode!
       action = "generate", // "generate" | "approve" | "issue"
+      due_date: customDueDate,
     } = body;
+
+    // Calculate default due date: 10 days after invoice date for commercial AP / TDS compliance
+    const calculatedDueDate = customDueDate || (() => {
+      const d = new Date(invoice_date);
+      d.setDate(d.getDate() + 10);
+      return d.toISOString().split("T")[0];
+    })();
 
     const fy = getFiscalYear(new Date());
 
@@ -341,7 +349,7 @@ export async function POST(req: Request) {
             invoice_number: invNum,
             fy_year: fy,
             invoice_date: invoice_date,
-            due_date: invoice_date,
+            due_date: calculatedDueDate,
             period_start: pStart,
             period_end: pEnd,
             base_rent: String(baseRentAmt),
@@ -375,7 +383,7 @@ export async function POST(req: Request) {
               invoice_number: invRentNum,
               fy_year: fy,
               invoice_date: invoice_date,
-              due_date: invoice_date,
+              due_date: calculatedDueDate,
               period_start: pStart,
               period_end: pEnd,
               base_rent: String(baseRentAmt),
@@ -407,7 +415,7 @@ export async function POST(req: Request) {
               invoice_number: invCamNum,
               fy_year: fy,
               invoice_date: invoice_date,
-              due_date: invoice_date,
+              due_date: calculatedDueDate,
               period_start: pStart,
               period_end: pEnd,
               cam_charges: String(camAmt),
@@ -439,7 +447,7 @@ export async function POST(req: Request) {
               invoice_number: invUtilNum,
               fy_year: fy,
               invoice_date: invoice_date,
-              due_date: invoice_date,
+              due_date: calculatedDueDate,
               period_start: pStart,
               period_end: pEnd,
               utility_charges: String(utilAmt),

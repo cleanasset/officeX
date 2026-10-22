@@ -36,10 +36,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Target invoices not found" }, { status: 404 });
     }
 
+    // Financial Safety Guard: Prevent double-settlement if invoice is already ₹0
+    const totalDue = targetInvoices.reduce((sum, inv) => sum + (Number(inv.balance_due) || 0), 0);
+    if (totalDue <= 0) {
+      return NextResponse.json(
+        { error: "Selected invoice is already fully settled (Balance due is ₹0.00). Double payment prevented." },
+        { status: 400 }
+      );
+    }
+
     const firstInv = targetInvoices[0];
     const resolvedOccupantId = occupant_id || firstInv.occupant_id;
     const paymentRef = razorpay_payment_id || `pay_portal_${Date.now()}`;
     const paymentCode = `PAY-${Date.now().toString().slice(-6)}`;
+    const actualPaymentMode = payment_mode === "online" ? "online" : "bank_transfer";
 
     // 2. Insert Payment Record (RR-PAY-01 / §4.10)
     const [newPayment] = await db
@@ -51,12 +61,12 @@ export async function POST(req: NextRequest) {
         contract_id: firstInv.contract_id,
         payment_code: paymentCode,
         payment_date: new Date().toISOString().split("T")[0],
-        payment_mode: "bank_transfer",
+        payment_mode: actualPaymentMode,
         amount_inr: String(amount_inr),
         payment_ref: paymentRef,
         payment_status: "received",
         is_matched: true,
-        notes: `Online checkout via Tenant Portal (Razorpay Ref: ${paymentRef})`,
+        notes: `Tenant Portal settlement (${actualPaymentMode === "online" ? "Razorpay Gateway Ref" : "Bank UTR"}: ${paymentRef})`,
       })
       .returning();
 

@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
     const senderName = body.sender_name || "JPS Management";
     const senderRole = body.sender_role || "Property Managing Company";
     const title = body.title || `Payment Reminder: ${invNumber}`;
-    const message = body.message || `Official collection reminder from ${senderName} for October 2026 lease invoice ${invNumber} totaling ₹${amountVal.toLocaleString("en-IN")}. Please settle via the tenant portal.`;
+    const recipientEmail = body.recipient_email || body.email || "tenant@gmail.com";
+    const message = body.message || `Official collection notice from ${senderName}: Invoice ${invNumber} for ${propName} is pending settlement. Please remit payment via your tenant portal.`;
 
     const inserted = await db.execute(sql`
       INSERT INTO tenant_reminders (
@@ -47,9 +48,34 @@ export async function POST(req: NextRequest) {
       RETURNING *;
     `);
 
+    // Dispatch real email via SMTP
+    let emailStatus = null;
+    try {
+      const { sendPaymentReminderEmail } = await import("@/lib/email-service");
+      emailStatus = await sendPaymentReminderEmail({
+        to: recipientEmail,
+        tenantName: targetName,
+        invoiceNumber: invNumber,
+        propertyName: propName,
+        spaceName: "Suite 101",
+        balanceDue: amountVal,
+        dueDate: "31-Oct-2026",
+        senderName: senderName,
+        message: message,
+        portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+      });
+    } catch (e: any) {
+      console.error("Failed to send reminder email:", e);
+      emailStatus = { success: false, error: e.message };
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Reminder successfully dispatched to Tenant Portal",
+      message: emailStatus?.success
+        ? `Reminder successfully dispatched to Tenant Portal and emailed to ${recipientEmail}`
+        : `Reminder dispatched to Tenant Portal (Email delivery: ${emailStatus?.error || "simulated"})`,
+      email_dispatched: !!emailStatus?.success,
+      recipient_email: recipientEmail,
       reminder: inserted.rows[0],
     });
   } catch (err: any) {

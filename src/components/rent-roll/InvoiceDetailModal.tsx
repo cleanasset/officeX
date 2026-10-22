@@ -72,6 +72,11 @@ export default function InvoiceDetailModal({
   const [creditReason, setCreditReason] = useState("");
   const [creditAmount, setCreditAmount] = useState("");
 
+  // Email Dispatch State
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("admin.cleanasset@gmail.com");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   // Approval comment state
   const [approvalComment, setApprovalComment] = useState("");
 
@@ -94,6 +99,7 @@ export default function InvoiceDetailModal({
       setActionSuccess(null);
       setActionError(null);
       setCreditNoteOpen(false);
+      setSendEmailOpen(false);
     }
   }, [isOpen, invoiceId]);
 
@@ -107,11 +113,43 @@ export default function InvoiceDetailModal({
       const json = await res.json();
       if (json.success && json.invoice) {
         setData(json.invoice);
+        if (json.invoice.occupant?.email) {
+          setRecipientEmail(json.invoice.occupant.email);
+        }
       }
     } catch (e: any) {
       setActionError(e.message || "Could not fetch invoice details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendInvoiceEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoiceId || !recipientEmail) return;
+    try {
+      setSendingEmail(true);
+      setActionError(null);
+      const res = await fetch(`/api/invoices/${invoiceId}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient_email: recipientEmail,
+          brand_name: brandName || companyName || "Mango Groups Ltd",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to dispatch email");
+      }
+      setActionSuccess(`Tax Invoice successfully emailed to ${recipientEmail} via SMTP.`);
+      setSendEmailOpen(false);
+      await fetchInvoice();
+      if (onInvoiceUpdated) onInvoiceUpdated();
+    } catch (e: any) {
+      setActionError(e.message || "Failed to send invoice email");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -568,6 +606,61 @@ export default function InvoiceDetailModal({
                   </div>
                 </form>
               )}
+
+              {/* Send Invoice Email Dialog Form */}
+              {sendEmailOpen && (
+                <form
+                  onSubmit={handleSendInvoiceEmail}
+                  className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                      <Send className="w-4 h-4 text-blue-700" />
+                      Dispatch Invoice via SMTP Email
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setSendEmailOpen(false)}
+                      className="text-xs text-slate-500 hover:text-slate-800"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1 text-xs">
+                      Recipient Email Address <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="e.g. tenant@example.com"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Enter the destination email address (defaults to tenant contact). You can enter your own email to test live delivery.
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSendEmailOpen(false)}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={sendingEmail || !recipientEmail}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {sendingEmail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      {sendingEmail ? "Dispatching Email..." : "Send Invoice Email"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </>
           )}
         </div>
@@ -596,6 +689,16 @@ export default function InvoiceDetailModal({
                   Approve & Issue Invoice
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => setSendEmailOpen(true)}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Dispatch statutory tax invoice via email to tenant"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Send via Email
+              </button>
 
               {!isDraft && (
                 <a
