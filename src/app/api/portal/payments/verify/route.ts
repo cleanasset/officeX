@@ -49,7 +49,14 @@ export async function POST(req: NextRequest) {
     const resolvedOccupantId = occupant_id || firstInv.occupant_id;
     const paymentRef = razorpay_payment_id || `pay_portal_${Date.now()}`;
     const paymentCode = `PAY-${Date.now().toString().slice(-6)}`;
-    const actualPaymentMode = payment_mode === "online" ? "online" : "bank_transfer";
+    const validModes = ["bank_transfer", "cheque", "upi", "cash", "credit", "other"] as const;
+    type PaymentChannel = (typeof validModes)[number];
+    const actualPaymentMode: PaymentChannel =
+      payment_mode === "online" || payment_mode === "upi"
+        ? "upi"
+        : validModes.includes(payment_mode as PaymentChannel)
+        ? (payment_mode as PaymentChannel)
+        : "bank_transfer";
 
     // 2. Insert Payment Record (RR-PAY-01 / §4.10)
     const [newPayment] = await db
@@ -66,7 +73,7 @@ export async function POST(req: NextRequest) {
         payment_ref: paymentRef,
         payment_status: "received",
         is_matched: true,
-        notes: `Tenant Portal settlement (${actualPaymentMode === "online" ? "Razorpay Gateway Ref" : "Bank UTR"}: ${paymentRef})`,
+        notes: `Tenant Portal settlement (${payment_mode === "online" ? "Razorpay Gateway Ref" : "Bank UTR"}: ${paymentRef})`,
       })
       .returning();
 
