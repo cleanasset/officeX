@@ -47,6 +47,7 @@ interface TaskItem {
   title: string;
   info: string;
   property: string;
+  propertyId?: string;
   occupantSpace: string;
   dueDate: string;
   dueStatus: "overdue" | "today" | "future";
@@ -109,24 +110,25 @@ export default function PropertyManagerDashboardPage() {
           const rentVal = Number(c.base_rent_rate || c.contract?.base_rent_rate || 0);
           const depVal = Number(c.deposit_amount_inr || c.contract?.deposit_amount_inr || 0);
 
-          // 1. Pending Lease Approval
+          // 1. Pending Landlord Lease Approval (PM has no approval authority)
           if (c.approval_status === "pending" || c.contract_status === "submitted") {
             generatedTasks.push({
               id: `appr_${c.id}`,
               category: "contract_approval",
-              categoryLabel: "Contract Approval",
-              priority: "HIGH",
-              title: `Approve Lease: ${occName}`,
-              info: `Contract ${c.contract_code || "LEAS"} submitted for approval · Base Rent: ₹${rentVal.toLocaleString()}/mo`,
+              categoryLabel: "Awaiting Landlord Sign-Off",
+              priority: "MEDIUM",
+              title: `Lease Awaiting Owner Approval: ${occName}`,
+              info: `Contract ${c.contract_code || "LEAS"} is submitted to Landlord. Base Rent: ₹${rentVal.toLocaleString()}/mo. Managing entity cannot approve.`,
               property: propName,
+              propertyId: c.property_id || c.propertyId,
               occupantSpace: `${occName} · ${spaceName}`,
               dueDate: c.start_date || todayStr,
               dueStatus: "today",
               financialDetail: `₹${rentVal.toLocaleString()}/mo`,
               actions: {
-                primaryText: "Review & Approve",
-                secondaryText: "Reject",
-                tertiaryText: "View Details",
+                primaryText: "View Status",
+                secondaryText: "Ping Landlord",
+                tertiaryText: "View Terms",
               },
             });
           }
@@ -257,7 +259,7 @@ export default function PropertyManagerDashboardPage() {
 
     if (actionType === "primary") {
       if (t.category === "contract_approval") {
-        window.location.href = "/approvals";
+        showFeedback("This lease is awaiting sign-off by the Property Owner. Managing entities cannot approve or sign contracts.");
         return;
       }
       if (t.category === "escalation_due") {
@@ -282,8 +284,8 @@ export default function PropertyManagerDashboardPage() {
         setReminderModalOpen(true);
         return;
       }
-      if (t.actions.secondaryText === "Reject") {
-        window.location.href = "/approvals";
+      if (t.actions.secondaryText === "Ping Landlord") {
+        showFeedback("Reminder sent to Property Owner to review and approve lease terms.");
         return;
       }
       if (t.actions.secondaryText === "Postpone") {
@@ -313,7 +315,11 @@ export default function PropertyManagerDashboardPage() {
 
   const filteredTasks = activeTasks.filter((t) => {
     if (filterPriority !== "all" && t.priority !== filterPriority) return false;
-    if (selectedProperty !== "all" && !t.property.toLowerCase().includes(selectedProperty.toLowerCase())) return false;
+    if (selectedProperty !== "all") {
+      const matchId = t.propertyId === selectedProperty;
+      const matchName = t.property?.toLowerCase().includes(selectedProperty.toLowerCase());
+      if (!matchId && !matchName) return false;
+    }
     return true;
   });
 
@@ -361,7 +367,7 @@ export default function PropertyManagerDashboardPage() {
               <option value="all">All Managed Centres</option>
               {propertiesList.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.property_name || p.name || "Commercial Centre"}
                 </option>
               ))}
             </select>
@@ -384,75 +390,91 @@ export default function PropertyManagerDashboardPage() {
       </div>
 
       {/* Assigned Commercial Asset & Tenant Overview Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
-              <Building2 size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-black text-slate-900">mango plus tower</h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                  100% Occupied
-                </span>
-                <span className="text-[10px] text-slate-400 font-semibold">Ahmedabad, Gujarat</span>
+      {(() => {
+        const activeProp = propertiesList.find(
+          (p) => p.id === selectedProperty || (p.property_name && p.property_name.toLowerCase() === selectedProperty.toLowerCase())
+        );
+        const isAll = selectedProperty === "all";
+        const displayPropName = activeProp?.property_name || (isAll ? "All Managed Commercial Assets" : "mango plus tower");
+        const displayCity = activeProp?.city ? `${activeProp.city}, Gujarat` : "Ahmedabad, Gujarat";
+        const displayArea = activeProp?.total_leasable_area_sqft
+          ? `${Number(activeProp.total_leasable_area_sqft).toLocaleString()} sqft`
+          : "50,000 sqft";
+
+        return (
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-black text-slate-900">{displayPropName}</h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      {isAll ? `${propertiesList.length || 1} Centre(s) Managed` : "100% Occupied"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-semibold">{displayCity}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Principal Landlord: <strong className="text-slate-800">mango groups</strong> · Managing Entity: <strong className="text-teal-800">jps management</strong> (Operational PM · Under Owner Sign-Off)
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Principal Landlord: <strong className="text-slate-800">mango groups</strong> · Managing Entity: <strong className="text-teal-800">jps management</strong>
-              </p>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/billing"
+                  className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+                >
+                  <Receipt size={13} />
+                  <span>Execute Billing Run</span>
+                </Link>
+                <Link
+                  href="/operate/invoices"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <FileText size={13} />
+                  <span>Invoices Register</span>
+                </Link>
+                <Link
+                  href="/properties/rent-roll"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <Layers size={13} />
+                  <span>Full Rent Roll</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Tenant Demarcation & Lease Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Demarcated Area</span>
+                <p className="text-base font-black text-slate-900 mt-1">{displayArea}</p>
+                <p className="text-[11px] text-teal-700 font-medium mt-0.5">
+                  {isAll ? "Across Managed Centres" : `${displayArea} occupied · 0 sqft vacant`}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Primary Corporate Tenant</span>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-sm font-black text-slate-900">{isAll ? "Utkarsh Makwana (+)" : "Utkarsh Makwana"}</p>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Suite 101</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">Canonical 3-Year Active Term · Lock-in Active</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">Monthly Contracted Lease</span>
+                <p className="text-base font-black text-teal-900 mt-1">₹12.50 Lakhs / mo</p>
+                <p className="text-[11px] text-teal-700 mt-0.5">Oct-2026 Invoiced: ₹15.16 Lakhs (incl. GST &amp; CAM)</p>
+              </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/billing"
-              className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5"
-            >
-              <Receipt size={13} />
-              <span>Execute Billing Run</span>
-            </Link>
-            <Link
-              href="/operate/invoices"
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
-            >
-              <FileText size={13} />
-              <span>Invoices Register</span>
-            </Link>
-            <Link
-              href="/properties/rent-roll"
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
-            >
-              <Layers size={13} />
-              <span>Full Rent Roll</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Tenant Demarcation & Lease Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Demarcated Area</span>
-            <p className="text-base font-black text-slate-900 mt-1">50,000 sqft</p>
-            <p className="text-[11px] text-teal-700 font-medium mt-0.5">50,000 sqft occupied · 0 sqft vacant</p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Primary Corporate Tenant</span>
-            <div className="flex items-center justify-between mt-1">
-              <p className="text-sm font-black text-slate-900">Utkarsh Makwana</p>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Suite 101</span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">Canonical 3-Year Active Term · Lock-in Active</p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">Monthly Contracted Lease</span>
-            <p className="text-base font-black text-teal-900 mt-1">₹12.50 Lakhs / mo</p>
-            <p className="text-[11px] text-teal-700 mt-0.5">Oct-2026 Invoiced: ₹15.16 Lakhs (incl. GST &amp; CAM)</p>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {actionSuccessMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-800 text-xs font-bold animate-fadeIn">
@@ -674,13 +696,13 @@ export default function PropertyManagerDashboardPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setWizardOpen(true)}
+            <Link
+              href="/billing"
               className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
             >
-              <Plus className="w-3.5 h-3.5" />
-              + Create Contract (§S-21)
-            </button>
+              <Receipt className="w-3.5 h-3.5" />
+              Execute Billing Run
+            </Link>
 
             <Link
               href="/properties/rent-roll?tab=collections"
@@ -699,6 +721,15 @@ export default function PropertyManagerDashboardPage() {
             >
               <Send className="w-3.5 h-3.5" />
               Send Reminder
+            </button>
+
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+              title="Draft new lease proposal for Property Owner sign-off"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Draft Lease (For Owner)
             </button>
 
             <button

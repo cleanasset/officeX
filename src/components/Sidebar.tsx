@@ -91,23 +91,16 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Public Marketplace", href: "/marketplace", icon: ExternalLink }
   ],
 
-  // PROPERTY MANAGER / CENTRE MANAGER (§3.2, §S-03)
+  // PROPERTY MANAGER / THIRD-PARTY MANAGING ENTITY (Strict Delegated Rent & Centre Operations)
   property_manager: [
-    { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList, section: "Overview" },
-    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList, section: "Operational Overview" },
     { name: "Space & Building Registry", href: "/properties/registry", icon: Building },
-    { name: "Deals & Inquiries", href: "/operate/lease-crm", icon: Sparkles },
-    { name: "New Contract Wizard", href: "/operate/contracts/new", icon: FileText },
-    { name: "Active Contracts", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Active Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
     { name: "Expiry & Renewals", href: "/operate/renewals", icon: Clock },
     { name: "Rent Escalations", href: "/operate/escalations", icon: TrendingUp },
-    { name: "Stacking Plan", href: "/operate/stacking", icon: Layers },
-    { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign, section: "Financials" },
+    { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign, section: "Rent & Collections" },
     { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
-    { name: "Disputes & Claims", href: "/operate/disputes", icon: ShieldCheck },
-    { name: "Security Deposits", href: "/operate/deposits", icon: Landmark },
-    { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
-    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+    { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", icon: Zap }
   ],
 
   // FACILITY MANAGER (§3.6, §S-03 FM)
