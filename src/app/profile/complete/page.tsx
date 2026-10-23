@@ -196,9 +196,34 @@ function CompleteProfileContent() {
     link: string;
   } | null>(null);
   const [copiedTenantInvite, setCopiedTenantInvite] = useState(false);
-
   // Tenants List for Contract selection
   const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
+
+  // Step 2: Multi-Tenant Demising & Floor Allocation Tracking
+  const [tenancyMode, setTenancyMode] = useState<"single" | "multi">("multi");
+  const [enrolledTenants, setEnrolledTenants] = useState<Array<{
+    id: string;
+    name: string;
+    company?: string;
+    email: string;
+    phone: string;
+    assignedFloors: number[];
+    floorLabels: string;
+    areaSqft: number;
+    spaceUnit: string;
+    gstin?: string;
+    pan?: string;
+    inviteLink?: string;
+    contractSaved?: boolean;
+  }>>([]);
+  const [selectedFloorsForCurrentTenant, setSelectedFloorsForCurrentTenant] = useState<number[]>([1]);
+  const [customSpaceUnitName, setCustomSpaceUnitName] = useState<string>("");
+  const [customFloorAreaSqft, setCustomFloorAreaSqft] = useState<string>("");
+
+  // Step 5: Management Scope (Whole Property vs Specific Tenants / Floors)
+  const [delegationScope, setDelegationScope] = useState<"whole_property" | "specific_tenants">("whole_property");
+  const [delegatedTenantIds, setDelegatedTenantIds] = useState<string[]>([]);
+  const [delegatedFloors, setDelegatedFloors] = useState<number[]>([]);
 
   // Step 3: Contract Form (Comprehensive Commercial Terms & Auto-Extraction)
   const [contractForm, setContractForm] = useState({
@@ -806,17 +831,49 @@ function CompleteProfileContent() {
         const tRes = await fetch("/api/rent-roll/tenants", { headers: authHeaders });
         if (tRes.ok) {
           const tData = await tRes.json();
-          const tArr = (Array.isArray(tData.data) ? tData.data : []).map((t: any) => ({
+          const rawTenants = Array.isArray(tData.data) ? tData.data : [];
+          const tArr = rawTenants.map((t: any) => ({
             id: t.id,
             name: t.tenant_name || t.trade_name,
             company: t.trade_name,
           }));
           setTenantsList(tArr);
-          if (tArr.length > 0) {
+
+          const richEnrolled = rawTenants.map((t: any, idx: number) => {
+            let remarksObj: any = {};
+            try {
+              if (t.remarks) remarksObj = JSON.parse(t.remarks);
+            } catch {}
+            const floors = Array.isArray(remarksObj.assigned_floors) && remarksObj.assigned_floors.length > 0
+              ? remarksObj.assigned_floors
+              : [idx + 1];
+            const floorLabels = remarksObj.floor_labels || (floors.length === 1 ? `Floor ${floors[0]}` : `Floors ${floors.join(", ")}`);
+            const spaceUnit = remarksObj.space_unit || floorLabels;
+            const area = remarksObj.area_sqft || 5000;
+            return {
+              id: t.id,
+              name: t.tenant_name || t.trade_name,
+              company: t.trade_name || t.tenant_name,
+              email: t.email || "",
+              phone: t.phone || "",
+              assignedFloors: floors,
+              floorLabels: floorLabels,
+              areaSqft: area,
+              spaceUnit: spaceUnit,
+              gstin: t.gstin || t.gst_number || "",
+              pan: t.pan || t.pan_number || "",
+              contractSaved: false,
+            };
+          });
+          setEnrolledTenants(richEnrolled);
+
+          if (richEnrolled.length > 0) {
             setContractForm((prev) => ({
               ...prev,
-              occupant_id: prev.occupant_id || tArr[0].id,
-              occupant_name: prev.occupant_name || tArr[0].name,
+              occupant_id: prev.occupant_id || richEnrolled[0].id,
+              occupant_name: prev.occupant_name || richEnrolled[0].name,
+              space_unit: prev.space_unit || richEnrolled[0].spaceUnit || "Suite 101",
+              area_sqft: prev.area_sqft || String(richEnrolled[0].areaSqft || 5000),
             }));
           }
         }
@@ -925,6 +982,10 @@ function CompleteProfileContent() {
           entityType,
           rights: managerRights,
           propertyName: propForm.property_name || registeredProperties[0]?.property_name || "Portfolio",
+          scope: delegationScope,
+          managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
+          managedTenantNames: delegationScope === "specific_tenants" ? (enrolledTenants.length > 0 ? enrolledTenants : tenantsList).filter((t: any) => delegatedTenantIds.includes(t.id)).map((t: any) => t.name) : "all",
+          managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
         }),
       });
       const json = await res.json();
@@ -933,6 +994,35 @@ function CompleteProfileContent() {
       } else {
         const origin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : DEPLOYED_BASE_URL.replace(/\/+$/, "");
         setGeneratedInviteLink(`${origin}/invite?role=${role}&email=${encodeURIComponent(email)}`);
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+          const propKey = propForm.property_name.trim() || registeredProperties[0]?.property_name || "Portfolio";
+          const assignedObj = {
+            name: name.trim() || "Property Manager",
+            email: email.trim(),
+            type: entityType,
+            role,
+            rights: managerRights,
+            assignedAt: new Date().toISOString(),
+            scope: delegationScope,
+            managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
+            managedTenantNames: delegationScope === "specific_tenants" ? (enrolledTenants.length > 0 ? enrolledTenants : tenantsList).filter((t: any) => delegatedTenantIds.includes(t.id)).map((t: any) => t.name) : "all",
+            managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
+          };
+          currentAssigns[propKey] = assignedObj;
+          if (registeredProperties[0]?.id) currentAssigns[registeredProperties[0].id] = assignedObj;
+          localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
+          setPropertyAssignments(currentAssigns);
+          localStorage.setItem("officex_has_manager", "true");
+          localStorage.setItem("officex_manager_name", name.trim());
+          localStorage.setItem("officex_manager_email", email.trim());
+          localStorage.setItem("officex_manager_status", "activated");
+        } catch (e) {
+          console.error("Failed saving delegation assignment:", e);
+        }
       }
     } catch {
       const origin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : DEPLOYED_BASE_URL.replace(/\/+$/, "");
@@ -1056,6 +1146,9 @@ function CompleteProfileContent() {
             email: managerData.email,
             type: managerData.entityType,
             assignedAt: new Date().toISOString(),
+            scope: delegationScope,
+            managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
+            managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
           };
         } else if (assignChoice === "custom" && customMgrName.trim()) {
           assignedObj = {
@@ -1063,6 +1156,9 @@ function CompleteProfileContent() {
             email: customMgrEmail.trim(),
             type: "pm_agency",
             assignedAt: new Date().toISOString(),
+            scope: delegationScope,
+            managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
+            managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
           };
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_has_manager", "true");
@@ -1123,20 +1219,37 @@ function CompleteProfileContent() {
   };
 
   // Save Tenant (Supports single tenant or multi-tenant stacking)
-  const handleSaveTenant = async (e: React.FormEvent, addAnother = false) => {
-    e.preventDefault();
+  const handleSaveTenant = async (e?: React.FormEvent, addAnother = false) => {
+    if (e) e.preventDefault();
     if (!tenantForm.occupant_name.trim()) {
-      showToast("Occupant Name is required");
+      showToast("Occupant Name is required", "error");
       return;
     }
     if (!tenantForm.email.trim()) {
-      showToast("Email is required");
+      showToast("Email is required", "error");
       return;
     }
     if (!tenantForm.phone.trim()) {
-      showToast("Phone is required");
+      showToast("Phone is required", "error");
       return;
     }
+
+    const totalF = Math.max(1, Number(propForm.floors_count) || 1);
+    const totalArea = Number(propForm.total_leasable_area_sqft) || 50000;
+    const defaultFloorArea = Math.round(totalArea / totalF);
+
+    const assignedFloors = tenancyMode === "single"
+      ? Array.from({ length: totalF }, (_, i) => i + 1)
+      : (selectedFloorsForCurrentTenant.length > 0 ? selectedFloorsForCurrentTenant : [1]);
+
+    const effectiveArea = Number(customFloorAreaSqft) || (tenancyMode === "single" ? totalArea : assignedFloors.length * defaultFloorArea);
+    const floorLabels = tenancyMode === "single"
+      ? `Entire Building (Floors 1-${totalF})`
+      : assignedFloors.length === 1
+      ? `Floor ${assignedFloors[0]}`
+      : `Floors ${assignedFloors.join(", ")}`;
+
+    const effectiveSpaceUnit = customSpaceUnitName.trim() || floorLabels;
 
     setLastSavedOccupantName(tenantForm.occupant_name.trim());
     setTenantLoading(true);
@@ -1164,6 +1277,11 @@ function CompleteProfileContent() {
             signatory_designation: tenantForm.signatory_designation.trim(),
             industry_type: tenantForm.industry_type,
             cin_number: tenantForm.cin_number.trim().toUpperCase(),
+            assigned_floors: assignedFloors,
+            floor_labels: floorLabels,
+            space_unit: effectiveSpaceUnit,
+            area_sqft: effectiveArea,
+            tenancy_mode: tenancyMode,
           }),
         }),
       });
@@ -1173,7 +1291,7 @@ function CompleteProfileContent() {
 
       // Add to tenants list
       setTenantsList((prev) => [
-        ...prev,
+        ...prev.filter((t) => t.id !== tenantId),
         { id: tenantId, name: occupantName, company: tenantForm.company_name.trim() }
       ]);
 
@@ -1188,6 +1306,27 @@ function CompleteProfileContent() {
         "Commercial Property";
       const ownerTitle = companyName || brandName || "Commercial Property Owner";
       const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(occupantName)}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(targetProp)}&owner=${encodeURIComponent(ownerTitle)}&invite=ten_${Date.now()}`;
+
+      const newTenantItem = {
+        id: tenantId,
+        name: occupantName,
+        company: tenantForm.company_name.trim() || occupantName,
+        email: tenantForm.email.trim(),
+        phone: tenantForm.phone.trim(),
+        assignedFloors: [...assignedFloors],
+        floorLabels: floorLabels,
+        areaSqft: effectiveArea,
+        spaceUnit: effectiveSpaceUnit,
+        gstin: tenantForm.gstin.trim(),
+        pan: tenantForm.pan.trim(),
+        inviteLink: inviteUrl,
+        contractSaved: false,
+      };
+
+      setEnrolledTenants((prev) => [
+        ...prev.filter((t) => t.id !== tenantId),
+        newTenantItem,
+      ]);
 
       setLatestTenantInvite({
         name: occupantName,
@@ -1208,10 +1347,26 @@ function CompleteProfileContent() {
         occupant_id: tenantId,
         occupant_name: occupantName,
         property_id: selectedPropertyForTenant || registeredProperties[0]?.id || "",
+        space_unit: effectiveSpaceUnit,
+        area_sqft: String(effectiveArea),
+        monthly_rent: prev.monthly_rent || String(Math.round(effectiveArea * (Number(prev.rate_per_sqft) || 85))),
         billing_entity: prev.billing_entity || propForm.spv_name || companyName || "",
       }));
 
       if (addAnother) {
+        // Calculate remaining unassigned floors
+        const existingFloorsSet = new Set([
+          ...enrolledTenants.flatMap((t) => t.assignedFloors),
+          ...assignedFloors,
+        ]);
+        const nextAvailFloor = Array.from({ length: totalF }, (_, i) => i + 1).find(
+          (f) => !existingFloorsSet.has(f)
+        ) || (totalF > 1 ? 2 : 1);
+
+        setSelectedFloorsForCurrentTenant([nextAvailFloor]);
+        setCustomSpaceUnitName(`Floor ${nextAvailFloor}`);
+        setCustomFloorAreaSqft(String(defaultFloorArea));
+
         setTenantForm({
           occupant_name: "",
           company_name: "",
@@ -1227,18 +1382,49 @@ function CompleteProfileContent() {
           signatory_name: "",
           signatory_designation: "",
         });
-        showToast(`✓ Occupant '${occupantName}' enrolled! You can now add your next tenant.`);
+        showToast(`✓ Occupant '${occupantName}' enrolled for ${floorLabels}! Form ready to add your next tenant.`);
       } else {
         markStepDone("tenant");
         showToast(`✓ Occupant '${occupantName}' enrolled! Tenant Portal invite generated.`);
-        // Advance directly to Creating Contract
         setActiveStep("contract");
       }
     } catch (err: any) {
-      showToast(`Error: ${err.message}`);
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       setTenantLoading(false);
     }
+  };
+
+  const handleAddNewTenantClick = () => {
+    const totalF = Math.max(1, Number(propForm.floors_count) || 1);
+    const totalArea = Number(propForm.total_leasable_area_sqft) || 50000;
+    const defaultFloorArea = Math.round(totalArea / totalF);
+
+    const existingFloorsSet = new Set(enrolledTenants.flatMap((t) => t.assignedFloors));
+    const nextAvailFloor = Array.from({ length: totalF }, (_, i) => i + 1).find(
+      (f) => !existingFloorsSet.has(f)
+    ) || (totalF > 1 ? 2 : 1);
+
+    setSelectedFloorsForCurrentTenant([nextAvailFloor]);
+    setCustomSpaceUnitName(`Floor ${nextAvailFloor}`);
+    setCustomFloorAreaSqft(String(defaultFloorArea));
+
+    setTenantForm({
+      occupant_name: "",
+      company_name: "",
+      industry_type: "IT / Technology",
+      email: "",
+      phone: "",
+      alt_contact_name: "",
+      alt_contact_phone: "",
+      gstin: "",
+      pan: "",
+      cin_number: "",
+      billing_address: propForm.address || "",
+      signatory_name: "",
+      signatory_designation: "",
+    });
+    showToast(`Form ready to add another occupant for Floor ${nextAvailFloor}.`);
   };
 
   // Save Contract (Comprehensive Commercial Terms & Institutional Linking)
@@ -1332,6 +1518,10 @@ function CompleteProfileContent() {
           occupant_id: contractForm.occupant_id,
           property_id: contractForm.property_id || selectedPropertyForTenant,
           contract_code: `LEAS-${Date.now().toString().slice(-5)}`,
+          space_unit: contractForm.space_unit,
+          space_name: contractForm.space_unit,
+          floor_name: contractForm.space_unit.includes("Floor") ? contractForm.space_unit : `Floor ${contractForm.space_unit}`,
+          area_sqft: Number(contractForm.area_sqft) || 1000,
           start_date: contractForm.start_date,
           end_date: contractForm.end_date,
           contract_type: "lease",
@@ -1386,9 +1576,29 @@ function CompleteProfileContent() {
         if (contractForm.occupant_name) localStorage.setItem("officex_tenant_name", contractForm.occupant_name);
       }
 
-      markStepDone("contract");
-      showToast("✓ Commercial Lease Contract registered with full commercial breakdown!");
-      setActiveStep("documents");
+      setEnrolledTenants((prev) =>
+        prev.map((t) => (t.id === contractForm.occupant_id ? { ...t, contractSaved: true } : t))
+      );
+
+      const remainingTenants = enrolledTenants.filter(
+        (t) => t.id !== contractForm.occupant_id && !t.contractSaved
+      );
+      if (remainingTenants.length > 0) {
+        showToast(`✓ Contract for '${contractForm.occupant_name}' registered! Next: configure contract for '${remainingTenants[0].name}'.`);
+        const nxt = remainingTenants[0];
+        setContractForm((prev) => ({
+          ...prev,
+          occupant_id: nxt.id,
+          occupant_name: nxt.name,
+          space_unit: nxt.spaceUnit || nxt.floorLabels,
+          area_sqft: String(nxt.areaSqft || 5000),
+          monthly_rent: String(Math.round((nxt.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
+        }));
+      } else {
+        markStepDone("contract");
+        showToast("✓ Commercial Lease Contract registered with full commercial breakdown!");
+        setActiveStep("documents");
+      }
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
@@ -2392,31 +2602,81 @@ function CompleteProfileContent() {
                 </p>
               </div>
 
-              {/* Enrolled Tenants Counter & Multi-Tenant Stacking Indicator */}
-              {tenantsList.length > 0 && (
-                <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <div className="w-7 h-7 rounded-lg bg-[#0D7B6C] text-white flex items-center justify-center font-bold text-xs">
-                      {tenantsList.length}
+              {/* Enrolled Occupants Master List & "+ Add Another Tenant" Banner */}
+              {enrolledTenants.length > 0 && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/40 to-white border border-teal-200/90 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center font-black text-sm shadow-2xs">
+                        {enrolledTenants.length}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-900">
+                            Enrolled Occupants in this Building ({enrolledTenants.length})
+                          </span>
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
+                            Multi-Tenant Demised
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                          {enrolledTenants.reduce((sum, t) => sum + (t.assignedFloors?.length || 1), 0)} of {Math.max(1, Number(propForm.floors_count) || 1)} floors allocated. You can add more tenants or proceed to contracts.
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-xs font-black text-slate-900 block">
-                        Enrolled Occupants for this Property ({tenantsList.length})
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        Multi-tenant building allocation active. You can add more tenants or proceed to contracts.
-                      </span>
-                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddNewTenantClick}
+                      className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 active:scale-95"
+                    >
+                      <Plus size={14} />
+                      <span>+ Add Another Tenant</span>
+                    </button>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {tenantsList.map((t, idx) => (
-                      <span
+
+                  {/* Enrolled Tenants Cards Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                    {enrolledTenants.map((t, idx) => (
+                      <div
                         key={t.id}
-                        className="px-2.5 py-1 rounded-lg bg-white border border-teal-200 text-teal-900 text-xs font-bold shadow-2xs flex items-center gap-1"
+                        className="p-3 rounded-xl bg-white border border-teal-200/90 shadow-2xs space-y-2 relative group hover:border-teal-400 transition"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        #{idx + 1} {t.name}
-                      </span>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-black text-slate-900 truncate flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            #{idx + 1} {t.name}
+                          </span>
+                          <span className="text-[10px] font-bold text-teal-900 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded shrink-0">
+                            {t.floorLabels || "Demised"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span className="truncate">{t.company && t.company !== t.name ? t.company : t.email || "Corporate Occupier"}</span>
+                          <span className="font-mono font-bold text-slate-700 shrink-0">{Number(t.areaSqft || 0).toLocaleString()} sq.ft</span>
+                        </div>
+
+                        {t.inviteLink && (
+                          <div className="pt-1.5 flex items-center justify-between border-t border-slate-100 text-[10px]">
+                            <span className="text-emerald-700 font-bold flex items-center gap-1">
+                              <CheckCircle2 size={11} /> Portal Active
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                  navigator.clipboard.writeText(t.inviteLink!);
+                                  showToast(`✓ Portal invite link copied for ${t.name}!`);
+                                }
+                              }}
+                              className="font-bold text-[#0D7B6C] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Copy size={10} /> Copy Link
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -2478,7 +2738,18 @@ function CompleteProfileContent() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSaveTenant} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!tenantForm.occupant_name.trim() && enrolledTenants.length > 0) {
+                      markStepDone("tenant");
+                      setActiveStep("contract");
+                    } else {
+                      handleSaveTenant(e, false);
+                    }
+                  }}
+                  className="space-y-5"
+                >
                   {/* Property Selector */}
                   <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
@@ -2511,6 +2782,242 @@ function CompleteProfileContent() {
                       ))}
                     </select>
                   </div>
+
+                  {/* ──── BUILDING DEMISING & FLOOR TENANCY CONFIGURATION ──── */}
+                  {(() => {
+                    const activeProp = registeredProperties.find(
+                      (p) => p.id === selectedPropertyForTenant || p.property_name === selectedPropertyForTenant
+                    );
+                    const currentFloorsCount = Math.max(
+                      1,
+                      Number(propForm.floors_count) || Number(activeProp?.floors_count) || 1
+                    );
+                    const currentTotalArea = Number(propForm.total_leasable_area_sqft) || Number(activeProp?.total_leasable_area_sqft) || 50000;
+                    const currentAreaPerFloor = Math.round(currentTotalArea / currentFloorsCount);
+
+                    return (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                          <div>
+                            <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                              <Building2 size={16} className="text-[#0D7B6C]" />
+                              Building Demising &amp; Floor Tenancy Configuration
+                            </span>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                              You entered <strong className="text-slate-800 font-bold">{currentFloorsCount} floor{currentFloorsCount > 1 ? "s" : ""}</strong> ({currentTotalArea.toLocaleString()} sq.ft total area) for {propForm.property_name || "this asset"}. Choose whether all floors have the same tenant or different tenants:
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-teal-800 bg-teal-100/80 px-2.5 py-1 rounded-md border border-teal-200 shrink-0 self-start sm:self-auto">
+                            ~{currentAreaPerFloor.toLocaleString()} sq.ft / floor
+                          </span>
+                        </div>
+
+                        {/* Mode Choice Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Option A: Single Tenant (Whole Building) */}
+                          <div
+                            onClick={() => {
+                              setTenancyMode("single");
+                              const allF = Array.from({ length: currentFloorsCount }, (_, i) => i + 1);
+                              setSelectedFloorsForCurrentTenant(allF);
+                              setCustomSpaceUnitName(`Entire Building (Floors 1-${currentFloorsCount})`);
+                              setCustomFloorAreaSqft(String(currentTotalArea));
+                            }}
+                            className={`p-4 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                              tenancyMode === "single"
+                                ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
+                                : "border-slate-200 bg-white/70 hover:bg-white"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="tenancyModeRadio"
+                              checked={tenancyMode === "single"}
+                              onChange={() => {}}
+                              className="mt-0.5 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900">
+                                  Same Tenant for All Floors
+                                </span>
+                                <span className="text-[9px] font-bold bg-teal-100 text-teal-800 px-1.5 py-0.2 rounded">
+                                  Whole Building
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 font-medium block mt-1 leading-snug">
+                                One enterprise occupant leases all {currentFloorsCount} floors ({currentTotalArea.toLocaleString()} sq.ft). Single unified commercial lease.
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Option B: Multi-Tenant Demising */}
+                          <div
+                            onClick={() => {
+                              setTenancyMode("multi");
+                              if (selectedFloorsForCurrentTenant.length === currentFloorsCount && currentFloorsCount > 1) {
+                                setSelectedFloorsForCurrentTenant([1]);
+                                setCustomSpaceUnitName("Floor 1");
+                                setCustomFloorAreaSqft(String(currentAreaPerFloor));
+                              }
+                            }}
+                            className={`p-4 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                              tenancyMode === "multi"
+                                ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
+                                : "border-slate-200 bg-white/70 hover:bg-white"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="tenancyModeRadio"
+                              checked={tenancyMode === "multi"}
+                              onChange={() => {}}
+                              className="mt-0.5 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900">
+                                  Different Tenants for Different Floors
+                                </span>
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">
+                                  Multi-Tenant Demised
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 font-medium block mt-1 leading-snug">
+                                Different occupants lease individual floors or suites. Each tenant receives a distinct lease contract and independent billing.
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive Building Floor Stacking & Allocation Plan */}
+                        {tenancyMode === "multi" && (
+                          <div className="pt-3 border-t border-slate-200/80 space-y-3 animate-in fade-in">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                                <Layers size={13} className="text-[#0D7B6C]" />
+                                Building Floor Allocation &amp; Stacking Plan:
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium">
+                                Click any floor below to allocate it to the tenant being enrolled:
+                              </span>
+                            </div>
+
+                            {/* Vertical Stacking Representation */}
+                            <div className="space-y-1.5">
+                              {Array.from({ length: currentFloorsCount }, (_, i) => currentFloorsCount - i).map((fl) => {
+                                const leasingTenant = enrolledTenants.find((t) => t.assignedFloors?.includes(fl));
+                                const isSelectedForCurrent = selectedFloorsForCurrentTenant.includes(fl);
+
+                                return (
+                                  <div
+                                    key={fl}
+                                    onClick={() => {
+                                      if (leasingTenant) {
+                                        showToast(`Floor ${fl} is already leased to ${leasingTenant.name}.`, "info");
+                                        return;
+                                      }
+                                      if (isSelectedForCurrent) {
+                                        if (selectedFloorsForCurrentTenant.length > 1) {
+                                          const next = selectedFloorsForCurrentTenant.filter((f) => f !== fl);
+                                          setSelectedFloorsForCurrentTenant(next);
+                                          setCustomSpaceUnitName(next.length === 1 ? `Floor ${next[0]}` : `Floors ${next.join(", ")}`);
+                                          setCustomFloorAreaSqft(String(next.length * currentAreaPerFloor));
+                                        } else {
+                                          showToast("At least one floor must remain selected for this occupant.");
+                                        }
+                                      } else {
+                                        const next = [...selectedFloorsForCurrentTenant, fl].sort((a, b) => a - b);
+                                        setSelectedFloorsForCurrentTenant(next);
+                                        setCustomSpaceUnitName(next.length === 1 ? `Floor ${next[0]}` : `Floors ${next.join(", ")}`);
+                                        setCustomFloorAreaSqft(String(next.length * currentAreaPerFloor));
+                                      }
+                                    }}
+                                    className={`p-3 rounded-xl border transition flex items-center justify-between text-xs cursor-pointer ${
+                                      leasingTenant
+                                        ? "bg-slate-100 border-slate-300 opacity-90 cursor-not-allowed"
+                                        : isSelectedForCurrent
+                                        ? "bg-teal-50 border-[#0D7B6C] ring-2 ring-teal-400/40 shadow-xs"
+                                        : "bg-white border-slate-200 hover:border-teal-300"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5">
+                                      <div
+                                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                                          leasingTenant
+                                            ? "bg-slate-300 text-slate-700"
+                                            : isSelectedForCurrent
+                                            ? "bg-[#0D7B6C] text-white"
+                                            : "bg-slate-100 text-slate-600"
+                                        }`}
+                                      >
+                                        F{fl}
+                                      </div>
+                                      <div>
+                                        <span className="font-extrabold text-slate-900 block">
+                                          Floor {fl} {fl === currentFloorsCount && "• Top Floor"} {fl === 1 && "• Ground Level"}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-medium">
+                                          Baseline area: ~{currentAreaPerFloor.toLocaleString()} sq.ft
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      {leasingTenant ? (
+                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                                          <Check size={12} className="text-emerald-700" />
+                                          <span>Occupied by {leasingTenant.name}</span>
+                                        </span>
+                                      ) : isSelectedForCurrent ? (
+                                        <span className="px-2.5 py-1 rounded-lg bg-[#0D7B6C] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                                          <Check size={12} />
+                                          <span>Allocated to Current Tenant</span>
+                                        </span>
+                                      ) : (
+                                        <span className="px-2.5 py-1 rounded-lg bg-white text-slate-600 text-xs font-medium border border-slate-300 hover:border-teal-400">
+                                          + Click to Assign
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Demised Space and Area Controls for the current tenant */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                              <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                  Demised Space / Unit Label *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={customSpaceUnitName}
+                                  onChange={(e) => setCustomSpaceUnitName(e.target.value)}
+                                  placeholder={selectedFloorsForCurrentTenant.length === 1 ? `Floor ${selectedFloorsForCurrentTenant[0]}` : `Floors ${selectedFloorsForCurrentTenant.join(", ")}`}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                  Occupied Leasable Area (Sq.Ft) *
+                                </label>
+                                <input
+                                  type="number"
+                                  value={customFloorAreaSqft}
+                                  onChange={(e) => setCustomFloorAreaSqft(e.target.value)}
+                                  placeholder={String(selectedFloorsForCurrentTenant.length * currentAreaPerFloor)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* 1. Occupant Name (required) */}
@@ -2749,18 +3256,23 @@ function CompleteProfileContent() {
                         type="button"
                         onClick={(e) => handleSaveTenant(e, true)}
                         disabled={tenantLoading}
-                        className="px-4 py-2.5 rounded-xl border border-[#0D7B6C] text-[#0D7B6C] hover:bg-teal-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        className="px-4 py-2.5 rounded-xl border-2 border-[#0D7B6C] text-[#0D7B6C] hover:bg-teal-50 text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                       >
-                        <Plus size={14} />
+                        <Plus size={15} />
                         <span>Save &amp; Add Another Tenant</span>
                       </button>
 
                       <button
                         type="submit"
                         disabled={tenantLoading}
-                        className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
-                        <span>Save Tenant &amp; Create Contract →</span>
+                        <span>
+                          {enrolledTenants.length > 0 && !tenantForm.occupant_name.trim()
+                            ? "Proceed to Step 3: Contracts →"
+                            : "Save Tenant & Create Contract →"}
+                        </span>
+                        <ArrowRight size={14} />
                       </button>
                     </div>
                   </div>
@@ -2935,6 +3447,54 @@ function CompleteProfileContent() {
                 </div>
               )}
 
+              {/* Multi-Tenant Contract Switcher Bar */}
+              {(enrolledTenants.length > 1 || tenantsList.length > 1) && (
+                <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <Users size={14} className="text-[#0D7B6C]" />
+                      Multi-Tenant Building: Select Occupant to Configure Contract:
+                    </span>
+                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">
+                      {enrolledTenants.filter((t) => t.contractSaved).length} of {Math.max(enrolledTenants.length, tenantsList.length)} Contracts Registered
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {(enrolledTenants.length > 0 ? enrolledTenants : tenantsList.map((t) => ({ ...t, floorLabels: "Demised Unit", spaceUnit: "Suite 101", areaSqft: 5000, contractSaved: false }))).map((t: any) => {
+                      const isCurrent = contractForm.occupant_id === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            clearFieldHighlight("occupant_id");
+                            setContractForm((prev) => ({
+                              ...prev,
+                              occupant_id: t.id,
+                              occupant_name: t.name,
+                              space_unit: t.spaceUnit || t.floorLabels || "Suite 101",
+                              area_sqft: String(t.areaSqft || 5000),
+                              monthly_rent: String(Math.round((t.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
+                            }));
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            isCurrent
+                              ? "bg-[#0D7B6C] text-white shadow-2xs"
+                              : "bg-white border border-teal-200 text-teal-900 hover:bg-teal-100/50"
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${t.contractSaved ? "bg-emerald-400" : isCurrent ? "bg-white" : "bg-slate-300"}`} />
+                          <span>{t.name}</span>
+                          <span className="text-[10px] opacity-80">({t.floorLabels || "Demised Unit"})</span>
+                          {t.contractSaved && <Check size={12} className="text-emerald-300 ml-0.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSaveContract} className="space-y-6">
                 {/* ──── SECTION 1: HIERARCHY & SPACE MAPPING ──── */}
                 <div className="space-y-3">
@@ -2962,11 +3522,15 @@ function CompleteProfileContent() {
                         onFocus={() => clearFieldHighlight("occupant_id")}
                         onChange={(e) => {
                           clearFieldHighlight("occupant_id");
-                          const sel = tenantsList.find((t) => t.id === e.target.value);
+                          const selId = e.target.value;
+                          const sel = tenantsList.find((t) => t.id === selId);
+                          const matchedEnrolled = enrolledTenants.find((t) => t.id === selId);
                           setContractForm({
                             ...contractForm,
-                            occupant_id: e.target.value,
+                            occupant_id: selId,
                             occupant_name: sel?.name || "",
+                            space_unit: matchedEnrolled?.spaceUnit || matchedEnrolled?.floorLabels || contractForm.space_unit,
+                            area_sqft: matchedEnrolled ? String(matchedEnrolled.areaSqft) : contractForm.area_sqft,
                           });
                         }}
                         className={getHighlightClass(
@@ -4358,6 +4922,182 @@ function CompleteProfileContent() {
                     </div>
                   )}
 
+                  {/* Management Delegation Scope: Whole Property vs Specific Tenants / Floors */}
+                  <div className="pt-3 border-t border-slate-200/80 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div>
+                        <span className="text-xs font-black text-slate-900 block flex items-center gap-1.5">
+                          <Building2 size={14} className="text-[#0D7B6C]" />
+                          Management Authority Scope *
+                        </span>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          Choose whether {managerData.name ? <strong>{managerData.name}</strong> : "this managing firm"} manages the whole property or only specific tenants/floors:
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded shrink-0">
+                        PM Delegation Scope
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Option 1: Whole Property & All Tenants */}
+                      <div
+                        onClick={() => setDelegationScope("whole_property")}
+                        className={`p-3.5 rounded-xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                          delegationScope === "whole_property"
+                            ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
+                            : "border-slate-200 bg-white/70 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delegationScopeRadio"
+                          checked={delegationScope === "whole_property"}
+                          onChange={() => {}}
+                          className="mt-0.5 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-900">
+                              Whole Property &amp; All Tenants
+                            </span>
+                            <span className="text-[9px] font-bold bg-teal-100 text-teal-800 px-1.5 py-0.2 rounded">
+                              Full Building
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-medium block mt-1 leading-snug">
+                            Firm oversees all {Math.max(1, Number(propForm.floors_count) || 1)} floors, common areas, and all active &amp; future tenant leases in {propForm.property_name || "this asset"}.
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Option 2: Specific Tenants & Floors Only */}
+                      <div
+                        onClick={() => {
+                          setDelegationScope("specific_tenants");
+                          if (delegatedTenantIds.length === 0 && (enrolledTenants.length > 0 || tenantsList.length > 0)) {
+                            const firstId = enrolledTenants[0]?.id || tenantsList[0]?.id;
+                            if (firstId) setDelegatedTenantIds([firstId]);
+                          }
+                          if (delegatedFloors.length === 0) {
+                            setDelegatedFloors([1]);
+                          }
+                        }}
+                        className={`p-3.5 rounded-xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                          delegationScope === "specific_tenants"
+                            ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
+                            : "border-slate-200 bg-white/70 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delegationScopeRadio"
+                          checked={delegationScope === "specific_tenants"}
+                          onChange={() => {}}
+                          className="mt-0.5 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-900">
+                              Specific Tenants &amp; Floors Only
+                            </span>
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">
+                              Designated Scope
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-medium block mt-1 leading-snug">
+                            Firm manages only selected commercial occupants or designated demised floors.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Specific selection checklists */}
+                    {delegationScope === "specific_tenants" && (
+                      <div className="p-3.5 rounded-xl bg-white border border-teal-200/90 space-y-3 animate-in fade-in">
+                        {/* 1. Tenant Checkboxes */}
+                        <div>
+                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block mb-1.5">
+                            1. Select Designated Occupants Managed by this Firm:
+                          </label>
+                          {enrolledTenants.length === 0 && tenantsList.length === 0 ? (
+                            <p className="text-[11px] text-amber-800 font-medium bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                              No occupants registered yet. Complete Step 2 to register tenants, or this manager will manage all future tenants.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {(enrolledTenants.length > 0 ? enrolledTenants : tenantsList.map((t) => ({ ...t, floorLabels: "Demised Unit", areaSqft: 5000 }))).map((t: any) => {
+                                const isChecked = delegatedTenantIds.includes(t.id);
+                                return (
+                                  <label
+                                    key={t.id}
+                                    className={`p-2.5 rounded-lg border flex items-center gap-2 cursor-pointer transition ${
+                                      isChecked
+                                        ? "bg-teal-50/70 border-[#0D7B6C] text-slate-900"
+                                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setDelegatedTenantIds((prev) => [...prev, t.id]);
+                                        } else {
+                                          setDelegatedTenantIds((prev) => prev.filter((id) => id !== t.id));
+                                        }
+                                      }}
+                                      className="w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                    />
+                                    <div className="text-xs">
+                                      <span className="font-extrabold block text-slate-900">{t.name}</span>
+                                      <span className="text-[10px] text-slate-500 font-medium">
+                                        {t.floorLabels || t.company || "Commercial Occupant"} {t.areaSqft ? `(${Number(t.areaSqft).toLocaleString()} sq.ft)` : ""}
+                                      </span>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Floor Checkboxes */}
+                        <div className="pt-2 border-t border-slate-100">
+                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block mb-1.5">
+                            2. Select Designated Floors Managed by this Firm:
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.from({ length: Math.max(1, Number(propForm.floors_count) || 1) }, (_, i) => i + 1).map((fl) => {
+                              const isChecked = delegatedFloors.includes(fl);
+                              return (
+                                <button
+                                  key={fl}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isChecked) {
+                                      setDelegatedFloors((prev) => prev.filter((f) => f !== fl));
+                                    } else {
+                                      setDelegatedFloors((prev) => [...prev, fl]);
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                    isChecked
+                                      ? "bg-[#0D7B6C] text-white shadow-2xs"
+                                      : "bg-slate-100 border border-slate-200 text-slate-700 hover:border-slate-300"
+                                  }`}
+                                >
+                                  <span>Floor {fl}</span>
+                                  {isChecked && <Check size={12} />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Rights Checklist */}
                   <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
                     <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
@@ -4487,6 +5227,36 @@ function CompleteProfileContent() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (assignChoice === "delegated" && managerData.email) {
+                      const assignedObj = {
+                        name: managerData.name.trim() || "Property Manager",
+                        email: managerData.email.trim(),
+                        type: managerData.entityType || "pm_agency",
+                        role: managerData.role || "property_manager",
+                        rights: managerRights,
+                        assignedAt: new Date().toISOString(),
+                        scope: delegationScope,
+                        managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
+                        managedTenantNames: delegationScope === "specific_tenants" ? (enrolledTenants.length > 0 ? enrolledTenants : tenantsList).filter((t: any) => delegatedTenantIds.includes(t.id)).map((t: any) => t.name) : "all",
+                        managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
+                      };
+                      if (typeof window !== "undefined") {
+                        try {
+                          const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+                          const propKey = propForm.property_name.trim() || registeredProperties[0]?.property_name || "Portfolio";
+                          currentAssigns[propKey] = assignedObj;
+                          if (registeredProperties[0]?.id) currentAssigns[registeredProperties[0].id] = assignedObj;
+                          localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
+                          setPropertyAssignments(currentAssigns);
+                          localStorage.setItem("officex_has_manager", "true");
+                          localStorage.setItem("officex_manager_name", assignedObj.name);
+                          localStorage.setItem("officex_manager_email", assignedObj.email);
+                          localStorage.setItem("officex_manager_status", "activated");
+                        } catch (e) {
+                          console.error("Failed saving delegation on continue:", e);
+                        }
+                      }
+                    }
                     markStepDone("delegation");
                     setActiveStep("banking");
                     showToast("✓ Step 5 completed! Please enter compulsory Bank Details for rent collection.");

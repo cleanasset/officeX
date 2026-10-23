@@ -338,7 +338,7 @@ export default function WorkspaceHubPage() {
                   </div>
                 ) : (
                   <div className="text-[11px] text-slate-600 font-medium">
-                    Plans start from ₹50/month · Instant coupon activation supported
+                    Plans start from ₹1/sq.ft · Instant coupon activation supported
                   </div>
                 )}
               </div>

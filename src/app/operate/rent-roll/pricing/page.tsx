@@ -173,7 +173,7 @@ export default function RentRollPricingPage() {
             <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Standalone Tower</span>
               <div className="text-2xl font-black text-slate-900 mt-0.5">
-                ₹50<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+                ₹1<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
               </div>
               <span className="text-[11px] font-bold text-teal-700 mt-1">Commercial Starter</span>
             </div>
@@ -184,7 +184,7 @@ export default function RentRollPricingPage() {
               </span>
               <span className="text-[10px] font-black uppercase tracking-wider text-teal-800">Tech Parks &amp; Campuses</span>
               <div className="text-2xl font-black text-[#0D7B6C] mt-0.5">
-                ₹100<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+                ₹2<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
               </div>
               <span className="text-[11px] font-bold text-teal-800 mt-1">Tech Park Campus</span>
             </div>
@@ -192,7 +192,7 @@ export default function RentRollPricingPage() {
             <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Funds &amp; REITs</span>
               <div className="text-2xl font-black text-slate-900 mt-0.5">
-                ₹200<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+                ₹3<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
               </div>
               <span className="text-[11px] font-bold text-slate-700 mt-1">REIT Mega-Portfolio</span>
             </div>
@@ -246,15 +246,15 @@ export default function RentRollPricingPage() {
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
                     <div>Commercial Starter</div>
-                    <div className="text-[11px] font-bold text-teal-700 normal-case">₹50 / mo</div>
+                    <div className="text-[11px] font-bold text-teal-700 normal-case">₹1 / sq.ft</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5 text-[#0D7B6C] bg-teal-50/50">
                     <div>Tech Park Campus</div>
-                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹100 / mo</div>
+                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹2 / sq.ft</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
                     <div>REIT Mega-Portfolio</div>
-                    <div className="text-[11px] font-bold text-slate-800 normal-case">₹200 / mo</div>
+                    <div className="text-[11px] font-bold text-slate-800 normal-case">₹3 / sq.ft</div>
                   </th>
                 </tr>
               </thead>

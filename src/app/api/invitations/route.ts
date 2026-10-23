@@ -20,6 +20,10 @@ export async function POST(req: Request) {
       entityType = "pm_agency",
       rights = {},
       propertyName,
+      scope = "whole_property",
+      managedTenantIds = [],
+      managedTenantNames = [],
+      managedFloors = [],
     } = body;
 
     if (!email || !email.includes("@")) {
@@ -79,6 +83,10 @@ export async function POST(req: Request) {
         },
         rights,
         propertyName: propertyName || "Commercial Portfolio",
+        scope,
+        managedTenantIds,
+        managedTenantNames,
+        managedFloors,
         createdAt: new Date().toISOString(),
       },
     });

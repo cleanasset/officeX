@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const ensured = await ensureTenantOrgRecord(orgId, clientAccountId, auth.userEmail);
     clientAccountId = ensured.clientAccountId;
 
-    // Auto-resolve space_id if property_id was provided without an explicit space_id
+    // Auto-resolve or provision space_id for multi-tenant and multi-floor contracts
     let targetSpaceId = body.space_id;
     if (!targetSpaceId && (body.property_id || body.building_id)) {
       const spaceConditions = [
@@ -53,6 +53,9 @@ export async function POST(req: Request) {
         .select({
           spaceId: space.id,
           buildingId: space.building_id,
+          spaceName: space.space_name,
+          spaceCode: space.space_code,
+          floorName: space.floor_name,
         })
         .from(space)
         .innerJoin(building, eq(space.building_id, building.id))
@@ -61,45 +64,113 @@ export async function POST(req: Request) {
             ...spaceConditions,
             body.property_id ? eq(building.property_id, body.property_id) : sql`1=1`
           )
-        )
-        .limit(1);
+        );
 
-      if (existingSpaces.length > 0) {
-        targetSpaceId = existingSpaces[0].spaceId;
-      } else if (body.property_id) {
-        // Auto-provision building & space under this property
-        const propRows = await db
-          .select()
-          .from(property)
-          .where(eq(property.id, body.property_id))
-          .limit(1);
+      const targetUnitName = (body.space_name || body.space_unit || "").trim();
+      const targetFloorName = (body.floor_name || body.floor || "").trim();
 
-        if (propRows.length > 0) {
-          const p = propRows[0];
-          const [newBld] = await db
-            .insert(building)
-            .values({
-              org_id: orgId,
-              client_account_id: clientAccountId,
-              property_id: p.id,
-              building_name: `${p.property_name} Tower 1`,
-              building_code: `BLD-${p.property_code}-01`,
-              total_area_sqft: p.total_leasable_area_sqft,
-            })
-            .returning();
+      // Check for an existing space that matches requested unit name or is completely vacant
+      let candidateSpaceId: string | null = null;
+      for (const spc of existingSpaces) {
+        const nameMatches = targetUnitName && spc.spaceName.toLowerCase() === targetUnitName.toLowerCase();
+        
+        // Check if this space already has an active overlapping contract
+        const activeContractsOnSpace = await db
+          .select({
+            id: contract.id,
+            start_date: contract.start_date,
+            end_date: contract.end_date,
+            contract_status: contract.contract_status,
+          })
+          .from(contract)
+          .where(
+            and(
+              eq(contract.space_id, spc.spaceId),
+              sql`${contract.contract_status} IN ('active', 'draft', 'future', 'notice_served', 'holding_over')`,
+              sql`${contract.deleted_at} IS NULL`
+            )
+          );
+
+        const hasOverlap = activeContractsOnSpace.some((ac) => {
+          const reqStart = new Date(body.start_date || new Date().toISOString());
+          const reqEnd = new Date(body.end_date || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString());
+          const exStart = new Date(ac.start_date);
+          const exEnd = new Date(ac.end_date);
+          return reqStart <= exEnd && exStart <= reqEnd;
+        });
+
+        if (nameMatches && !hasOverlap) {
+          candidateSpaceId = spc.spaceId;
+          break;
+        } else if (!targetUnitName && !hasOverlap && !candidateSpaceId) {
+          candidateSpaceId = spc.spaceId;
+        }
+      }
+
+      if (candidateSpaceId) {
+        targetSpaceId = candidateSpaceId;
+      } else if (body.property_id || body.building_id) {
+        // Find or provision building for this property
+        let bldId = body.building_id;
+        let propertyCode = "PR";
+        let defaultArea = "5000";
+
+        if (body.property_id) {
+          const propRows = await db
+            .select()
+            .from(property)
+            .where(eq(property.id, body.property_id))
+            .limit(1);
+
+          if (propRows.length > 0) {
+            const p = propRows[0];
+            propertyCode = p.property_code || "PR";
+            defaultArea = String(p.total_leasable_area_sqft || 5000);
+
+            if (!bldId) {
+              const [existingBld] = await db
+                .select({ id: building.id })
+                .from(building)
+                .where(and(eq(building.property_id, p.id), sql`${building.deleted_at} IS NULL`))
+                .limit(1);
+
+              if (existingBld) {
+                bldId = existingBld.id;
+              } else {
+                const [newBld] = await db
+                  .insert(building)
+                  .values({
+                    org_id: orgId,
+                    client_account_id: clientAccountId,
+                    property_id: p.id,
+                    building_name: `${p.property_name} Tower 1`,
+                    building_code: `BLD-${propertyCode}-01`,
+                    total_area_sqft: p.total_leasable_area_sqft,
+                  })
+                  .returning();
+                bldId = newBld.id;
+              }
+            }
+          }
+        }
+
+        if (bldId) {
+          const assignedUnitName = targetUnitName || (targetFloorName ? `${targetFloorName} Suite` : `Suite ${Math.floor(100 + Math.random() * 900)}`);
+          const spaceArea = body.area_sqft ? String(body.area_sqft) : defaultArea;
 
           const [newSpc] = await db
             .insert(space)
             .values({
               org_id: orgId,
               client_account_id: clientAccountId,
-              building_id: newBld.id,
-              space_name: "Suite 101",
-              space_code: `SPC-${p.property_code}-101`,
-              chargeable_area_sqft: p.total_leasable_area_sqft,
+              building_id: bldId,
+              space_name: assignedUnitName,
+              space_code: `SPC-${propertyCode}-${Math.floor(100 + Math.random() * 900)}`,
+              floor_name: targetFloorName || null,
+              chargeable_area_sqft: spaceArea,
               occupancy_status: "occupied",
               is_leasable: true,
-              space_type: "suite",
+              space_type: targetFloorName ? "floor" : "suite",
             })
             .returning();
 

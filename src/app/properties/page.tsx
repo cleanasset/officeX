@@ -371,10 +371,21 @@ export default function PropertiesPortfolioPage() {
                             const pAssigned = assignments[prop.id] || assignments[pName];
                             if (pAssigned?.name) {
                               return (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
-                                  <UserCheck size={12} className="text-teal-600" />
-                                  <span>{pAssigned.name}</span>
-                                </span>
+                                <div className="flex flex-col gap-1 items-start">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+                                    <UserCheck size={12} className="text-teal-600" />
+                                    <span>{pAssigned.name}</span>
+                                  </span>
+                                  {pAssigned.scope === "specific_tenants" ? (
+                                    <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                      Specific Tenants / Floors
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-slate-500">
+                                      Whole Property Lease
+                                    </span>
+                                  )}
+                                </div>
                               );
                             }
                             return (

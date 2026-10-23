@@ -303,7 +303,7 @@ export default function RentRollRegisterPage() {
                       href="/operate/rent-roll/pricing"
                       className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
                     >
-                      <span>Expand Quota (From ₹50/sq.ft)</span>
+                      <span>Expand Quota (From ₹1/sq.ft)</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                     <button
@@ -908,7 +908,7 @@ export default function RentRollRegisterPage() {
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="text-slate-900">Direct Rate Top-ups:</strong> Additional capacity beyond 50 Cr sq.ft can be expanded on demand across commercial tiers (₹50, ₹100, or ₹200 / sq.ft).
+                  <strong className="text-slate-900">Direct Rate Top-ups:</strong> Additional capacity beyond 50 Cr sq.ft can be expanded on demand across commercial tiers (₹1, ₹2, or ₹3 / sq.ft).
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -925,7 +925,7 @@ export default function RentRollRegisterPage() {
                 onClick={() => setShowGracePeriodModal(false)}
                 className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow-xs transition"
               >
-                View Pricing Plans (₹50–₹200/sq.ft)
+                View Pricing Plans (₹1–₹3/sq.ft)
               </Link>
               <button
                 onClick={() => setShowGracePeriodModal(false)}

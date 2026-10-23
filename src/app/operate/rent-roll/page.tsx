@@ -489,7 +489,7 @@ export default function RentRollProductPage() {
             Transparent Pricing Built for Modern Commercial Portfolios
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xl mx-auto mt-2 mb-6 leading-relaxed">
-            From single commercial towers to pan-India REIT portfolios. Tiered rates at ₹50, ₹100, and ₹200 / sq.ft with 100% launch waivers and active 14-day grace period protection.
+            From single commercial towers to pan-India REIT portfolios. Tiered rates at ₹1, ₹2, and ₹3 / sq.ft with 100% launch waivers and active 14-day grace period protection.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link

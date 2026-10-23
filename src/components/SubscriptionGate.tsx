@@ -30,7 +30,7 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
     name: "Commercial Starter",
     badge: "50k Sq.Ft Cap",
     popular: false,
-    price: 50,
+    price: 1,
     period: "/mo",
     scope: "Up to 50,000 sq.ft",
     target: "Standalone Commercial Tower",
@@ -47,7 +47,7 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
     name: "Tech Park Campus",
     badge: "Most Popular",
     popular: true,
-    price: 100,
+    price: 2,
     period: "/mo",
     scope: "Up to 2,50,000 sq.ft",
     target: "Multi-Tower Tech Parks & Campuses",
@@ -64,7 +64,7 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
     name: "REIT Mega-Portfolio",
     badge: "Enterprise Scale",
     popular: false,
-    price: 200,
+    price: 3,
     period: "/mo",
     scope: "Up to 50,00,00,000 sq.ft",
     target: "Institutional Funds & REITs",
@@ -107,7 +107,7 @@ export default function SubscriptionGate({
   const [isRoleDecided, setIsRoleDecided] = useState<boolean>(true);
   const [selectedPersonaKey, setSelectedPersonaKey] = useState<string>("owner");
 
-  // Selected Pricing Plan state (default: "techpark" ₹100, user can pick "starter" ₹50 or "reit-mega" ₹200)
+  // Selected Pricing Plan state (default: "techpark" ₹2, user can pick "starter" ₹1 or "reit-mega" ₹3)
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
   const [customSqft, setCustomSqft] = useState<number>(() => {
     if (typeof window !== "undefined") {

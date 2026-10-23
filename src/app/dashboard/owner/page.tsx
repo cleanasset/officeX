@@ -519,7 +519,7 @@ export default function OwnerDashboardPage() {
             href="/operate/rent-roll/pricing"
             className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 transition shadow-xs text-center"
           >
-            Expand Quota (From ₹50/sq.ft)
+            Expand Quota (From ₹1/sq.ft)
           </Link>
         </div>
       )}

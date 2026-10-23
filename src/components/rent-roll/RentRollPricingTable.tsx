@@ -181,13 +181,13 @@ export default function RentRollPricingTable({
     handleSqftChange(val);
   };
 
-  // Commercial Slabs: ₹50, ₹100, ₹200 per sq.ft with specific tier benefits
+  // Commercial Slabs: ₹1, ₹2, ₹3 per sq.ft with specific tier benefits
   const SLABS = [
     {
       id: "starter",
       name: "Commercial Starter",
       badge: "Standalone Tower",
-      ratePerSqft: 50,
+      ratePerSqft: 1,
       target: "Standalone Commercial Towers & Small Portfolios",
       popular: false,
       ctaText: "Select Starter",
@@ -202,7 +202,7 @@ export default function RentRollPricingTable({
       id: "techpark",
       name: "Tech Park Campus",
       badge: "Most Popular",
-      ratePerSqft: 100,
+      ratePerSqft: 2,
       target: "Multi-Tower Tech Parks & Commercial Campuses",
       popular: true,
       ctaText: "Select Tech Park",
@@ -217,7 +217,7 @@ export default function RentRollPricingTable({
       id: "reit-mega",
       name: "REIT Mega-Portfolio",
       badge: "Enterprise Scale",
-      ratePerSqft: 200,
+      ratePerSqft: 3,
       target: "Institutional Funds, REITs & Mega Portfolios",
       popular: false,
       ctaText: "Select Enterprise",
@@ -498,7 +498,7 @@ export default function RentRollPricingTable({
                   Enter Your Leasable Property Area (Sq.Ft)
                 </h2>
                 <p className="text-xs text-slate-500 font-medium">
-                  Plans are charged fixed at <strong className="text-slate-800">₹50, ₹100, or ₹200 per sq.ft</strong> based on tier capabilities. Choose or type your area below:
+                  Plans are charged fixed at <strong className="text-slate-800">₹1, ₹2, or ₹3 per sq.ft</strong> based on tier capabilities. Choose or type your area below:
                 </p>
               </div>
             </div>
