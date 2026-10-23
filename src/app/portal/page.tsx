@@ -180,13 +180,13 @@ export default function TenantHomePage() {
           receipt: (primaryInvoice?.invoice_number || `INV-${Date.now()}`).slice(0, 40),
           description: `Rent - ${primaryInvoice?.invoice_number || "INV-2026-27-0001"}`,
           prefillName: tenantDisplayName,
-          prefillEmail: occupant?.email || "accounts@mangotower.com",
-          prefillPhone: occupant?.phone || "9876543210",
+          prefillEmail: occupant?.email || "",
+          prefillPhone: occupant?.phone || "",
           notes: {
             invoice_id: targetInvoiceId,
             occupant_id: occupant.id || "",
-            building: "Mango Plus Tower",
-            suite: "Suite 101",
+            building: primaryContract?.property_name || "Commercial Centre",
+            suite: primaryContract?.space_name || "Commercial Unit",
           },
           onSuccess: async (rzpRes) => {
             try {

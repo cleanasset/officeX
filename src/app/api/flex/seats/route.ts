@@ -197,14 +197,25 @@ export async function POST(req: Request) {
       const overageHours = Number(row.meeting_room_overage_hours) || 0;
       const overageAmount = Number(row.meeting_room_overage_amount) || (overageHours * 800);
 
-      // Formulas F-04, F-05, F-06
+      // Formulas F-04, F-05, F-06, F-07
       let billable = occupied;
-      if (basis === "contracted") billable = contracted;
-      else if (basis === "occupied") billable = occupied;
-      else if (basis === "minimum") billable = Math.max(occupied, minimum);
+      if (basis === "contracted") billable = contracted; // F-04
+      else if (basis === "occupied") billable = occupied; // F-05
+      else if (basis === "minimum") billable = Math.max(occupied, minimum); // F-06
+      else if (basis === "hybrid") billable = minimum + Math.max(0, occupied - minimum); // F-07
 
       const seatAmount = billable * rate;
       const totalAmount = seatAmount + overageAmount;
+
+      if (action === "approve") {
+        const allowedCheckerRoles = ["finance", "asset_manager", "owner", "super_admin"];
+        if (!allowedCheckerRoles.includes(auth.role)) {
+          return NextResponse.json(
+            { error: "Access denied: Only Finance users or Asset Managers can approve seat counts." },
+            { status: 403 }
+          );
+        }
+      }
 
       const newStatus =
         action === "approve"

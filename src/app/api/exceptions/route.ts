@@ -9,9 +9,11 @@ import {
   meterReadings,
   seatCounts,
   depositTransactions,
+  rentStep,
+  contractCharge,
 } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, or, isNull } from "drizzle-orm";
+import { eq, and, sql, or, isNull, ne } from "drizzle-orm";
 
 export interface ExceptionItem {
   id: string;
@@ -35,28 +37,38 @@ export async function GET(req: Request) {
     const exceptions: ExceptionItem[] = [];
 
     // -------------------------------------------------------------------------
-    // 1. CONTRACT EXCEPTIONS
+    // 1. CONTRACT & ESCALATION EXCEPTIONS (AL-01, AL-02, AL-03, AL-04, AL-05, AL-13)
     // -------------------------------------------------------------------------
-    // A. Contracts in holding_over status
+
+    // A. Holding Over (AL-05)
     const holdingOverContracts = await db
       .select({
         id: contract.id,
         code: contract.contract_code,
         occupantId: contract.occupant_id,
         occupantName: occupant.occupant_name,
+        expiryDate: contract.end_date,
       })
       .from(contract)
       .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
-      .where(eq(contract.contract_status, "holding_over"));
+      .where(
+        or(
+          eq(contract.contract_status, "holding_over"),
+          and(
+            eq(contract.contract_status, "active"),
+            sql`${contract.end_date} < CURRENT_DATE`
+          )
+        )
+      );
 
     holdingOverContracts.forEach((c) => {
       exceptions.push({
         id: `EX-CON-HOLD-${c.id.slice(0, 8)}`,
         category: "contract",
-        code: "RR-ALR-04",
+        code: "AL-05",
         severity: "critical",
         title: "Occupant Holding Over without Executed Renewal",
-        description: `Contract ${c.code} for ${c.occupantName} has passed expiry without a renewed agreement. Rent is accruing without tenure protection.`,
+        description: `Occupant ${c.occupantName} is holding over at space under contract ${c.code} since ${c.expiryDate || "expiry"}. Rent is accruing without renewed tenure protection.`,
         entity_type: "contract",
         entity_id: c.id,
         entity_name: c.occupantName || c.code,
@@ -67,7 +79,91 @@ export async function GET(req: Request) {
       });
     });
 
-    // B. Active contracts without signed LOI/Agreement flag
+    // B. Escalation Due and Not Applied (AL-04 - Critical, Table 173)
+    const overdueEscalations = await db
+      .select({
+        stepId: rentStep.id,
+        effectiveDate: rentStep.effective_date,
+        escalationType: rentStep.escalation_type,
+        escalationValue: rentStep.escalation_value,
+        rate: rentStep.rate,
+        contractId: contract.id,
+        contractCode: contract.contract_code,
+        occupantName: occupant.occupant_name,
+        component: contractCharge.component,
+      })
+      .from(rentStep)
+      .innerJoin(contractCharge, eq(rentStep.contract_charge_id, contractCharge.id))
+      .innerJoin(contract, eq(contractCharge.contract_id, contract.id))
+      .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
+      .where(
+        and(
+          sql`${rentStep.deleted_at} IS NULL`,
+          ne(rentStep.status, "applied"),
+          sql`${rentStep.effective_date} <= CURRENT_DATE`
+        )
+      );
+
+    overdueEscalations.forEach((e) => {
+      exceptions.push({
+        id: `EX-AL04-${e.stepId.slice(0, 8)}`,
+        category: "contract",
+        code: "AL-04",
+        severity: "critical",
+        title: "Escalation Due & Not Applied (Billing Uses Old Rate)",
+        description: `Escalation for ${e.contractCode} (${e.occupantName}) was due on ${e.effectiveDate} (${e.escalationValue || "5"}% uplift) and is not applied. Invoicing will use outdated rate until applied.`,
+        entity_type: "escalation",
+        entity_id: e.stepId,
+        entity_name: `${e.contractCode} - ${(e.component || "base_rent").toUpperCase()}`,
+        action_label: "Apply Escalation (S-25)",
+        action_href: `/escalations?stepId=${e.stepId}`,
+        created_at: new Date().toISOString(),
+        status: "open",
+      });
+    });
+
+    // C. Escalation Due within 30 days (AL-03 - Action, Table 173)
+    const upcomingDueEscalations = await db
+      .select({
+        stepId: rentStep.id,
+        effectiveDate: rentStep.effective_date,
+        escalationValue: rentStep.escalation_value,
+        contractCode: contract.contract_code,
+        occupantName: occupant.occupant_name,
+        component: contractCharge.component,
+      })
+      .from(rentStep)
+      .innerJoin(contractCharge, eq(rentStep.contract_charge_id, contractCharge.id))
+      .innerJoin(contract, eq(contractCharge.contract_id, contract.id))
+      .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
+      .where(
+        and(
+          sql`${rentStep.deleted_at} IS NULL`,
+          ne(rentStep.status, "applied"),
+          sql`${rentStep.effective_date} > CURRENT_DATE`,
+          sql`${rentStep.effective_date} <= CURRENT_DATE + INTERVAL '30 days'`
+        )
+      );
+
+    upcomingDueEscalations.forEach((e) => {
+      exceptions.push({
+        id: `EX-AL03-${e.stepId.slice(0, 8)}`,
+        category: "contract",
+        code: "AL-03",
+        severity: "warning",
+        title: "Contract Rent Step Escalation Due Soon",
+        description: `${(e.component || "Base rent").toUpperCase()} for ${e.contractCode} rises ${e.escalationValue || "5"}% on ${e.effectiveDate}. Issue 30-day tenant notice (AL-03T) and review calendar.`,
+        entity_type: "escalation",
+        entity_id: e.stepId,
+        entity_name: `${e.contractCode} (${e.occupantName})`,
+        action_label: "Review S-25",
+        action_href: `/escalations?stepId=${e.stepId}`,
+        created_at: new Date().toISOString(),
+        status: "open",
+      });
+    });
+
+    // D. Missing Executed Agreement (AL-13)
     const unsignedContracts = await db
       .select({
         id: contract.id,
@@ -87,7 +183,7 @@ export async function GET(req: Request) {
       exceptions.push({
         id: `EX-CON-DOC-${c.id.slice(0, 8)}`,
         category: "contract",
-        code: "RR-CON-05",
+        code: "AL-13",
         severity: "warning",
         title: "Missing Executed Contract Document",
         description: `Contract ${c.code} (${c.occupantName}) is active in rent roll but formal stamped agreement is unexecuted.`,
@@ -101,10 +197,46 @@ export async function GET(req: Request) {
       });
     });
 
+    // E. Contract Expiry Cadence (AL-01 - Expiring in <= 90 days)
+    const expiringContracts = await db
+      .select({
+        id: contract.id,
+        code: contract.contract_code,
+        occupantName: occupant.occupant_name,
+        expiryDate: contract.end_date,
+      })
+      .from(contract)
+      .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
+      .where(
+        and(
+          eq(contract.contract_status, "active"),
+          sql`${contract.end_date} > CURRENT_DATE`,
+          sql`${contract.end_date} <= CURRENT_DATE + INTERVAL '90 days'`
+        )
+      );
+
+    expiringContracts.forEach((c) => {
+      exceptions.push({
+        id: `EX-AL01-${c.id.slice(0, 8)}`,
+        category: "contract",
+        code: "AL-01",
+        severity: "warning",
+        title: "Contract Expiring Within 90 Days",
+        description: `Lease ${c.code} for ${c.occupantName} reaches tenure expiry on ${c.expiryDate}. Initiate renewal negotiation or exit protocol.`,
+        entity_type: "contract",
+        entity_id: c.id,
+        entity_name: c.occupantName || c.code,
+        action_label: "Open Renewal (S-18)",
+        action_href: `/properties/rent-roll?contractId=${c.id}`,
+        created_at: new Date().toISOString(),
+        status: "open",
+      });
+    });
+
     // -------------------------------------------------------------------------
-    // 2. BILLING EXCEPTIONS
+    // 2. BILLING EXCEPTIONS (AL-14, RULE-46, AL-15)
     // -------------------------------------------------------------------------
-    // A. Unapproved Seat Counts (AL-14)
+    // A. Unapproved Seat Counts (AL-14 - Blocks Billing)
     const unapprovedSeats = await db
       .select()
       .from(seatCounts)
@@ -121,7 +253,7 @@ export async function GET(req: Request) {
         entity_type: "seat_count",
         entity_id: s.id,
         entity_name: `Period ${s.period}`,
-        action_label: "Approve Seats",
+        action_label: "Approve Seats (S-32)",
         action_href: "/operations/seat-counts",
         created_at: new Date().toISOString(),
         status: "open",
@@ -178,7 +310,7 @@ export async function GET(req: Request) {
         entity_type: "meter",
         entity_id: m.id,
         entity_name: m.meter_code,
-        action_label: "Log Reading",
+        action_label: "Log Reading (S-31)",
         action_href: "/operations/meters",
         created_at: new Date().toISOString(),
         status: "open",
@@ -186,9 +318,8 @@ export async function GET(req: Request) {
     });
 
     // -------------------------------------------------------------------------
-    // 3. COLLECTION EXCEPTIONS
+    // 3. COLLECTION EXCEPTIONS (AL-08, AL-09)
     // -------------------------------------------------------------------------
-    // A. Severely Overdue Invoices (> 60 Days, AL-10)
     const overdueInvoices = await db
       .select({
         id: invoice.id,
@@ -213,9 +344,9 @@ export async function GET(req: Request) {
       exceptions.push({
         id: `EX-COL-OVD-${inv.id.slice(0, 8)}`,
         category: "collection",
-        code: "AL-10",
+        code: "AL-08",
         severity: "critical",
-        title: "Arrears Ageing > 30 Days Outstanding",
+        title: "Arrears Ageing > 30 Days Outstanding (Dunning Notice Required)",
         description: `Invoice ${inv.invoiceNumber} for ${inv.occupantName} has outstanding balance of ₹${bal.toLocaleString("en-IN")}, overdue since ${inv.dueDate}.`,
         entity_type: "invoice",
         entity_id: inv.id,
@@ -227,7 +358,7 @@ export async function GET(req: Request) {
       });
     });
 
-    // B. Unallocated Cash Older Than 7 Days (AL-11)
+    // B. Unallocated Cash > 7 Days (AL-09)
     const unallocatedPayments = await db
       .select()
       .from(payment)
@@ -243,7 +374,7 @@ export async function GET(req: Request) {
       exceptions.push({
         id: `EX-COL-UNAL-${p.id.slice(0, 8)}`,
         category: "collection",
-        code: "AL-11",
+        code: "AL-09",
         severity: "warning",
         title: "Unallocated Cash Deposit > 7 Days",
         description: `Payment ${p.payment_code} of ₹${amt.toLocaleString("en-IN")} received on ${p.payment_date} remains unallocated to invoices.`,
@@ -258,7 +389,7 @@ export async function GET(req: Request) {
     });
 
     // -------------------------------------------------------------------------
-    // 4. COMPLIANCE & DEPOSIT EXCEPTIONS (AL-12, AL-13)
+    // 4. COMPLIANCE & DEPOSIT EXCEPTIONS (AL-11, AL-12)
     // -------------------------------------------------------------------------
     const bgTransactions = await db
       .select()
@@ -274,7 +405,7 @@ export async function GET(req: Request) {
       exceptions.push({
         id: `EX-CMP-BG-${bg.id.slice(0, 8)}`,
         category: "compliance",
-        code: "AL-13",
+        code: "AL-11",
         severity: "critical",
         title: "Bank Guarantee (BG) Expiring Within 30 Days",
         description: `Bank Guarantee ${bg.bgNumber || bg.instrumentReference || "BG-REF"} of ₹${parseFloat(bg.amount || "0").toLocaleString("en-IN")} expires on ${bg.validityDate}. Invoke notice or renewal required.`,
@@ -301,7 +432,6 @@ export async function GET(req: Request) {
     const activeWarningExceptions = exceptions.filter((e) => e.severity === "warning").length;
     const totalExceptionCount = exceptions.length;
 
-    // Weighted clean records
     let k23Score = 100;
     if (actualTotalRecords > 0) {
       const passedRecords = Math.max(0, actualTotalRecords - (activeCriticalExceptions * 1.5 + activeWarningExceptions));

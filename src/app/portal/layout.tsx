@@ -102,6 +102,7 @@ export default function TenantPortalLayout({
       badgeColor: "bg-red-500 text-white"
     },
     { href: "/portal/payments", label: "Payments & Ledger", icon: CreditCard, badge: null },
+    { href: "/portal/disputes", label: "Disputes & Support", icon: LifeBuoy, badge: null },
     { href: "/portal/contract", label: "My Lease Contract", icon: FileText, badge: "Active", badgeColor: "bg-emerald-500/20 text-emerald-400" },
     { href: "/portal/documents", label: "Documents & NOC", icon: FolderLock, badge: null },
     { href: "/portal/profile", label: "Profile & Contacts", icon: User, badge: null },
@@ -273,13 +274,15 @@ export default function TenantPortalLayout({
             </Link>
 
             {/* Context Breadcrumb / Unit */}
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
-                Asset: {primaryContract?.property_name || "mango plus tower"}
-              </span>
-              <span>•</span>
-              <span className="text-slate-600 font-bold">Demarcated Suite 101</span>
-            </div>
+            {primaryContract && (
+              <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
+                  Asset: {primaryContract.property_name || "Commercial Centre"}
+                </span>
+                <span>•</span>
+                <span className="text-slate-600 font-bold">{primaryContract.space_name || primaryContract.space_code || "Unit Demarcated"}</span>
+              </div>
+            )}
           </div>
 
           {/* Right Header Actions */}

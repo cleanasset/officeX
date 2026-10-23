@@ -59,12 +59,12 @@ export async function POST(
       to: recipientEmail,
       tenantName: tenantName,
       invoiceNumber: inv.invoice_number,
-      propertyName: body.property_name || "mango plus tower",
-      spaceName: body.space_name || "Suite 101",
+      propertyName: body.property_name || "Commercial Centre",
+      spaceName: body.space_name || "Commercial Space",
       grossTotal: inv.gross_total,
       dueDate: dueDateStr,
       invoiceDate: invoiceDateStr,
-      brandName: body.brand_name || "Mango Groups Ltd",
+      brandName: body.brand_name || "OfficeX Asset Management",
       portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
     });
 

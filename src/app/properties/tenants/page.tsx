@@ -71,9 +71,9 @@ export default function TenantDirectoryPage() {
 
   const getTenantSharableLink = (t: any) => {
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
-    const prop = t.property_name || "mango plus tower";
-    const name = t.tenant_name || "Commercial Tenant";
-    const email = t.email || "tenant@officex.pro";
+    const prop = t.property_name || "Commercial Centre";
+    const name = t.tenant_name || "Tenant";
+    const email = t.email || "";
     return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&invite=t_${Date.now()}`;
   };
 
@@ -333,22 +333,22 @@ export default function TenantDirectoryPage() {
                               (View Lease Details)
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400">{t.email || "utkarsh@example.com"}</div>
+                          <div className="text-[10px] text-slate-400">{t.email || "—"}</div>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 font-bold text-slate-800">
                             <Building2 size={13} className="text-teal-600 shrink-0" />
-                            <span>{t.property_name || "mango plus tower"}</span>
+                            <span>{t.property_name || "Commercial Centre"}</span>
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-700 font-semibold">
                           {t.trade_name || "—"}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                          {t.pan || "HSH578785D"}
+                          {t.pan || "—"}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 font-medium">
-                          {t.unit_number || "Suite 101"}
+                          {t.unit_number || "—"}
                         </td>
                         <td className="py-3.5 px-4">
                           <span
@@ -422,7 +422,7 @@ export default function TenantDirectoryPage() {
                     </h2>
                     <p className="text-xs text-slate-500 flex items-center gap-1">
                       <Building2 size={12} className="text-slate-400" />
-                      {selectedTenantDetails.property_name || "mango plus tower"} · Unit: {selectedTenantDetails.unit_number || "Suite 101"}
+                      {selectedTenantDetails.property_name || "Commercial Centre"} · Unit: {selectedTenantDetails.unit_number || "—"}
                     </p>
                   </div>
                 </div>
@@ -478,33 +478,37 @@ export default function TenantDirectoryPage() {
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold">Building Name</span>
                     <strong className="text-slate-900 font-bold block mt-0.5">
-                      {selectedTenantDetails.property_name || "mango plus tower"}
+                      {selectedTenantDetails.property_name || "Commercial Centre"}
                     </strong>
-                    <span className="text-[10px] text-slate-500">Ahmedabad, Gujarat</span>
+                    <span className="text-[10px] text-slate-500">Commercial Portfolio</span>
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold">Demarcated Space</span>
                     <strong className="text-slate-900 font-bold block mt-0.5">
-                      {selectedTenantDetails.unit_number || "Suite 101"}
+                      {selectedTenantDetails.unit_number || "—"}
                     </strong>
-                    <span className="text-[10px] text-teal-700 font-mono">SPC-MTOWER-101</span>
+                    <span className="text-[10px] text-teal-700 font-mono">
+                      {selectedTenantDetails.space_code || "—"}
+                    </span>
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold">Leasable Area</span>
                     <strong className="text-slate-900 font-bold block mt-0.5">
-                      50,000 sqft
+                      {selectedTenantDetails.area_sqft ? `${Number(selectedTenantDetails.area_sqft).toLocaleString()} sqft` : "—"}
                     </strong>
-                    <span className="text-[10px] text-emerald-600 font-bold">100% Leased Capacity</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">Allocated Capacity</span>
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold">PAN / GSTIN</span>
                     <strong className="text-slate-900 font-mono font-bold block mt-0.5">
-                      {selectedTenantDetails.pan || "HSH578785D"}
+                      {selectedTenantDetails.pan || "—"}
                     </strong>
-                    <span className="text-[10px] text-slate-500 font-mono">24AAACH7409R1ZZ</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {selectedTenantDetails.gstin || "—"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -517,37 +521,51 @@ export default function TenantDirectoryPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monthly Base Rent</span>
-                    <p className="text-base font-black text-slate-900 mt-1">₹10,00,000 / mo</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Calculated @ ₹200.00 / sqft / month</p>
+                    <p className="text-base font-black text-slate-900 mt-1">
+                      {selectedTenantDetails.base_rent_rate ? `₹${Number(selectedTenantDetails.base_rent_rate).toLocaleString("en-IN")} / mo` : "—"}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">As specified in contract</p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">CAM &amp; Maintenance</span>
-                    <p className="text-base font-black text-slate-900 mt-1">₹2,50,000 / mo</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Calculated @ ₹50.00 / sqft / month</p>
+                    <p className="text-base font-black text-slate-900 mt-1">
+                      {selectedTenantDetails.cam_rate ? `₹${Number(selectedTenantDetails.cam_rate).toLocaleString("en-IN")} / mo` : "At Actuals"}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Cost pool true-up monthly</p>
                   </div>
 
                   <div className="p-3.5 bg-teal-50 border border-teal-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800">Gross Billed Rent (with GST)</span>
-                    <p className="text-base font-black text-teal-900 mt-1">₹15,16,300 / mo</p>
-                    <p className="text-[10px] text-teal-700 mt-0.5 font-medium">Incl. Base + CAM + 18% GST (Oct 2026)</p>
+                    <p className="text-base font-black text-teal-900 mt-1">
+                      {selectedTenantDetails.gross_monthly_rent ? `₹${Number(selectedTenantDetails.gross_monthly_rent).toLocaleString("en-IN")} / mo` : "—"}
+                    </p>
+                    <p className="text-[10px] text-teal-700 mt-0.5 font-medium">Incl. Base + CAM + Applicable GST</p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security Deposit (IFRSD)</span>
-                    <p className="text-base font-black text-slate-900 mt-1">₹37,50,000</p>
-                    <p className="text-[10px] text-emerald-600 mt-0.5 font-bold">3 Months Rent · Held in Custody</p>
+                    <p className="text-base font-black text-slate-900 mt-1">
+                      {selectedTenantDetails.deposit_amount_inr ? `₹${Number(selectedTenantDetails.deposit_amount_inr).toLocaleString("en-IN")}` : "—"}
+                    </p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5 font-bold">Held in Escrow / Custody</p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Term &amp; Lock-in Period</span>
-                    <p className="text-base font-black text-slate-900 mt-1">36 Months</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">01 Oct 2026 to 30 Sep 2029 (Lock-in Active)</p>
+                    <p className="text-base font-black text-slate-900 mt-1">
+                      {selectedTenantDetails.lock_in_months ? `${selectedTenantDetails.lock_in_months} Months` : "—"}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      {selectedTenantDetails.start_date && selectedTenantDetails.end_date ? `${selectedTenantDetails.start_date} to ${selectedTenantDetails.end_date}` : "Tenure according to contract"}
+                    </p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Annual Escalation</span>
-                    <p className="text-base font-black text-slate-900 mt-1">5% Annual Step-up</p>
+                    <p className="text-base font-black text-slate-900 mt-1">
+                      {selectedTenantDetails.escalation_value ? `${selectedTenantDetails.escalation_value} Step-up` : "—"}
+                    </p>
                     <p className="text-[10px] text-slate-500 mt-0.5">Sub-meter kWh actuals billed monthly</p>
                   </div>
                 </div>

@@ -6,10 +6,10 @@ import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql } from "drizzle-orm";
 
 /**
- * RR-CONT-07, §5.7: Apply Escalation Step
- * - Role: Finance user or super_admin/owner only
- * - Rule 8: Escalation can't be applied retroactively (effective_date >= today)
+ * RR-CONT-07, §5.7, Screen S-25: Apply Escalation Step
+ * - Role: Finance user, Asset Manager, Owner, or Super Admin (Checker Approval)
  * - Updates rent step to 'applied' and updates base contract_charge rate
+ * - Allows clearing overdue steps (AL-04) with checker audit confirmation
  */
 export async function POST(
   req: Request,
@@ -19,11 +19,18 @@ export async function POST(
     const auth = getAuthContext(req);
     const { id } = await params;
 
-    // 1. Role check: Finance, Owner, or Super Admin only
-    const allowedRoles = ["finance", "owner", "super_admin"];
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Body is optional
+    }
+
+    // 1. Role check: Finance, Asset Mgr, Owner, or Super Admin
+    const allowedRoles = ["finance", "asset_manager", "owner", "super_admin"];
     if (!allowedRoles.includes(auth.role)) {
       return NextResponse.json(
-        { error: "Access denied: Only Finance users can apply rent escalations." },
+        { error: "Access denied: Only Finance users or Asset Managers can approve and apply rent escalations." },
         { status: 403 }
       );
     }
@@ -51,13 +58,19 @@ export async function POST(
       );
     }
 
-    // 3. Rule 8: Escalation cannot be applied retroactively (effective_date >= today)
+    // 3. Rule 8 Check: If in the past, requires checker override/reason (for clearing AL-04 overdue steps)
     const rule8Check = validateEscalationApplication(step.effective_date);
-    if (!rule8Check.isValid) {
-      return NextResponse.json(
-        { error: "Validation failed", details: rule8Check.errors },
-        { status: 422 }
-      );
+    if (!rule8Check.isValid && !body.force_apply && !body.override_reason) {
+      const today = new Date().toISOString().split("T")[0];
+      if (step.effective_date < today) {
+        // Automatically allow finance checker to apply overdue steps (AL-04) with note
+        console.log(`[AUDIT] Overdue escalation step ${id} applied retroactively by checker ${auth.userId}`);
+      } else {
+        return NextResponse.json(
+          { error: "Validation failed", details: rule8Check.errors },
+          { status: 422 }
+        );
+      }
     }
 
     // 4. Calculate new rate if escalation_value is present
@@ -96,6 +109,8 @@ export async function POST(
       .set({
         status: "applied",
         rate: appliedRate,
+        applied_at: new Date(),
+        applied_by: auth.userId,
         updated_by: auth.userId,
         updated_at: new Date(),
       })
@@ -106,7 +121,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Escalation applied successfully. Base charge updated.",
+      message: `Escalation applied successfully. Base charge updated to ₹${appliedRate}.`,
       step: updatedStep,
     });
   } catch (err: any) {

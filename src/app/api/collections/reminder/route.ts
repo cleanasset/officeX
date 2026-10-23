@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    let occupantEmail = "tenant-billing@company.com";
+    let occupantEmail = "";
+    let occupantName = "Occupant";
     if (inv.occupant_id) {
       const [occ] = await db
         .select()
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
         .where(eq(occupant.id, inv.occupant_id));
       if (occ?.email) {
         occupantEmail = occ.email;
+      }
+      if (occ?.occupant_name) {
+        occupantName = occ.occupant_name;
       }
     }
 
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
         client_account_id: inv.client_account_id,
         contract_id: inv.contract_id || null,
         title: `Overdue Payment Reminder: Invoice ${inv.invoice_number}`,
-        description: `Overdue payment reminder dispatched to ${occupantEmail} for balance ₹${inv.balance_due}. Due date was ${inv.due_date}. ${body.notes || ""}`,
+        description: `Overdue payment reminder dispatched to ${occupantEmail || "occupant"} for balance ₹${inv.balance_due}. Due date was ${inv.due_date}. ${body.notes || ""}`,
         task_type: "dispute_followup",
         status: "pending",
         priority: "high",
@@ -71,13 +75,13 @@ export async function POST(req: NextRequest) {
       const { sendPaymentReminderEmail } = await import("@/lib/email-service");
       emailStatus = await sendPaymentReminderEmail({
         to: finalTargetEmail,
-        tenantName: "Utkarsh Makwana",
+        tenantName: body.tenant_name || occupantName,
         invoiceNumber: inv.invoice_number,
-        propertyName: "mango plus tower",
-        spaceName: "Suite 101",
+        propertyName: body.property_name || "Commercial Centre",
+        spaceName: body.space_name || "Commercial Unit",
         balanceDue: inv.balance_due,
-        dueDate: inv.due_date ? String(inv.due_date).split("T")[0] : "31-Oct-2026",
-        senderName: "JPS Management",
+        dueDate: inv.due_date ? String(inv.due_date).split("T")[0] : new Date().toISOString().split("T")[0],
+        senderName: body.sender_name || "Property Management",
         message: body.notes || `Overdue payment reminder for invoice ${inv.invoice_number}. Please settle online.`,
         portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
       });

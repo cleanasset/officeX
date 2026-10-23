@@ -45,9 +45,10 @@ interface ExpiryBucket {
   tenant?: string;
 }
 
-// Dynamic Kanban Deals State (Zero prefeeded mock data)
   const [deals, setDeals] = useState<DealCard[]>([]);
   const [vacantSpaces, setVacantSpaces] = useState<any[]>([]);
+  const [propertiesList, setPropertiesList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [expiryBuckets, setExpiryBuckets] = useState<ExpiryBucket[]>([
     { label: "0–30 Days", count: 0, rent: "₹0", color: "bg-emerald-50 text-emerald-800" },
     { label: "31–90 Days", count: 0, rent: "₹0", color: "bg-amber-50 text-amber-800" },
@@ -56,18 +57,100 @@ interface ExpiryBucket {
     { label: "365+ Days", count: 0, rent: "₹0", color: "bg-slate-50 text-slate-800" },
   ]);
 
-
-
-  const stages: { key: DealCard["stage"]; label: string; badge: string }[] = [
-    { key: "enquiry", label: "Lead / Enquiry", badge: "bg-slate-100 text-slate-700" },
-    { key: "site_visit", label: "Site Visit", badge: "bg-blue-100 text-blue-700" },
-    { key: "proposal", label: "Proposal / Qual.", badge: "bg-purple-100 text-purple-700" },
-    { key: "loi", label: "LOI Drafted", badge: "bg-amber-100 text-amber-700" },
-    { key: "agreement", label: "Agreement / Neg.", badge: "bg-orange-100 text-orange-700" },
-    { key: "won", label: "Won (Closed)", badge: "bg-emerald-100 text-emerald-700" },
+  const stages: { key: DealCard["stage"]; label: string; badge: string; dbStage: string }[] = [
+    { key: "enquiry", label: "Lead / Enquiry", badge: "bg-slate-100 text-slate-700", dbStage: "lead" },
+    { key: "site_visit", label: "Site Visit", badge: "bg-blue-100 text-blue-700", dbStage: "site_visit" },
+    { key: "proposal", label: "Proposal / Qual.", badge: "bg-purple-100 text-purple-700", dbStage: "proposal" },
+    { key: "loi", label: "LOI Drafted", badge: "bg-amber-100 text-amber-700", dbStage: "loi" },
+    { key: "agreement", label: "Agreement / Neg.", badge: "bg-orange-100 text-orange-700", dbStage: "agreement_drafting" },
+    { key: "won", label: "Won (Closed)", badge: "bg-emerald-100 text-emerald-700", dbStage: "won" },
   ];
 
-  const moveDealStage = (dealId: string, direction: "next" | "prev") => {
+  const fetchLeasingData = async () => {
+    try {
+      setLoading(true);
+      const [dealsRes, spacesRes, expiryRes, propsRes] = await Promise.all([
+        fetch("/api/deals").catch(() => null),
+        fetch("/api/rent-roll/spaces").catch(() => null),
+        fetch("/api/rent-roll/expiry-pipeline").catch(() => null),
+        fetch("/api/rent-roll/properties").catch(() => null),
+      ]);
+
+      if (propsRes && propsRes.ok) {
+        const pJson = await propsRes.json();
+        setPropertiesList(pJson.data || []);
+      }
+
+      if (dealsRes && dealsRes.ok) {
+        const dJson = await dealsRes.json();
+        const rawDeals = dJson.data || [];
+        const stageMapRev: Record<string, DealCard["stage"]> = {
+          lead: "enquiry",
+          site_visit: "site_visit",
+          proposal: "proposal",
+          loi: "loi",
+          agreement_drafting: "agreement",
+          won: "won",
+        };
+        const mappedDeals: DealCard[] = rawDeals.map((d: any) => ({
+          id: d.id,
+          name: d.deal_name || "Commercial Lease Opportunity",
+          tenantName: d.occupant_name || d.prospect_name || "Prospective Tenant",
+          property: d.property_name || "Commercial Centre",
+          areaSqft: Number(d.estimated_area_sqft || d.target_area_sqft || 0),
+          estMonthlyRent: d.estimated_rent_inr ? `₹${Number(d.estimated_rent_inr).toLocaleString("en-IN")}` : "₹0",
+          probability: Number(d.probability_percent || 50),
+          stage: stageMapRev[d.deal_stage] || "enquiry",
+        }));
+        setDeals(mappedDeals);
+      }
+
+      if (spacesRes && spacesRes.ok) {
+        const sJson = await spacesRes.json();
+        const rawSpaces = sJson.data || [];
+        const vac = rawSpaces.filter((s: any) => s.occupancy_status === "vacant" || !s.occupancy_status);
+        setVacantSpaces(
+          vac.map((s: any) => ({
+            code: s.space_code || "SPC",
+            property: s.property_name || "Property",
+            area: `${Number(s.chargeable_area_sqft || 0).toLocaleString("en-IN")} sq ft`,
+            chargeableAreaSqFt: s.chargeable_area_sqft,
+            askingRate: s.market_rent_rate ? `₹${s.market_rent_rate} psf` : "Market ERV",
+            vacantSince: "Immediate",
+            daysVacant: 14,
+            deal: "Available",
+          }))
+        );
+      }
+
+      if (expiryRes && expiryRes.ok) {
+        const eJson = await expiryRes.json();
+        const items = eJson.data || [];
+        const b30 = items.filter((i: any) => i.alert_bucket === "critical_1m");
+        const b90 = items.filter((i: any) => i.alert_bucket === "urgent_3m");
+        const b180 = items.filter((i: any) => i.alert_bucket === "planning_6m");
+        const b365 = items.filter((i: any) => i.alert_bucket === "upcoming_12m");
+
+        setExpiryBuckets([
+          { label: "0–30 Days", count: b30.length, rent: `₹${b30.reduce((s: number, x: any) => s + (Number(x.monthly_rent) || 0), 0).toLocaleString("en-IN")}`, color: "bg-rose-50 text-rose-800" },
+          { label: "31–90 Days", count: b90.length, rent: `₹${b90.reduce((s: number, x: any) => s + (Number(x.monthly_rent) || 0), 0).toLocaleString("en-IN")}`, color: "bg-amber-50 text-amber-800" },
+          { label: "91–180 Days", count: b180.length, rent: `₹${b180.reduce((s: number, x: any) => s + (Number(x.monthly_rent) || 0), 0).toLocaleString("en-IN")}`, color: "bg-blue-50 text-blue-800" },
+          { label: "181–365 Days", count: b365.length, rent: `₹${b365.reduce((s: number, x: any) => s + (Number(x.monthly_rent) || 0), 0).toLocaleString("en-IN")}`, color: "bg-purple-50 text-purple-800" },
+          { label: "365+ Days", count: 0, rent: "₹0", color: "bg-slate-50 text-slate-800" },
+        ]);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchLeasingData();
+  }, [scope]);
+
+  const moveDealStage = async (dealId: string, direction: "next" | "prev") => {
     const stageOrder: DealCard["stage"][] = [
       "enquiry",
       "site_visit",
@@ -77,17 +160,28 @@ interface ExpiryBucket {
       "won",
     ];
 
+    const currentDeal = deals.find((d) => d.id === dealId);
+    if (!currentDeal) return;
+
+    const currentIndex = stageOrder.indexOf(currentDeal.stage);
+    const nextIndex =
+      direction === "next"
+        ? Math.min(stageOrder.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1);
+    const newStage = stageOrder[nextIndex];
+
     setDeals((prev) =>
-      prev.map((d) => {
-        if (d.id !== dealId) return d;
-        const currentIndex = stageOrder.indexOf(d.stage);
-        const nextIndex =
-          direction === "next"
-            ? Math.min(stageOrder.length - 1, currentIndex + 1)
-            : Math.max(0, currentIndex - 1);
-        return { ...d, stage: stageOrder[nextIndex] };
-      })
+      prev.map((d) => (d.id === dealId ? { ...d, stage: newStage } : d))
     );
+
+    const st = stages.find((s) => s.key === newStage);
+    if (st) {
+      await fetch(`/api/deals/${dealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deal_stage: st.dbStage }),
+      }).catch(() => {});
+    }
   };
 
   return (

@@ -43,20 +43,12 @@ function InviteContent() {
     monthlyRevenue: number;
     tenants: Array<{ name: string; space: string; monthlyRent: number; term: string; status: string }>;
   }>({
-    name: propParam || "mango plus tower",
-    location: "Ahmedabad, Gujarat",
-    totalArea: 50000,
-    occupancyPct: 100,
-    monthlyRevenue: 1250000,
-    tenants: [
-      {
-        name: "Utkarsh Makwana",
-        space: "Suite 101 (Floor 1)",
-        monthlyRent: 1250000,
-        term: "3-Year Active Term",
-        status: "Active",
-      },
-    ],
+    name: propParam || "Commercial Centre",
+    location: "Commercial Portfolio",
+    totalArea: 0,
+    occupancyPct: 0,
+    monthlyRevenue: 0,
+    tenants: [],
   });
 
   useEffect(() => {
@@ -79,28 +71,20 @@ function InviteContent() {
         const matchedTenants = contracts
           .filter((c: any) => !targetProp || c.property_id === targetProp.id || c.property_name === targetProp.property_name)
           .map((c: any) => ({
-            name: c.occupant_name || c.tenant_name || "Utkarsh Makwana",
-            space: c.space_name ? `${c.space_name} (${c.space_code || "SPC-101"})` : "Suite 101",
-            monthlyRent: Number(c.base_rent_rate || 1250000),
-            term: c.end_date ? `Lease to ${new Date(c.end_date).toLocaleDateString("en-IN")}` : "3-Year Active Term",
-            status: "Active",
+            name: c.occupant_name || c.tenant_name || "Tenant",
+            space: c.space_name ? `${c.space_name} (${c.space_code || "Unit"})` : "Demarcated Space",
+            monthlyRent: Number(c.base_rent_rate || 0),
+            term: c.end_date ? `Lease to ${new Date(c.end_date).toLocaleDateString("en-IN")}` : "Active Term",
+            status: c.contract_status === "active" ? "Active" : (c.contract_status || "Active"),
           }));
 
         setPropertyDetails({
-          name: targetProp.property_name || "mango plus tower",
-          location: targetProp.city ? `${targetProp.city}${targetProp.state ? `, ${targetProp.state}` : ""}` : "Ahmedabad, Gujarat",
-          totalArea: parseFloat(targetProp.total_leasable_area_sqft || 0) || 50000,
-          occupancyPct: 100,
-          monthlyRevenue: matchedTenants.length > 0 ? matchedTenants.reduce((s: number, t: any) => s + t.monthlyRent, 0) : 1250000,
-          tenants: matchedTenants.length > 0 ? matchedTenants : [
-            {
-              name: "Utkarsh Makwana",
-              space: "Suite 101 (Floor 1)",
-              monthlyRent: 1250000,
-              term: "3-Year Active Term",
-              status: "Active",
-            },
-          ],
+          name: targetProp.property_name || "Commercial Centre",
+          location: targetProp.city ? `${targetProp.city}${targetProp.state ? `, ${targetProp.state}` : ""}` : "Commercial Location",
+          totalArea: parseFloat(targetProp.total_leasable_area_sqft || 0) || 0,
+          occupancyPct: matchedTenants.length > 0 ? 100 : 0,
+          monthlyRevenue: matchedTenants.reduce((s: number, t: any) => s + t.monthlyRent, 0),
+          tenants: matchedTenants,
         });
       }
     });

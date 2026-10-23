@@ -139,38 +139,52 @@ export default function FinanceDashboardPage() {
 
   const fetchLiveFinanceData = async () => {
     try {
-      const agingRes = await fetch("/api/collections/aging").catch(() => null);
+      const [agingRes, paymentsRes] = await Promise.all([
+        fetch("/api/collections/aging").catch(() => null),
+        fetch("/api/payments").catch(() => null),
+      ]);
+
+      let totalCollected = 0;
+      if (paymentsRes && paymentsRes.ok) {
+        const pJson = await paymentsRes.json();
+        const paymentsList = pJson.data || pJson.payments || [];
+        totalCollected = paymentsList.reduce((sum: number, p: any) => sum + (Number(p.amount) || Number(p.payment_amount) || 0), 0);
+      }
+
       if (agingRes && agingRes.ok) {
         const json = await agingRes.json();
-        if (json.summary) {
-          const totalRec = json.summary.total_outstanding || 0;
-          setTopKPIs({
-            totalReceivable: totalRec,
-            collectedThisMonth: Math.round(totalRec * 0.4),
-            collectedTargetPct: totalRec > 0 ? 84.6 : 0,
-            collectionsRateVsPrev: totalRec > 0 ? "+2.1%" : "0.0%",
-            dsoDays: totalRec > 0 ? 28 : 0,
-          });
+        const summary = json.summary || json;
+        const totalRec = Number(summary.total_outstanding || json.total_outstanding || 0);
 
-          if (json.summary.buckets) {
-            const b = json.summary.buckets;
-            const b0 = b["0-30"] || { count: 0, amount: 0 };
-            const b31 = b["31-60"] || { count: 0, amount: 0 };
-            const b61 = b["61-90"] || { count: 0, amount: 0 };
-            const b90 = b["90+"] || { count: 0, amount: 0 };
-            const tot = (b0.amount + b31.amount + b61.amount + b90.amount) || 1;
+        // Formula F-25: Collection Efficiency % = Collections / (Collections + Outstanding) * 100
+        const totalBilled = totalCollected + totalRec;
+        const effPct = totalBilled > 0 ? Math.min(100, Math.round((totalCollected / totalBilled) * 1000) / 10) : 0;
+        const dso = totalCollected > 0 ? Math.round((totalRec / (totalCollected / 30))) : 0;
 
-            setAgingData({
-              "0-30": { bucket: "0–30 Days (Current)", key: "0-30", count: b0.count, amount: b0.amount, percentage: Math.round((b0.amount / tot) * 100), invoices: [] },
-              "31-60": { bucket: "31–60 Days", key: "31-60", count: b31.count, amount: b31.amount, percentage: Math.round((b31.amount / tot) * 100), invoices: [] },
-              "61-90": { bucket: "61–90 Days", key: "61-90", count: b61.count, amount: b61.amount, percentage: Math.round((b61.amount / tot) * 100), invoices: [] },
-              "90+": { bucket: "90+ Days (Critical)", key: "90+", count: b90.count, amount: b90.amount, percentage: Math.round((b90.amount / tot) * 100), invoices: [] },
-            });
-          }
-        }
+        setTopKPIs({
+          totalReceivable: totalRec,
+          collectedThisMonth: totalCollected,
+          collectedTargetPct: effPct,
+          collectionsRateVsPrev: `${effPct}%`,
+          dsoDays: dso,
+        });
+
+        const b = summary.buckets || json.buckets || {};
+        const b0 = b["0-30"] || b["current_0_30"] || { count: 0, amount: 0 };
+        const b31 = b["31-60"] || b["overdue_31_60"] || { count: 0, amount: 0 };
+        const b61 = b["61-90"] || b["overdue_61_90"] || { count: 0, amount: 0 };
+        const b90 = b["90+"] || b["critical_90_plus"] || { count: 0, amount: 0 };
+        const tot = (Number(b0.amount) + Number(b31.amount) + Number(b61.amount) + Number(b90.amount)) || 1;
+
+        setAgingData({
+          "0-30": { bucket: "0–30 Days (Current)", key: "0-30", count: b0.count || 0, amount: Number(b0.amount || 0), percentage: Math.round((Number(b0.amount || 0) / tot) * 100), invoices: [] },
+          "31-60": { bucket: "31–60 Days", key: "31-60", count: b31.count || 0, amount: Number(b31.amount || 0), percentage: Math.round((Number(b31.amount || 0) / tot) * 100), invoices: [] },
+          "61-90": { bucket: "61–90 Days", key: "61-90", count: b61.count || 0, amount: Number(b61.amount || 0), percentage: Math.round((Number(b61.amount || 0) / tot) * 100), invoices: [] },
+          "90+": { bucket: "90+ Days (Critical)", key: "90+", count: b90.count || 0, amount: Number(b90.amount || 0), percentage: Math.round((Number(b90.amount || 0) / tot) * 100), invoices: [] },
+        });
       }
     } catch (e) {
-      // safe fallback
+      console.error(e);
     }
   };
 

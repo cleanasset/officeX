@@ -52,12 +52,82 @@ export default function AgeingCollectionsPage() {
   const [dunningChannel, setDunningChannel] = useState<"email" | "whatsapp" | "both">("both");
   const [sendingNotice, setSendingNotice] = useState(false);
 
+  // S-45: Log Follow-up & Promise to Pay (PTP AL-10) Modal
+  const [followupModalOpen, setFollowupModalOpen] = useState(false);
+  const [activeFollowupRow, setActiveFollowupRow] = useState<AgingOccupantRow | null>(null);
+  const [followupChannel, setFollowupChannel] = useState<"call" | "email" | "whatsapp" | "visit" | "legal_notice">("call");
+  const [followupOutcome, setFollowupOutcome] = useState<"promised" | "disputed" | "no_response" | "paid" | "other">("promised");
+  const [ptpDate, setPtpDate] = useState("");
+  const [ptpAmount, setPtpAmount] = useState("");
+  const [nextFollowupDate, setNextFollowupDate] = useState("");
+  const [followupNotes, setFollowupNotes] = useState("");
+  const [submittingFollowup, setSubmittingFollowup] = useState(false);
+
   // Write-Off Modal
   const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
   const [activeWriteOffRow, setActiveWriteOffRow] = useState<AgingOccupantRow | null>(null);
   const [writeOffAmount, setWriteOffAmount] = useState("");
   const [writeOffReason, setWriteOffReason] = useState("Tenant Insolvency / Abandoned Premise");
   const [submittingWriteOff, setSubmittingWriteOff] = useState(false);
+
+  const handleExportCSV = () => {
+    if (rows.length === 0) return;
+    const headers = ["Occupant", "Contract", "Property", "Total Outstanding", "0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "Oldest Days Overdue", "Invoices Count"];
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => [
+        `"${r.occupant_name.replace(/"/g, '""')}"`,
+        `"${r.contract_code}"`,
+        `"${r.property_name || ''}"`,
+        r.total_outstanding,
+        r.bucket_0_30,
+        r.bucket_31_60,
+        r.bucket_61_90,
+        r.bucket_90_plus,
+        r.oldest_due_days,
+        r.invoices_count
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `officex_ageing_report_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleLogFollowupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeFollowupRow) return;
+    try {
+      setSubmittingFollowup(true);
+      const res = await fetch("/api/collections/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          occupant_id: activeFollowupRow.occupant_id,
+          channel: followupChannel,
+          outcome: followupOutcome,
+          ptp_date: followupOutcome === "promised" ? ptpDate : null,
+          ptp_amount: followupOutcome === "promised" ? parseFloat(ptpAmount || "0") : null,
+          due_date: nextFollowupDate || null,
+          notes: followupNotes,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to log follow-up");
+      alert(json.message || "Follow-up logged successfully!");
+      setFollowupModalOpen(false);
+      fetchAgingData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSubmittingFollowup(false);
+    }
+  };
 
   const fetchAgingData = async () => {
     try {
@@ -185,6 +255,15 @@ export default function AgeingCollectionsPage() {
           >
             Payment Centre (S-43)
           </Link>
+
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition border border-slate-200 flex items-center gap-1.5 shadow-2xs"
+            title="Export CSV"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Export CSV</span>
+          </button>
 
           <button
             onClick={fetchAgingData}
@@ -331,13 +410,23 @@ export default function AgeingCollectionsPage() {
                   <div className="text-base font-black text-rose-700 font-mono">₹{r.total_outstanding.toLocaleString("en-IN")}</div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => {
+                      setActiveFollowupRow(r);
+                      setPtpAmount(r.total_outstanding.toString());
+                      setFollowupModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
+                  >
+                    <Phone className="w-3 h-3" /> Follow-up
+                  </button>
                   <button
                     onClick={() => {
                       setActiveDunningRow(r);
                       setDunningModalOpen(true);
                     }}
-                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                    className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"
                   >
                     <Send className="w-3 h-3" /> Remind
                   </button>
@@ -347,7 +436,7 @@ export default function AgeingCollectionsPage() {
                       setWriteOffAmount(r.bucket_90_plus.toString());
                       setWriteOffModalOpen(true);
                     }}
-                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
+                    className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
                   >
                     Write-Off
                   </button>
@@ -414,6 +503,16 @@ export default function AgeingCollectionsPage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setActiveFollowupRow(r);
+                            setPtpAmount(r.total_outstanding.toString());
+                            setFollowupModalOpen(true);
+                          }}
+                          className="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs"
+                        >
+                          <Phone className="w-3 h-3" /> Follow-up
+                        </button>
                         <button
                           onClick={() => {
                             setActiveDunningRow(r);
@@ -580,6 +679,135 @@ export default function AgeingCollectionsPage() {
                   className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition shadow-sm"
                 >
                   {submittingWriteOff ? "Submitting..." : "Submit for Approval (S-06)"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* S-45: Collection Follow-up & Promise to Pay (PTP) Modal */}
+      {followupModalOpen && activeFollowupRow && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-teal-100 text-[#0F8B7D] rounded">
+                  Screen S-45 &middot; AL-10 PTP Tracking
+                </span>
+                <h3 className="text-base font-bold text-slate-900 mt-1">Log Collection Follow-up &amp; PTP</h3>
+              </div>
+              <button onClick={() => setFollowupModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            <form onSubmit={handleLogFollowupSubmit} className="p-5 space-y-4 text-xs">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                <div>Occupant: <strong>{activeFollowupRow.occupant_name}</strong></div>
+                <div>Contract: <span className="font-mono">{activeFollowupRow.contract_code}</span></div>
+                <div>Total Outstanding: <strong className="text-rose-700 font-mono">₹{activeFollowupRow.total_outstanding.toLocaleString("en-IN")}</strong></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Interaction Channel *</label>
+                  <select
+                    value={followupChannel}
+                    onChange={(e: any) => setFollowupChannel(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-[#0F8B7D]"
+                  >
+                    <option value="call">Phone Call</option>
+                    <option value="email">Email Follow-up</option>
+                    <option value="whatsapp">WhatsApp Business</option>
+                    <option value="visit">Premise In-Person Visit</option>
+                    <option value="legal_notice">Formal Legal Demand Notice</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Call / Visit Outcome *</label>
+                  <select
+                    value={followupOutcome}
+                    onChange={(e: any) => setFollowupOutcome(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-[#0F8B7D]"
+                  >
+                    <option value="promised">Promised to Pay (PTP)</option>
+                    <option value="disputed">Disputed Invoice</option>
+                    <option value="no_response">No Response / Unreachable</option>
+                    <option value="paid">Already Paid (UTR pending)</option>
+                    <option value="other">Other Commercial Reason</option>
+                  </select>
+                </div>
+              </div>
+
+              {followupOutcome === "promised" && (
+                <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-200/80 space-y-3">
+                  <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider block">
+                    Promise-to-Pay (PTP) Commitment
+                  </span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">PTP Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={ptpDate}
+                        onChange={(e) => setPtpDate(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-xs focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Promised Amount (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={ptpAmount}
+                        onChange={(e) => setPtpAmount(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold text-xs text-slate-900 focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-teal-800">
+                    If this date passes without matching receipt, system triggers <strong>Alert AL-10 (Promise Broken)</strong> to Finance.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Next Follow-up Date (Optional)</label>
+                <input
+                  type="date"
+                  value={nextFollowupDate}
+                  onChange={(e) => setNextFollowupDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-[#0F8B7D]"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Notes &amp; Discussion Summary</label>
+                <textarea
+                  rows={2}
+                  value={followupNotes}
+                  onChange={(e) => setFollowupNotes(e.target.value)}
+                  placeholder="Spoke with Head of Accounts; agreed on payment date..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-[#0F8B7D]"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setFollowupModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingFollowup}
+                  className="px-5 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl font-bold transition shadow-sm"
+                >
+                  {submittingFollowup ? "Saving..." : "Save Follow-up (Task S-45)"}
                 </button>
               </div>
             </form>

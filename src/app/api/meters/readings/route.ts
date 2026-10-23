@@ -256,6 +256,13 @@ export async function POST(req: Request) {
         )
         .limit(1);
 
+      const statusVal =
+        action === "approve"
+          ? "approved"
+          : action === "submit"
+          ? "submitted"
+          : "draft";
+
       if (existing) {
         // Update existing reading
         const [updated] = await db
@@ -272,7 +279,7 @@ export async function POST(req: Request) {
             source,
             is_spike: isSpike,
             spike_note: spike_note || existing.spike_note,
-            status: action === "submit" ? "submitted" : "draft",
+            status: statusVal,
             submitted_by: auth.userId,
           })
           .where(eq(meterReadings.id, existing.id))
@@ -300,7 +307,7 @@ export async function POST(req: Request) {
             source,
             is_spike: isSpike,
             spike_note: spike_note || null,
-            status: action === "submit" ? "submitted" : "draft",
+            status: statusVal,
             submitted_by: auth.userId,
           })
           .returning();
@@ -312,7 +319,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message:
-        action === "submit"
+        action === "approve"
+          ? `Approved ${savedResults.length} meter reading(s) for utility invoice generation.`
+          : action === "submit"
           ? `Successfully submitted ${savedResults.length} meter reading(s) for billing.`
           : `Saved ${savedResults.length} meter reading(s) as draft.`,
       count: savedResults.length,

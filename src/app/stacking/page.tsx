@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function StackingRedirectPage() {
-  redirect("/operate/stacking");
-}
+export { default } from "@/app/operate/stacking/page";

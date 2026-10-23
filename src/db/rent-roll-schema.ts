@@ -69,6 +69,9 @@ export const occupancyStatusEnum = pgEnum("occupancy_status", [
   "occupied",
   "under_maintenance",
   "retired",
+  "under_offer",
+  "fitting_out",
+  "under_notice",
 ]);
 
 // §4.6: occupant entity legal type
@@ -118,6 +121,7 @@ export const contractStatusEnum = pgEnum("contract_status", [
   "holding_over",
   "expired",
   "terminated",
+  "cancelled",
 ]);
 
 // §4.7: financial approval status workflow

@@ -49,7 +49,9 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "partially_paid",
   "paid",
   "overdue",
-  "cancelled"
+  "cancelled",
+  "written_off",
+  "disputed",
 ]);
 
 export const paymentModeEnum = pgEnum("payment_mode", [

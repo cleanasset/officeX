@@ -13,10 +13,11 @@ import {
   meterReadings,
   meters,
   billingRuns,
+  rentStep,
 } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { getFiscalYear } from "@/lib/rent-roll/jobs/invoice-generation";
-import { eq, and, sql, desc, or } from "drizzle-orm";
+import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 
 /**
  * S-40 Billing Runs API
@@ -65,6 +66,18 @@ export async function GET(req: Request) {
 
     const loggedMeterIds = new Set(readingsInPeriod.map((r) => r.meter_id));
     const missingMetersCount = allActiveMeters.filter((m) => !loggedMeterIds.has(m.id)).length;
+
+    // Pre-check 4: Unapplied escalations due on or before today (AL-04)
+    const unappliedEscalations = await db
+      .select({ id: rentStep.id })
+      .from(rentStep)
+      .where(
+        and(
+          sql`${rentStep.deleted_at} IS NULL`,
+          ne(rentStep.status, "applied"),
+          sql`${rentStep.effective_date} <= CURRENT_DATE`
+        )
+      );
 
     // 2. Fetch existing invoices generated for this period
     const existingInvoices = await db
@@ -153,12 +166,14 @@ export async function GET(req: Request) {
           passed: occupantsNoGstin.length === 0,
         },
         {
-          code: "AL-02",
+          code: "AL-04",
           severity: "amber",
-          title: "1 escalation due and pending review in calendar",
-          action_link: "/properties/rent-roll",
+          title: unappliedEscalations.length > 0
+            ? `${unappliedEscalations.length} escalation(s) due and not applied — billing uses old rate`
+            : "All contractual escalations are up to date",
+          action_link: "/escalations",
           action_label: "Open S-25",
-          passed: false,
+          passed: unappliedEscalations.length === 0,
         },
         {
           code: "AL-15",
@@ -275,24 +290,72 @@ export async function POST(req: Request) {
       });
     }
 
-    // 1. Fetch active contracts to bill
+    // 1. Fetch active contracts to bill along with property location and occupant GSTIN
     const activeContracts = await db
       .select({
         id: contract.id,
         contract_code: contract.contract_code,
         occupant_id: contract.occupant_id,
         occupant_name: occupant.occupant_name,
+        occupant_gst: occupant.gst_number,
         deposit_amount_inr: contract.deposit_amount_inr,
+        space_id: contract.space_id,
+        property_id: property.id,
+        property_state: property.state,
       })
       .from(contract)
       .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
+      .leftJoin(space, eq(contract.space_id, space.id))
+      .leftJoin(building, eq(space.building_id, building.id))
+      .leftJoin(property, eq(building.property_id, property.id))
       .where(sql`${contract.deleted_at} IS NULL`)
       .limit(30);
 
     const generatedInvoices = [];
-    let invoiceSeq = 1001;
+    
+    // Dynamically derive next sequence from existing records
+    const [invCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invoice);
+    let invoiceSeq = (invCount?.count || 0) + 1001 + Math.floor(Math.random() * 100);
+
+    // Helper: Map state name/code to 2-digit Indian GST State Code
+    function resolveStateCode(input?: string | null): string {
+      if (!input) return "27"; // Default Maharashtra (27)
+      const cleaned = input.trim().toUpperCase();
+      if (/^\d{2}$/.test(cleaned)) return cleaned;
+      const stateMap: Record<string, string> = {
+        MAHARASHTRA: "27",
+        MH: "27",
+        KARNATAKA: "29",
+        KA: "29",
+        DELHI: "07",
+        DL: "07",
+        "TAMIL NADU": "33",
+        TN: "33",
+        HARYANA: "06",
+        HR: "06",
+        "UTTAR PRADESH": "09",
+        UP: "09",
+        GUJARAT: "24",
+        GJ: "24",
+        TELANGANA: "36",
+        TS: "36",
+        "WEST BENGAL": "19",
+        WB: "19",
+        RAJASTHAN: "08",
+        RJ: "08",
+      };
+      return stateMap[cleaned] || "27";
+    }
 
     for (const c of activeContracts) {
+      // Determine GST Place of Supply (POS)
+      const propStateCode = resolveStateCode(c.property_state);
+      const occupantGst = (c.occupant_gst || "").trim();
+      const occStateCode = occupantGst.length >= 2 ? occupantGst.slice(0, 2) : propStateCode;
+      const isInterState = occStateCode !== propStateCode;
+
       // 1. Fetch real contract charges for this contract
       const charges = await db
         .select()
@@ -365,6 +428,51 @@ export async function POST(req: Request) {
           } as any)
           .returning();
 
+        // Line 1: Base Rent
+        await db.insert(invoice_line).values({
+          org_id: auth.orgId,
+          client_account_id: auth.clientAccountId,
+          invoice_id: createdInv.id,
+          description: `Commercial Space Lease Rental (SAC: 997212) - ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}`,
+          quantity: "1.00",
+          rate: String(baseRentAmt),
+          amount_inr: String(baseRentAmt),
+          tax_rate_percent: "18.00",
+          tax_amount_inr: String(baseRentAmt * 0.18),
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        });
+
+        // Line 2: CAM
+        await db.insert(invoice_line).values({
+          org_id: auth.orgId,
+          client_account_id: auth.clientAccountId,
+          invoice_id: createdInv.id,
+          description: `Common Area Maintenance (CAM) & Facilities (SAC: 997221) - ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}`,
+          quantity: "1.00",
+          rate: String(camAmt),
+          amount_inr: String(camAmt),
+          tax_rate_percent: "18.00",
+          tax_amount_inr: String(camAmt * 0.18),
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        });
+
+        // Line 3: Utilities
+        await db.insert(invoice_line).values({
+          org_id: auth.orgId,
+          client_account_id: auth.clientAccountId,
+          invoice_id: createdInv.id,
+          description: `Metered Utilities Recovery (SAC: 9969) - ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}`,
+          quantity: "1.00",
+          rate: String(utilAmt),
+          amount_inr: String(utilAmt),
+          tax_rate_percent: "18.00",
+          tax_amount_inr: String(utilAmt * 0.18),
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        });
+
         generatedInvoices.push(createdInv);
       } else {
         // SPLIT INVOICES MODE: Separate invoices for Rent, CAM, and Utility
@@ -396,6 +504,20 @@ export async function POST(req: Request) {
               status: "draft",
             } as any)
             .returning();
+
+          await db.insert(invoice_line).values({
+            org_id: auth.orgId,
+            client_account_id: auth.clientAccountId,
+            invoice_id: rentInv.id,
+            description: `Commercial Space Lease Rental (SAC: 997212) [POS: ${occStateCode} • ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}]`,
+            quantity: "1.00",
+            rate: String(baseRentAmt),
+            amount_inr: String(baseRentAmt),
+            tax_rate_percent: "18.00",
+            tax_amount_inr: String(gst),
+            created_by: auth.userId,
+            updated_by: auth.userId,
+          });
 
           generatedInvoices.push(rentInv);
         }
@@ -429,6 +551,20 @@ export async function POST(req: Request) {
             } as any)
             .returning();
 
+          await db.insert(invoice_line).values({
+            org_id: auth.orgId,
+            client_account_id: auth.clientAccountId,
+            invoice_id: camInv.id,
+            description: `Common Area Maintenance (CAM) & Operations (SAC: 997221) [POS: ${occStateCode} • ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}]`,
+            quantity: "1.00",
+            rate: String(camAmt),
+            amount_inr: String(camAmt),
+            tax_rate_percent: "18.00",
+            tax_amount_inr: String(gst),
+            created_by: auth.userId,
+            updated_by: auth.userId,
+          });
+
           generatedInvoices.push(camInv);
         }
 
@@ -460,6 +596,20 @@ export async function POST(req: Request) {
               status: "draft",
             } as any)
             .returning();
+
+          await db.insert(invoice_line).values({
+            org_id: auth.orgId,
+            client_account_id: auth.clientAccountId,
+            invoice_id: utilInv.id,
+            description: `Metered Utilities Recovery (SAC: 9969) [POS: ${occStateCode} • ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}]`,
+            quantity: "1.00",
+            rate: String(utilAmt),
+            amount_inr: String(utilAmt),
+            tax_rate_percent: "18.00",
+            tax_amount_inr: String(gst),
+            created_by: auth.userId,
+            updated_by: auth.userId,
+          });
 
           generatedInvoices.push(utilInv);
         }

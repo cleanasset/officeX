@@ -20,6 +20,9 @@ import {
   Building,
   Layers,
   History,
+  Bell,
+  LogOut,
+  FileCheck,
 } from "lucide-react";
 
 interface ContractDetailDrawerProps {
@@ -51,6 +54,25 @@ export default function ContractDetailDrawer({
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [commentText, setCommentText] = useState("");
+
+  // Notice & Termination modal state (Screen S-22 actions)
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [noticeForm, setNoticeForm] = useState({
+    notice_date: new Date().toISOString().split("T")[0],
+    vacate_date: "",
+    notice_reason: "lease_expiry",
+    initiated_by: "tenant",
+    penalty_amount: "0",
+    remarks: "",
+  });
+  const [terminateForm, setTerminateForm] = useState({
+    termination_date: new Date().toISOString().split("T")[0],
+    reason: "early_surrender",
+    dilapidations_amount: "0",
+    deposit_adjustment_notes: "",
+    remarks: "",
+  });
 
   useEffect(() => {
     if (contractId && isOpen) {
@@ -142,6 +164,50 @@ export default function ContractDetailDrawer({
       if (!res.ok) throw new Error(json.error || "Failed to reject contract");
       setShowRejectModal(false);
       setCommentText("");
+      await fetchContractDetail(contractId);
+      onRefresh();
+    } catch (err: any) {
+      setActionError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleServeNotice() {
+    if (!contractId) return;
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const res = await fetch(`/api/contracts/${contractId}/notice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+        body: JSON.stringify(noticeForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to serve notice");
+      setShowNoticeModal(false);
+      await fetchContractDetail(contractId);
+      onRefresh();
+    } catch (err: any) {
+      setActionError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleTerminate() {
+    if (!contractId) return;
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const res = await fetch(`/api/contracts/${contractId}/terminate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+        body: JSON.stringify(terminateForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to terminate contract");
+      setShowTerminateModal(false);
       await fetchContractDetail(contractId);
       onRefresh();
     } catch (err: any) {
@@ -270,6 +336,37 @@ export default function ContractDetailDrawer({
                   Awaiting Approver Action (RR-CON-09: Maker cannot self-approve)
                 </div>
               )}
+
+              {["active", "holding_over"].includes(data.contract_status) && (
+                <button
+                  disabled={actionLoading}
+                  onClick={() => {
+                    const d = new Date();
+                    const days = data.notice_period_days || 90;
+                    d.setDate(d.getDate() + days);
+                    setNoticeForm((prev) => ({
+                      ...prev,
+                      vacate_date: d.toISOString().split("T")[0],
+                    }));
+                    setShowNoticeModal(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg shadow-2xs transition"
+                >
+                  <Bell className="w-3.5 h-3.5 text-amber-600" />
+                  Serve Notice
+                </button>
+              )}
+
+              {["active", "notice_served", "holding_over"].includes(data.contract_status) && (
+                <button
+                  disabled={actionLoading}
+                  onClick={() => setShowTerminateModal(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg shadow-2xs transition"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                  Surrender / Terminate
+                </button>
+              )}
             </div>
           )}
 
@@ -392,6 +489,18 @@ export default function ContractDetailDrawer({
                       </div>
                     </div>
                   </div>
+
+                  {data.remarks && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                      <h4 className="font-semibold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <FileCheck className="w-3.5 h-3.5 text-teal-800" />
+                        Statutory Covenants & Audit Remarks
+                      </h4>
+                      <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-mono bg-white p-2.5 rounded-lg border border-slate-200">
+                        {data.remarks}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -623,6 +732,172 @@ export default function ContractDetailDrawer({
                 className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm disabled:opacity-50"
               >
                 Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Serve Notice Modal (Screen S-22 / §4.13) */}
+      {showNoticeModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 border border-slate-200 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Bell className="w-5 h-5 text-amber-600" />
+              Serve Notice — {data?.contract_code}
+            </h3>
+            <p className="text-xs text-slate-500">
+              Serving notice will transition the contract to &apos;Notice Served&apos; status and update the vacate timeline.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Notice Date</label>
+                <input
+                  type="date"
+                  value={noticeForm.notice_date}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, notice_date: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Proposed Vacate Date</label>
+                <input
+                  type="date"
+                  value={noticeForm.vacate_date}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, vacate_date: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Initiated By</label>
+                <select
+                  value={noticeForm.initiated_by}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, initiated_by: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs capitalize"
+                >
+                  <option value="tenant">Tenant</option>
+                  <option value="landlord">Landlord / Owner</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Notice Reason</label>
+                <select
+                  value={noticeForm.notice_reason}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, notice_reason: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                >
+                  <option value="lease_expiry">Lease Expiry</option>
+                  <option value="early_relocation">Early Relocation</option>
+                  <option value="commercial_default">Commercial Default</option>
+                  <option value="mutual_surrender">Mutual Surrender</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1 text-xs">Notice Remarks / Handover Notes</label>
+              <textarea
+                rows={2}
+                value={noticeForm.remarks}
+                onChange={(e) => setNoticeForm({ ...noticeForm, remarks: e.target.value })}
+                placeholder="Optional notes or joint inspection scheduling..."
+                className="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={actionLoading}
+                onClick={handleServeNotice}
+                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm"
+              >
+                Confirm Notice Served
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Surrender / Terminate Modal (Screen S-22 / §4.13) */}
+      {showTerminateModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 border border-slate-200 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <LogOut className="w-5 h-5 text-rose-600" />
+              Surrender & Terminate Space
+            </h3>
+            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
+              <strong>Warning:</strong> Terminating will mark the contract as &apos;Terminated&apos; and release the demised space ({data?.space?.space_name || "Space"}) back to <strong>Vacant</strong> status.
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Termination Date</label>
+                <input
+                  type="date"
+                  value={terminateForm.termination_date}
+                  onChange={(e) => setTerminateForm({ ...terminateForm, termination_date: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Dilapidations / Fitout Repair (₹)</label>
+                <input
+                  type="number"
+                  value={terminateForm.dilapidations_amount}
+                  onChange={(e) => setTerminateForm({ ...terminateForm, dilapidations_amount: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1 text-xs">Termination Reason</label>
+              <select
+                value={terminateForm.reason}
+                onChange={(e) => setTerminateForm({ ...terminateForm, reason: e.target.value })}
+                className="w-full p-2 border border-slate-300 rounded-lg text-xs"
+              >
+                <option value="early_surrender">Early Handover / Mutual Surrender</option>
+                <option value="contract_completion">Normal Lease Completion</option>
+                <option value="default_forfeiture">Default Eviction / Forfeiture</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1 text-xs">Security Deposit Settlement Notes</label>
+              <textarea
+                rows={2}
+                value={terminateForm.deposit_adjustment_notes}
+                onChange={(e) => setTerminateForm({ ...terminateForm, deposit_adjustment_notes: e.target.value })}
+                placeholder="e.g. ₹50,000 adjusted for electricity dues, remaining ₹450,000 refunded via RTGS..."
+                className="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowTerminateModal(false)}
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={actionLoading}
+                onClick={handleTerminate}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm"
+              >
+                Confirm Termination & Release Space
               </button>
             </div>
           </div>

@@ -181,48 +181,7 @@ export default function PropertyManagerDashboardPage() {
           }
         });
 
-        if (generatedTasks.length > 0) {
-          setTasks(generatedTasks);
-        } else {
-          setTasks([
-            {
-              id: "task_billing_oct",
-              category: "overdue_payment",
-              categoryLabel: "Billing Reconciliation",
-              priority: "HIGH",
-              title: "Execute Monthly Rent Billing: Utkarsh Makwana",
-              info: "October 2026 invoice (Gross: ₹15,16,300) generated for mango plus tower · Suite 101. Review lines and dispatch.",
-              property: "mango plus tower",
-              occupantSpace: "Utkarsh Makwana · Suite 101",
-              dueDate: todayStr,
-              dueStatus: "today",
-              financialDetail: "₹15,16,300",
-              actions: {
-                primaryText: "Review & Dispatch",
-                secondaryText: "Send Reminder",
-                tertiaryText: "View Details",
-              },
-            },
-            {
-              id: "task_meter_reading",
-              category: "escalation_due",
-              categoryLabel: "Sub-meter Reading",
-              priority: "MEDIUM",
-              title: "Log Electric Sub-Meter Consumption",
-              info: "Monthly utility cycle for Suite 101. Record closing meter reading to calculate power charges.",
-              property: "mango plus tower",
-              occupantSpace: "Utkarsh Makwana · Suite 101",
-              dueDate: todayStr,
-              dueStatus: "today",
-              financialDetail: "3,500 kWh",
-              actions: {
-                primaryText: "Record Reading",
-                secondaryText: "Postpone",
-                tertiaryText: "View Timeline",
-              },
-            },
-          ]);
-        }
+        setTasks(generatedTasks);
       })
       .catch(() => {});
 
@@ -326,6 +285,11 @@ export default function PropertyManagerDashboardPage() {
     return true;
   });
 
+  const isAll = selectedProperty === "all";
+  const activeProp = propertiesList.find(
+    (p) => p.id === selectedProperty || (p.property_name && p.property_name.toLowerCase() === selectedProperty.toLowerCase())
+  );
+
   return (
     <div className="space-y-6 pb-24">
       {/* Top Header (§S-03) */}
@@ -394,15 +358,11 @@ export default function PropertyManagerDashboardPage() {
 
       {/* Assigned Commercial Asset & Tenant Overview Card */}
       {(() => {
-        const activeProp = propertiesList.find(
-          (p) => p.id === selectedProperty || (p.property_name && p.property_name.toLowerCase() === selectedProperty.toLowerCase())
-        );
-        const isAll = selectedProperty === "all";
-        const displayPropName = activeProp?.property_name || (isAll ? "All Managed Commercial Assets" : "mango plus tower");
-        const displayCity = activeProp?.city ? `${activeProp.city}, Gujarat` : "Ahmedabad, Gujarat";
+        const displayPropName = activeProp?.property_name || (isAll ? "All Managed Commercial Assets" : "Commercial Asset");
+        const displayCity = activeProp?.city ? (activeProp.state ? `${activeProp.city}, ${activeProp.state}` : activeProp.city) : "--";
         const displayArea = activeProp?.total_leasable_area_sqft
           ? `${Number(activeProp.total_leasable_area_sqft).toLocaleString()} sqft`
-          : "50,000 sqft";
+          : "--";
 
         return (
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
@@ -854,15 +814,15 @@ export default function PropertyManagerDashboardPage() {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        target_name: reminderTarget || "Utkarsh Makwana · Suite 101",
-                        property_name: "mango plus tower",
-                        invoice_number: "INV-2026-27-0001",
-                        amount_inr: 1516300,
+                        target_name: reminderTarget || "Occupant",
+                        property_name: activeProp?.property_name || "Commercial Centre",
+                        invoice_number: "INV-" + new Date().getFullYear(),
+                        amount_inr: 0,
                         recipient_email: reminderEmail,
-                        sender_name: "JPS Management",
+                        sender_name: "Property Management",
                         sender_role: "Property Managing Company",
-                        title: "Payment Reminder: October 2026 Rent & CAM",
-                        message: `Official collection notice from JPS Management: October 2026 invoice INV-2026-27-0001 (₹15,16,300.00) for mango plus tower · Suite 101 is pending payment. Please settle via your portal.`,
+                        title: "Official Property Notice",
+                        message: `Official notice: Please review your pending items in your tenant portal or contact property management.`,
                       }),
                     });
                     const json = await res.json();

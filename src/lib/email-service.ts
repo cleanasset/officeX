@@ -201,12 +201,12 @@ export async function sendInvoiceNotificationEmail({
   to,
   tenantName,
   invoiceNumber,
-  propertyName = "mango plus tower",
-  spaceName = "Suite 101",
+  propertyName = "Commercial Centre",
+  spaceName = "Commercial Space",
   grossTotal,
   dueDate,
   invoiceDate = new Date().toISOString().split("T")[0],
-  brandName = "Mango Groups Ltd",
+  brandName = "OfficeX Asset Management",
   portalUrl = "https://www.officex.pro/portal/invoices",
 }: SendInvoiceEmailOptions): Promise<SendEmailResult> {
   const transporter = getTransporter();
@@ -361,13 +361,13 @@ export async function sendPaymentReminderEmail({
   to,
   tenantName,
   invoiceNumber,
-  propertyName = "mango plus tower",
-  spaceName = "Suite 101",
+  propertyName = "Commercial Centre",
+  spaceName = "Commercial Space",
   balanceDue,
   dueDate,
-  senderName = "JPS Management",
+  senderName = "Property Management",
   message,
-  brandName = "Mango Groups Ltd",
+  brandName = "OfficeX Asset Management",
   portalUrl = "https://www.officex.pro/portal/invoices",
 }: SendReminderEmailOptions): Promise<SendEmailResult> {
   const transporter = getTransporter();

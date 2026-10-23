@@ -20,6 +20,9 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Info,
+  Check,
+  Building2,
+  FileText,
 } from "lucide-react";
 
 interface MeterReadingRow {
@@ -75,6 +78,7 @@ export default function MeterReadingsPage() {
       }
     } catch (e) {
       console.error(e);
+      setNotification({ type: "error", message: "Failed to load meter readings" });
     } finally {
       setLoading(false);
     }
@@ -106,8 +110,8 @@ export default function MeterReadingsPage() {
           : Math.max(0, (closingNum - r.opening) * r.multiplier);
 
         const amount = consumption * r.tariff_rate;
-        // Formula spike: >30% jump above avg past consumption
-        const isSpike = r.avg_past_consumption > 0 && consumption > r.avg_past_consumption * 1.3 && consumption > 50;
+        // Formula spike: >25% jump above avg past consumption
+        const isSpike = r.avg_past_consumption > 0 && consumption > r.avg_past_consumption * 1.25 && consumption > 50;
 
         return {
           ...r,
@@ -115,13 +119,13 @@ export default function MeterReadingsPage() {
           consumption,
           amount,
           is_spike: isSpike,
-          spike_note: isSpike ? "Consumption jumped > 30% above historical baseline" : null,
+          spike_note: isSpike ? "Consumption jumped >25% above historical baseline" : null,
         };
       })
     );
   };
 
-  const handleSave = async (action: "save" | "submit") => {
+  const handleSave = async (action: "save" | "submit" | "approve") => {
     try {
       setSaving(true);
       const payload = {
@@ -170,7 +174,6 @@ export default function MeterReadingsPage() {
     if (!csvText.trim()) return;
     try {
       const lines = csvText.trim().split("\n");
-      // Format: meter_code, closing
       const updates = new Map<string, number>();
       lines.forEach((l) => {
         const parts = l.split(",").map((p) => p.trim());
@@ -190,7 +193,7 @@ export default function MeterReadingsPage() {
               ? matchedVal * r.multiplier
               : Math.max(0, (matchedVal - r.opening) * r.multiplier);
             const amount = consumption * r.tariff_rate;
-            const isSpike = r.avg_past_consumption > 0 && consumption > r.avg_past_consumption * 1.3;
+            const isSpike = r.avg_past_consumption > 0 && consumption > r.avg_past_consumption * 1.25;
             return {
               ...r,
               closing: matchedVal,
@@ -206,7 +209,7 @@ export default function MeterReadingsPage() {
       setCsvModalOpen(false);
       setNotification({
         type: "success",
-        message: `Imported ${updates.size} meter readings from CSV into table. Review and save.`,
+        message: `Imported ${updates.size} meter readings from CSV. Review calculated consumption and click Submit.`,
       });
       setTimeout(() => setNotification(null), 4000);
     } catch (err) {
@@ -214,296 +217,427 @@ export default function MeterReadingsPage() {
     }
   };
 
-  const getUtilityIcon = (u: string) => {
+  const getUtilityBadge = (u: string) => {
     switch (u.toLowerCase()) {
       case "electricity":
-        return <Zap className="w-3.5 h-3.5 text-amber-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <Zap className="w-3 h-3 text-amber-600" /> Elec.
+          </span>
+        );
       case "dg_backup":
-        return <Flame className="w-3.5 h-3.5 text-orange-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
+            <Flame className="w-3 h-3 text-orange-600" /> DG Backup
+          </span>
+        );
       case "water":
-        return <Droplets className="w-3.5 h-3.5 text-sky-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
+            <Droplets className="w-3 h-3 text-sky-600" /> Water
+          </span>
+        );
       default:
-        return <Gauge className="w-3.5 h-3.5 text-emerald-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <Gauge className="w-3 h-3 text-emerald-600" /> {u.replace("_", " ")}
+          </span>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-amber-400 uppercase">
-              <span>Property Operations</span>
-              <span>•</span>
-              <span>Screen S-31</span>
-              <span>•</span>
-              <span className="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
-                Formula F-09 Utility Billing
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white mt-1">
-              Meter Readings Entry
-            </h1>
-            <p className="text-sm text-slate-400 mt-0.5">
-              Sub-meter consumption capture with opening/closing delta, multiplier, tariff rates, and &gt;30% spike warnings.
-            </p>
+    <div className="min-h-screen bg-slate-50/60 p-3 sm:p-6 pb-28 md:pb-16 space-y-4 sm:space-y-6">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-[#0F8B7D]/10 text-[#0F8B7D] rounded-full border border-[#0F8B7D]/20">
+              Screen S-31 &middot; Meter Readings
+            </span>
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-800 rounded-full border border-amber-200">
+              Formula F-09 Utility Invoicing
+            </span>
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+              Feeds INV-UTIL Split Series
+            </span>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/settings/meters"
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Meters & Tariffs Master</span>
-            </Link>
-
-            <button
-              onClick={() => setCsvModalOpen(true)}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5 text-sky-400" />
-              <span>Upload CSV</span>
-            </button>
-
-            <button
-              onClick={() => handleSave("save")}
-              disabled={saving}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Draft</span>
-            </button>
-
-            <button
-              onClick={() => handleSave("submit")}
-              disabled={saving}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-amber-900/30 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Submit for Billing</span>
-            </button>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            Utility Meter Consumption Capture
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Capture sub-meter closing readings, calculate delta consumption (F-09), flag &gt;25% consumption anomalies, and feed utility invoices into billing runs.
+          </p>
         </div>
 
-        {notification && (
-          <div
-            className={`p-4 rounded-xl text-xs flex items-center justify-between animate-fadeIn ${
-              notification.type === "success"
-                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
-                : "bg-rose-500/10 border border-rose-500/30 text-rose-300"
-            }`}
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          <button
+            onClick={() => setCsvModalOpen(true)}
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
           >
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>{notification.message}</span>
-            </div>
-            <button onClick={() => setNotification(null)}>✕</button>
+            <Upload className="w-3.5 h-3.5 text-[#0F8B7D]" />
+            <span>Upload CSV</span>
+          </button>
+
+          <button
+            onClick={() => handleSave("save")}
+            disabled={saving}
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Draft</span>
+          </button>
+
+          <button
+            onClick={() => handleSave("submit")}
+            disabled={saving}
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Submit for Billing</span>
+          </button>
+
+          <button
+            onClick={() => handleSave("approve")}
+            disabled={saving}
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-[#0F8B7D] hover:bg-[#0D7A6D] text-white rounded-xl text-xs font-black shadow-xs flex items-center gap-1.5 transition"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Approve for Invoicing</span>
+          </button>
+        </div>
+      </div>
+
+      {notification && (
+        <div
+          className={`p-4 rounded-xl text-xs flex items-center justify-between border ${
+            notification.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
+          }`}
+        >
+          <div className="flex items-center gap-2 font-medium">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{notification.message}</span>
           </div>
-        )}
+          <button onClick={() => setNotification(null)} className="font-bold">✕</button>
+        </div>
+      )}
 
-        {/* Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/70 p-3 rounded-xl border border-slate-800">
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Property</label>
-              <select
-                value={propertyId}
-                onChange={(e) => setPropertyId(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-              >
-                <option value="all">All Properties</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.property_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {/* KPI Tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Total Electricity
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-amber-600 font-mono">
+            {(summary?.total_kwh_electricity || 0).toLocaleString("en-IN")} <span className="text-xs text-slate-400 font-sans">kWh</span>
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">Tariff benchmark: ₹11.50/kWh</div>
+        </div>
 
-            <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Period</label>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-medium"
-              >
-                <option value="Sep-2026">Sep-2026</option>
-                <option value="Oct-2026">Oct-2026</option>
-                <option value="Aug-2026">Aug-2026</option>
-                <option value="Jul-2026">Jul-2026</option>
-              </select>
-            </div>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            DG Backup Units
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-orange-600 font-mono">
+            {(summary?.total_dg_units || 0).toLocaleString("en-IN")} <span className="text-xs text-slate-400 font-sans">units</span>
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">Tariff benchmark: ₹24.00/unit</div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Total Billed Utility (₹)
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-[#0F8B7D] font-mono">
+            ₹{(summary?.total_billed_amount || 0).toLocaleString("en-IN")}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">Formula F-09 total recovery</div>
+        </div>
+
+        <div className={`p-4 sm:p-5 rounded-2xl border shadow-xs ${
+          (summary?.spike_warnings_count || 0) > 0 ? "bg-amber-50/70 border-amber-300" : "bg-white border-slate-200/80"
+        }`}>
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider block mb-1 text-slate-500">
+            Consumption Spikes (&gt;25%)
+          </span>
+          <div className={`text-xl sm:text-2xl font-black ${
+            (summary?.spike_warnings_count || 0) > 0 ? "text-amber-700" : "text-slate-900"
+          }`}>
+            {summary?.spike_warnings_count || 0}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">Anomalies requiring inspection</div>
+        </div>
+      </div>
+
+      {/* Selector & Filter Bar per Wireframe S-31 */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1 font-bold">Property</label>
+            <select
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-[#0F8B7D]"
+            >
+              <option value="all">All Properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.property_name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Quick Metrics */}
-          <div className="flex items-center gap-4 text-xs font-mono">
-            <div className="text-right">
-              <span className="text-slate-500 text-[11px]">Total Electricity:</span>{" "}
-              <span className="text-amber-400 font-bold">{(summary?.total_kwh_electricity || 0).toLocaleString("en-IN")} kWh</span>
-            </div>
-            <div className="text-right">
-              <span className="text-slate-500 text-[11px]">DG Backup:</span>{" "}
-              <span className="text-orange-400 font-bold">{(summary?.total_dg_units || 0).toLocaleString("en-IN")} units</span>
-            </div>
-            <div className="text-right">
-              <span className="text-slate-500 text-[11px]">Total Billed:</span>{" "}
-              <span className="text-emerald-400 font-bold">₹{(summary?.total_billed_amount || 0).toLocaleString("en-IN")}</span>
-            </div>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1 font-bold">Period</label>
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-[#0F8B7D]"
+            >
+              <option value="Sep-2026">Sep-2026</option>
+              <option value="Oct-2026">Oct-2026</option>
+              <option value="Aug-2026">Aug-2026</option>
+              <option value="Jul-2026">Jul-2026</option>
+            </select>
           </div>
         </div>
 
-        {/* Meter Readings Entry Table (Wireframe S-31) */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider border-b border-slate-800 text-[11px]">
+        <div className="flex items-center gap-3 text-xs font-mono w-full sm:w-auto justify-between sm:justify-end">
+          <div className="text-slate-500">
+            Total Meters: <strong className="text-slate-900">{readings.length}</strong>
+          </div>
+          <div className="text-emerald-700 font-bold">
+            Logged: {readings.filter((r) => r.closing !== null).length} / {readings.length}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Card View (< sm screens) */}
+      <div className="sm:hidden space-y-3">
+        {readings.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+            <Gauge className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <div className="font-bold text-slate-700">No Sub-Meters Found</div>
+            <p className="text-xs text-slate-500 mt-1">Configure meters in Settings or import via CSV.</p>
+          </div>
+        ) : (
+          readings.map((r) => (
+            <div
+              key={r.meter_id}
+              className={`bg-white rounded-2xl border p-4 shadow-xs space-y-3 ${
+                r.is_spike ? "border-amber-300 bg-amber-50/20" : "border-slate-200"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm text-slate-900 font-mono">{r.meter_code}</span>
+                    {getUtilityBadge(r.utility)}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    {r.space_code} &bull; {r.space_name}
+                  </div>
+                </div>
+
+                {r.is_spike ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    Spike &gt;25%
+                  </span>
+                ) : r.closing !== null ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                    {r.status === "approved" ? "Approved" : r.status === "submitted" ? "Submitted" : "Ready"}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-500">
+                    Pending
+                  </span>
+                )}
+              </div>
+
+              {/* In-cell mobile inputs */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Opening (Sys)</span>
+                  <span className="font-mono text-slate-700 font-semibold">{r.opening.toLocaleString("en-IN")}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Closing [Input]</span>
+                  <input
+                    type="number"
+                    placeholder={String(r.opening)}
+                    value={r.closing !== null ? r.closing : ""}
+                    onChange={(e) => handleClosingChange(r.meter_id, e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-0.5 font-mono text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Consumption (F-09)</span>
+                  <span className="font-mono text-slate-900 font-bold">
+                    {r.consumption > 0 ? r.consumption.toLocaleString("en-IN") : "0"} units
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Billed Cost (₹)</span>
+                  <span className="font-mono text-[#0F8B7D] font-black">
+                    ₹{Math.round(r.amount).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View (>= sm screens) */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th className="py-3 px-4 font-semibold">Meter Code</th>
+                <th className="py-3 px-4 font-semibold">Space / Location</th>
+                <th className="py-3 px-4 font-semibold">Utility</th>
+                <th className="py-3 px-4 font-semibold text-center">Multiplier</th>
+                <th className="py-3 px-4 font-semibold text-right">Opening (Sys)</th>
+                <th className="py-3 px-4 font-semibold text-right w-36">Closing [Input]</th>
+                <th className="py-3 px-4 font-semibold text-right">Consumption (F-09)</th>
+                <th className="py-3 px-4 font-semibold text-right">Tariff (₹)</th>
+                <th className="py-3 px-4 font-semibold text-right font-bold text-[#0F8B7D]">Amount (₹)</th>
+                <th className="py-3 px-4 font-semibold text-center">Status / Anomaly</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-mono">
+              {readings.length === 0 ? (
                 <tr>
-                  <th className="py-3 px-4 font-semibold">Meter</th>
-                  <th className="py-3 px-4 font-semibold">Space / Floor</th>
-                  <th className="py-3 px-4 font-semibold">Utility</th>
-                  <th className="py-3 px-4 font-semibold text-center">Multiplier</th>
-                  <th className="py-3 px-4 font-semibold text-right">Opening (Sys)</th>
-                  <th className="py-3 px-4 font-semibold text-right w-36">Closing [Input]</th>
-                  <th className="py-3 px-4 font-semibold text-right">Consumption (F-09)</th>
-                  <th className="py-3 px-4 font-semibold text-right">Tariff (₹)</th>
-                  <th className="py-3 px-4 font-semibold text-right">Amount (₹)</th>
-                  <th className="py-3 px-4 font-semibold text-center">Status / Warning</th>
+                  <td colSpan={10} className="py-10 text-center text-slate-400 font-sans">
+                    No active meters found for this property.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {readings.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-500 font-sans">
-                      No meters found for this property. Configure meters in the Meter Master.
+              ) : (
+                readings.map((r) => (
+                  <tr
+                    key={r.meter_id}
+                    className={`hover:bg-slate-50/80 transition ${
+                      r.is_spike ? "bg-amber-50/30" : ""
+                    }`}
+                  >
+                    <td className="py-3 px-4 font-bold text-slate-900 font-mono">
+                      {r.meter_code}
+                    </td>
+
+                    <td className="py-3 px-4 text-slate-700 font-sans">
+                      <div className="font-semibold text-slate-900">{r.space_code}</div>
+                      <div className="text-[10px] text-slate-400">{r.space_name}</div>
+                    </td>
+
+                    <td className="py-3 px-4 font-sans">
+                      {getUtilityBadge(r.utility)}
+                    </td>
+
+                    <td className="py-3 px-4 text-center text-slate-600">{r.multiplier}</td>
+
+                    <td className="py-3 px-4 text-right text-slate-600">
+                      {r.opening.toLocaleString("en-IN")}
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      <input
+                        type="number"
+                        placeholder={String(r.opening)}
+                        value={r.closing !== null ? r.closing : ""}
+                        onChange={(e) => handleClosingChange(r.meter_id, e.target.value)}
+                        className={`w-32 text-right bg-white border rounded px-2 py-1 text-xs text-slate-900 focus:outline-none font-bold ${
+                          r.is_spike
+                            ? "border-amber-400 bg-amber-50/40 text-amber-900 focus:border-amber-500"
+                            : "border-slate-300 focus:border-[#0F8B7D]"
+                        }`}
+                      />
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      <span className="font-bold text-slate-900">
+                        {r.consumption > 0 ? r.consumption.toLocaleString("en-IN") : "0"}
+                      </span>
+                      {r.avg_past_consumption > 0 && (
+                        <div className="text-[10px] text-slate-400 font-sans">
+                          Avg: {r.avg_past_consumption.toLocaleString("en-IN")}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="py-3 px-4 text-right text-slate-600">
+                      ₹{Number(r.tariff_rate).toFixed(2)}
+                    </td>
+
+                    <td className="py-3 px-4 text-right font-black text-[#0F8B7D]">
+                      ₹{Math.round(r.amount).toLocaleString("en-IN")}
+                    </td>
+
+                    <td className="py-3 px-4 text-center font-sans">
+                      {r.is_spike ? (
+                        <div
+                          className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300 text-[10px] font-bold"
+                          title={r.spike_note || "Consumption spiked >25% above average"}
+                        >
+                          <AlertTriangle className="w-3 h-3 text-amber-600" />
+                          <span>Spike &gt;25%</span>
+                        </div>
+                      ) : r.closing !== null ? (
+                        <span className="text-emerald-700 text-[11px] font-bold flex items-center justify-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{r.status === "approved" ? "Approved" : r.status === "submitted" ? "Submitted" : "Ready"}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">Pending Input</span>
+                      )}
                     </td>
                   </tr>
-                ) : (
-                  readings.map((r) => (
-                    <tr
-                      key={r.meter_id}
-                      className={`hover:bg-slate-800/40 transition-colors ${
-                        r.is_spike ? "bg-amber-950/20" : ""
-                      }`}
-                    >
-                      <td className="py-3 px-4 font-bold text-slate-100 flex items-center gap-2">
-                        {getUtilityIcon(r.utility)}
-                        <span>{r.meter_code}</span>
-                      </td>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                      <td className="py-3 px-4 text-slate-300 font-sans">
-                        <div className="font-medium">{r.space_code}</div>
-                        <div className="text-[10px] text-slate-500">{r.space_name}</div>
-                      </td>
-
-                      <td className="py-3 px-4 text-slate-400 capitalize font-sans">
-                        {r.utility.replace("_", " ")}
-                      </td>
-
-                      <td className="py-3 px-4 text-center text-slate-400">{r.multiplier}</td>
-
-                      <td className="py-3 px-4 text-right text-slate-400">
-                        {r.opening.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="py-3 px-4 text-right">
-                        <input
-                          type="number"
-                          placeholder={String(r.opening)}
-                          value={r.closing !== null ? r.closing : ""}
-                          onChange={(e) => handleClosingChange(r.meter_id, e.target.value)}
-                          className={`w-32 text-right bg-slate-950 border rounded px-2.5 py-1 text-xs text-white focus:outline-none font-bold ${
-                            r.is_spike
-                              ? "border-amber-500 focus:border-amber-400 bg-amber-950/30"
-                              : "border-slate-700 focus:border-amber-500"
-                          }`}
-                        />
-                      </td>
-
-                      <td className="py-3 px-4 text-right">
-                        <span className="font-bold text-white">
-                          {r.consumption > 0 ? r.consumption.toLocaleString("en-IN") : "0"}
-                        </span>
-                        {r.avg_past_consumption > 0 && (
-                          <div className="text-[10px] text-slate-500">
-                            Avg: {r.avg_past_consumption.toLocaleString("en-IN")}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-right text-slate-300">
-                        ₹{Number(r.tariff_rate).toFixed(2)}
-                      </td>
-
-                      <td className="py-3 px-4 text-right font-bold text-emerald-400">
-                        ₹{Math.round(r.amount).toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="py-3 px-4 text-center font-sans">
-                        {r.is_spike ? (
-                          <div
-                            className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 text-[10px] font-bold"
-                            title={r.spike_note || "Consumption spiked > 30% above average"}
-                          >
-                            <AlertTriangle className="w-3 h-3 text-amber-400" />
-                            <span>Spike &gt;30%</span>
-                          </div>
-                        ) : r.closing !== null ? (
-                          <span className="text-emerald-400 text-[11px] font-semibold flex items-center justify-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{r.status === "submitted" ? "Submitted" : "Ready"}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-600 text-[11px]">Pending Input</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* Footer per Wireframe S-31 */}
+        <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">Source:</span>
+            <span className="bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">manual</span>
+            <span className="bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">csv</span>
+            <span className="bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">api</span>
+            <span className="text-slate-400">(auto when CAFM subscribed)</span>
           </div>
 
-          {/* Table Footer per Wireframe S-31 */}
-          <div className="p-3 bg-slate-900/90 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500">Source:</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px]">manual</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px]">csv</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px]">api</span>
-              <span className="text-slate-600">(auto when CAFM subscribed)</span>
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
-              <span className="text-slate-500">Total Lines: {readings.length}</span>
-              <span>•</span>
-              <span className="text-emerald-400 font-bold">
-                Logged: {readings.filter((r) => r.closing !== null).length} / {readings.length}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 mt-2 sm:mt-0 font-medium">
+            <span>Total Lines: {readings.length}</span>
+            <span>&bull;</span>
+            <span className="text-emerald-700 font-bold">
+              Ready for Billing: {readings.filter((r) => r.closing !== null).length} / {readings.length}
+            </span>
           </div>
         </div>
       </div>
 
       {/* CSV Bulk Ingestion Modal */}
       {csvModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">Bulk CSV Upload (Meter Readings)</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Paste comma-separated rows or file content</p>
+                <h3 className="text-base font-bold text-slate-900">Bulk CSV Upload (Meter Readings)</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Paste comma-separated rows or file content</p>
               </div>
-              <button onClick={() => setCsvModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setCsvModalOpen(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <div className="p-5 space-y-3">
-              <div className="text-xs text-slate-400">
-                Format: <code className="text-amber-400">meter_code, closing_reading</code> (one per line)
-                <br />
-                Example:
-                <pre className="bg-slate-950 p-2 rounded text-[11px] font-mono text-slate-300 mt-1">
+              <div className="text-xs text-slate-600">
+                Format: <code className="text-[#0F8B7D] font-bold">meter_code, closing_reading</code> (one per line)
+                <pre className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] font-mono text-slate-800 mt-1">
                   E-T1-03, 196410{"\n"}
                   D-T1-03, 4388{"\n"}
                   W-T1-01, 3850
@@ -515,21 +649,21 @@ export default function MeterReadingsPage() {
                 placeholder="E-T1-03, 196410..."
                 value={csvText}
                 onChange={(e) => setCsvText(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-800 focus:outline-none focus:border-[#0F8B7D] font-mono"
               />
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setCsvModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs"
+                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleCsvImport}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold"
+                  className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0D7A6D] text-white rounded-lg text-xs font-black shadow-xs"
                 >
                   Import Readings
                 </button>

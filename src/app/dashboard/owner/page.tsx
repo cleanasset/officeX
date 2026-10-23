@@ -298,17 +298,17 @@ export default function OwnerDashboardPage() {
               (hasMgr && mgrName ? { name: mgrName, email: mgrEmail, type: mgrType } : null);
 
             // Compute revenue from live rent roll or contracts
-            const totalArea = parseFloat(p.total_leasable_area_sqft || 0) || 50000;
-            const occArea = parseFloat(p.occupied_area_sqft || 0) || totalArea;
-            const occPct = totalArea > 0 ? Math.min(100, Math.round((occArea / totalArea) * 100)) : 100;
+            const totalArea = parseFloat(p.total_leasable_area_sqft || 0);
+            const occArea = parseFloat(p.occupied_area_sqft || 0);
+            const occPct = totalArea > 0 ? Math.min(100, Math.round((occArea / totalArea) * 100)) : 0;
 
-            const finalRevenue = liveMonthlyRent > 0 ? liveMonthlyRent : 1250000;
+            const finalRevenue = liveMonthlyRent > 0 ? liveMonthlyRent : 0;
 
             return {
               id: p.id,
-              name: p.property_name,
+              name: p.property_name || "Commercial Property",
               code: p.property_code || "PROP",
-              location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || "Ahmedabad, Gujarat"),
+              location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || ""),
               areaSqft: totalArea,
               occupiedSqft: occArea,
               occupancyPct: occPct,
@@ -332,26 +332,26 @@ export default function OwnerDashboardPage() {
       if (activeContractRows.length > 0) {
         const topOccs: OccupantRank[] = activeContractRows.map((r: any, idx: number) => ({
           rank: idx + 1,
-          name: r.occupant_name || "Utkarsh Makwana",
-          property: r.property_name || liveProps[0]?.name || "mango plus tower",
-          space: `${r.space_name || "Suite 101"} (${r.space_code || "SPC-MTOWER-101"})`,
-          monthlyRent: Number(r.monthly_base_rent || liveMonthlyRent || 1250000),
+          name: r.occupant_name || "Tenant",
+          property: r.property_name || liveProps[0]?.name || "Property",
+          space: `${r.space_name || "Unit"} ${r.space_code ? `(${r.space_code})` : ""}`,
+          monthlyRent: Number(r.monthly_base_rent || 0),
           status: "Active" as const,
         }));
         setTopOccupants(topOccs);
 
         const expList: ExpirationItem[] = activeContractRows.map((r: any) => {
-          const endDate = r.end_date ? new Date(r.end_date) : new Date("2029-11-15");
+          const endDate = r.end_date ? new Date(r.end_date) : new Date();
           const daysLeft = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           return {
             id: r.id,
-            occupant: r.occupant_name || "Utkarsh Makwana",
-            property: r.property_name || liveProps[0]?.name || "mango plus tower",
-            space: r.space_name || "Suite 101",
-            expiryDate: r.end_date || "2029-11-15",
-            daysLeft: isNaN(daysLeft) ? 1120 : daysLeft,
+            occupant: r.occupant_name || "Tenant",
+            property: r.property_name || liveProps[0]?.name || "Property",
+            space: r.space_name || "Unit",
+            expiryDate: r.end_date || "",
+            daysLeft: isNaN(daysLeft) ? 0 : daysLeft,
             status: daysLeft < 90 ? "approaching" : "renewed",
-            renewalStatusText: daysLeft < 90 ? `${daysLeft} days remaining` : "Active Term (3-Year Lease)",
+            renewalStatusText: daysLeft < 90 ? `${daysLeft} days remaining` : "Active Term",
           };
         });
         setExpirations(expList);
@@ -361,34 +361,49 @@ export default function OwnerDashboardPage() {
         );
         const topOccs: OccupantRank[] = sortedContracts.slice(0, 5).map((c: any, idx: number) => ({
           rank: idx + 1,
-          name: c.occupant_name || c.tenant_name || "Utkarsh Makwana",
-          property: c.property_name || liveProps[0]?.name || "mango plus tower",
-          space: c.space_name || "Suite 101",
-          monthlyRent: Number(c.base_rent_rate || liveMonthlyRent || 1250000),
+          name: c.occupant_name || c.tenant_name || "Tenant",
+          property: c.property_name || liveProps[0]?.name || "Property",
+          space: c.space_name || "Unit",
+          monthlyRent: Number(c.base_rent_rate || 0),
           status: "Active" as const,
         }));
         setTopOccupants(topOccs);
+      } else {
+        setTopOccupants([]);
+        setExpirations([]);
       }
 
-      // 3. Process live invoices & aging
-      let invoiceGrossTotal = 1516300;
-      let invoiceCount = 1;
-      if (invRes && invRes.ok) {
-        const invJson = await invRes.json();
-        const invList = invJson.data || invJson.invoices || [];
-        if (Array.isArray(invList) && invList.length > 0) {
-          invoiceGrossTotal = invList.reduce((sum: number, i: any) => sum + (Number(i.gross_total) || Number(i.grossTotal) || 0), 0);
-          invoiceCount = invList.length;
+      // 3. Process live invoices & real aging from collections API
+      const agingRes = await fetch("/api/collections/aging", { headers: authHeaders }).catch(() => null);
+      if (agingRes && agingRes.ok) {
+        const agingJson = await agingRes.json();
+        const b = agingJson.buckets || {};
+        setAgingBuckets({
+          b0_30: { count: b.current_0_30?.count || 0, amount: b.current_0_30?.amount || 0 },
+          b31_60: { count: b.overdue_31_60?.count || 0, amount: b.overdue_31_60?.amount || 0 },
+          b61_90: { count: b.overdue_61_90?.count || 0, amount: b.overdue_61_90?.amount || 0 },
+          b90_plus: { count: b.critical_90_plus?.count || 0, amount: b.critical_90_plus?.amount || 0 },
+          totalOutstanding: Number(agingJson.total_outstanding || 0),
+        });
+      } else {
+        let invoiceGrossTotal = 0;
+        let invoiceCount = 0;
+        if (invRes && invRes.ok) {
+          const invJson = await invRes.json();
+          const invList = invJson.data || invJson.invoices || [];
+          if (Array.isArray(invList) && invList.length > 0) {
+            invoiceGrossTotal = invList.reduce((sum: number, i: any) => sum + (Number(i.gross_total) || Number(i.grossTotal) || 0), 0);
+            invoiceCount = invList.length;
+          }
         }
+        setAgingBuckets({
+          b0_30: { count: invoiceCount, amount: invoiceGrossTotal },
+          b31_60: { count: 0, amount: 0 },
+          b61_90: { count: 0, amount: 0 },
+          b90_plus: { count: 0, amount: 0 },
+          totalOutstanding: invoiceGrossTotal,
+        });
       }
-
-      setAgingBuckets({
-        b0_30: { count: invoiceCount, amount: invoiceGrossTotal },
-        b31_60: { count: 0, amount: 0 },
-        b61_90: { count: 0, amount: 0 },
-        b90_plus: { count: 0, amount: 0 },
-        totalOutstanding: invoiceGrossTotal,
-      });
 
       // 4. Fetch Multi-Client Mandates & Owner Statement
       const clientRes = await fetch("/api/multi-client/clients", { headers: authHeaders }).catch(() => null);

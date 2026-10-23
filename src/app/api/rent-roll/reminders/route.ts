@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
     const auth = getAuthContext(req);
     const body = await req.json();
 
-    const targetName = body.target_name || body.occupant_space || "Utkarsh Makwana · Suite 101";
-    const propName = body.property_name || "mango plus tower";
-    const invNumber = body.invoice_number || "INV-2026-27-0001";
-    const amountVal = Number(body.amount_inr || 1516300);
-    const senderName = body.sender_name || "JPS Management";
+    const targetName = body.target_name || body.occupant_space || "Occupant";
+    const propName = body.property_name || "Commercial Centre";
+    const invNumber = body.invoice_number || "INV";
+    const amountVal = Number(body.amount_inr || 0);
+    const senderName = body.sender_name || "Property Management";
     const senderRole = body.sender_role || "Property Managing Company";
     const title = body.title || `Payment Reminder: ${invNumber}`;
-    const recipientEmail = body.recipient_email || body.email || "tenant@gmail.com";
+    const recipientEmail = body.recipient_email || body.email || "";
     const message = body.message || `Official collection notice from ${senderName}: Invoice ${invNumber} for ${propName} is pending settlement. Please remit payment via your tenant portal.`;
 
     const inserted = await db.execute(sql`

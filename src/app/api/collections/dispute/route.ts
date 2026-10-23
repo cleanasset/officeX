@@ -183,7 +183,7 @@ export async function PATCH(req: NextRequest) {
       await db
         .update(invoice)
         .set({
-          status: issue_credit_note ? "credited" : "settled",
+          status: issue_credit_note ? "cancelled" : "paid",
           updated_at: new Date(),
         })
         .where(eq(invoice.id, existing.invoice_id));

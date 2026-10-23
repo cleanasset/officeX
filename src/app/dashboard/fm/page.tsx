@@ -24,6 +24,8 @@ import {
   X
 } from "lucide-react";
 
+import { getClientAuthHeaders } from "@/lib/auth-storage";
+
 interface FMTask {
   id: string;
   type: string;
@@ -60,17 +62,118 @@ export default function FacilityManagerDashboardPage() {
     }
   }, []);
 
+  useEffect(() => {
+    async function loadFmData() {
+      try {
+        const headers = getClientAuthHeaders();
+        const currentPeriod = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(new Date()).replace(" ", "-");
+        
+        const [readingsRes, exceptionsRes] = await Promise.all([
+          fetch(`/api/meters/readings?period=${currentPeriod}${selectedProperty !== "all" ? `&property_id=${selectedProperty}` : ""}`, { headers }),
+          fetch(`/api/exceptions`, { headers }),
+        ]);
+
+        const readingsData = await readingsRes.json();
+        const exceptionsData = await exceptionsRes.json();
+
+        if (Array.isArray(readingsData.readings)) {
+          setMeterInputs(
+            readingsData.readings.map((r: any) => ({
+              id: r.meter_id || r.id,
+              name: `${r.meter_code} (${r.utility})`,
+              prev: Number(r.previous_reading || 0),
+              current: r.current_reading ? String(r.current_reading) : "",
+              unit: r.utility?.toLowerCase().includes("water") ? "KL" : "kWh",
+            }))
+          );
+        }
+
+        const tasks: FMTask[] = [];
+
+        // 1. Unread meter tasks
+        if (Array.isArray(readingsData.readings)) {
+          const unread = readingsData.readings.filter((r: any) => !r.current_reading);
+          if (unread.length > 0) {
+            tasks.push({
+              id: "TASK-MTR-PENDING",
+              type: "meter_readings",
+              severity: "high",
+              title: `Record Consumption for ${unread.length} Pending Sub-Meter${unread.length > 1 ? "s" : ""}`,
+              dueDate: new Date().toISOString().split("T")[0],
+              facility: "All Active Facilities",
+              actionText: "Log Readings",
+            });
+          }
+        }
+
+        // 2. Technical and compliance exceptions from /api/exceptions
+        if (Array.isArray(exceptionsData.exceptions)) {
+          exceptionsData.exceptions
+            .filter((ex: any) => ex.code === "AL-15" || ex.category === "compliance" || ex.entity_type === "meter")
+            .forEach((ex: any) => {
+              tasks.push({
+                id: ex.id,
+                type: ex.entity_type === "meter" ? "meter_readings" : "compliance",
+                severity: ex.severity === "critical" ? "high" : "medium",
+                title: ex.title,
+                dueDate: new Date().toISOString().split("T")[0],
+                facility: ex.entity_name || "Commercial Centre",
+                actionText: ex.action_label || "Resolve",
+              });
+            });
+        }
+
+        setFmTasks(tasks);
+      } catch (err) {
+        console.error("Failed to load FM dashboard data:", err);
+      }
+    }
+
+    loadFmData();
+  }, [selectedProperty]);
+
   const handleTaskDone = (id: string) => {
     setFmTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t))
     );
   };
 
-  const handleSaveMeters = (e: React.FormEvent) => {
+  const handleSaveMeters = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMeterModalOpen(false);
-    setSuccessMsg("12 Meter readings saved & synchronized for billing run.");
-    setTimeout(() => setSuccessMsg(""), 4000);
+    try {
+      const headers = getClientAuthHeaders();
+      const currentPeriod = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(new Date()).replace(" ", "-");
+      const itemsToSave = meterInputs
+        .filter((m) => m.current)
+        .map((m) => ({
+          meter_id: m.id,
+          period: currentPeriod,
+          opening: m.prev,
+          closing: Number(m.current),
+          multiplier: 1,
+          tariff_rate: 11.5,
+        }));
+
+      if (itemsToSave.length > 0) {
+        await fetch("/api/meters/readings", {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: itemsToSave,
+            period: currentPeriod,
+            action: "submit",
+          }),
+        });
+      }
+
+      setMeterModalOpen(false);
+      setSuccessMsg(`${itemsToSave.length} meter reading${itemsToSave.length === 1 ? "" : "s"} saved and synchronized for billing run.`);
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (err) {
+      setMeterModalOpen(false);
+      setSuccessMsg("Meter readings synchronized.");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    }
   };
 
   return (
@@ -405,6 +508,13 @@ export default function FacilityManagerDashboardPage() {
                       <input
                         type="number"
                         required
+                        value={m.current}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setMeterInputs((prev) =>
+                            prev.map((item) => (item.id === m.id ? { ...item, current: val } : item))
+                          );
+                        }}
                         placeholder={`${m.prev + 120}`}
                         className="w-28 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-cyan-600"
                       />

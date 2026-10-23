@@ -1,0 +1,24 @@
+# Vercel Deployment Ignore File
+# Excludes heavy local assets, raw scrapers, spreadsheets, and scratch files from build bundles
+
+# Heavy raw data and local scrapers (saves ~100MB+ per deployment)
+office marketplace data/
+client response/
+documents/
+scratch/
+extracted_media/
+scripts/
+
+# Raw spreadsheets and PDF documents
+*.xlsx
+*.csv
+*.pdf
+*.log
+
+# Documentation and markdown files (not needed in runtime build)
+*.md
+!README.md
+
+# Testing & coverage
+coverage/
+.turbo/

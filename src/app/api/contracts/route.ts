@@ -323,6 +323,18 @@ export async function POST(req: Request) {
       }
     }
 
+    // Build statutory metadata remarks if provided
+    const statutoryNotes = [
+      body.registration_status ? `Registration: ${body.registration_status}` : null,
+      body.stamp_duty_amount ? `Stamp Duty: ₹${body.stamp_duty_amount} (Borne by: ${body.stamp_duty_borne_by || "Shared"})` : null,
+      body.tds_applicable !== undefined ? `TDS Sec 194-I: ${body.tds_applicable ? "Applicable (10%)" : "Exempt"}` : null,
+    ].filter(Boolean).join(" | ");
+
+    const combinedRemarks = [
+      payload.remarks || payload.notes,
+      statutoryNotes ? `[Statutory: ${statutoryNotes}]` : null,
+    ].filter(Boolean).join("\n");
+
     // Insert Contract
     const [insertedContract] = await db
       .insert(contract)
@@ -346,7 +358,7 @@ export async function POST(req: Request) {
         is_template: payload.is_template,
         deposit_amount_inr: payload.deposit_amount_inr ? String(payload.deposit_amount_inr) : null,
         deposit_status: payload.deposit_status || "pending",
-        remarks: payload.remarks || payload.notes || null,
+        remarks: combinedRemarks || null,
         created_by: auth.userId,
         updated_by: auth.userId,
         version: 1,
@@ -373,6 +385,14 @@ export async function POST(req: Request) {
     // Insert Charges & Rent Steps
     if (Array.isArray(body.charges) && body.charges.length > 0) {
       for (const ch of body.charges) {
+        const defaultSac =
+          ch.hsn_sac ||
+          (ch.invoice_group === "cam" || ch.component === "cam"
+            ? "997221"
+            : ch.component === "parking" || ch.component === "parking_slot"
+            ? "9967"
+            : "997212");
+
         const [insertedCharge] = await db
           .insert(contractCharge)
           .values({
@@ -387,6 +407,7 @@ export async function POST(req: Request) {
             is_included: ch.is_included ?? false,
             is_recoverable: ch.is_recoverable ?? false,
             invoice_group: ch.invoice_group || "rent",
+            hsn_sac: defaultSac,
             billing_mode: ch.billing_mode || "advance",
             start_date: ch.start_date || payload.start_date,
             end_date: ch.end_date || payload.end_date,
