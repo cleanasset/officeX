@@ -305,15 +305,15 @@ export default function TenantHomePage() {
       </div>
 
       {/* Active Management Collection Reminder Banner */}
-      {latestReminder && totalOutstanding > 0 && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-red-500/10 to-amber-500/10 border-2 border-amber-500/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+      {latestReminder && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs font-black">
-              <Bell size={20} className="animate-bounce" />
+            <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Bell size={18} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
                   Notice from {latestReminder.sender_name || "JPS Management"}
                 </span>
                 <span className="text-[11px] text-slate-500 font-semibold">
@@ -323,7 +323,7 @@ export default function TenantHomePage() {
               <p className="text-xs font-black text-slate-900">
                 {latestReminder.title || "Payment Reminder: October 2026 Lease Settlement"}
               </p>
-              <p className="text-xs text-slate-700 leading-relaxed max-w-2xl font-medium">
+              <p className="text-xs text-slate-600 leading-relaxed max-w-2xl font-medium">
                 {latestReminder.message}
               </p>
             </div>
@@ -332,145 +332,130 @@ export default function TenantHomePage() {
           <button
             type="button"
             onClick={() => setPayModalOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs tracking-wide shrink-0 shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs flex items-center justify-center gap-1.5 transition-transform active:scale-95 cursor-pointer self-start sm:self-auto"
           >
-            <CreditCard size={15} /> Settle Invoice Now
+            <CreditCard size={14} /> Settle Invoice Now
           </button>
         </div>
       )}
 
-      {/* 2. Outstanding Balance Hero Card */}
-      <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
-        <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.25)_0,transparent_70%)] pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-black uppercase tracking-widest text-indigo-300">
-                Total Outstanding Balance
+      {/* 2. Executive Financial Snapshot (Clean 3-Module Matrix) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Module 1: Outstanding Balance & Payment */}
+        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                Current Due
               </span>
-              {totalOutstanding === 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Fully Settled
+              {totalOutstanding > 0 ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  Due 31-Oct-2026
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Settled
                 </span>
               )}
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl sm:text-5xl font-black tracking-tight">
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
                 ₹{totalOutstanding.toLocaleString("en-IN")}
               </span>
               <span className="text-xs text-slate-400 font-bold">INR</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-300 font-medium pt-1">
-              <Calendar size={14} className="text-indigo-400" />
-              <span>
-                Due date:{" "}
-                <strong className="text-white">
-                  {summary.next_due_date
-                    ? new Date(summary.next_due_date).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })
-                    : "31 Oct 2026"}
-                </strong>
-                {totalOutstanding > 0 && <span className="text-amber-300 font-bold ml-1.5">(October 2026 Billing Run)</span>}
-              </span>
-            </div>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              {totalOutstanding > 0 ? "October 2026 Tax Invoice · Dispatched" : "No outstanding bills pending"}
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between gap-3">
             {totalOutstanding <= 0 ? (
-              <div className="px-6 py-3.5 rounded-2xl bg-emerald-500/20 text-emerald-300 font-black text-sm flex items-center justify-center gap-2 border border-emerald-500/30">
-                <CheckCircle2 size={16} className="text-emerald-400" /> Fully Settled (₹0.00 Due)
-              </div>
+              <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                <CheckCircle2 size={15} className="text-emerald-500" /> Account Fully Paid
+              </span>
             ) : (
               <button
                 id="dashboard-pay-now-btn"
                 onClick={() => setPayModalOpen(true)}
-                className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm tracking-wide shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               >
-                <CreditCard size={16} /> Pay Now
+                <CreditCard size={14} /> Pay Now
               </button>
             )}
             <Link
               href="/portal/invoices"
-              className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-white/10"
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 group"
             >
-              View Invoices <ChevronRight size={14} />
+              All Invoices <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Module 2: Security Deposit */}
+        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                Security Deposit
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Protected in Escrow
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                ₹{Number(summary.security_deposit_held_inr || 3750000).toLocaleString("en-IN")}
+              </span>
+              <span className="text-xs text-slate-400 font-bold">INR</span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Equivalent to 3 months gross rent held in SPV escrow
+            </p>
+          </div>
+
+          <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
+              <ShieldCheck size={14} /> 100% Refundable
+            </span>
+            <Link href="/portal/contract" className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+              Deposit Terms →
+            </Link>
+          </div>
+        </div>
+
+        {/* Module 3: Account Standing & Lease Status */}
+        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                Account & Lease Status
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Good Standing
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-3xl sm:text-4xl font-black text-emerald-700 tracking-tight">
+                Active
+              </span>
+              <span className="text-xs text-slate-400 font-bold">· 0 Arrears</span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Lock-in active through 15-Nov-2029 · 0 active disputes
+            </p>
+          </div>
+
+          <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-600">
+            <span>Managed by JPS Management</span>
+            <Link href="/portal/profile" className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+              Support Contacts →
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 3. Four-Tile Verified Financial KPI Matrix */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Tile 1: Current Billing Cycle Due */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Current Cycle Due
-            </span>
-            <Clock size={16} className="text-indigo-600" />
-          </div>
-          <div className="text-2xl font-black text-slate-900">
-            ₹{totalOutstanding.toLocaleString("en-IN")}
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium">
-            Due 31-Oct-2026 · Invoice INV-2026-27-0001
-          </p>
-        </div>
-
-        {/* Tile 2: Security Deposit on File */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Security Deposit Held
-            </span>
-            <ShieldCheck size={16} className="text-emerald-600" />
-          </div>
-          <div className="text-2xl font-black text-slate-900">
-            ₹{Number(summary.security_deposit_held_inr || 3750000).toLocaleString("en-IN")}
-          </div>
-          <p className="text-[11px] text-emerald-700 font-bold">
-            Protected in Escrow (3 Months)
-          </p>
-        </div>
-
-        {/* Tile 3: Overdue Status / Arrears */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Overdue Arrears
-            </span>
-            <CheckCircle2 size={16} className="text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-700">
-            ₹0
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium">
-            Account in 100% Good Standing
-          </p>
-        </div>
-
-        {/* Tile 4: Active Disputes / Helpdesk */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Active Disputes
-            </span>
-            <HelpCircle size={16} className="text-indigo-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900">
-            {summary.open_disputes_count || 0}
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium">
-            All services operational
-          </p>
-        </div>
-      </div>
-
-      {/* 4. Two Column Layout: Transparent Invoice Breakdown & Notices */}
+      {/* 3. Two Column Layout: Transparent Invoice Breakdown & Lease Milestones */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Transparent Invoice Breakdown (7 Cols) */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
@@ -589,11 +574,40 @@ export default function TenantHomePage() {
               <h2 className="text-base font-black text-slate-900 tracking-tight">Lease Milestones</h2>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Live Feed
+              Active Schedule
             </span>
           </div>
 
           <div className="space-y-3">
+            {/* Active Management Notices from PM */}
+            {reminders.slice(0, 2).map((r: any) => (
+              <div key={r.id} className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Bell size={13} className="text-amber-600" />
+                    {r.title || "Payment Reminder"}
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                    {r.sender_name || "JPS Management"}
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900/90 font-medium pl-4 leading-relaxed">
+                  {r.message}
+                </p>
+                <div className="pl-4 pt-1 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 font-semibold">
+                    {r.created_at ? new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Today"}
+                  </span>
+                  <button
+                    onClick={() => setPayModalOpen(true)}
+                    className="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                  >
+                    Settle Invoice Now →
+                  </button>
+                </div>
+              </div>
+            ))}
+
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -605,7 +619,7 @@ export default function TenantHomePage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium pl-3.5 leading-relaxed">
-                Lease lock-in valid until 15-Nov-2029. 90 days mutual notice period applies.
+                Contractual lock-in valid until 15-Nov-2029. 90 days mutual notice period applies.
               </p>
             </div>
 
@@ -624,17 +638,23 @@ export default function TenantHomePage() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+            {/* Quick Operational Help / Support Card */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-teal-500" />
-                  Refundable Security Deposit
+                  <Building2 size={13} className="text-indigo-600" />
+                  Facility & Property Contact
                 </span>
-                <span className="text-xs font-black text-slate-900">₹37,50,000</span>
+                <span className="text-[10px] font-bold text-slate-500">Suite 101</span>
               </div>
-              <p className="text-xs text-slate-500 font-medium pl-3.5 leading-relaxed">
-                Equivalent to 3 months gross rent, securely held in landlord escrow account.
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Managed by JPS Management. For fit-out requests or queries, reach facility support.
               </p>
+              <div className="pt-1 flex items-center gap-3 text-xs">
+                <Link href="/portal/profile" className="font-bold text-indigo-600 hover:text-indigo-800">
+                  View Manager Details →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

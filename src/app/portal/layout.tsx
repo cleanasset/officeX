@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -120,19 +121,26 @@ export default function TenantPortalLayout({
       {/* 1. Left Sidebar for Desktop (Width 260px) */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800 text-white fixed inset-y-0 left-0 z-40 shadow-xl">
         {/* Brand & Logo Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-teal-400 flex items-center justify-center text-white shadow-md font-black text-sm tracking-tighter">
-            OX
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-black text-base tracking-tight text-white">OFFICEX</span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-                TENANT
-              </span>
+        <div className="p-5 border-b border-slate-800">
+          <Link href="/portal" className="flex items-center gap-3 group">
+            <Image 
+              src="/logo-removebg-preview.png" 
+              alt="OfficeX Logo" 
+              width={34} 
+              height={34} 
+              className="object-contain group-hover:scale-105 transition-transform shrink-0"
+              style={{ width: "auto", height: "30px" }}
+            />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-base tracking-tight text-white">OFFICEX</span>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                  TENANT
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">Self-Service Lease Portal</p>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium">Self-Service Lease Portal</p>
-          </div>
+          </Link>
         </div>
 
         {/* Active Occupant & Space Identity Badge */}
@@ -248,6 +256,22 @@ export default function TenantPortalLayout({
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
+            {/* Mobile Brand Logo */}
+            <Link href="/portal" className="md:hidden flex items-center gap-2">
+              <Image 
+                src="/logo-removebg-preview.png" 
+                alt="OfficeX Logo" 
+                width={26} 
+                height={26} 
+                className="object-contain"
+                style={{ width: "auto", height: "24px" }}
+              />
+              <span className="font-black text-sm tracking-tight text-slate-900">OFFICEX</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                PORTAL
+              </span>
+            </Link>
+
             {/* Context Breadcrumb / Unit */}
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
@@ -284,10 +308,20 @@ export default function TenantPortalLayout({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-200 bg-slate-900 text-white p-4 space-y-2 animate-in fade-in slide-in-from-top duration-150 z-30">
-            <div className="pb-2 border-b border-slate-800">
-              <p className="text-xs font-bold text-white">{tenantDisplayName}</p>
-              <p className="text-[10px] text-slate-400">{assignedSpaceName}</p>
+          <div className="md:hidden border-b border-slate-200 bg-slate-900 text-white p-4 space-y-3 animate-in fade-in slide-in-from-top duration-150 z-30">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <Image 
+                src="/logo-removebg-preview.png" 
+                alt="OfficeX Logo" 
+                width={28} 
+                height={28} 
+                className="object-contain shrink-0"
+                style={{ width: "auto", height: "26px" }}
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{tenantDisplayName}</p>
+                <p className="text-[10px] text-slate-400 truncate">{assignedSpaceName}</p>
+              </div>
             </div>
             <div className="grid grid-cols-1 gap-1">
               {navLinks.map((link) => {
