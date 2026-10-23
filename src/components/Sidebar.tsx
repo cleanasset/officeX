@@ -74,7 +74,8 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
     { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle },
 
-    { name: "Owner Statements", href: "/operate/owner-statements", icon: Landmark, section: "Financials" },
+    { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", icon: Landmark, section: "Financials" },
+    { name: "Owner Statements", href: "/operate/owner-statements", icon: FileText },
     { name: "Revenue Forecast", href: "/operate/forecast", icon: Calendar },
     { name: "NOI & Property P&L", href: "/operate/pnl", icon: BarChart3 },
     { name: "Investor Pack (MIS)", href: "/operate/mis", icon: FileText },

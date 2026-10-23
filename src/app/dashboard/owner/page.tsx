@@ -35,7 +35,8 @@ import {
   Copy,
   UserCheck,
   Plus,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Landmark
 } from "lucide-react";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
@@ -624,6 +625,15 @@ export default function OwnerDashboardPage() {
             <span>Upload Excel</span>
           </button>
 
+          {/* Action: Banking & ERP Invoicing Module */}
+          <Link
+            href="/dashboard/owner/banking"
+            className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100/80 border border-teal-200 text-teal-800 text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Landmark className="w-3.5 h-3.5 text-[#0D7B6C]" />
+            <span>Banking &amp; ERP Sync</span>
+          </Link>
+
           {/* Secondary Action: Owner Statement */}
           <button
             onClick={() => setStatementModalOpen(true)}
@@ -654,6 +664,39 @@ export default function OwnerDashboardPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-teal-600" : ""}`} />
           </button>
         </div>
+      </div>
+
+      {/* Dedicated Banking Coordinates & Direct ERP Invoicing Status Strip */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
+            <Landmark size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Remittance Bank Active
+              </span>
+              <span className="text-[10px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                Tally Prime &amp; Zoho Books Integration Available
+              </span>
+            </div>
+            <h4 className="text-xs font-black text-slate-900 mt-0.5">
+              Commercial Bank Account &amp; Direct Accounting Integration
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Tenants remit rent to your verified account. Invoices can be generated and synced directly to <strong>Tally Prime</strong> or <strong>Zoho Books</strong>.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/dashboard/owner/banking"
+          className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer self-start sm:self-auto"
+        >
+          <span>Manage Banking &amp; ERP Sync</span>
+          <ChevronRight size={14} />
+        </Link>
       </div>
 
       {/* Executive KPI Cards (5 Cards) — Clean, Spacious, Real Indian Figures */}
