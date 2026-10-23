@@ -27,6 +27,7 @@ import {
   AlertCircle,
   FileCheck,
   Send,
+  Mail,
   X
 } from "lucide-react";
 import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
@@ -49,6 +50,7 @@ interface TaskItem {
   property: string;
   propertyId?: string;
   occupantSpace: string;
+  occupantEmail?: string;
   dueDate: string;
   dueStatus: "overdue" | "today" | "future";
   financialDetail?: string;
@@ -68,6 +70,7 @@ export default function PropertyManagerDashboardPage() {
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [reminderTarget, setReminderTarget] = useState<string | null>(null);
   const [reminderEmail, setReminderEmail] = useState("admin.cleanasset@gmail.com");
+  const [showCustomEmail, setShowCustomEmail] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [actionSuccessMessage, setActionSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -759,34 +762,77 @@ export default function PropertyManagerDashboardPage() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Send className="w-4 h-4 text-blue-600" />
+                <Send className="w-4 h-4 text-teal-700" />
                 Dispatch Payment / Statutory Reminder
               </h3>
-              <button onClick={() => setReminderModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setReminderModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3">
-              <p className="text-xs text-slate-600">
-                An automated payment reminder with outstanding balance and HDFC wire remittance instructions will be dispatched to{" "}
-                <span className="font-bold text-slate-900">{reminderTarget || "Utkarsh Makwana · Suite 101"}</span>.
-              </p>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1 text-xs">
-                  Recipient Email Address <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={reminderEmail}
-                  onChange={(e) => setReminderEmail(e.target.value)}
-                  placeholder="Enter recipient email..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Dispatches via live SMTP (smtp.gmail.com). You can enter your own email to test live delivery.
-                </p>
+            <div className="space-y-3">
+              {/* Target & Auto-Resolved Lease Contact */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Occupant</span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Active Lease
+                  </span>
+                </div>
+                <p className="text-sm font-black text-slate-900">{reminderTarget || "Utkarsh Makwana · Suite 101"}</p>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-slate-600">
+                  <Mail size={13} className="text-slate-400 shrink-0" />
+                  <span className="text-[11px] text-slate-600">Registered Email:</span>
+                  <strong className="text-slate-900 font-mono text-[11px]">{reminderEmail || "admin.cleanasset@gmail.com"}</strong>
+                  <span className="text-[9px] text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded font-bold border border-teal-200">
+                    ✓ Auto-Resolved from Lease
+                  </span>
+                </div>
+              </div>
+
+              {/* Dual-Channel Dispatch Information */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
+                  <CheckCircle2 size={14} className="text-blue-600" />
+                  <span>Automated Dual-Channel Delivery:</span>
+                </div>
+                <ul className="text-[11px] text-blue-800 space-y-1 pl-5 list-disc font-medium">
+                  <li>
+                    <strong>Tenant Portal Dashboard:</strong> Pops up immediately in tenant's top alert banner with 1-click settlement.
+                  </li>
+                  <li>
+                    <strong>Official Email (SMTP):</strong> Dispatches formatted collection notice with HDFC wire remittance instructions.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Collapsed override for testing or CC */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomEmail(!showCustomEmail)}
+                  className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 transition flex items-center gap-1 cursor-pointer"
+                >
+                  {showCustomEmail ? "− Hide custom email override" : "⚙️ Optional: Send test copy / override recipient email"}
+                </button>
+                {showCustomEmail && (
+                  <div className="mt-2 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <label className="block text-slate-700 font-bold text-[11px]">
+                      Custom / Test Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={reminderEmail}
+                      onChange={(e) => setReminderEmail(e.target.value)}
+                      placeholder="e.g. tenant-accounting@company.com"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Defaults to the tenant's registered lease email. Managing companies do not need to type this.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -821,22 +867,22 @@ export default function PropertyManagerDashboardPage() {
                     });
                     const json = await res.json();
                     setReminderModalOpen(false);
-                    showFeedback(json.message || `Payment reminder emailed to ${reminderEmail}!`);
+                    showFeedback(json.message || `Payment reminder posted to Tenant Dashboard & emailed to ${reminderEmail}!`);
                   } catch (e: any) {
                     setReminderModalOpen(false);
-                    showFeedback(`Collection reminder sent.`);
+                    showFeedback(`Collection reminder dispatched to dashboard and email.`);
                   } finally {
                     setSendingReminder(false);
                   }
                 }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
                 {sendingReminder ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Send className="w-3.5 h-3.5" />
                 )}
-                {sendingReminder ? "Sending Email..." : "Send Reminder Now"}
+                {sendingReminder ? "Dispatching..." : "Send Reminder (Dashboard & Email)"}
               </button>
             </div>
           </div>

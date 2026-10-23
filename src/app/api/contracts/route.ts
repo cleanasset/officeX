@@ -490,6 +490,7 @@ export async function GET(req: Request) {
         occupant_name: occupant.occupant_name,
         occupant_code: occupant.occupant_code,
         occupant_type: occupant.occupant_type,
+        occupant_email: occupant.email,
         space_name: space.space_name,
         space_code: space.space_code,
         chargeable_area_sqft: space.chargeable_area_sqft,

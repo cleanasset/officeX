@@ -6,13 +6,28 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
+// Public marketing & product landing pages under /operate render their own sovereign
+// MarketingHeader, full-width Hero, Pricing tables, and Footer. They must NEVER be squeezed
+// inside the internal application Sidebar or Topbar.
+const MARKETING_LANDING_ROUTES = new Set([
+  "/operate",
+  "/operate/rent-roll",
+  "/operate/rent-roll/pricing",
+  "/operate/helpdesk",
+  "/operate/ppm",
+  "/operate/compliance",
+  "/operate/visitors",
+]);
+
 export default function OperateLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isMarketingLanding = pathname === "/operate";
+  const pathname = usePathname() || "";
+  const cleanPath = pathname.replace(/\/$/, "");
+
+  const isMarketingLanding = MARKETING_LANDING_ROUTES.has(cleanPath);
 
   if (isMarketingLanding) {
     return <>{children}</>;
