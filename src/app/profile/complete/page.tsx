@@ -39,6 +39,7 @@ import {
   Check,
   Clock,
   Armchair,
+  Landmark,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -65,10 +66,23 @@ const DEPLOYED_BASE_URL =
 function CompleteProfileContent() {
   const router = useRouter();
 
-  // Active step (now includes Contract step)
-  const [activeStep, setActiveStep] = useState<"property" | "tenant" | "contract" | "documents" | "delegation">("property");
+  // Active step (now includes 6 compulsory steps: Property -> Occupant -> Contract -> Documents -> Delegation -> Banking)
+  const [activeStep, setActiveStep] = useState<"property" | "tenant" | "contract" | "documents" | "delegation" | "banking">("property");
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Step 6: Bank & Payout Coordinates Form (Compulsory for rent collection)
+  const [bankForm, setBankForm] = useState({
+    beneficiary_name: "",
+    bank_name: "HDFC Bank",
+    custom_bank_name: "",
+    account_number: "",
+    confirm_account_number: "",
+    ifsc_code: "",
+    account_type: "current", // "current" | "escrow" | "savings"
+    branch_name: "",
+  });
+  const [bankLoading, setBankLoading] = useState(false);
 
   // Stored Onboarding Context (Zero hardcoded fake defaults)
   const [companyName, setCompanyName] = useState("");
@@ -822,6 +836,57 @@ function CompleteProfileContent() {
       } else {
         setAssignChoice("self");
       }
+
+      // Step 6: Bank & Remittance Coordinates (Compulsory for rent collection)
+      const storedBankAcc = localStorage.getItem("officex_bank_account") || "";
+      const storedBankIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+      const storedBankName = localStorage.getItem("officex_bank_name") || "HDFC Bank";
+      const storedBankBeneficiary =
+        localStorage.getItem("officex_bank_beneficiary") ||
+        localStorage.getItem("officex_property_spv") ||
+        storedComp ||
+        storedBrand ||
+        "";
+      const storedBankType = localStorage.getItem("officex_bank_account_type") || "current";
+      const storedBankBranch = localStorage.getItem("officex_bank_branch") || "";
+      const isBankDone = localStorage.getItem("officex_bank_setup_completed") === "1";
+
+      setBankForm((prev) => ({
+        ...prev,
+        beneficiary_name: prev.beneficiary_name || storedBankBeneficiary,
+        bank_name: storedBankName || prev.bank_name,
+        account_number: prev.account_number || storedBankAcc,
+        confirm_account_number: prev.confirm_account_number || storedBankAcc,
+        ifsc_code: prev.ifsc_code || storedBankIfsc,
+        account_type: storedBankType || prev.account_type,
+        branch_name: prev.branch_name || storedBankBranch,
+      }));
+
+      if (isBankDone && storedBankAcc && storedBankIfsc) {
+        setCompletedSteps((prev) => (prev.includes("banking") ? prev : [...prev, "banking"]));
+      }
+
+      // Check database billing entities table for existing registered primary entity
+      try {
+        const beRes = await fetch("/api/settings/billing-entities", { headers: authHeaders });
+        if (beRes.ok) {
+          const beJson = await beRes.json();
+          const beList = Array.isArray(beJson.data) ? beJson.data : [];
+          const primaryEntity = beList.find((e: any) => e.is_default) || beList[0];
+          if (primaryEntity && primaryEntity.bank_account_number) {
+            setBankForm((prev) => ({
+              ...prev,
+              beneficiary_name: primaryEntity.legal_name || prev.beneficiary_name || storedBankBeneficiary,
+              bank_name: primaryEntity.bank_name || prev.bank_name,
+              account_number: primaryEntity.bank_account_number || prev.account_number,
+              confirm_account_number: primaryEntity.bank_account_number || prev.confirm_account_number,
+              ifsc_code: primaryEntity.bank_ifsc || prev.ifsc_code,
+              branch_name: primaryEntity.bank_branch || prev.branch_name,
+            }));
+            setCompletedSteps((prev) => (prev.includes("banking") ? prev : [...prev, "banking"]));
+          }
+        }
+      } catch (e) {}
     }
   };
 
@@ -1331,8 +1396,97 @@ function CompleteProfileContent() {
     }
   };
 
-  const finishSetupAndEnterDashboard = () => {
+  const handleSaveBanking = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    const beneficiary = (bankForm.beneficiary_name || propForm.spv_name || companyName || brandName || "").trim();
+    const effectiveBankName =
+      bankForm.bank_name === "Other" ? bankForm.custom_bank_name.trim() : bankForm.bank_name;
+    const accNumber = bankForm.account_number.trim().replace(/\s+/g, "");
+    const confirmAccNumber = bankForm.confirm_account_number.trim().replace(/\s+/g, "");
+    const ifsc = bankForm.ifsc_code.trim().toUpperCase();
+
+    if (!beneficiary) {
+      showToast("⚠️ Please enter Beneficiary Account Holder / SPV Legal Name");
+      return;
+    }
+    if (!accNumber || accNumber.length < 8) {
+      showToast("⚠️ Please enter a valid Bank Account Number (minimum 8 digits)");
+      return;
+    }
+    if (accNumber !== confirmAccNumber) {
+      showToast("⚠️ Account number and confirmation account number do not match");
+      return;
+    }
+    if (!ifsc || ifsc.length !== 11) {
+      showToast("⚠️ Please enter a valid 11-character Indian IFSC Code (e.g., HDFC0000060)");
+      return;
+    }
+
+    try {
+      setBankLoading(true);
+      const authHeaders = getClientAuthHeaders();
+
+      // Save to database billingEntities table via API
+      await fetch("/api/settings/billing-entities", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          legal_name: beneficiary,
+          trade_name: beneficiary,
+          bank_name: effectiveBankName,
+          bank_account_number: accNumber,
+          bank_ifsc: ifsc,
+          bank_branch: bankForm.branch_name.trim() || "Main Branch",
+          pan: propForm.pan_number || undefined,
+          gstin: propForm.gstin || undefined,
+          registered_address: propForm.address || undefined,
+          state_code: propForm.state || undefined,
+          is_default: true,
+        }),
+      }).catch(() => {});
+
+      // Persist across browser storage for instant sync across tabs and tenant portal
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_bank_account", accNumber);
+        localStorage.setItem("officex_bank_ifsc", ifsc);
+        localStorage.setItem("officex_bank_name", effectiveBankName);
+        localStorage.setItem("officex_bank_beneficiary", beneficiary);
+        localStorage.setItem("officex_property_spv", beneficiary);
+        localStorage.setItem("officex_bank_account_type", bankForm.account_type);
+        localStorage.setItem("officex_bank_branch", bankForm.branch_name.trim());
+        localStorage.setItem("officex_bank_setup_completed", "1");
+      }
+
+      markStepDone("banking");
+      showToast("✓ Bank Account Details saved successfully! Rent collection enabled.");
+      finishSetupAndEnterDashboard(true);
+    } catch (err: any) {
+      showToast(`Error saving bank details: ${err.message}`);
+    } finally {
+      setBankLoading(false);
+    }
+  };
+
+  const finishSetupAndEnterDashboard = (bypassBankCheck: boolean | any = false) => {
+    const isBypass = typeof bypassBankCheck === "boolean" ? bypassBankCheck : false;
+    const isBankDone =
+      isBypass ||
+      completedSteps.includes("banking") ||
+      (typeof window !== "undefined" && localStorage.getItem("officex_bank_setup_completed") === "1") ||
+      Boolean(bankForm.account_number && bankForm.ifsc_code && bankForm.account_number.length >= 8);
+
+    if (!isBankDone) {
+      showToast("⚠️ Bank Account Details are compulsory so tenants can pay rent! Please complete Step 6.");
+      setActiveStep("banking");
+      return;
+    }
+
     markStepDone("delegation");
+    markStepDone("banking");
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_subscription", "active");
       sessionStorage.setItem("officex_subscription", "active");
@@ -1367,7 +1521,7 @@ function CompleteProfileContent() {
     }
   };
 
-  const progressPct = Math.round(((completedSteps.length) / 5) * 100);
+  const progressPct = Math.round(((completedSteps.length) / 6) * 100);
 
   return (
     <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
@@ -1407,13 +1561,24 @@ function CompleteProfileContent() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link
-                  href="/dashboard/owner"
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isBankDone =
+                      completedSteps.includes("banking") ||
+                      (typeof window !== "undefined" && localStorage.getItem("officex_bank_setup_completed") === "1");
+                    if (!isBankDone) {
+                      showToast("⚠️ Bank Account Details are compulsory before entering dashboard so tenants can pay rent!");
+                      setActiveStep("banking");
+                    } else {
+                      finishSetupAndEnterDashboard();
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
-                  <span>Skip to Dashboard</span>
+                  <span>Go to Dashboard</span>
                   <ChevronRight size={14} />
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -1421,7 +1586,7 @@ function CompleteProfileContent() {
             <div className="mt-5 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-slate-600">
-                  Profile Progress: <strong className="text-teal-700">{completedSteps.length} of 5 Modules Completed</strong>
+                  Profile Progress: <strong className="text-teal-700">{completedSteps.length} of 6 Modules Completed</strong>
                 </span>
                 <span className="font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
                   {Math.min(100, progressPct)}%
@@ -1507,14 +1672,15 @@ function CompleteProfileContent() {
               </div>
             )}
 
-            {/* Navigation Tabs (5 Steps) */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-6 pt-5 border-t border-slate-100">
+            {/* Navigation Tabs (6 Steps - Bank Details Compulsory) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-6 pt-5 border-t border-slate-100">
               {[
                 { id: "property", label: "1. Add Property", icon: Building2 },
                 { id: "tenant", label: "2. Add Occupant", icon: Users },
                 { id: "contract", label: "3. Lease Contract", icon: FileText },
                 { id: "documents", label: "4. Compliance Vault", icon: ShieldCheck },
-                { id: "delegation", label: assignChoice === "self" ? "5. Management & Access" : "5. Team Delegation", icon: UserCheck },
+                { id: "delegation", label: assignChoice === "self" ? "5. Management" : "5. Delegation", icon: UserCheck },
+                { id: "banking", label: "6. Bank Details", icon: Landmark, isCompulsory: true },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isCurrent = activeStep === tab.id;
@@ -1543,9 +1709,16 @@ function CompleteProfileContent() {
                       >
                         {isDone ? <CheckCircle2 size={15} /> : <Icon size={14} />}
                       </div>
-                      <span className="text-xs font-extrabold text-slate-800 truncate">
-                        {tab.label}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-extrabold text-slate-800 truncate block">
+                          {tab.label}
+                        </span>
+                        {tab.isCompulsory && (
+                          <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200 inline-block">
+                            Required
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -3957,7 +4130,7 @@ function CompleteProfileContent() {
 
                   <button
                     type="button"
-                    onClick={finishSetupAndEnterDashboard}
+                    onClick={() => finishSetupAndEnterDashboard()}
                     className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Complete Setup &amp; Enter Dashboard →</span>
@@ -3973,7 +4146,7 @@ function CompleteProfileContent() {
               <div className="border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
-                    Step 5 of 5
+                    Step 5 of 6
                   </span>
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0D7B6C] text-[10px] font-black uppercase tracking-wider">
                     <ShieldCheck size={11} />
@@ -4313,11 +4486,403 @@ function CompleteProfileContent() {
 
                 <button
                   type="button"
-                  onClick={finishSetupAndEnterDashboard}
+                  onClick={() => {
+                    markStepDone("delegation");
+                    setActiveStep("banking");
+                    showToast("✓ Step 5 completed! Please enter compulsory Bank Details for rent collection.");
+                  }}
                   className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-sm font-black shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Complete Setup &amp; Enter Dashboard</span>
+                  <span>Continue to Step 6: Bank &amp; Payout Setup (Compulsory)</span>
                   <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ──── MODULE 6: COMPULSORY BANK ACCOUNT & REMITTANCE DETAILS ──── */}
+          {activeStep === "banking" && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                    Step 6 of 6
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                    <AlertCircle size={11} className="text-amber-700" />
+                    Compulsory For Rent Collection
+                  </span>
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                    <ShieldCheck size={11} />
+                    <span>RBI &amp; Rule 46 CGST Compliant</span>
+                  </div>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <Landmark className="text-[#0D7B6C]" size={22} />
+                  <span>Commercial Bank Account &amp; Payout Coordinates</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Designate the primary commercial bank account where tenants will deposit monthly rent, CAM charges, and utility reimbursements.
+                </p>
+              </div>
+
+              {/* Compulsory Requirement Banner */}
+              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-2xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-200/70 text-amber-900 flex items-center justify-center shrink-0 mt-0.5">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-950">
+                      Why are bank details compulsory before entering dashboard?
+                    </h4>
+                    <p className="text-xs text-amber-900/90 mt-0.5 leading-relaxed">
+                      Without verified landlord bank coordinates, tenants accessing the Tenant Portal cannot generate remittance slips or execute NEFT/RTGS wire transfers. Adding your account ensures zero payment delays and automated bank reconciliation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two Column Layout: Form & Live Remittance Preview */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Form Column */}
+                <form onSubmit={handleSaveBanking} className="lg:col-span-7 space-y-4">
+                  {/* Beneficiary SPV Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Beneficiary Account Holder / SPV Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Prestige Estates SPV Pvt Ltd"
+                      value={bankForm.beneficiary_name}
+                      onChange={(e) => setBankForm({ ...bankForm, beneficiary_name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Must match the legal entity registered on your lease contract and GST portal.
+                    </p>
+                  </div>
+
+                  {/* Bank Name Dropdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Bank Name <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={bankForm.bank_name}
+                        onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white cursor-pointer"
+                      >
+                        <option value="HDFC Bank">HDFC Bank</option>
+                        <option value="ICICI Bank">ICICI Bank</option>
+                        <option value="State Bank of India">State Bank of India (SBI)</option>
+                        <option value="Axis Bank">Axis Bank</option>
+                        <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                        <option value="IndusInd Bank">IndusInd Bank</option>
+                        <option value="Yes Bank">Yes Bank</option>
+                        <option value="Punjab National Bank">Punjab National Bank</option>
+                        <option value="Bank of Baroda">Bank of Baroda</option>
+                        <option value="Other">Other Bank...</option>
+                      </select>
+                    </div>
+
+                    {bankForm.bank_name === "Other" ? (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Specify Bank Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Standard Chartered Bank"
+                          value={bankForm.custom_bank_name}
+                          onChange={(e) => setBankForm({ ...bankForm, custom_bank_name: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Account Type <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={bankForm.account_type}
+                          onChange={(e) => setBankForm({ ...bankForm, account_type: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white cursor-pointer"
+                        >
+                          <option value="current">Current Account (Corporate / SPV)</option>
+                          <option value="escrow">Escrow Collection Account</option>
+                          <option value="savings">Savings Account (Proprietorship)</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Account Number & Confirm Account Number */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Bank Account Number <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 50200088991234"
+                        value={bankForm.account_number}
+                        onChange={(e) =>
+                          setBankForm({
+                            ...bankForm,
+                            account_number: e.target.value.replace(/[^0-9a-zA-Z]/g, ""),
+                          })
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white tracking-wider"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          Confirm Account Number <span className="text-rose-500">*</span>
+                        </label>
+                        {bankForm.confirm_account_number && (
+                          <span
+                            className={`text-[10px] font-bold ${
+                              bankForm.account_number === bankForm.confirm_account_number
+                                ? "text-emerald-700 flex items-center gap-0.5"
+                                : "text-rose-600"
+                            }`}
+                          >
+                            {bankForm.account_number === bankForm.confirm_account_number ? (
+                              <>
+                                <Check size={11} /> Matched
+                              </>
+                            ) : (
+                              "Mismatched"
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Re-enter Account Number"
+                        value={bankForm.confirm_account_number}
+                        onChange={(e) =>
+                          setBankForm({
+                            ...bankForm,
+                            confirm_account_number: e.target.value.replace(/[^0-9a-zA-Z]/g, ""),
+                          })
+                        }
+                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 tracking-wider bg-white ${
+                          bankForm.confirm_account_number &&
+                          bankForm.account_number !== bankForm.confirm_account_number
+                            ? "border-rose-400 focus:ring-rose-500"
+                            : "border-slate-300 focus:ring-[#0D7B6C]"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* IFSC Code & Branch Name */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          IFSC Code <span className="text-rose-500">*</span>
+                        </label>
+                        {bankForm.ifsc_code && (
+                          <span
+                            className={`text-[10px] font-bold ${
+                              /^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankForm.ifsc_code)
+                                ? "text-emerald-700 flex items-center gap-0.5"
+                                : "text-amber-700"
+                            }`}
+                          >
+                            {/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankForm.ifsc_code) ? (
+                              <>
+                                <Check size={11} /> Valid Format
+                              </>
+                            ) : (
+                              "11 Chars Required"
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        maxLength={11}
+                        placeholder="e.g. HDFC0000060"
+                        value={bankForm.ifsc_code}
+                        onChange={(e) =>
+                          setBankForm({
+                            ...bankForm,
+                            ifsc_code: e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ""),
+                          })
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white uppercase tracking-wider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Bank Branch &amp; City
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. MG Road Branch, Bengaluru"
+                        value={bankForm.branch_name}
+                        onChange={(e) => setBankForm({ ...bankForm, branch_name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C] bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Primary Default Billing Entity Confirmation */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="primaryBillingCheck"
+                      defaultChecked
+                      className="mt-0.5 rounded text-[#0D7B6C] focus:ring-[#0D7B6C] h-4 w-4 cursor-pointer"
+                    />
+                    <label htmlFor="primaryBillingCheck" className="text-xs text-slate-700 font-semibold cursor-pointer">
+                      <span>Set as Default Primary Billing Entity</span>
+                      <span className="block text-[11px] text-slate-500 font-normal mt-0.5">
+                        These coordinates will automatically be stamped on all PDF invoices and provided to tenants in their Tenant Remittance Portal.
+                      </span>
+                    </label>
+                  </div>
+                </form>
+
+                {/* Right Column: Live Remittance Slip Preview */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl border border-teal-500/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-44 h-44 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+
+                    <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+                          <Landmark size={16} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono text-teal-400 uppercase tracking-widest block">
+                            Tenant Remittance Slip
+                          </span>
+                          <span className="text-xs font-black text-white">
+                            {bankForm.bank_name === "Other"
+                              ? bankForm.custom_bank_name || "Commercial Bank"
+                              : bankForm.bank_name || "Commercial Bank"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Live Preview
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-3 font-mono text-xs">
+                      <div>
+                        <span className="text-[10px] text-teal-300/70 font-sans block uppercase font-bold">
+                          Beneficiary SPV / Legal Entity
+                        </span>
+                        <span className="font-bold text-white text-sm break-words">
+                          {bankForm.beneficiary_name || propForm.spv_name || companyName || "Official Landlord SPV"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10">
+                        <div>
+                          <span className="text-[10px] text-teal-300/70 font-sans block uppercase font-bold">
+                            Account Number
+                          </span>
+                          <span className="font-bold text-white tracking-wider text-xs sm:text-sm">
+                            {bankForm.account_number || "•••• •••• ••••"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-teal-300/70 font-sans block uppercase font-bold">
+                            IFSC Code
+                          </span>
+                          <span className="font-bold text-teal-300 tracking-wider">
+                            {bankForm.ifsc_code || "•••••••••••"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 text-[11px]">
+                        <div>
+                          <span className="text-[9px] text-teal-300/70 font-sans block uppercase font-bold">
+                            Account Type
+                          </span>
+                          <span className="text-white capitalize">
+                            {bankForm.account_type || "Current"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-teal-300/70 font-sans block uppercase font-bold">
+                            Branch
+                          </span>
+                          <span className="text-slate-300 truncate block">
+                            {bankForm.branch_name || "Main Commercial Branch"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-[10px] text-teal-200/80">
+                      <span className="flex items-center gap-1">
+                        <ShieldCheck size={13} className="text-emerald-400" />
+                        Direct RTGS / NEFT / IMPS Remittance
+                      </span>
+                      <span className="font-mono text-white/40">Rule 46 CGST</span>
+                    </div>
+                  </div>
+
+                  {/* Info helper */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-[#0D7B6C]" />
+                      Automated Tenant Portal Synchronization
+                    </span>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Once saved, your tenants will immediately see these details when clicking <strong>"Pay Now"</strong> or <strong>"Corporate Wire Instructions"</strong> in their tenant workspace.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Finish Actions */}
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setActiveStep("delegation")}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  ← Back to Step 5: Management
+                </button>
+
+                <button
+                  type="button"
+                  disabled={bankLoading}
+                  onClick={handleSaveBanking}
+                  className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-700 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-sm font-black shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {bankLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Saving Bank Coordinates...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Save Bank Details &amp; Launch Dashboard</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

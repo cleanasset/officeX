@@ -9,6 +9,7 @@ import {
   invoice,
   dispute,
 } from "@/db/rent-roll-schema";
+import { billingEntities } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc, or } from "drizzle-orm";
 
@@ -253,12 +254,36 @@ export async function GET(req: NextRequest) {
       link: "/portal/documents",
     });
 
-      return NextResponse.json({
-        success: true,
-        occupant: currentOccupant,
-        occupants_list: allOccupants,
-        contracts: contracts,
-        summary: {
+    // Query official landlord SPV bank coordinates (for corporate wire remittance)
+    let landlordBank: any = null;
+    try {
+      const [be] = await db
+        .select()
+        .from(billingEntities)
+        .where(eq(billingEntities.orgId, auth.orgId))
+        .orderBy(desc(billingEntities.isDefault), desc(billingEntities.createdAt))
+        .limit(1);
+
+      if (be && be.bankAccountNumber) {
+        landlordBank = {
+          spv_name: be.legalName || be.tradeName,
+          bank_name: be.bankName || "Commercial Bank",
+          account_number: be.bankAccountNumber,
+          ifsc_code: be.bankIfsc || "",
+          branch: be.bankBranch || "",
+        };
+      }
+    } catch (e) {
+      // Non-blocking fallback
+    }
+
+    return NextResponse.json({
+      success: true,
+      occupant: currentOccupant,
+      occupants_list: allOccupants,
+      contracts: contracts,
+      landlord_bank_details: landlordBank,
+      summary: {
           total_outstanding_inr: Math.round(totalOutstanding * 100) / 100,
           next_due_date: nextDueDate || todayStr,
           overdue_count: overdueCount,

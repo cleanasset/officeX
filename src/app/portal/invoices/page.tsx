@@ -96,6 +96,12 @@ function TenantInvoicesContent() {
   const [brandName, setBrandName] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
   const [tenantDisplayName, setTenantDisplayName] = useState<string>("Utkarsh Makwana");
+  const [landlordBank, setLandlordBank] = useState<{
+    spv_name?: string;
+    bank_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -103,10 +109,23 @@ function TenantInvoicesContent() {
       const storedBrand = localStorage.getItem("officex_brand_name") || "";
       const storedCompany = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") || "";
       const storedTenant = localStorage.getItem("officex_tenant_name") || "";
+      const storedBankAcc = localStorage.getItem("officex_bank_account") || "";
+      const storedBankIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+      const storedBankName = localStorage.getItem("officex_bank_name") || "";
+      const storedSpv = localStorage.getItem("officex_property_spv") || "";
+
       if (storedLogo) setBrandLogo(storedLogo);
       if (storedBrand) setBrandName(storedBrand);
       if (storedCompany) setCompanyName(storedCompany);
       if (storedTenant) setTenantDisplayName(storedTenant);
+      if (storedBankAcc && storedBankIfsc) {
+        setLandlordBank({
+          spv_name: storedSpv || storedCompany || "Commercial Landlord SPV",
+          bank_name: storedBankName || "Commercial Bank",
+          account_number: storedBankAcc,
+          ifsc_code: storedBankIfsc,
+        });
+      }
     }
 
     loadInvoices();
@@ -316,12 +335,36 @@ function TenantInvoicesContent() {
   // Load Landlord's Bank Account for Direct Transfer
   async function fetchLandlordBankDetails() {
     try {
+      const storedBankAcc = typeof window !== "undefined" ? localStorage.getItem("officex_bank_account") : "";
+      const storedBankIfsc = typeof window !== "undefined" ? localStorage.getItem("officex_bank_ifsc") : "";
+      const storedBankName = typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "";
+      const storedSpv =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_bank_beneficiary") ||
+            localStorage.getItem("officex_property_spv") ||
+            localStorage.getItem("officex_company_name")
+          : "";
+
       const res = await fetch("/api/portal/payments/netbanking");
       if (res.ok) {
         const json = await res.json();
-        if (json.bank_details) {
+        if (json.bank_details?.bankAccountNumber && json.bank_details?.id !== "default-owner-bank") {
           setLandlordBankDetails(json.bank_details);
+          return;
         }
+      }
+
+      if (storedBankAcc && storedBankIfsc) {
+        setLandlordBankDetails({
+          name: storedSpv || "Official Landlord SPV",
+          bankName: storedBankName || "Commercial Bank",
+          bankAccountNumber: storedBankAcc,
+          bankIfscCode: storedBankIfsc,
+          bankBranch:
+            typeof window !== "undefined"
+              ? localStorage.getItem("officex_bank_branch") || "Main Commercial Branch"
+              : "Main Commercial Branch",
+        });
       }
     } catch (e) {
       console.error("Failed to load landlord bank details:", e);
@@ -831,8 +874,12 @@ function TenantInvoicesContent() {
             <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] font-black uppercase text-teal-800 block">Bank Wire Remittance Instructions:</span>
-                <p className="font-bold text-teal-950 mt-0.5">HDFC Bank Ltd · Current A/c 50200088991234 · IFSC HDFC0000060</p>
-                <p className="text-[11px] text-teal-700 font-medium">Beneficiary: {brandName || companyName || "Mango Groups Ltd"} · Remit via Corporate RTGS / NEFT</p>
+                <p className="font-bold text-teal-950 mt-0.5">
+                  {landlordBank?.bank_name || "Commercial Bank"} · Current A/c {landlordBank?.account_number || "••••••••"} · IFSC {landlordBank?.ifsc_code || "••••••••"}
+                </p>
+                <p className="text-[11px] text-teal-700 font-medium">
+                  Beneficiary: {landlordBank?.spv_name || brandName || companyName || "Commercial Landlord SPV"} · Remit via Corporate RTGS / NEFT
+                </p>
               </div>
               <div className="sm:text-right shrink-0">
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-white text-teal-800 border border-teal-200 font-mono">
@@ -1333,7 +1380,7 @@ function TenantInvoicesContent() {
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Remitted Into Account:</span>
                 <span className="font-mono font-bold text-slate-900">
-                  HDFC Bank Ltd · A/c 50200088991234
+                  {landlordBank?.bank_name || "Commercial Bank"} · A/c {landlordBank?.account_number || "••••••••"}
                 </span>
               </div>
 

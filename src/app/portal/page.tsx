@@ -58,6 +58,13 @@ export default function TenantHomePage() {
   const [brandLogo, setBrandLogo] = useState<string>("");
   const [brandName, setBrandName] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
+  const [landlordBank, setLandlordBank] = useState<{
+    spv_name?: string;
+    bank_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    branch?: string;
+  } | null>(null);
   const [viewInvoiceModalOpen, setViewInvoiceModalOpen] = useState(false);
 
   useEffect(() => {
@@ -65,9 +72,22 @@ export default function TenantHomePage() {
       const storedLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
       const storedBrand = localStorage.getItem("officex_brand_name") || "";
       const storedCompany = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") || "";
+      const storedBankAcc = localStorage.getItem("officex_bank_account") || "";
+      const storedBankIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+      const storedBankName = localStorage.getItem("officex_bank_name") || "";
+      const storedSpv = localStorage.getItem("officex_property_spv") || "";
+
       if (storedLogo) setBrandLogo(storedLogo);
       if (storedBrand) setBrandName(storedBrand);
       if (storedCompany) setCompanyName(storedCompany);
+      if (storedBankAcc && storedBankIfsc) {
+        setLandlordBank({
+          spv_name: storedSpv || storedCompany || "Commercial Landlord SPV",
+          bank_name: storedBankName || "Commercial Bank",
+          account_number: storedBankAcc,
+          ifsc_code: storedBankIfsc,
+        });
+      }
     }
 
     const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
@@ -90,6 +110,9 @@ export default function TenantHomePage() {
       const json = await res.json();
       if (json.success) {
         setData(json);
+        if (json.landlord_bank_details?.account_number) {
+          setLandlordBank(json.landlord_bank_details);
+        }
         if (json.occupant?.occupant_name && typeof window !== "undefined") {
           localStorage.setItem("officex_tenant_name", json.occupant.occupant_name);
         }
@@ -847,39 +870,55 @@ export default function TenantHomePage() {
                 <div className="p-3 bg-white rounded-xl border border-teal-200 space-y-2 font-mono text-[11px]">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-sans font-semibold">Beneficiary SPV:</span>
-                    <span className="font-bold text-slate-900 font-sans">Mango Groups Ltd</span>
+                    <span className="font-bold text-slate-900 font-sans">
+                      {landlordBank?.spv_name || brandName || companyName || "Commercial Landlord SPV"}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-sans font-semibold">Bank Name:</span>
-                    <span className="font-bold text-slate-900 font-sans">HDFC Bank Ltd</span>
+                    <span className="font-bold text-slate-900 font-sans">
+                      {landlordBank?.bank_name || "Commercial Bank"}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-sans font-semibold">Account Number:</span>
                     <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                      <span>50200088991234</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy("50200088991234", "acct")}
-                        className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
-                      >
-                        {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
-                      </button>
+                      <span>{landlordBank?.account_number || "Pending Landlord Setup"}</span>
+                      {landlordBank?.account_number && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(landlordBank.account_number!, "acct")}
+                          className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
+                          title="Copy account number"
+                        >
+                          {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-sans font-semibold">IFSC Code:</span>
                     <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                      <span>HDFC0000060</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy("HDFC0000060", "ifsc")}
-                        className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
-                      >
-                        {copiedField === "ifsc" ? <Check size={12} /> : <Copy size={12} />}
-                      </button>
+                      <span>{landlordBank?.ifsc_code || "Pending Landlord Setup"}</span>
+                      {landlordBank?.ifsc_code && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(landlordBank.ifsc_code!, "ifsc")}
+                          className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
+                          title="Copy IFSC code"
+                        >
+                          {copiedField === "ifsc" ? <Check size={12} /> : <Copy size={12} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
+
+                {!landlordBank?.account_number && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-medium">
+                    ⚠️ The property owner has not linked direct wire details yet. Please use <strong>Real Net Banking</strong> above or contact property management.
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-teal-950 block">
@@ -1129,9 +1168,12 @@ export default function TenantHomePage() {
             {/* Bank Remittance Details Box */}
             <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-[10px] font-black uppercase text-teal-800 block">Bank Wire Remittance Instructions:</span>
-                <p className="font-bold text-teal-950 mt-0.5">HDFC Bank Ltd · Current A/c 50200088991234 · IFSC HDFC0000060</p>
-                <p className="text-[11px] text-teal-700 font-medium">Beneficiary: Mango Groups Ltd · Remit via Corporate RTGS / NEFT before 31-Oct-2026</p>
+                <p className="font-bold text-teal-950 mt-0.5">
+                  {landlordBank?.bank_name || "Commercial Bank"} · Current A/c {landlordBank?.account_number || "••••••••"} · IFSC {landlordBank?.ifsc_code || "••••••••"}
+                </p>
+                <p className="text-[11px] text-teal-700 font-medium">
+                  Beneficiary: {landlordBank?.spv_name || brandName || companyName || "Mango Groups Ltd"} · Remit via Corporate RTGS / NEFT before 31-Oct-2026
+                </p>
               </div>
               <div className="sm:text-right shrink-0">
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-white text-teal-800 border border-teal-200 font-mono">
@@ -1222,7 +1264,7 @@ export default function TenantHomePage() {
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Remitted Into Account:</span>
                 <span className="font-mono font-bold text-slate-900">
-                  HDFC Bank Ltd · A/c 50200088991234
+                  {landlordBank?.bank_name || "Commercial Bank"} · A/c {landlordBank?.account_number || "••••••••"}
                 </span>
               </div>
 

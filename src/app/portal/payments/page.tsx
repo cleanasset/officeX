@@ -31,6 +31,12 @@ export default function TenantPaymentsPage() {
   const [companyName, setCompanyName] = useState<string>("");
   const [tenantDisplayName, setTenantDisplayName] = useState<string>("Utkarsh Makwana");
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [landlordBank, setLandlordBank] = useState<{
+    bank_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    spv_name?: string;
+  } | null>(null);
 
   // TDS Certificate Upload state (§T-04)
   const [tdsQuarter, setTdsQuarter] = useState("Q2 (Jul - Sep 2026)");
@@ -44,20 +50,46 @@ export default function TenantPaymentsPage() {
       const storedBrand = localStorage.getItem("officex_brand_name") || "";
       const storedCompany = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") || "";
       const storedTenant = localStorage.getItem("officex_tenant_name") || "";
+      const storedBankAcc = localStorage.getItem("officex_bank_account") || "";
+      const storedBankName = localStorage.getItem("officex_bank_name") || "";
+      const storedBankIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+
       if (storedLogo) setBrandLogo(storedLogo);
       if (storedBrand) setBrandName(storedBrand);
       if (storedCompany) setCompanyName(storedCompany);
       if (storedTenant) setTenantDisplayName(storedTenant);
+      if (storedBankAcc) {
+        setLandlordBank({
+          bank_name: storedBankName || "HDFC Bank",
+          account_number: storedBankAcc,
+          ifsc_code: storedBankIfsc,
+          spv_name: storedCompany || storedBrand,
+        });
+      }
     }
 
     loadPayments();
+    loadPortalBank();
 
     const handleOccChange = () => {
       loadPayments();
+      loadPortalBank();
     };
     window.addEventListener("occupantChanged", handleOccChange);
     return () => window.removeEventListener("occupantChanged", handleOccChange);
   }, []);
+
+  async function loadPortalBank() {
+    try {
+      const res = await fetch("/api/portal/summary");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.landlord_bank_details?.account_number) {
+          setLandlordBank(json.landlord_bank_details);
+        }
+      }
+    } catch {}
+  }
 
   async function loadPayments() {
     try {
@@ -363,7 +395,7 @@ export default function TenantPaymentsPage() {
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Remitted Into Account:</span>
                 <span className="font-mono font-bold text-slate-900">
-                  HDFC Bank Ltd · A/c 50200088991234
+                  {landlordBank?.bank_name || "Commercial Bank"} · A/c {landlordBank?.account_number || "50200088991234"}
                 </span>
               </div>
 
