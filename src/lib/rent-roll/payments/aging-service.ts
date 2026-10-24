@@ -9,7 +9,7 @@
  */
 
 import { db } from "@/db";
-import { invoice, occupant } from "@/db/rent-roll-schema";
+import { invoice, occupant, contract, space, building, property } from "@/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 
 export interface AgingBucketItem {
@@ -29,9 +29,15 @@ export interface OccupantAgingSummary {
   occupant_id: string;
   occupant_name: string;
   occupant_code: string;
+  contract_code: string;
+  property_name: string;
+  oldest_due_days: number;
+  disputed_amount: number;
+  invoices_count: number;
   is_in_arrears: boolean;
   arrears_flag: boolean;
   total_outstanding: number;
+  bucket_0_30: number;
   current_0_30: number;
   bucket_31_60: number;
   overdue_31_60: number;
@@ -94,8 +100,14 @@ export async function calculateAgingReport(
       status: invoice.status,
       occupant_id: invoice.occupant_id,
       contract_id: invoice.contract_id,
+      contract_code: contract.contract_code,
+      property_name: property.property_name,
     })
     .from(invoice)
+    .leftJoin(contract, eq(invoice.contract_id, contract.id))
+    .leftJoin(space, eq(contract.space_id, space.id))
+    .leftJoin(building, eq(space.building_id, building.id))
+    .leftJoin(property, eq(building.property_id, property.id))
     .where(and(...conditions));
 
   // Query all occupants in this org
@@ -158,9 +170,15 @@ export async function calculateAgingReport(
         occupant_id: occId,
         occupant_name: occMeta ? occMeta.occupant_name : "Unassigned Occupant",
         occupant_code: occMeta ? occMeta.occupant_code : "UNASSIGNED",
+        contract_code: inv.contract_code || "—",
+        property_name: inv.property_name || "—",
+        oldest_due_days: daysOverdue,
+        disputed_amount: 0,
+        invoices_count: 0,
         is_in_arrears: false,
         arrears_flag: false,
         total_outstanding: 0,
+        bucket_0_30: 0,
         current_0_30: 0,
         bucket_31_60: 0,
         overdue_31_60: 0,
@@ -172,14 +190,24 @@ export async function calculateAgingReport(
         invoices: [],
       };
       occupantBucketsMap.set(occId, occSummary);
+    } else {
+      occSummary.oldest_due_days = Math.max(occSummary.oldest_due_days, daysOverdue);
+      if (!occSummary.contract_code || occSummary.contract_code === "—") {
+        occSummary.contract_code = inv.contract_code || "—";
+      }
+      if (!occSummary.property_name || occSummary.property_name === "—") {
+        occSummary.property_name = inv.property_name || "—";
+      }
     }
 
     occSummary.total_outstanding += balance;
     occSummary.invoices.push(bucketItem);
     occSummary.invoice_count = occSummary.invoices.length;
+    occSummary.invoices_count = occSummary.invoices.length;
 
     if (daysOverdue <= 30) {
       occSummary.current_0_30 += balance;
+      occSummary.bucket_0_30 += balance;
       totalCurrent += balance;
       count0_30++;
     } else if (daysOverdue <= 60) {

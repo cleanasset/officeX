@@ -76,16 +76,16 @@ export default function AgeingCollectionsPage() {
     const csvContent = [
       headers.join(","),
       ...rows.map(r => [
-        `"${r.occupant_name.replace(/"/g, '""')}"`,
-        `"${r.contract_code}"`,
+        `"${String(r.occupant_name || '').replace(/"/g, '""')}"`,
+        `"${r.contract_code || ''}"`,
         `"${r.property_name || ''}"`,
-        r.total_outstanding,
-        r.bucket_0_30,
-        r.bucket_31_60,
-        r.bucket_61_90,
-        r.bucket_90_plus,
-        r.oldest_due_days,
-        r.invoices_count
+        r.total_outstanding || 0,
+        r.bucket_0_30 || (r as any).current_0_30 || 0,
+        r.bucket_31_60 || 0,
+        r.bucket_61_90 || 0,
+        r.bucket_90_plus || 0,
+        r.oldest_due_days || 0,
+        r.invoices_count || 0
       ].join(","))
     ].join("\n");
 
@@ -209,23 +209,25 @@ export default function AgeingCollectionsPage() {
   };
 
   const filteredRows = rows.filter((r) => {
-    if (selectedBucket === "90_plus" && r.bucket_90_plus <= 0) return false;
-    if (selectedBucket === "61_90" && r.bucket_61_90 <= 0) return false;
-    if (selectedBucket === "31_60" && r.bucket_31_60 <= 0) return false;
+    const b90 = Number(r.bucket_90_plus || 0);
+    const b60 = Number(r.bucket_61_90 || 0);
+    const b30 = Number(r.bucket_31_60 || 0);
+    if (selectedBucket === "90_plus" && b90 <= 0) return false;
+    if (selectedBucket === "61_90" && b60 <= 0) return false;
+    if (selectedBucket === "31_60" && b30 <= 0) return false;
     if (search) {
       const q = search.toLowerCase();
-      return (
-        r.occupant_name.toLowerCase().includes(q) ||
-        r.contract_code.toLowerCase().includes(q) ||
-        (r.property_name && r.property_name.toLowerCase().includes(q))
-      );
+      const occName = String(r.occupant_name || "").toLowerCase();
+      const ctrCode = String(r.contract_code || "").toLowerCase();
+      const propName = String(r.property_name || "").toLowerCase();
+      return occName.includes(q) || ctrCode.includes(q) || propName.includes(q);
     }
     return true;
   });
 
-  const totalOutstanding = summary?.total_outstanding ?? rows.reduce((s, r) => s + (r.total_outstanding || 0), 0);
-  const total90Plus = summary?.bucket_90_plus ?? rows.reduce((s, r) => s + (r.bucket_90_plus || 0), 0);
-  const totalDisputed = rows.reduce((s, r) => s + (r.disputed_amount || 0), 0);
+  const totalOutstanding = summary?.total_outstanding ?? rows.reduce((s, r) => s + (Number(r.total_outstanding) || 0), 0);
+  const total90Plus = summary?.bucket_90_plus ?? rows.reduce((s, r) => s + (Number(r.bucket_90_plus) || 0), 0);
+  const totalDisputed = rows.reduce((s, r) => s + (Number(r.disputed_amount) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-3.5 sm:p-6 pb-28 md:pb-16 space-y-4 sm:space-y-6">
@@ -373,48 +375,48 @@ export default function AgeingCollectionsPage() {
             <div key={r.occupant_id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900">{r.occupant_name}</h4>
-                  <span className="text-[11px] font-mono text-slate-500">{r.contract_code} &bull; {r.property_name}</span>
+                  <h4 className="font-bold text-sm text-slate-900">{r.occupant_name || "Occupant"}</h4>
+                  <span className="text-[11px] font-mono text-slate-500">{r.contract_code || "—"} &bull; {r.property_name || "—"}</span>
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  r.oldest_due_days > 90 ? "bg-rose-100 text-rose-800" :
-                  r.oldest_due_days > 30 ? "bg-amber-100 text-amber-800" :
+                  (r.oldest_due_days || 0) > 90 ? "bg-rose-100 text-rose-800" :
+                  (r.oldest_due_days || 0) > 30 ? "bg-amber-100 text-amber-800" :
                   "bg-blue-100 text-blue-800"
                 }`}>
-                  {r.oldest_due_days}d Overdue
+                  {r.oldest_due_days || 0}d Overdue
                 </span>
               </div>
 
               <div className="grid grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center text-[10px] font-mono">
                 <div>
                   <span className="text-slate-400 block">0-30d</span>
-                  <span className="font-bold text-slate-800">₹{r.bucket_0_30.toLocaleString("en-IN")}</span>
+                  <span className="font-bold text-slate-800">₹{Number(r.bucket_0_30 ?? (r as any).current_0_30 ?? 0).toLocaleString("en-IN")}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">31-60d</span>
-                  <span className="font-bold text-amber-700">₹{r.bucket_31_60.toLocaleString("en-IN")}</span>
+                  <span className="font-bold text-amber-700">₹{Number(r.bucket_31_60 || 0).toLocaleString("en-IN")}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">61-90d</span>
-                  <span className="font-bold text-orange-700">₹{r.bucket_61_90.toLocaleString("en-IN")}</span>
+                  <span className="font-bold text-orange-700">₹{Number(r.bucket_61_90 || 0).toLocaleString("en-IN")}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">90+d</span>
-                  <span className="font-bold text-rose-700">₹{r.bucket_90_plus.toLocaleString("en-IN")}</span>
+                  <span className="font-bold text-rose-700">₹{Number(r.bucket_90_plus || 0).toLocaleString("en-IN")}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                 <div>
                   <div className="text-[10px] uppercase font-bold text-slate-400">Total Arrears</div>
-                  <div className="text-base font-black text-rose-700 font-mono">₹{r.total_outstanding.toLocaleString("en-IN")}</div>
+                  <div className="text-base font-black text-rose-700 font-mono">₹{Number(r.total_outstanding || 0).toLocaleString("en-IN")}</div>
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     onClick={() => {
                       setActiveFollowupRow(r);
-                      setPtpAmount(r.total_outstanding.toString());
+                      setPtpAmount(String(r.total_outstanding || 0));
                       setFollowupModalOpen(true);
                     }}
                     className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
@@ -433,7 +435,7 @@ export default function AgeingCollectionsPage() {
                   <button
                     onClick={() => {
                       setActiveWriteOffRow(r);
-                      setWriteOffAmount(r.bucket_90_plus.toString());
+                      setWriteOffAmount(String(r.bucket_90_plus || 0));
                       setWriteOffModalOpen(true);
                     }}
                     className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
@@ -474,31 +476,31 @@ export default function AgeingCollectionsPage() {
                 filteredRows.map((r) => (
                   <tr key={r.occupant_id} className="hover:bg-slate-50">
                     <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{r.occupant_name}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{r.contract_code} &bull; {r.property_name}</div>
+                      <div className="font-bold text-slate-900">{r.occupant_name || "Occupant"}</div>
+                      <div className="text-[10px] font-mono text-slate-400">{r.contract_code || "—"} &bull; {r.property_name || "—"}</div>
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-slate-700">
-                      ₹{r.bucket_0_30.toLocaleString("en-IN")}
+                      ₹{Number(r.bucket_0_30 ?? (r as any).current_0_30 ?? 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-amber-700">
-                      ₹{r.bucket_31_60.toLocaleString("en-IN")}
+                      ₹{Number(r.bucket_31_60 || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-orange-700">
-                      ₹{r.bucket_61_90.toLocaleString("en-IN")}
+                      ₹{Number(r.bucket_61_90 || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-black text-rose-700">
-                      ₹{r.bucket_90_plus.toLocaleString("en-IN")}
+                      ₹{Number(r.bucket_90_plus || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
-                      ₹{r.total_outstanding.toLocaleString("en-IN")}
+                      ₹{Number(r.total_outstanding || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        r.oldest_due_days > 90 ? "bg-rose-100 text-rose-800" :
-                        r.oldest_due_days > 30 ? "bg-amber-100 text-amber-800" :
+                        (r.oldest_due_days || 0) > 90 ? "bg-rose-100 text-rose-800" :
+                        (r.oldest_due_days || 0) > 30 ? "bg-amber-100 text-amber-800" :
                         "bg-blue-100 text-blue-800"
                       }`}>
-                        {r.oldest_due_days} days
+                        {r.oldest_due_days || 0} days
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -560,7 +562,7 @@ export default function AgeingCollectionsPage() {
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                 <div>Recipient: <strong>{activeDunningRow.occupant_name}</strong></div>
                 <div>Contract: <span className="font-mono">{activeDunningRow.contract_code}</span></div>
-                <div>Arrears Overdue: <strong className="text-rose-700 font-mono">₹{activeDunningRow.total_outstanding.toLocaleString("en-IN")}</strong></div>
+                <div>Arrears Overdue: <strong className="text-rose-700 font-mono">₹{Number(activeDunningRow.total_outstanding || 0).toLocaleString("en-IN")}</strong></div>
               </div>
 
               <div>
@@ -704,7 +706,7 @@ export default function AgeingCollectionsPage() {
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                 <div>Occupant: <strong>{activeFollowupRow.occupant_name}</strong></div>
                 <div>Contract: <span className="font-mono">{activeFollowupRow.contract_code}</span></div>
-                <div>Total Outstanding: <strong className="text-rose-700 font-mono">₹{activeFollowupRow.total_outstanding.toLocaleString("en-IN")}</strong></div>
+                <div>Total Outstanding: <strong className="text-rose-700 font-mono">₹{Number(activeFollowupRow.total_outstanding || 0).toLocaleString("en-IN")}</strong></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
