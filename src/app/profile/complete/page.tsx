@@ -60,6 +60,10 @@ import {
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import AgreementVarianceModal, { AgreementDiffItem } from "@/components/rent-roll/AgreementVarianceModal";
 import { getClientAuthHeaders, getClientUserEmail } from "@/lib/auth-storage";
+import {
+  DELEGATED_ENTITY_TYPES,
+  getDelegatedEntityLabel,
+} from "@/components/rent-roll/RentRollOnboardingWizard";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -709,12 +713,30 @@ function CompleteProfileContent() {
   const [assignChoice, setAssignChoice] = useState<"delegated" | "self" | "custom">("delegated");
   const [customMgrName, setCustomMgrName] = useState("");
   const [customMgrEmail, setCustomMgrEmail] = useState("");
+  const [customMgrType, setCustomMgrType] = useState("pm_company");
+  const [customMgrUserRole, setCustomMgrUserRole] = useState<"property_manager" | "org_admin">("property_manager");
+  const [customMgrRights, setCustomMgrRights] = useState({
+    contractExecution: false,
+    concessions: false,
+    billingRuns: true,
+    depositRefunds: false,
+    maxMaintenanceSpend: 25000,
+  });
+  const [customCopiedManagerLink, setCustomCopiedManagerLink] = useState(false);
   const [propertyAssignments, setPropertyAssignments] = useState<Record<string, any>>({});
   const [assignmentSuccessData, setAssignmentSuccessData] = useState<{
     propertyName: string;
     managerName: string;
     managerEmail: string;
   } | null>(null);
+
+  const getCustomManagerActivationLink = () => {
+    const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : DEPLOYED_BASE_URL.replace(/\/+$/, "");
+    const roleKey = customMgrType === "user_pm_or_admin" ? customMgrUserRole : customMgrType;
+    const propTitle = propForm.property_name.trim() || "Commercial Property";
+    const ownerTitle = companyName.trim() || brandName.trim() || "Commercial Asset Owner";
+    return `${origin}/invite?role=${encodeURIComponent(roleKey)}&mgr=${encodeURIComponent(customMgrName.trim() || "Manager")}&prop=${encodeURIComponent(propTitle)}&owner=${encodeURIComponent(ownerTitle)}&invite=act_${Date.now()}`;
+  };
 
   useEffect(() => {
     loadInitialState();
@@ -1214,26 +1236,45 @@ function CompleteProfileContent() {
             name: managerData.name,
             email: managerData.email,
             type: managerData.entityType,
+            userRole: managerData.role,
             assignedAt: new Date().toISOString(),
             scope: delegationScope,
             managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
             managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
+            rights: managerRights,
           };
         } else if (assignChoice === "custom" && customMgrName.trim()) {
+          const customLink = getCustomManagerActivationLink();
           assignedObj = {
             name: customMgrName.trim(),
             email: customMgrEmail.trim(),
-            type: "pm_agency",
+            type: customMgrType,
+            userRole: customMgrType === "user_pm_or_admin" ? customMgrUserRole : undefined,
             assignedAt: new Date().toISOString(),
             scope: delegationScope,
             managedTenantIds: delegationScope === "specific_tenants" ? delegatedTenantIds : "all",
             managedFloors: delegationScope === "specific_tenants" ? delegatedFloors : "all",
+            rights: customMgrRights,
+            activationLink: customLink,
           };
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_has_manager", "true");
+            localStorage.setItem("officex_manage_mode", "delegated");
             localStorage.setItem("officex_manager_name", customMgrName.trim());
             localStorage.setItem("officex_manager_email", customMgrEmail.trim());
+            localStorage.setItem("officex_manager_type", customMgrType);
+            if (customMgrType === "user_pm_or_admin") {
+              localStorage.setItem("officex_manager_user_role", customMgrUserRole);
+            } else {
+              localStorage.removeItem("officex_manager_user_role");
+            }
             localStorage.setItem("officex_manager_status", "activated");
+            localStorage.setItem("officex_manager_activation_link", customLink);
+          }
+        } else if (assignChoice === "self") {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_manage_mode", "self");
+            localStorage.removeItem("officex_has_manager");
           }
         }
 
@@ -2554,31 +2595,37 @@ function CompleteProfileContent() {
                       />
                     </div>
 
-                    {/* ASSIGN PROPERTY MANAGEMENT (§Manager Assignment Flow) */}
-                    <div className="sm:col-span-2 pt-3 border-t border-slate-200">
-                      <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="text-xs font-black text-slate-900 block">
-                              Assign Property Management
-                            </label>
-                            <p className="text-[11px] text-slate-500 font-medium">
-                              Choose who will manage tenant agreements, monthly billings, and sub-meters for this building.
-                            </p>
+                    {/* ASSIGN PROPERTY MANAGEMENT & DELEGATION (§Manager Assignment Flow) */}
+                    <div className="sm:col-span-3 pt-3 border-t border-slate-200">
+                      <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                              <UserCheck size={16} />
+                            </div>
+                            <div>
+                              <label className="text-xs font-black text-slate-900 block">
+                                Property Management Mode &amp; Delegation ("Assign to someone else")
+                              </label>
+                              <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
+                                Choose whether you manage this property personally or assign management directly to a PM company, FM operator, MSP, or designated operations manager.
+                              </p>
+                            </div>
                           </div>
-                          <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">
+                          <span className="text-[10px] font-bold text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200 shrink-0">
                             Operational Mandate
                           </span>
                         </div>
 
+                        {/* Choice Radio Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                           {/* Option 1: Delegated Manager (if onboarded) */}
                           {managerData.name && (
                             <label
                               className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
                                 assignChoice === "delegated"
-                                  ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
-                                  : "border-teal-200 bg-white/60 hover:bg-white"
+                                  ? "border-teal-600 bg-white shadow-xs ring-1 ring-teal-500 text-slate-900"
+                                  : "border-teal-200 bg-white/60 hover:bg-white text-slate-700"
                               }`}
                             >
                               <input
@@ -2594,7 +2641,7 @@ function CompleteProfileContent() {
                                   {managerData.name}
                                 </span>
                                 <span className="text-[10px] text-teal-700 font-semibold block mt-0.5">
-                                  Delegated Partner (Active)
+                                  {getDelegatedEntityLabel(managerData.entityType, managerData.role)} (Active)
                                 </span>
                                 <span className="text-[10px] text-slate-400 block truncate">
                                   {managerData.email}
@@ -2607,8 +2654,8 @@ function CompleteProfileContent() {
                           <label
                             className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
                               assignChoice === "self"
-                                ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
-                                : "border-slate-200 bg-white/60 hover:bg-white"
+                                ? "border-teal-600 bg-white shadow-xs ring-1 ring-teal-500 text-slate-900"
+                                : "border-slate-200 bg-white/60 hover:bg-white text-slate-700"
                             }`}
                           >
                             <input
@@ -2624,7 +2671,7 @@ function CompleteProfileContent() {
                                 Self-Managed
                               </span>
                               <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                                I manage this property directly
+                                I manage this property directly as asset owner
                               </span>
                             </div>
                           </label>
@@ -2633,8 +2680,8 @@ function CompleteProfileContent() {
                           <label
                             className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
                               assignChoice === "custom"
-                                ? "border-[#0D7B6C] bg-white shadow-xs ring-1 ring-[#0D7B6C]/20"
-                                : "border-slate-200 bg-white/60 hover:bg-white"
+                                ? "border-teal-600 bg-white shadow-xs ring-1 ring-teal-500 text-slate-900"
+                                : "border-slate-200 bg-white/60 hover:bg-white text-slate-700"
                             }`}
                           >
                             <input
@@ -2650,38 +2697,222 @@ function CompleteProfileContent() {
                                 Assign Another
                               </span>
                               <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                                Add agency / CA / manager
+                                Appoint PM company, FM, MSP, or User
                               </span>
                             </div>
                           </label>
                         </div>
 
+                        {/* Detailed Assignment Controls when "Assign Another" is selected */}
                         {assignChoice === "custom" && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 animate-in fade-in duration-150">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                Manager / Agency Legal Name
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Knight Frank PM Services"
-                                value={customMgrName}
-                                onChange={(e) => setCustomMgrName(e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                              />
+                          <div className="pt-3 border-t border-amber-200/70 space-y-3.5 animate-in fade-in duration-150">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                              {/* Managing Entity Type */}
+                              <div>
+                                <label className="font-bold text-slate-700 block mb-1">
+                                  Managing Entity Type *
+                                </label>
+                                <select
+                                  value={customMgrType}
+                                  onChange={(e) => setCustomMgrType(e.target.value)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                                >
+                                  {DELEGATED_ENTITY_TYPES.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.title}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* Manager Name */}
+                              <div>
+                                <label className="font-bold text-slate-700 block mb-1">
+                                  {customMgrType === "user_pm_or_admin" ? "Assignee Full Name *" : "Entity / Company Name *"}
+                                </label>
+                                <input
+                                  type="text"
+                                  required={assignChoice === "custom"}
+                                  placeholder={
+                                    customMgrType === "user_pm_or_admin"
+                                      ? "e.g. Vikram Sharma"
+                                      : customMgrType === "fm_company"
+                                      ? "e.g. CBRE / JLL Facilities"
+                                      : customMgrType === "msp"
+                                      ? "e.g. SmartOps MSP Solutions"
+                                      : "e.g. Apex Property Management LLP"
+                                  }
+                                  value={customMgrName}
+                                  onChange={(e) => setCustomMgrName(e.target.value)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                                />
+                              </div>
+
+                              {/* Manager Email */}
+                              <div>
+                                <label className="font-bold text-slate-700 block mb-1">
+                                  {customMgrType === "user_pm_or_admin" ? "User Email Address *" : "Work Email *"}
+                                </label>
+                                <input
+                                  type="email"
+                                  required={assignChoice === "custom"}
+                                  placeholder={
+                                    customMgrType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
+                                  }
+                                  value={customMgrEmail}
+                                  onChange={(e) => setCustomMgrEmail(e.target.value)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                Manager Email Address
-                              </label>
-                              <input
-                                type="email"
-                                placeholder="manager@knightfrank.com"
-                                value={customMgrEmail}
-                                onChange={(e) => setCustomMgrEmail(e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                              />
+
+                            {/* Designated Role for another user */}
+                            {customMgrType === "user_pm_or_admin" && (
+                              <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                                <div>
+                                  <span className="font-black text-slate-900 block">Designated Role for this User</span>
+                                  <span className="text-[10px] text-slate-500 font-medium">
+                                    Choose whether this user operates with Property Manager or Org Admin privileges.
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-800">
+                                    <input
+                                      type="radio"
+                                      name="customManagerUserRole"
+                                      value="property_manager"
+                                      checked={customMgrUserRole === "property_manager"}
+                                      onChange={() => setCustomMgrUserRole("property_manager")}
+                                      className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                    />
+                                    <span>Property Manager</span>
+                                  </label>
+                                  <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-800">
+                                    <input
+                                      type="radio"
+                                      name="customManagerUserRole"
+                                      value="org_admin"
+                                      checked={customMgrUserRole === "org_admin"}
+                                      onChange={() => setCustomMgrUserRole("org_admin")}
+                                      className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                    />
+                                    <span>Org Admin</span>
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Granular Rights Checkboxes */}
+                            <div className="pt-2 space-y-2">
+                              <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
+                                Delegated Permissions &amp; Owner Approval Thresholds:
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={customMgrRights.contractExecution}
+                                    onChange={(e) =>
+                                      setCustomMgrRights({ ...customMgrRights, contractExecution: e.target.checked })
+                                    }
+                                    className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                  />
+                                  <div>
+                                    <span className="font-bold text-slate-800 block">Execute Lease Agreements</span>
+                                    <span className="text-[10px] text-slate-500">
+                                      {customMgrRights.contractExecution
+                                        ? "Direct execution enabled"
+                                        : "Requires Owner Approval before signing"}
+                                    </span>
+                                  </div>
+                                </label>
+
+                                <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={customMgrRights.concessions}
+                                    onChange={(e) =>
+                                      setCustomMgrRights({ ...customMgrRights, concessions: e.target.checked })
+                                    }
+                                    className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                  />
+                                  <div>
+                                    <span className="font-bold text-slate-800 block">Rent Discounts &amp; Waivers</span>
+                                    <span className="text-[10px] text-slate-500">
+                                      {customMgrRights.concessions
+                                        ? "Discretionary discounts permitted"
+                                        : "Requires Owner Approval in inbox"}
+                                    </span>
+                                  </div>
+                                </label>
+
+                                <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={customMgrRights.billingRuns}
+                                    onChange={(e) =>
+                                      setCustomMgrRights({ ...customMgrRights, billingRuns: e.target.checked })
+                                    }
+                                    className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                  />
+                                  <div>
+                                    <span className="font-bold text-slate-800 block">Monthly Invoicing Runs</span>
+                                    <span className="text-[10px] text-slate-500">
+                                      {customMgrRights.billingRuns
+                                        ? "Autonomous monthly batch runs"
+                                        : "Requires Owner preview & trigger"}
+                                    </span>
+                                  </div>
+                                </label>
+
+                                <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={customMgrRights.depositRefunds}
+                                    onChange={(e) =>
+                                      setCustomMgrRights({ ...customMgrRights, depositRefunds: e.target.checked })
+                                    }
+                                    className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                                  />
+                                  <div>
+                                    <span className="font-bold text-slate-800 block">Deposit Refund Authorisation</span>
+                                    <span className="text-[10px] text-slate-500">
+                                      {customMgrRights.depositRefunds
+                                        ? "Direct refund authorization"
+                                        : "Requires Owner Approval"}
+                                    </span>
+                                  </div>
+                                </label>
+                              </div>
                             </div>
+
+                            {/* Live Generated Activation / Invite Link */}
+                            {customMgrName.trim() && (
+                              <div className="p-3 bg-white/90 rounded-xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs animate-in fade-in">
+                                <div className="min-w-0">
+                                  <span className="text-[11px] font-bold text-slate-700 block">
+                                    Manager Activation &amp; Portal Invitation Link:
+                                  </span>
+                                  <span className="font-mono text-[11px] text-teal-800 truncate select-all block mt-0.5">
+                                    {getCustomManagerActivationLink()}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const link = getCustomManagerActivationLink();
+                                    navigator.clipboard.writeText(link);
+                                    setCustomCopiedManagerLink(true);
+                                    showToast("✓ Manager activation link copied to clipboard!");
+                                    setTimeout(() => setCustomCopiedManagerLink(false), 2500);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-[11px] font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs self-start sm:self-auto"
+                                >
+                                  {customCopiedManagerLink ? <Check size={12} /> : <Copy size={12} />}
+                                  <span>{customCopiedManagerLink ? "Copied!" : "Copy Manager Invite"}</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
