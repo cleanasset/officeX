@@ -232,8 +232,9 @@ function CompleteProfileContent() {
     fitoutPeriodDays?: string;
     inviteLink?: string;
     contractSaved?: boolean;
+    monthlyRent?: number;
   }>>([]);
-  const [selectedFloorsForCurrentTenant, setSelectedFloorsForCurrentTenant] = useState<number[]>([1]);
+  const [selectedFloorsForCurrentTenant, setSelectedFloorsForCurrentTenant] = useState<number[]>([]);
   const [customSpaceUnitName, setCustomSpaceUnitName] = useState<string>("");
   const [customFloorAreaSqft, setCustomFloorAreaSqft] = useState<string>("");
 
@@ -1153,14 +1154,13 @@ function CompleteProfileContent() {
         setRegisteredProperties(updatedList);
         setSelectedPropertyForTenant(newProp.id || newProp.property_name);
 
-        // A newly added property starts with clean slate: 0 enrolled tenants
+        // A newly added property starts with clean slate: 0 enrolled tenants, 0 pre-allocated floors
         setEnrolledTenants([]);
         setLatestTenantInvite(null);
         setEditingTenantId(null);
-        setSelectedFloorsForCurrentTenant([1]);
-        setCustomSpaceUnitName("Floor 1");
-        const defaultFlArea = Math.round((Number(propForm.total_leasable_area_sqft) || 50000) / Math.max(1, Number(propForm.floors_count) || 1));
-        setCustomFloorAreaSqft(String(defaultFlArea));
+        setSelectedFloorsForCurrentTenant([]);
+        setCustomSpaceUnitName("");
+        setCustomFloorAreaSqft("");
 
         // Auto-fill tenant billing address from the newly saved property's full address
         const propFullAddress = [
@@ -1303,13 +1303,18 @@ function CompleteProfileContent() {
       return;
     }
 
+    if (tenancyMode === "multi" && selectedFloorsForCurrentTenant.length === 0) {
+      showToast("Please click to choose at least one floor from the building for this occupant.", "error");
+      return;
+    }
+
     const totalF = Math.max(1, Number(propForm.floors_count) || 1);
     const totalArea = Number(propForm.total_leasable_area_sqft) || 50000;
     const defaultFloorArea = Math.round(totalArea / totalF);
 
     const assignedFloors = tenancyMode === "single"
       ? Array.from({ length: totalF }, (_, i) => i + 1)
-      : (selectedFloorsForCurrentTenant.length > 0 ? selectedFloorsForCurrentTenant : [1]);
+      : selectedFloorsForCurrentTenant;
 
     const effectiveArea = Number(customFloorAreaSqft) || (tenancyMode === "single" ? totalArea : assignedFloors.length * defaultFloorArea);
     const floorLabels = tenancyMode === "single"
@@ -1474,18 +1479,10 @@ function CompleteProfileContent() {
       }));
 
       if (addAnother) {
-        // Calculate remaining unassigned floors
-        const existingFloorsSet = new Set([
-          ...enrolledTenants.filter((t) => t.id !== tenantId).flatMap((t) => t.assignedFloors),
-          ...assignedFloors,
-        ]);
-        const nextAvailFloor = Array.from({ length: totalF }, (_, i) => i + 1).find(
-          (f) => !existingFloorsSet.has(f)
-        ) || (totalF > 1 ? (assignedFloors[assignedFloors.length - 1] % totalF) + 1 : 1);
-
-        setSelectedFloorsForCurrentTenant([nextAvailFloor]);
-        setCustomSpaceUnitName(`Floor ${nextAvailFloor}`);
-        setCustomFloorAreaSqft(String(defaultFloorArea));
+        // Reset floor allocation so user chooses from available property floors for next tenant
+        setSelectedFloorsForCurrentTenant([]);
+        setCustomSpaceUnitName("");
+        setCustomFloorAreaSqft("");
 
         const matchedProp = registeredProperties.find((p) => p.id === selectedPropertyForTenant || p.property_name === selectedPropertyForTenant);
         const pAddr = matchedProp ? [matchedProp.address, matchedProp.city, matchedProp.state, matchedProp.postal_code].filter(Boolean).join(", ") : (propForm.address || "");
@@ -1582,20 +1579,10 @@ function CompleteProfileContent() {
   };
 
   const handleAddNewTenantClick = () => {
-    const totalF = Math.max(1, Number(propForm.floors_count) || 1);
-    const totalArea = Number(propForm.total_leasable_area_sqft) || 50000;
-    const defaultFloorArea = Math.round(totalArea / totalF);
-
     setEditingTenantId(null);
-
-    const existingFloorsSet = new Set(enrolledTenants.flatMap((t) => t.assignedFloors));
-    const nextAvailFloor = Array.from({ length: totalF }, (_, i) => i + 1).find(
-      (f) => !existingFloorsSet.has(f)
-    ) || (totalF > 1 ? 2 : 1);
-
-    setSelectedFloorsForCurrentTenant([nextAvailFloor]);
-    setCustomSpaceUnitName(`Floor ${nextAvailFloor}`);
-    setCustomFloorAreaSqft(String(defaultFloorArea));
+    setSelectedFloorsForCurrentTenant([]);
+    setCustomSpaceUnitName("");
+    setCustomFloorAreaSqft("");
 
     const matchedProp = registeredProperties.find((p) => p.id === selectedPropertyForTenant || p.property_name === selectedPropertyForTenant);
     const pAddr = matchedProp ? [matchedProp.address, matchedProp.city, matchedProp.state, matchedProp.postal_code].filter(Boolean).join(", ") : (propForm.address || "");
@@ -1626,7 +1613,7 @@ function CompleteProfileContent() {
       const formEl = document.getElementById("tenant-entry-form");
       if (formEl) formEl.scrollIntoView({ behavior: "smooth" });
     }
-    showToast(`Form reset and ready to add occupant for Floor ${nextAvailFloor}.`);
+    showToast("Form ready! Please select which floor this tenant will occupy.");
   };
 
   // Save Contract (Comprehensive Commercial Terms & Institutional Linking)
@@ -1779,7 +1766,7 @@ function CompleteProfileContent() {
       }
 
       setEnrolledTenants((prev) =>
-        prev.map((t) => (t.id === contractForm.occupant_id ? { ...t, contractSaved: true } : t))
+        prev.map((t) => (t.id === contractForm.occupant_id ? { ...t, contractSaved: true, monthlyRent: baseRent } : t))
       );
 
       const remainingTenants = enrolledTenants.filter(
@@ -3168,11 +3155,9 @@ function CompleteProfileContent() {
                           <div
                             onClick={() => {
                               setTenancyMode("multi");
-                              if (selectedFloorsForCurrentTenant.length === currentFloorsCount && currentFloorsCount > 1) {
-                                setSelectedFloorsForCurrentTenant([1]);
-                                setCustomSpaceUnitName("Floor 1");
-                                setCustomFloorAreaSqft(String(currentAreaPerFloor));
-                              }
+                              setSelectedFloorsForCurrentTenant([]);
+                              setCustomSpaceUnitName("");
+                              setCustomFloorAreaSqft("");
                             }}
                             className={`p-4 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
                               tenancyMode === "multi"
@@ -3216,6 +3201,13 @@ function CompleteProfileContent() {
                               </span>
                             </div>
 
+                            {selectedFloorsForCurrentTenant.length === 0 && (
+                              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center gap-2.5 text-xs text-amber-950 animate-in fade-in">
+                                <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0">!</span>
+                                <span><strong>Step 1: Choose Floor(s):</strong> Click which floor this tenant will occupy. No floor is allocated until you click it.</span>
+                              </div>
+                            )}
+
                             {/* Vertical Stacking Representation */}
                             <div className="space-y-1.5">
                               {Array.from({ length: currentFloorsCount }, (_, i) => currentFloorsCount - i).map((fl) => {
@@ -3233,13 +3225,14 @@ function CompleteProfileContent() {
                                         return;
                                       }
                                       if (isSelectedForCurrent) {
-                                        if (selectedFloorsForCurrentTenant.length > 1) {
-                                          const next = selectedFloorsForCurrentTenant.filter((f) => f !== fl);
-                                          setSelectedFloorsForCurrentTenant(next);
+                                        const next = selectedFloorsForCurrentTenant.filter((f) => f !== fl);
+                                        setSelectedFloorsForCurrentTenant(next);
+                                        if (next.length === 0) {
+                                          setCustomSpaceUnitName("");
+                                          setCustomFloorAreaSqft("");
+                                        } else {
                                           setCustomSpaceUnitName(next.length === 1 ? `Floor ${next[0]}` : `Floors ${next.join(", ")}`);
                                           setCustomFloorAreaSqft(String(next.length * currentAreaPerFloor));
-                                        } else {
-                                          showToast("At least one floor must remain selected for this occupant.");
                                         }
                                       } else {
                                         const next = [...selectedFloorsForCurrentTenant, fl].sort((a, b) => a - b);
@@ -3280,18 +3273,19 @@ function CompleteProfileContent() {
 
                                     <div className="flex items-center gap-2">
                                       {leasingTenant ? (
-                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
-                                          <Check size={12} className="text-emerald-700" />
+                                        <span className="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 flex items-center gap-1.5 shadow-2xs">
+                                          <Check size={12} className="text-slate-500" />
                                           <span>Occupied by {leasingTenant.name}</span>
                                         </span>
                                       ) : isSelectedForCurrent ? (
                                         <span className="px-2.5 py-1 rounded-lg bg-[#0D7B6C] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
                                           <Check size={12} />
-                                          <span>Allocated to Current Tenant</span>
+                                          <span>Selected (Click to Remove)</span>
                                         </span>
                                       ) : (
-                                        <span className="px-2.5 py-1 rounded-lg bg-white text-slate-600 text-xs font-medium border border-slate-300 hover:border-teal-400">
-                                          + Click to Assign
+                                        <span className="px-2.5 py-1 rounded-lg bg-white text-slate-700 text-xs font-bold border-2 border-dashed border-teal-500/80 hover:bg-teal-50 hover:border-[#0D7B6C] flex items-center gap-1 transition">
+                                          <Plus size={12} className="text-[#0D7B6C]" />
+                                          <span>Choose Floor {fl}</span>
                                         </span>
                                       )}
                                     </div>
@@ -3310,7 +3304,13 @@ function CompleteProfileContent() {
                                   type="text"
                                   value={customSpaceUnitName}
                                   onChange={(e) => setCustomSpaceUnitName(e.target.value)}
-                                  placeholder={selectedFloorsForCurrentTenant.length === 1 ? `Floor ${selectedFloorsForCurrentTenant[0]}` : `Floors ${selectedFloorsForCurrentTenant.join(", ")}`}
+                                  placeholder={
+                                    selectedFloorsForCurrentTenant.length === 0
+                                      ? "Click a floor above to assign"
+                                      : selectedFloorsForCurrentTenant.length === 1
+                                      ? `Floor ${selectedFloorsForCurrentTenant[0]}`
+                                      : `Floors ${selectedFloorsForCurrentTenant.join(", ")}`
+                                  }
                                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
                                 />
                               </div>
@@ -3323,7 +3323,11 @@ function CompleteProfileContent() {
                                   type="number"
                                   value={customFloorAreaSqft}
                                   onChange={(e) => setCustomFloorAreaSqft(e.target.value)}
-                                  placeholder={String(selectedFloorsForCurrentTenant.length * currentAreaPerFloor)}
+                                  placeholder={
+                                    selectedFloorsForCurrentTenant.length === 0
+                                      ? "0"
+                                      : String(selectedFloorsForCurrentTenant.length * currentAreaPerFloor)
+                                  }
                                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
                                 />
                               </div>
@@ -3964,53 +3968,170 @@ function CompleteProfileContent() {
                 </div>
               )}
 
-              {/* Multi-Tenant Contract Switcher Bar */}
-              {(enrolledTenants.length > 1 || tenantsList.length > 1) && (
-                <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                      <Users size={14} className="text-[#0D7B6C]" />
-                      Multi-Tenant Building: Select Occupant to Configure Contract:
-                    </span>
-                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">
-                      {enrolledTenants.filter((t) => t.contractSaved).length} of {Math.max(enrolledTenants.length, tenantsList.length)} Contracts Registered
-                    </span>
-                  </div>
+              {/* ──── WHOLE BUILDING & INDIVIDUAL TENANT CONTRACT ARCHITECTURE ──── */}
+              {(() => {
+                const totalBldgArea = Number(propForm.total_leasable_area_sqft) || 50000;
+                const totalLeased = enrolledTenants.reduce((sum, t) => sum + (t.areaSqft || 0), 0);
+                const occupancyPct = totalBldgArea > 0 ? Math.min(100, Math.round((totalLeased / totalBldgArea) * 100)) : 0;
+                const totalBldgMonthlyRent = enrolledTenants.reduce((sum, t) => {
+                  return sum + (t.monthlyRent || Math.round((t.areaSqft || 5000) * (Number(contractForm.rate_per_sqft) || 85)));
+                }, 0);
+                const annualRentRoll = totalBldgMonthlyRent * 12;
 
-                  <div className="flex flex-wrap gap-2">
-                    {(enrolledTenants.length > 0 ? enrolledTenants : tenantsList.map((t) => ({ ...t, floorLabels: "Demised Unit", spaceUnit: "Suite 101", areaSqft: 5000, contractSaved: false }))).map((t: any) => {
-                      const isCurrent = contractForm.occupant_id === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            clearFieldHighlight("occupant_id");
-                            setContractForm((prev) => ({
-                              ...prev,
-                              occupant_id: t.id,
-                              occupant_name: t.name,
-                              space_unit: t.spaceUnit || t.floorLabels || "Suite 101",
-                              area_sqft: String(t.areaSqft || 5000),
-                              monthly_rent: String(Math.round((t.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
-                            }));
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                            isCurrent
-                              ? "bg-[#0D7B6C] text-white shadow-2xs"
-                              : "bg-white border border-teal-200 text-teal-900 hover:bg-teal-100/50"
-                          }`}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${t.contractSaved ? "bg-emerald-400" : isCurrent ? "bg-white" : "bg-slate-300"}`} />
-                          <span>{t.name}</span>
-                          <span className="text-[10px] opacity-80">({t.floorLabels || "Demised Unit"})</span>
-                          {t.contractSaved && <Check size={12} className="text-emerald-300 ml-0.5" />}
-                        </button>
-                      );
-                    })}
+                return (
+                  <div className="space-y-4">
+                    {/* Whole Building Aggregated Financial Snapshot */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-[#0B2528] to-[#071324] text-white border border-teal-500/30 shadow-sm space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-[#0D7B6C] flex items-center justify-center text-white">
+                            <Building2 size={15} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black uppercase tracking-wider text-teal-300 block">
+                              Whole Building Commercial Rent Roll: {propForm.property_name || "Commercial Centre"}
+                            </span>
+                            <span className="text-[10px] text-slate-300">
+                              Building Total Leasable Capacity: {totalBldgArea.toLocaleString()} sq.ft across {propForm.floors_count || 1} Floors
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-teal-400/20 text-teal-300 border border-teal-400/30 self-start sm:self-auto">
+                          {enrolledTenants.filter((t) => t.contractSaved).length} of {Math.max(1, enrolledTenants.length)} Contracts Configured
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block">Demised / Leased Area</span>
+                          <span className="text-base font-black text-white mt-0.5 block font-mono">
+                            {totalLeased.toLocaleString()} sq.ft
+                          </span>
+                          <span className="text-[10px] text-teal-300 font-medium">({occupancyPct}% of Building Area)</span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block">Vacant Building Space</span>
+                          <span className="text-base font-black text-slate-300 mt-0.5 block font-mono">
+                            {Math.max(0, totalBldgArea - totalLeased).toLocaleString()} sq.ft
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">({100 - occupancyPct}% Unleased)</span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block">Building Monthly Rent Roll</span>
+                          <span className="text-base font-black text-emerald-400 mt-0.5 block font-mono">
+                            ₹{totalBldgMonthlyRent.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-emerald-300 font-medium">Sum of all tenant leases</span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block">Projected Annual Gross</span>
+                          <span className="text-base font-black text-teal-300 mt-0.5 block font-mono">
+                            ₹{annualRentRoll.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-teal-400 font-medium">Annualized collections</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Individual Tenant Contract Selector & Dedicated Portal Links */}
+                    <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <Users size={14} className="text-[#0D7B6C]" />
+                          Select Tenant to Configure Dedicated Contract &amp; Commercial Terms:
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Each tenant has an isolated contract, individual rent schedule, and distinct portal link.
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {(enrolledTenants.length > 0 ? enrolledTenants : tenantsList.map((t) => ({ ...t, floorLabels: "Demised Unit", spaceUnit: "Suite 101", areaSqft: 5000, contractSaved: false }))).map((t: any) => {
+                          const isCurrent = contractForm.occupant_id === t.id;
+                          const tOrigin = typeof window !== "undefined" && window.location.origin ? window.location.origin : DEPLOYED_BASE_URL;
+                          const tProp = registeredProperties.find((p) => p.id === selectedPropertyForTenant)?.property_name || propForm.property_name || "Commercial Centre";
+                          const tOwner = companyName || brandName || "Commercial Property Owner";
+                          const tLink = t.inviteLink || `${tOrigin}/invite?role=tenant&mgr=${encodeURIComponent(t.name)}&email=${encodeURIComponent(t.email || "")}&prop=${encodeURIComponent(tProp)}&owner=${encodeURIComponent(tOwner)}&floor=${encodeURIComponent(t.floorLabels || "Demised Unit")}`;
+
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() => {
+                                clearFieldHighlight("occupant_id");
+                                setContractForm((prev) => ({
+                                  ...prev,
+                                  occupant_id: t.id,
+                                  occupant_name: t.name,
+                                  space_unit: t.spaceUnit || t.floorLabels || "Suite 101",
+                                  area_sqft: String(t.areaSqft || 5000),
+                                  monthly_rent: t.monthlyRent ? String(t.monthlyRent) : String(Math.round((t.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
+                                }));
+                              }}
+                              className={`p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between gap-2 ${
+                                isCurrent
+                                  ? "bg-white border-[#0D7B6C] ring-2 ring-teal-500/30 shadow-xs"
+                                  : "bg-white/80 border-slate-200 hover:border-teal-300"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${isCurrent ? "bg-[#0D7B6C] text-white" : "bg-slate-100 text-slate-700"}`}>
+                                    {t.assignedFloors && t.assignedFloors.length > 0 ? `F${t.assignedFloors[0]}` : "F1"}
+                                  </div>
+                                  <div className="truncate">
+                                    <span className="font-extrabold text-xs text-slate-900 block truncate">{t.name}</span>
+                                    <span className="text-[10px] text-slate-500 font-medium block truncate">
+                                      {t.floorLabels || "Demised Space"} · {Number(t.areaSqft || 5000).toLocaleString()} sq.ft
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {t.contractSaved ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300 flex items-center gap-1">
+                                      <Check size={11} className="text-emerald-700" />
+                                      <span>Contract Configured</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300 flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                      <span>Pending Config</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[10px]">
+                                <span className="font-mono text-slate-600 truncate max-w-[200px]">
+                                  {tLink}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                      navigator.clipboard.writeText(tLink);
+                                      showToast(`✓ Copied Portal Link for ${t.name}!`);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] font-bold border border-teal-300 flex items-center gap-1 cursor-pointer shrink-0"
+                                >
+                                  <Copy size={10} />
+                                  <span>Copy Portal Link</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <form onSubmit={handleSaveContract} className="space-y-6">
                 {/* ──── SECTION 1: HIERARCHY & SPACE MAPPING ──── */}

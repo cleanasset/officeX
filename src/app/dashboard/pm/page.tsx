@@ -83,9 +83,51 @@ export default function PropertyManagerDashboardPage() {
 
   // Dynamic Tasks (100% Real Live State - Zero Mock Data)
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [pmScope, setPmScope] = useState<{
+    scope: "whole_property" | "specific_tenants";
+    managedTenantNames: string[];
+    managedFloors: (string | number)[];
+  } | null>(null);
 
   useEffect(() => {
     const authHeaders = getClientAuthHeaders();
+
+    // Determine Management Scope (§Role-Based Rights)
+    let scopeType: "whole_property" | "specific_tenants" = "whole_property";
+    let managedTenants: string[] = [];
+    let managedFloorsList: (number | string)[] = [];
+
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlScope = urlParams.get("scope");
+      const urlTenants = urlParams.get("tenants");
+      const urlFloors = urlParams.get("floors");
+      const propParam = urlParams.get("prop");
+
+      const storedAssignments = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+      const activePropKey = propParam || localStorage.getItem("officex_active_property") || "";
+      const assignInfo = storedAssignments[activePropKey] || Object.values(storedAssignments)[0] as any;
+
+      if (urlScope === "specific_tenants" || assignInfo?.scope === "specific_tenants") {
+        scopeType = "specific_tenants";
+        if (urlTenants) {
+          managedTenants = urlTenants.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        } else if (Array.isArray(assignInfo?.managedTenantNames)) {
+          managedTenants = assignInfo.managedTenantNames.map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+        }
+        if (urlFloors) {
+          managedFloorsList = urlFloors.split(",").map((s) => s.trim()).filter(Boolean);
+        } else if (Array.isArray(assignInfo?.managedFloors)) {
+          managedFloorsList = assignInfo.managedFloors.map((s: any) => String(s).trim()).filter(Boolean);
+        }
+      }
+
+      setPmScope({
+        scope: scopeType,
+        managedTenantNames: managedTenants,
+        managedFloors: managedFloorsList,
+      });
+    }
 
     fetch("/api/rent-roll/properties", { headers: authHeaders })
       .then((res) => res.json())
@@ -112,6 +154,19 @@ export default function PropertyManagerDashboardPage() {
           const spaceName = c.space_name || "Unit Demarcated";
           const rentVal = Number(c.base_rent_rate || c.contract?.base_rent_rate || 0);
           const depVal = Number(c.deposit_amount_inr || c.contract?.deposit_amount_inr || 0);
+
+          // If PM role is scoped to specific tenants, enforce tenant isolation
+          if (scopeType === "specific_tenants" && managedTenants.length > 0) {
+            const occMatch = managedTenants.some(
+              (t) => occName.toLowerCase().includes(t) || t.includes(occName.toLowerCase())
+            );
+            const flMatch =
+              managedFloorsList.length > 0 &&
+              managedFloorsList.some((f) => spaceName.toLowerCase().includes(`floor ${f}`) || spaceName.toLowerCase().includes(`f${f}`));
+            if (!occMatch && !flMatch) {
+              return; // Skip tasks outside delegated tenant scope
+            }
+          }
 
           // 1. Pending Landlord Lease Approval (PM has no approval authority)
           if (c.approval_status === "pending" || c.contract_status === "submitted") {
@@ -355,6 +410,57 @@ export default function PropertyManagerDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Management Authority Scope Banner (§Role-Based View) */}
+      {pmScope && pmScope.scope === "specific_tenants" ? (
+        <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-amber-950">
+                  Designated Management Scope: Specific Tenant(s) Only
+                </h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 uppercase tracking-wider">
+                  Scoped PM Role
+                </span>
+              </div>
+              <p className="text-xs text-amber-900/80 font-medium mt-0.5">
+                Your dashboard is restricted to designated tenant: <strong>{pmScope.managedTenantNames.length > 0 ? pmScope.managedTenantNames.join(", ") : "Assigned Tenant"}</strong> {pmScope.managedFloors.length > 0 ? `(Floors: ${pmScope.managedFloors.join(", ")})` : ""}. Whole-building finances and unassigned tenant leases are sovereign to the Property Owner.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold text-amber-900 bg-white px-3 py-1.5 rounded-xl border border-amber-300 shadow-2xs self-start sm:self-auto shrink-0">
+            🔒 Single-Tenant Scoped Console
+          </span>
+        </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-teal-50/80 border border-teal-200 text-teal-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-teal-950">
+                  Full Building Management Scope: Whole Asset Console
+                </h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-200 text-teal-900 uppercase tracking-wider">
+                  Full Building PM
+                </span>
+              </div>
+              <p className="text-xs text-teal-800 font-medium mt-0.5">
+                You have operational authority across all building floors, all current and future tenants, and overall property facility maintenance.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold text-teal-900 bg-white px-3 py-1.5 rounded-xl border border-teal-200 shadow-2xs self-start sm:self-auto shrink-0">
+            🏢 All Floors &amp; Tenants Managed
+          </span>
+        </div>
+      )}
 
       {/* Assigned Commercial Asset & Tenant Overview Card */}
       {(() => {

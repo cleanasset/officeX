@@ -150,10 +150,21 @@ function InviteContent() {
         localStorage.setItem("officex_manager_dashboard_activated", "true");
         localStorage.setItem("officex_manager_status", "activated");
 
-        // Save property assignment mapping
+        // Save property assignment mapping preserving designated delegation scope
+        let assignedScopeObj: any = { name: displayName, email: displayEmail, type: roleParam, scope: "whole_property" };
         try {
           const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
-          currentAssigns[propToAssign] = { name: displayName, email: displayEmail, type: roleParam };
+          const existing = currentAssigns[propToAssign] || {};
+          assignedScopeObj = {
+            ...existing,
+            name: displayName,
+            email: displayEmail,
+            type: roleParam,
+            scope: existing.scope || "whole_property",
+            managedTenantNames: existing.managedTenantNames || "all",
+            managedFloors: existing.managedFloors || "all",
+          };
+          currentAssigns[propToAssign] = assignedScopeObj;
           localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
         } catch {}
       }
@@ -178,7 +189,12 @@ function InviteContent() {
       if (roleParam === "tenant" || roleParam === "occupant") {
         router.push("/portal");
       } else {
-        router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propToAssign)}`);
+        const storedAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+        const aObj = storedAssigns[propToAssign] || {};
+        const scopeParam = aObj.scope || "whole_property";
+        const tenantsParam = Array.isArray(aObj.managedTenantNames) ? aObj.managedTenantNames.join(",") : "";
+        const floorsParam = Array.isArray(aObj.managedFloors) ? aObj.managedFloors.join(",") : "";
+        router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propToAssign)}&scope=${encodeURIComponent(scopeParam)}&tenants=${encodeURIComponent(tenantsParam)}&floors=${encodeURIComponent(floorsParam)}`);
       }
     }, 400);
   };
