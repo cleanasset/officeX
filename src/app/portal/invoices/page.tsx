@@ -141,7 +141,11 @@ function TenantInvoicesContent() {
   async function loadInvoices() {
     try {
       setLoading(true);
-      const res = await fetch(`/api/portal/invoices?status=${filterTab}`);
+      const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+      const url = savedOccId
+        ? `/api/portal/invoices?status=${filterTab}&occupant_id=${encodeURIComponent(savedOccId)}`
+        : `/api/portal/invoices?status=${filterTab}`;
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success) {
         const list: PortalInvoice[] = json.invoices || [];

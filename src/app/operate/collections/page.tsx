@@ -28,6 +28,16 @@ interface AgingOccupantRow {
   pan_number?: string;
   contract_code: string;
   property_name: string;
+  email?: string;
+  phone?: string;
+  invoice_id?: string;
+  invoice_number?: string;
+  invoices?: Array<{
+    invoice_id: string;
+    invoice_number: string;
+    balance_due: number;
+    days_overdue: number;
+  }>;
   total_outstanding: number;
   bucket_0_30: number;
   bucket_31_60: number;
@@ -50,6 +60,10 @@ export default function AgeingCollectionsPage() {
   const [dunningModalOpen, setDunningModalOpen] = useState(false);
   const [activeDunningRow, setActiveDunningRow] = useState<AgingOccupantRow | null>(null);
   const [dunningChannel, setDunningChannel] = useState<"email" | "whatsapp" | "both">("both");
+  const [dunningEmail, setDunningEmail] = useState("");
+  const [dunningPhone, setDunningPhone] = useState("");
+  const [dunningInvoiceNumber, setDunningInvoiceNumber] = useState("");
+  const [dunningNotes, setDunningNotes] = useState("");
   const [sendingNotice, setSendingNotice] = useState(false);
 
   // S-45: Log Follow-up & Promise to Pay (PTP AL-10) Modal
@@ -159,13 +173,24 @@ export default function AgeingCollectionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           occupant_id: activeDunningRow.occupant_id,
+          invoice_id: activeDunningRow.invoice_id || activeDunningRow.invoices?.[0]?.invoice_id,
+          recipient_email: dunningEmail,
+          recipient_phone: dunningPhone,
           channel: dunningChannel,
+          notes: dunningNotes,
           outstanding_amount: activeDunningRow.total_outstanding,
         }),
       });
       const json = await res.json();
       if (json.success) {
-        alert(json.message || "Statutory payment reminder notice dispatched successfully!");
+        if (json.whatsapp_url && (dunningChannel === "whatsapp" || dunningChannel === "both")) {
+          const openWa = confirm(`${json.message}\n\nWould you like to open WhatsApp to send the demand message right now?`);
+          if (openWa) {
+            window.open(json.whatsapp_url, "_blank");
+          }
+        } else {
+          alert(json.message || "Statutory payment reminder notice dispatched successfully!");
+        }
         setDunningModalOpen(false);
         fetchAgingData();
       } else {
@@ -518,6 +543,10 @@ export default function AgeingCollectionsPage() {
                         <button
                           onClick={() => {
                             setActiveDunningRow(r);
+                            setDunningEmail(r.email || "");
+                            setDunningPhone(r.phone || "");
+                            setDunningInvoiceNumber(r.invoice_number || (r.invoices?.[0]?.invoice_number) || "");
+                            setDunningNotes("");
                             setDunningModalOpen(true);
                           }}
                           className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-sm"
@@ -547,7 +576,7 @@ export default function AgeingCollectionsPage() {
       {/* Dunning Reminder Notice Modal */}
       {dunningModalOpen && activeDunningRow && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in duration-200">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded">
@@ -555,42 +584,105 @@ export default function AgeingCollectionsPage() {
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-1">Dispatch Payment Demand Notice</h3>
               </div>
-              <button onClick={() => setDunningModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button 
+                onClick={() => setDunningModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-200 transition"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSendDunningNotice} className="p-5 space-y-4 text-xs">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
-                <div>Recipient: <strong>{activeDunningRow.occupant_name}</strong></div>
-                <div>Contract: <span className="font-mono">{activeDunningRow.contract_code}</span></div>
-                <div>Arrears Overdue: <strong className="text-rose-700 font-mono">₹{Number(activeDunningRow.total_outstanding || 0).toLocaleString("en-IN")}</strong></div>
+              {/* Recipient & Contract Summary Card */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Recipient:</span>
+                  <strong className="text-slate-900 font-bold">{activeDunningRow.occupant_name}</strong>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Contract:</span>
+                  <span className="font-mono font-bold text-slate-800">{activeDunningRow.contract_code}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Linked Invoice:</span>
+                  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                    {dunningInvoiceNumber || activeDunningRow.invoice_number || (activeDunningRow.invoices?.[0]?.invoice_number) || "Auto-linked (Latest)"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                  <span className="text-slate-500 font-medium">Arrears Overdue:</span>
+                  <strong className="text-rose-700 font-mono text-sm">
+                    ₹{Number(activeDunningRow.total_outstanding || 0).toLocaleString("en-IN")}
+                  </strong>
+                </div>
               </div>
 
+              {/* Destination Contact & Email Fields */}
+              <div className="space-y-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                      Recipient Email ID
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">PDF statement delivered here</span>
+                  </label>
+                  <input
+                    type="email"
+                    required={dunningChannel === "email" || dunningChannel === "both"}
+                    value={dunningEmail}
+                    onChange={(e) => setDunningEmail(e.target.value)}
+                    placeholder="tenant@company.com"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      Recipient Contact / WhatsApp Number
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">WhatsApp notice delivered here</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required={dunningChannel === "whatsapp"}
+                    value={dunningPhone}
+                    onChange={(e) => setDunningPhone(e.target.value)}
+                    placeholder="e.g. 9876543210 or +91 98765 43210"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* Dispatch Channel Selector */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Dispatch Channels</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setDunningChannel("email")}
-                    className={`p-2 rounded-xl border text-center font-bold ${
-                      dunningChannel === "email" ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-700"
+                    className={`p-2 rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 ${
+                      dunningChannel === "email" ? "bg-slate-900 text-white border-slate-900 shadow-xs" : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                     }`}
                   >
-                    Email Only
+                    <Mail className="w-3 h-3" /> Email Only
                   </button>
                   <button
                     type="button"
                     onClick={() => setDunningChannel("whatsapp")}
-                    className={`p-2 rounded-xl border text-center font-bold ${
-                      dunningChannel === "whatsapp" ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-700"
+                    className={`p-2 rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 ${
+                      dunningChannel === "whatsapp" ? "bg-emerald-600 text-white border-emerald-600 shadow-xs" : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                     }`}
                   >
-                    WhatsApp
+                    <Phone className="w-3 h-3" /> WhatsApp
                   </button>
                   <button
                     type="button"
                     onClick={() => setDunningChannel("both")}
-                    className={`p-2 rounded-xl border text-center font-bold ${
-                      dunningChannel === "both" ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-700"
+                    className={`p-2 rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 ${
+                      dunningChannel === "both" ? "bg-slate-900 text-white border-slate-900 shadow-xs" : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                     }`}
                   >
                     Both Channels
@@ -598,7 +690,19 @@ export default function AgeingCollectionsPage() {
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px]">
+              {/* Custom Demand Notes (Optional) */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Custom Message / Note (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={dunningNotes}
+                  onChange={(e) => setDunningNotes(e.target.value)}
+                  placeholder="e.g. Please clear immediate payment before Friday to avoid service interruption."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-2xs"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
                 Notice will automatically attach the certified PDF Statement of Account, outstanding invoices list, and Razorpay quick payment link.
               </div>
 
@@ -606,15 +710,16 @@ export default function AgeingCollectionsPage() {
                 <button
                   type="button"
                   onClick={() => setDunningModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-semibold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={sendingNotice}
-                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition shadow-sm"
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition shadow-sm disabled:opacity-50 flex items-center gap-1.5"
                 >
+                  <Send className="w-3.5 h-3.5" />
                   {sendingNotice ? "Dispatching..." : "Send Demand Notice"}
                 </button>
               </div>

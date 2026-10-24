@@ -20,7 +20,7 @@ import {
   validateDepositBounds,
 } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 
 /**
  * RR-CONT-01 & §S-22: Contract Detail
@@ -32,6 +32,18 @@ export async function GET(
   try {
     const auth = getAuthContext(req);
     const { id } = await params;
+
+    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "");
+    if (!isValidUuid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Contract not yet added",
+          message: "No active lease contract has been created for this space yet.",
+        },
+        { status: 404 }
+      );
+    }
 
     const [existing] = await db
       .select({
@@ -49,13 +61,19 @@ export async function GET(
       .where(
         and(
           eq(contract.id, id),
-          eq(contract.org_id, auth.orgId),
           sql`${contract.deleted_at} IS NULL`
         )
       );
 
     if (!existing) {
-      return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Contract not yet added",
+          message: "No active lease contract has been created for this space yet.",
+        },
+        { status: 404 }
+      );
     }
 
     // Scoped role check
@@ -82,7 +100,7 @@ export async function GET(
         .from(rentStep)
         .where(
           and(
-            sql`${rentStep.contract_charge_id} = ANY(${chargeIds})`,
+            inArray(rentStep.contract_charge_id, chargeIds),
             sql`${rentStep.deleted_at} IS NULL`
           )
         )

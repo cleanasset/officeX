@@ -172,7 +172,7 @@ export default function TenantPortalLayout({
               >
                 {occupantsList.map((occ) => (
                   <option key={occ.id} value={occ.id}>
-                    {occ.occupant_name} ({occ.occupant_code})
+                    {occ.occupant_name} {occ.property_name ? `· ${occ.property_name}` : `(${occ.occupant_code})`}
                   </option>
                 ))}
               </select>

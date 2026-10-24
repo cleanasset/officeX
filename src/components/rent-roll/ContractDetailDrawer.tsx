@@ -84,17 +84,29 @@ export default function ContractDetailDrawer({
   }, [contractId, isOpen]);
 
   async function fetchContractDetail(id: string) {
+    if (!id || id.startsWith("vacant-") || id === "uncontracted") {
+      setData(null);
+      setActionError(null);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setActionError(null);
       const res = await fetch(`/api/contracts/${id}`);
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data) {
         setData(json.data);
       } else {
-        setActionError(json.error || "Failed to load contract details");
+        setData(null);
+        if (res.status === 404 || json.error === "Contract not yet added" || json.error === "Contract not found") {
+          setActionError(null);
+        } else {
+          setActionError(json.error || "Failed to load contract details");
+        }
       }
     } catch (err: any) {
+      setData(null);
       setActionError(err.message);
     } finally {
       setLoading(false);
@@ -249,6 +261,11 @@ export default function ContractDetailDrawer({
               <span className="font-mono text-sm font-bold text-slate-900 tracking-tight">
                 {data?.contract_code || "Contract Detail"}
               </span>
+              {!data && !loading && (
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-300">
+                  Not Yet Added
+                </span>
+              )}
               {data && (
                 <span
                   className={`text-[11px] uppercase font-semibold px-2 py-0.5 rounded-full border ${
@@ -409,7 +426,15 @@ export default function ContractDetailDrawer({
               Loading contract profile...
             </div>
           ) : !data ? (
-            <div className="text-center py-12 text-slate-400 text-xs">No contract selected</div>
+            <div className="text-center py-16 px-6 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 mx-auto flex items-center justify-center shadow-xs">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">Contract Not Yet Added</h4>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                This space is currently vacant or uncontracted. No lease agreement has been created for it yet.
+              </p>
+            </div>
           ) : (
             <>
               {/* Tab 1: Summary */}

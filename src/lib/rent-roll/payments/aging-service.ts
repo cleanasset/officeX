@@ -31,6 +31,10 @@ export interface OccupantAgingSummary {
   occupant_code: string;
   contract_code: string;
   property_name: string;
+  email?: string;
+  phone?: string;
+  invoice_id?: string;
+  invoice_number?: string;
   oldest_due_days: number;
   disputed_amount: number;
   invoices_count: number;
@@ -116,6 +120,8 @@ export async function calculateAgingReport(
       id: occupant.id,
       occupant_name: occupant.occupant_name,
       occupant_code: occupant.occupant_code,
+      email: occupant.email,
+      phone: occupant.phone,
     })
     .from(occupant)
     .where(and(eq(occupant.org_id, orgId), isNull(occupant.deleted_at)));
@@ -172,6 +178,10 @@ export async function calculateAgingReport(
         occupant_code: occMeta ? occMeta.occupant_code : "UNASSIGNED",
         contract_code: inv.contract_code || "—",
         property_name: inv.property_name || "—",
+        email: occMeta?.email || "",
+        phone: occMeta?.phone || "",
+        invoice_id: inv.id,
+        invoice_number: inv.invoice_number,
         oldest_due_days: daysOverdue,
         disputed_amount: 0,
         invoices_count: 0,
@@ -197,6 +207,10 @@ export async function calculateAgingReport(
       }
       if (!occSummary.property_name || occSummary.property_name === "—") {
         occSummary.property_name = inv.property_name || "—";
+      }
+      if (!occSummary.invoice_id) {
+        occSummary.invoice_id = inv.id;
+        occSummary.invoice_number = inv.invoice_number;
       }
     }
 
