@@ -198,6 +198,43 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "System Audit Log", href: "/admin/audit", icon: ShieldCheck }
   ],
 
+  // CLIENT PRINCIPAL (Third-Party Property Owner §2.1 Segment B)
+  client_principal: [
+    { name: "My Managed Portfolio", href: "/dashboard/owner", icon: Layers, section: "Client Account" },
+    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Property Registry", href: "/properties/registry", icon: Building },
+    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
+    { name: "Active Contracts", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck, section: "Approvals & Statements" },
+    { name: "Owner Statements", href: "/operate/owner-statements", icon: FileText },
+    { name: "Monthly MIS Pack", href: "/operate/mis", icon: FileText },
+    { name: "Collections & Arrears", href: "/operate/collections", icon: AlertTriangle }
+  ],
+
+  // ASSET MANAGER (Commercial Oversight & Yield §3.1)
+  asset_manager: [
+    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers, section: "Portfolio Assets" },
+    { name: "Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Stacking & Vacancy", href: "/operate/stacking", icon: Layers },
+    { name: "Contracts & Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck, section: "Commercial Oversight" },
+    { name: "Rent Escalations", href: "/operate/escalations", icon: TrendingUp },
+    { name: "Expiry & Renewals", href: "/operate/renewals", icon: Clock },
+    { name: "Revenue Forecast", href: "/operate/forecast", icon: Calendar, section: "Financial Yield" },
+    { name: "NOI & Property P&L", href: "/operate/pnl", icon: BarChart3 },
+    { name: "Investor MIS Pack", href: "/operate/mis", icon: FileText }
+  ],
+
+  // AUDITOR & COMPLIANCE (Read-Only Financial Records §5.14)
+  auditor: [
+    { name: "Audit Dashboard", href: "/reporting/mis", icon: ShieldCheck, section: "Compliance & Audit" },
+    { name: "Rent Roll Register (Read)", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Invoices & Lines", href: "/operate/invoices", icon: FileText },
+    { name: "Payment Receipts", href: "/operate/payments", icon: CreditCard },
+    { name: "Month-End Snapshots", href: "/operate/snapshots", icon: ShieldCheck },
+    { name: "Immutable Audit Log", href: "/admin/audit", icon: ShieldCheck }
+  ],
+
   // COMMERCIAL PORTFOLIO (DEFAULT COMPATIBILITY)
   properties: [
     { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers },
@@ -310,6 +347,9 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
 const roleHomes: Record<string, { label: string; roleName: string; route: string }> = {
   owner: { label: "Owner & Principal", roleName: "Owner / Landlord", route: "/dashboard/owner" },
+  org_admin: { label: "Executive Control", roleName: "Organisation Admin", route: "/dashboard/owner" },
+  client_principal: { label: "Client Principal", roleName: "Client Principal (3rd Party Owner)", route: "/dashboard/owner" },
+  asset_manager: { label: "Asset Management", roleName: "Asset Manager", route: "/dashboard/owner" },
   property_manager: { label: "Property Management", roleName: "Property Manager", route: "/dashboard/pm" },
   facility_manager: { label: "Facility Operations", roleName: "Facility Manager", route: "/dashboard/fm" },
   finance_manager: { label: "Finance & Accounts", roleName: "Finance Manager", route: "/dashboard/finance" },
@@ -317,7 +357,7 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
   flex_operator: { label: "Flex & Coworking", roleName: "Flex Operator", route: "/operate/head-leases" },
   tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/portal" },
   occupant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/portal" },
-  org_admin: { label: "Executive Control", roleName: "Organisation Admin", route: "/dashboard/owner" },
+  auditor: { label: "Auditor & Compliance", roleName: "Auditor", route: "/reporting/mis" },
   admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin" },
   properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/dashboard/owner" },
   ops: { label: "Facility Management", roleName: "Facility Management", route: "/dashboard/fm" },
@@ -498,8 +538,32 @@ function SidebarInner() {
           </button>
         </div>
 
+        {/* Active Workspace Persona Card (§5.14 Table 5.14a) */}
+        <div className="mx-3 mt-2.5 mb-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-between shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
+              <ShieldCheck size={13} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</span>
+              <span className="text-[11px] font-black text-slate-900 truncate max-w-[130px]">{activeRole.roleName || activeRole.label}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const nextRoleKey = currentPortalKey === "owner" ? "org_admin" : currentPortalKey === "org_admin" ? "property_manager" : "owner";
+              handleRoleChange(nextRoleKey);
+            }}
+            className="text-[9px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2 py-1 rounded-md border border-teal-200/70 hover:bg-teal-100 transition-colors cursor-pointer shrink-0"
+            title="Toggle between Owner & Manager personas"
+          >
+            Switch
+          </button>
+        </div>
+
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
-        <nav className="flex-1 px-3 py-3 flex flex-col gap-1 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <nav className="flex-1 px-3 py-2 flex flex-col gap-1 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {activeMenu.map((item, idx) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const itemPath = item.href.split("?")[0];

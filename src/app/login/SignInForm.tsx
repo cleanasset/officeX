@@ -28,7 +28,9 @@ import {
   Check,
   Building,
   Loader2,
-  Users
+  Users,
+  Settings,
+  ClipboardList
 } from "lucide-react";
 import { setAuthCookie } from "@/lib/auth-storage";
 import {
@@ -720,6 +722,9 @@ export default function SignInForm({
 
     const roleDashboards: Record<string, string> = {
       owner: "/dashboard/owner",
+      org_admin: "/dashboard/owner",
+      client_principal: "/dashboard/owner",
+      asset_manager: "/dashboard/owner",
       property_manager: "/dashboard/pm",
       facility_manager: "/dashboard/fm",
       leasing_manager: "/dashboard/leasing",
@@ -727,23 +732,17 @@ export default function SignInForm({
       tenant: "/portal",
       occupant: "/portal",
       flex_operator: "/operate/head-leases",
-      org_admin: "/dashboard/owner",
+      auditor: "/reporting/mis",
     };
     const determinedRoleDashboard = (storedRoleKey && roleDashboards[storedRoleKey])
       ? roleDashboards[storedRoleKey]
       : "/dashboard/owner";
 
     let destination = "";
-    if (safeRedirect && safeRedirect === "/dashboard") {
-      destination = "/dashboard";
-    } else if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
-      destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard")
-        ? safeRedirect
-        : "/properties/rent-roll";
-    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
+    if (safeRedirect && safeRedirect !== "/dashboard" && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
       destination = safeRedirect;
     } else {
-      destination = "/dashboard";
+      destination = determinedRoleDashboard;
     }
 
     setStep("signed_in_success");
@@ -1320,6 +1319,95 @@ export default function SignInForm({
                     </svg>
                     <span>{t.continueWithGoogle}</span>
                   </button>
+                </div>
+
+                {/* 1-Click Persona Selector (§5.14 Table 5.14a Demo / Evaluation) */}
+                <div className="pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fast Evaluation Personas</span>
+                    <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">Table 5.14a</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectRole({
+                          key: "owner",
+                          label: "Owner / Landlord",
+                          badge: "Segment A",
+                          dashboardUrl: "/dashboard/owner",
+                          description: "Owner portfolio ROI, collections & expiries"
+                        });
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-left transition-all cursor-pointer flex items-center gap-2 group"
+                    >
+                      <Building2 size={14} className="text-teal-700 shrink-0 group-hover:scale-110 transition-transform" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900 truncate">Property Owner</span>
+                        <span className="text-[9px] text-slate-400 truncate">Portfolio &amp; Yield</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectRole({
+                          key: "org_admin",
+                          label: "Org Admin (1 Manager)",
+                          badge: "Full Access",
+                          dashboardUrl: "/dashboard/owner",
+                          description: "1-Manager full authority over leases, billing & ops"
+                        });
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-left transition-all cursor-pointer flex items-center gap-2 group"
+                    >
+                      <Settings size={14} className="text-teal-700 shrink-0 group-hover:scale-110 transition-transform" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900 truncate">1 Manager (Admin)</span>
+                        <span className="text-[9px] text-slate-400 truncate">Full Operations</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectRole({
+                          key: "property_manager",
+                          label: "Property Manager",
+                          badge: "Operations",
+                          dashboardUrl: "/dashboard/pm",
+                          description: "PM daily task queue & leases"
+                        });
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-left transition-all cursor-pointer flex items-center gap-2 group"
+                    >
+                      <ClipboardList size={14} className="text-teal-700 shrink-0 group-hover:scale-110 transition-transform" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900 truncate">Property Manager</span>
+                        <span className="text-[9px] text-slate-400 truncate">Today Console</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectRole({
+                          key: "tenant",
+                          label: "Corporate Occupant",
+                          badge: "Tenant",
+                          dashboardUrl: "/portal",
+                          description: "Invoices, Pay Now & TDS"
+                        });
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-left transition-all cursor-pointer flex items-center gap-2 group"
+                    >
+                      <Users size={14} className="text-teal-700 shrink-0 group-hover:scale-110 transition-transform" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900 truncate">Tenant Workplace</span>
+                        <span className="text-[9px] text-slate-400 truncate">Invoices &amp; Pay Now</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Recovery & Sign-up Links */}

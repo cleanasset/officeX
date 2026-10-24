@@ -25,7 +25,8 @@ import {
   Zap,
   ClipboardList,
   ShieldCheck,
-  Compass
+  Compass,
+  Landmark
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
@@ -35,13 +36,15 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 const AVAILABLE_ROLES = [
   { key: "owner", label: "Owner / Landlord", sub: "Portfolio, Rent Roll & NOI", route: "/dashboard/owner", icon: Building2 },
+  { key: "org_admin", label: "Org Admin (1 Manager)", sub: "Full Operational Authority", route: "/dashboard/owner", icon: Settings },
+  { key: "client_principal", label: "Client Principal (3rd Party Owner)", sub: "Managed Account & Statements", route: "/dashboard/owner", icon: Landmark },
   { key: "property_manager", label: "Property Manager", sub: "Daily Operations & Leases", route: "/dashboard/pm", icon: ClipboardList },
   { key: "finance_manager", label: "Finance / AR Manager", sub: "Invoices, Payments & Ageing", route: "/dashboard/finance", icon: Receipt },
   { key: "leasing_manager", label: "Leasing Manager", sub: "Pipeline, Vacancy & Deals", route: "/dashboard/leasing", icon: TrendingUp },
   { key: "facility_manager", label: "Facility Manager", sub: "FM Helpdesk & CAM Meters", route: "/dashboard/fm", icon: Zap },
   { key: "flex_operator", label: "Flex / Coworking", sub: "Seats & Centre P&L", route: "/operate/head-leases", icon: Layers },
-  { key: "occupant", label: "Corporate Occupant", sub: "Tenant Self-Service Portal", route: "/tenant", icon: Users },
-  { key: "org_admin", label: "Org Admin / Settings", sub: "Platform Configuration", route: "/settings", icon: Settings },
+  { key: "tenant", label: "Corporate Occupant (Tenant)", sub: "Invoices, Pay Now & TDS", route: "/portal", icon: Users },
+  { key: "auditor", label: "Auditor & Compliance", sub: "Snapshots & Immutable Audit", route: "/reporting/mis", icon: ShieldCheck },
 ];
 
 export default function Topbar() {
@@ -280,6 +283,60 @@ export default function Topbar() {
         {/* Global Property Selector */}
         <div className="min-w-0">
           <PropertySelector />
+        </div>
+
+        {/* Persona / Role Selector (§5.14 Access Control & Table 5.14a) */}
+        <div className="relative shrink-0" ref={roleDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-500 bg-white hover:bg-slate-50 transition-all text-xs font-bold text-slate-800 shadow-2xs cursor-pointer"
+            title="Switch Workspace Persona (§5.14 Access Control & Table 5.14a)"
+          >
+            <activeRole.icon size={15} className="text-[#0F8B7D] shrink-0" />
+            <div className="hidden sm:flex flex-col text-left leading-tight">
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Persona</span>
+              <span className="text-xs font-extrabold text-slate-900 truncate max-w-[110px] md:max-w-[140px] lg:max-w-[170px]">{activeRole.label}</span>
+            </div>
+            <ChevronDown size={13} className={`text-slate-400 transition-transform ${isRoleDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {isRoleDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
+              <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 block">OFFICEX Access Control</span>
+                  <span className="text-xs font-black text-slate-900">Switch Persona (Table 5.14a)</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Spec Roles</span>
+              </div>
+              <div className="flex flex-col gap-1 py-1 max-h-80 overflow-y-auto">
+                {AVAILABLE_ROLES.map((r) => {
+                  const Icon = r.icon;
+                  const isSelected = r.key === currentRoleKey;
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => handleSelectRole(r)}
+                      className={`w-full p-2 rounded-xl text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                        isSelected ? "bg-teal-50/80 text-teal-900 font-bold border border-teal-200/60" : "hover:bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-xs font-bold truncate">{r.label}</span>
+                        <span className="text-[10px] text-slate-400 truncate">{r.sub}</span>
+                      </div>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0 mr-1" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

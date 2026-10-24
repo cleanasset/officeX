@@ -658,6 +658,16 @@ export default function OwnerDashboardPage() {
             <span>Owner Statement</span>
           </button>
 
+          {/* Action: Property Delegation & 1-Manager Setup (S-66) */}
+          <Link
+            href="/settings/delegation"
+            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            title="Manage Assigned Property Managers & Delegation Rights (S-66)"
+          >
+            <Briefcase className="w-3.5 h-3.5 text-teal-700" />
+            <span>Team &amp; Delegation</span>
+          </Link>
+
           {/* Primary Action: Add Property / Unit */}
           <button
             onClick={() => {

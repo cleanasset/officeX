@@ -64,6 +64,9 @@ import {
   DELEGATED_ENTITY_TYPES,
   getDelegatedEntityLabel,
 } from "@/components/rent-roll/RentRollOnboardingWizard";
+import PropertyHierarchyModal, {
+  HierarchyTab,
+} from "@/components/rent-roll/PropertyHierarchyModal";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -76,6 +79,10 @@ function CompleteProfileContent() {
   const [activeStep, setActiveStep] = useState<"property" | "tenant" | "contract" | "documents" | "delegation" | "banking">("property");
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Single Unified Hierarchy Gateway State
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
 
   // Step 6: Bank & Payout Coordinates Form (Compulsory for rent collection)
   const [bankForm, setBankForm] = useState({
@@ -2164,6 +2171,39 @@ function CompleteProfileContent() {
                 );
               })}
             </div>
+          </div>
+
+          {/* ──── UNIFIED PROPERTY & RENT ROLL GATEWAY LAUNCH BANNER ──── */}
+          <div className="bg-gradient-to-r from-teal-50 via-emerald-50/50 to-teal-100/40 border border-teal-200/90 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Single Canonical Rent Roll Gateway
+                  </h4>
+                  <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">
+                    5-Step Unified Wizard
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
+                  Configure your entire commercial hierarchy (Property &rarr; Buildings &rarr; Spaces &rarr; Tenants &rarr; Lease Contracts) using the same universal modal gateway found across the platform.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setHierarchyTab("property");
+                setHierarchyModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-2 shrink-0 shadow-md cursor-pointer self-start sm:self-auto active:scale-95"
+            >
+              <Building2 size={15} />
+              <span>Launch Unified Gateway &rarr;</span>
+            </button>
           </div>
 
           {/* ──── MODULE 1: ADD PROPERTY WITH ALL SPEC FIELDS ──── */}
@@ -6615,6 +6655,14 @@ function CompleteProfileContent() {
                 applyAgreementTerms(pendingAgreementData, agreementDifferences);
               }
             }}
+          />
+
+          {/* ──── SINGLE UNIFIED PROPERTY HIERARCHY GATEWAY MODAL ──── */}
+          <PropertyHierarchyModal
+            isOpen={hierarchyModalOpen}
+            onClose={() => setHierarchyModalOpen(false)}
+            initialTab={hierarchyTab}
+            onSuccess={loadInitialState}
           />
         </main>
       </div>

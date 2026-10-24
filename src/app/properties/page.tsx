@@ -22,11 +22,16 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import PropertyHierarchyModal, {
+  HierarchyTab,
+} from "@/components/rent-roll/PropertyHierarchyModal";
 
 export default function PropertiesPortfolioPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Record<string, any>>({});
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
 
   // Licensed Capacity Telemetry
   const [subscribedSqft, setSubscribedSqft] = useState<number>(0);
@@ -143,13 +148,17 @@ export default function PropertiesPortfolioPage() {
               >
                 <RefreshCw size={15} className={loading ? "animate-spin text-teal-600" : ""} />
               </button>
-              <Link
-                href="/onboarding"
-                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition"
+              <button
+                type="button"
+                onClick={() => {
+                  setHierarchyTab("property");
+                  setHierarchyModalOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
                 <span>Add Property</span>
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -414,6 +423,14 @@ export default function PropertiesPortfolioPage() {
         </main>
 
         <MobileBottomNav />
+
+        {/* Unified Property & Rent Roll Gateway Modal */}
+        <PropertyHierarchyModal
+          isOpen={hierarchyModalOpen}
+          onClose={() => setHierarchyModalOpen(false)}
+          initialTab={hierarchyTab}
+          onSuccess={fetchProperties}
+        />
       </div>
     </div>
   );
