@@ -1478,7 +1478,7 @@ function CompleteProfileContent() {
         billing_entity: prev.billing_entity || propForm.spv_name || companyName || "",
       }));
 
-      if (addAnother) {
+      if (addAnother && tenancyMode === "multi") {
         // Reset floor allocation so user chooses from available property floors for next tenant
         setSelectedFloorsForCurrentTenant([]);
         setCustomSpaceUnitName("");
@@ -2802,26 +2802,30 @@ function CompleteProfileContent() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-slate-900">
-                            Enrolled Occupants in this Building ({enrolledTenants.length})
+                            {tenancyMode === "single" ? "Single Enterprise Occupant (Entire Building)" : `Enrolled Occupants in this Building (${enrolledTenants.length})`}
                           </span>
-                          <span className="text-[10px] font-bold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
-                            Multi-Tenant Demised
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tenancyMode === "single" ? "bg-teal-100/80 text-teal-800 border-teal-200" : "bg-amber-100/80 text-amber-800 border-amber-200"}`}>
+                            {tenancyMode === "single" ? "Single Enterprise Asset" : "Multi-Tenant Demised"}
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
-                          {enrolledTenants.reduce((sum, t) => sum + (t.assignedFloors?.length || 1), 0)} of {Math.max(1, Number(propForm.floors_count) || 1)} floors allocated. You can add more tenants or proceed to contracts.
+                          {tenancyMode === "single"
+                            ? `All ${Math.max(1, Number(propForm.floors_count) || 1)} floors allocated to this occupant. No additional tenants permitted.`
+                            : `${enrolledTenants.reduce((sum, t) => sum + (t.assignedFloors?.length || 1), 0)} of ${Math.max(1, Number(propForm.floors_count) || 1)} floors allocated. You can add more tenants or proceed to contracts.`}
                         </span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleAddNewTenantClick}
-                      className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 active:scale-95"
-                    >
-                      <Plus size={14} />
-                      <span>+ Add Another Tenant</span>
-                    </button>
+                    {tenancyMode === "multi" && (
+                      <button
+                        type="button"
+                        onClick={handleAddNewTenantClick}
+                        className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 active:scale-95"
+                      >
+                        <Plus size={14} />
+                        <span>+ Add Another Tenant</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Enrolled Tenants Cards Grid */}
@@ -3187,6 +3191,23 @@ function CompleteProfileContent() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Single Tenant Confirmation Banner */}
+                        {tenancyMode === "single" && (
+                          <div className="pt-3 border-t border-slate-200/80">
+                            <div className="p-3.5 bg-teal-50/80 border border-teal-200 rounded-xl flex items-center justify-between gap-3 text-xs text-teal-950 animate-in fade-in">
+                              <div className="flex items-center gap-2.5">
+                                <Building2 size={16} className="text-[#0D7B6C] shrink-0" />
+                                <div>
+                                  <span className="font-bold">Entire Asset Allocation Active:</span> This occupant will lease all {currentFloorsCount} floor{currentFloorsCount > 1 ? "s" : ""} ({currentTotalArea.toLocaleString()} sq.ft). Additional tenant additions are disabled.
+                                </div>
+                              </div>
+                              <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px] uppercase tracking-wider shrink-0">
+                                Single Tenant Exclusive
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Interactive Building Floor Stacking & Allocation Plan */}
                         {tenancyMode === "multi" && (
@@ -3771,15 +3792,17 @@ function CompleteProfileContent() {
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={(e) => handleSaveTenant(e, true)}
-                        disabled={tenantLoading}
-                        className="px-4 py-2.5 rounded-xl border-2 border-[#0D7B6C] text-[#0D7B6C] hover:bg-teal-50 text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                      >
-                        <Plus size={15} />
-                        <span>{editingTenantId ? "Update & Add Another Tenant" : "Save & Add Another Tenant"}</span>
-                      </button>
+                      {tenancyMode === "multi" && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveTenant(e, true)}
+                          disabled={tenantLoading}
+                          className="px-4 py-2.5 rounded-xl border-2 border-[#0D7B6C] text-[#0D7B6C] hover:bg-teal-50 text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                        >
+                          <Plus size={15} />
+                          <span>{editingTenantId ? "Update & Add Another Tenant" : "Save & Add Another Tenant"}</span>
+                        </button>
+                      )}
 
                       <button
                         type="submit"
@@ -3789,6 +3812,8 @@ function CompleteProfileContent() {
                         <span>
                           {editingTenantId
                             ? "Update Occupant Details →"
+                            : tenancyMode === "single"
+                            ? "Save Enterprise Tenant & Create Contract →"
                             : enrolledTenants.length > 0 && !tenantForm.occupant_name.trim()
                             ? "Proceed to Step 3: Contracts →"
                             : "Save Tenant & Create Contract →"}
@@ -4342,20 +4367,21 @@ function CompleteProfileContent() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     {/* Handover Condition */}
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">Handover Condition *</label>
                       <select
                         value={contractForm.fitout_condition}
                         onChange={(e) => setContractForm({ ...contractForm, fitout_condition: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
                       >
                         <option value="Fully Furnished">Fully Furnished (Plug &amp; Play)</option>
                         <option value="Warm Shell">Warm Shell (HVAC, Ceilings, Screed)</option>
                         <option value="Bare Shell">Bare Shell (Raw Concrete Slab)</option>
                         <option value="Semi-Furnished">Semi-Furnished (Partially Fitted)</option>
                       </select>
+                      <span className="text-[10px] text-slate-500 mt-1 block">Interior physical handover state of the premises.</span>
                     </div>
 
                     {/* Rent-Free Fit-out Period (Days) */}
@@ -4363,57 +4389,12 @@ function CompleteProfileContent() {
                       <label className="font-bold text-slate-700 block mb-1">Fit-out Rent-Free Period (Days)</label>
                       <input
                         type="number"
-                        placeholder="e.g. 60 or 90"
+                        placeholder="e.g. 30 or 60"
                         value={contractForm.fitout_period_days}
                         onChange={(e) => setContractForm({ ...contractForm, fitout_period_days: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
-                    </div>
-
-                    {/* Bare Shell Rate (₹/sqft) */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Bare Shell Rate (₹/sqft/mo)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 65"
-                        value={contractForm.bare_shell_rate}
-                        onChange={(e) => {
-                          const bs = e.target.value;
-                          const fit = Number(contractForm.fitout_rate) || 0;
-                          const totalRate = Number(bs) + fit;
-                          const area = Number(contractForm.area_sqft) || 0;
-                          setContractForm({
-                            ...contractForm,
-                            bare_shell_rate: bs,
-                            rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
-                            monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
-                          });
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
-
-                    {/* Fit-out Amortization Rate (₹/sqft) */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Fit-out Rent (₹/sqft/mo)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 25"
-                        value={contractForm.fitout_rate}
-                        onChange={(e) => {
-                          const fit = e.target.value;
-                          const bs = Number(contractForm.bare_shell_rate) || 0;
-                          const totalRate = bs + Number(fit);
-                          const area = Number(contractForm.area_sqft) || 0;
-                          setContractForm({
-                            ...contractForm,
-                            fitout_rate: fit,
-                            rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
-                            monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
-                          });
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">Rent waiver concession days granted for fit-out setup before commercial rent begins.</span>
                     </div>
                   </div>
                 </div>
@@ -4471,7 +4452,7 @@ function CompleteProfileContent() {
                   </div>
 
                   {/* Dynamic Pricing Inputs */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  <div className={`grid gap-4 pt-2 ${contractForm.billing_model === "Hybrid" ? "grid-cols-1 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"}`}>
                     {/* Area (Sq.Ft) */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -4503,8 +4484,55 @@ function CompleteProfileContent() {
                       />
                     </div>
 
-                    {/* Rate per Sq.Ft or Rate per Seat */}
-                    {contractForm.billing_model === "Seat-based" ? (
+                    {/* Rate inputs per chosen billing model */}
+                    {contractForm.billing_model === "Hybrid" ? (
+                      <>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Bare Shell Component (₹/sqft/mo) *</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g. 20"
+                            value={contractForm.bare_shell_rate}
+                            onChange={(e) => {
+                              const bs = e.target.value;
+                              const fit = Number(contractForm.fitout_rate) || 0;
+                              const totalRate = Number(bs) + fit;
+                              const area = Number(contractForm.area_sqft) || 0;
+                              setContractForm({
+                                ...contractForm,
+                                bare_shell_rate: bs,
+                                rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
+                                monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
+                              });
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Fit-out Component (₹/sqft/mo) *</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g. 25"
+                            value={contractForm.fitout_rate}
+                            onChange={(e) => {
+                              const fit = e.target.value;
+                              const bs = Number(contractForm.bare_shell_rate) || 0;
+                              const totalRate = bs + Number(fit);
+                              const area = Number(contractForm.area_sqft) || 0;
+                              setContractForm({
+                                ...contractForm,
+                                fitout_rate: fit,
+                                rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
+                                monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
+                              });
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                      </>
+                    ) : contractForm.billing_model === "Seat-based" ? (
                       <>
                         <div>
                           <label className="font-bold text-slate-700 block mb-1">Seats / Workstations Count *</label>

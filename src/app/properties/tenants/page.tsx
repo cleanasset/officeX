@@ -609,203 +609,193 @@ export default function TenantDirectoryPage() {
         {/* ------------------------------------------------------------- */}
         {/* MODAL 2: EXECUTED CONTRACT DOCUMENT / PDF VIEWER MODAL        */}
         {/* ------------------------------------------------------------- */}
-        {contractViewerOpen && contractToView && (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-50 animate-in fade-in">
-            <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
-              {/* Top Navigation Bar with Prominent Close Button */}
-              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base font-black text-slate-900">
-                        Commercial Lease Agreement — Suite 101, mango plus tower
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        Legally Executed &amp; Stamp Duty Paid
-                      </span>
+        {contractViewerOpen && contractToView && (() => {
+          const viewerTenantName = contractToView.tenant_name || contractToView.occupant_name || "Corporate Lessee";
+          const viewerPropertyName = contractToView.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") : "") || "Commercial Property";
+          const viewerSpaceName = contractToView.space_name || contractToView.unit || "Demised Unit";
+          const viewerArea = contractToView.area_sqft || contractToView.chargeable_area_sqft || "Demised Area";
+          const viewerLessor = (typeof window !== "undefined" ? localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") : "") || "Commercial Property Asset SPV";
+          const viewerPan = contractToView.pan_number || "PAN-REGISTERED";
+
+          return (
+            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-50 animate-in fade-in">
+              <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+                {/* Top Navigation Bar with Prominent Close Button */}
+                <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                      <FileText size={20} />
                     </div>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      Document Code: LEAS-2026-0001 · Registration Authority: Government of Gujarat (§Table 103)
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-black text-slate-900">
+                          Commercial Lease Agreement — {viewerSpaceName}, {viewerPropertyName}
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Legally Executed &amp; Stamp Duty Paid
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">
+                        Document Code: {contractToView.contract_code || "LEAS-2026-0001"} · Registration Authority: Government of Gujarat (§Table 103)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined") window.print();
+                      }}
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="Print or Save as PDF"
+                    >
+                      <Printer size={13} />
+                      <span>Print / Save PDF</span>
+                    </button>
+
+                    {/* Prominent Close Button */}
+                    <button
+                      type="button"
+                      onClick={() => setContractViewerOpen(false)}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                      title="Close Contract Viewer"
+                    >
+                      <X size={18} />
+                      <span className="hidden sm:inline">Close</span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") window.print();
-                    }}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-2xs"
-                    title="Print or Save as PDF"
-                  >
-                    <Printer size={13} />
-                    <span>Print / Save PDF</span>
-                  </button>
+                {/* Scrollable Document Sheet with Official Legal Formatting */}
+                <div className="flex-1 p-4 sm:p-8 bg-slate-100 overflow-y-auto">
+                  <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-lg text-slate-800 font-sans space-y-6 relative">
+                    {/* Watermark overlay */}
+                    <div className="absolute inset-0 pointer-events-none flex flex-col justify-around items-center opacity-5 overflow-hidden z-10 rotate-[-25deg]">
+                      <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                      <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                      <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                    </div>
 
-                  {/* Prominent Close Button */}
-                  <button
-                    type="button"
-                    onClick={() => setContractViewerOpen(false)}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-                    title="Close Contract Viewer"
-                  >
-                    <X size={18} />
-                    <span className="hidden sm:inline">Close</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Scrollable Document Sheet with Official Legal Formatting */}
-              <div className="flex-1 p-4 sm:p-8 bg-slate-100 overflow-y-auto">
-                <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-lg text-slate-800 font-sans space-y-6 relative">
-                  {/* Watermark overlay */}
-                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-around items-center opacity-5 overflow-hidden z-10 rotate-[-25deg]">
-                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
-                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
-                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
-                  </div>
-
-                  {/* Official Government e-Stamping Certificate Representation */}
-                  <div className="border-2 border-emerald-700/80 rounded-xl p-4 bg-emerald-50/30 text-xs font-mono space-y-2">
-                    <div className="flex items-center justify-between border-b border-emerald-300 pb-2">
-                      <div className="font-bold text-emerald-950 uppercase tracking-wider text-xs">
-                        Government of Gujarat · e-Stamping Certificate
+                    {/* Official Government e-Stamping Certificate Representation */}
+                    <div className="border-2 border-emerald-700/80 rounded-xl p-4 bg-emerald-50/30 text-xs font-mono space-y-2">
+                      <div className="flex items-center justify-between border-b border-emerald-300 pb-2">
+                        <div className="font-bold text-emerald-950 uppercase tracking-wider text-xs">
+                          Government of Gujarat · e-Stamping Certificate
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-800">Certificate No: IN-GJ202610014892A</div>
                       </div>
-                      <div className="text-[10px] font-bold text-emerald-800">Certificate No: IN-GJ202610014892A</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
-                      <div><strong className="text-slate-900">Certificate Issued Date:</strong> 01-Oct-2026 11:24 AM</div>
-                      <div><strong className="text-slate-900">Account Reference:</strong> NONACC (SV)/ gjnon01/ AHMEDABAD</div>
-                      <div><strong className="text-slate-900">Description of Document:</strong> Article 35(b) Lease Agreement</div>
-                      <div><strong className="text-slate-900">Consideration Price:</strong> ₹1,25,00,000</div>
-                      <div><strong className="text-slate-900">First Party:</strong> mango groups (Lessor)</div>
-                      <div><strong className="text-slate-900">Second Party:</strong> Utkarsh Makwana (Lessee)</div>
-                      <div><strong className="text-slate-900">Stamp Duty Amount:</strong> ₹1,25,000 (PAID IN FULL)</div>
-                      <div><strong className="text-slate-900">Verification Status:</strong> Digitally Authenticated</div>
-                    </div>
-                  </div>
-
-                  {/* Agreement Legal Preamble */}
-                  <div className="text-center space-y-1 pt-2">
-                    <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                      COMMERCIAL LEASE &amp; OCCUPANCY AGREEMENT
-                    </h2>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Executed at Ahmedabad, Gujarat on this 1st Day of October, 2026
-                    </p>
-                  </div>
-
-                  <div className="text-xs leading-relaxed space-y-3 text-slate-700">
-                    <p>
-                      <strong>BY AND BETWEEN:</strong>
-                    </p>
-                    <p className="pl-3 border-l-2 border-teal-500">
-                      <strong>MANGO GROUPS</strong>, a sovereign commercial property asset entity having its principal portfolio operations at Ahmedabad, Gujarat (hereinafter referred to as the <strong>"LESSOR"</strong>, which expression shall unless repugnant to the context include its successors and assigns) of the <strong>FIRST PART</strong>;
-                    </p>
-                    <p>
-                      <strong>AND:</strong>
-                    </p>
-                    <p className="pl-3 border-l-2 border-emerald-500">
-                      <strong>UTKARSH MAKWANA</strong>, carrying on corporate business under PAN: <code>HSH578785D</code>, having office premises at Ahmedabad, Gujarat (hereinafter referred to as the <strong>"LESSEE"</strong>, which expression shall unless repugnant to the context include authorized legal representatives and permitted assigns) of the <strong>SECOND PART</strong>.
-                    </p>
-                  </div>
-
-                  {/* Operational Clauses */}
-                  <div className="space-y-4 text-xs leading-relaxed text-slate-700 pt-2 border-t border-slate-200">
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">1. Demised Premises</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        The Lessor hereby demises to the Lessee, and the Lessee hereby takes on lease from the Lessor, commercial workspace bearing demarcated unit <strong>Suite 101, 1st Floor, mango plus tower</strong>, situated at Ahmedabad, Gujarat, admeasuring a total Super Built-up Area of <strong>50,000 sqft</strong>, together with appurtenant common area access rights.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">2. Lease Term &amp; Mandatory Lock-in</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        The lease shall be for a fixed term of <strong>36 (Thirty-Six) Calendar Months</strong> commencing from <strong>01 October 2026</strong> and expiring on <strong>30 September 2029</strong>. Both parties hereby expressly agree to a mandatory Lock-in Period of 36 months during which neither party shall terminate this agreement without default cause.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">3. Monthly Lease Rent &amp; CAM Maintenance Structure</h4>
-                      <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-1.5 font-mono text-[11px]">
-                        <div className="flex justify-between">
-                          <span>Base Monthly Rent (50,000 sqft @ ₹200.00/sqft):</span>
-                          <strong className="text-slate-900">₹10,00,000.00</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Common Area Maintenance (CAM @ ₹50.00/sqft):</span>
-                          <strong className="text-slate-900">₹2,50,000.00</strong>
-                        </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Applicable Goods &amp; Services Tax (GST @ 18%):</span>
-                          <span>₹2,25,000.00</span>
-                        </div>
-                        <div className="border-t border-slate-200 pt-1.5 flex justify-between font-bold text-teal-900 text-xs">
-                          <span>Total Monthly Invoiced Commercial Consideration:</span>
-                          <span>₹15,16,300.00</span>
-                        </div>
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Rent shall be payable in advance on or before the 5th day of each English calendar month through bank electronic remittance.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">4. Interest-Free Refundable Security Deposit (IFRSD)</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        The Lessee has deposited a total sum of <strong>₹37,50,000 (Rupees Thirty-Seven Lakhs Fifty Thousand Only)</strong>, equivalent to 3 (three) months' rent, with the Lessor as interest-free refundable security deposit. The Lessor acknowledges receipt and custody of this deposit.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">5. Rent Escalation Terms</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        The agreed Base Rent shall escalate by <strong>5% (Five Percent) per annum</strong> compounded annually on each anniversary of the Lease Commencement Date. The first step-up will take effect on <strong>01 October 2027</strong>.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">6. Utility Sub-metering &amp; Energy Reconciliations</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        Electricity and water charges for Suite 101 shall be recorded monthly via dedicated calibrated check-meters and billed at applicable state board tariffs on actual kWh consumed.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 uppercase">7. Jurisdiction &amp; Dispute Resolution</h4>
-                      <p className="mt-0.5 text-slate-600">
-                        This agreement is governed by the laws of India. Any disputes arising hereunder shall be subject to the exclusive jurisdiction of the competent courts in Ahmedabad, Gujarat.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Signatures Representation */}
-                  <div className="pt-6 border-t-2 border-slate-200 grid grid-cols-2 gap-6 text-xs text-slate-700">
-                    <div className="space-y-3">
-                      <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSOR:</div>
-                      <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-200">
-                        <div className="font-bold text-teal-900">MANGO GROUPS</div>
-                        <div className="text-[10px] text-slate-500 mt-1">Authorized Sovereign Representative</div>
-                        <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Signed on 01-Oct-2026</div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                        <div><strong className="text-slate-900">Certificate Issued Date:</strong> 01-Oct-2026 11:24 AM</div>
+                        <div><strong className="text-slate-900">Account Reference:</strong> NONACC (SV)/ gjnon01/ AHMEDABAD</div>
+                        <div><strong className="text-slate-900">Description of Document:</strong> Article 35(b) Lease Agreement</div>
+                        <div><strong className="text-slate-900">Demised Unit:</strong> {viewerSpaceName}</div>
+                        <div><strong className="text-slate-900">First Party:</strong> {viewerLessor} (Lessor)</div>
+                        <div><strong className="text-slate-900">Second Party:</strong> {viewerTenantName} (Lessee)</div>
+                        <div><strong className="text-slate-900">Stamp Duty Amount:</strong> PAID IN FULL</div>
+                        <div><strong className="text-slate-900">Verification Status:</strong> Digitally Authenticated</div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSEE:</div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="font-bold text-slate-900">UTKARSH MAKWANA</div>
-                        <div className="text-[10px] text-slate-500 mt-1">Corporate Occupant · Suite 101</div>
-                        <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Signed on 01-Oct-2026</div>
+                    {/* Agreement Legal Preamble */}
+                    <div className="text-center space-y-1 pt-2">
+                      <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                        COMMERCIAL LEASE &amp; OCCUPANCY AGREEMENT
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Executed at Ahmedabad, Gujarat on this 1st Day of October, 2026
+                      </p>
+                    </div>
+
+                    <div className="text-xs leading-relaxed space-y-3 text-slate-700">
+                      <p>
+                        <strong>BY AND BETWEEN:</strong>
+                      </p>
+                      <p className="pl-3 border-l-2 border-teal-500">
+                        <strong>{viewerLessor.toUpperCase()}</strong>, a commercial property asset entity having its principal portfolio operations at Ahmedabad, Gujarat (hereinafter referred to as the <strong>"LESSOR"</strong>, which expression shall unless repugnant to the context include its successors and assigns) of the <strong>FIRST PART</strong>;
+                      </p>
+                      <p>
+                        <strong>AND:</strong>
+                      </p>
+                      <p className="pl-3 border-l-2 border-emerald-500">
+                        <strong>{viewerTenantName.toUpperCase()}</strong>, carrying on corporate business under PAN: <code>{viewerPan}</code> (hereinafter referred to as the <strong>"LESSEE"</strong>, which expression shall unless repugnant to the context include authorized legal representatives and permitted assigns) of the <strong>SECOND PART</strong>.
+                      </p>
+                    </div>
+
+                    {/* Operational Clauses */}
+                    <div className="space-y-4 text-xs leading-relaxed text-slate-700 pt-2 border-t border-slate-200">
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">1. Demised Premises</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          The Lessor hereby demises to the Lessee, and the Lessee hereby takes on lease from the Lessor, commercial workspace bearing demarcated unit <strong>{viewerSpaceName}, {viewerPropertyName}</strong>, admeasuring a total Super Built-up Area of <strong>{viewerArea} sqft</strong>, together with appurtenant common area access rights.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">2. Lease Term &amp; Mandatory Lock-in</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          The lease shall be for a fixed term commencing from agreed Lease Commencement Date. Both parties hereby expressly agree to contractual lock-in and notice terms during which neither party shall terminate this agreement without default cause.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">3. Monthly Lease Rent &amp; CAM Maintenance Structure</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          Rent shall be payable in advance on or before the 5th day of each English calendar month through bank electronic remittance as per terms covenanted in the master lease.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">4. Interest-Free Refundable Security Deposit (IFRSD)</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          The Lessee has deposited the agreed interest-free refundable security deposit with the Lessor. The Lessor acknowledges receipt and custody of this deposit held in designated escrow.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">5. Rent Escalation Terms</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          The agreed Base Rent shall escalate per the periodic indexation schedule agreed in the commercial contract.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">6. Utility Sub-metering &amp; Energy Reconciliations</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          Electricity and water charges for {viewerSpaceName} shall be recorded monthly via dedicated calibrated check-meters and billed at applicable state board tariffs on actual consumption.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 uppercase">7. Jurisdiction &amp; Dispute Resolution</h4>
+                        <p className="mt-0.5 text-slate-600">
+                          This agreement is governed by the laws of India. Any disputes arising hereunder shall be subject to the exclusive jurisdiction of the competent courts.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Signatures Representation */}
+                    <div className="pt-6 border-t-2 border-slate-200 grid grid-cols-2 gap-6 text-xs text-slate-700">
+                      <div className="space-y-3">
+                        <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSOR:</div>
+                        <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-200">
+                          <div className="font-bold text-teal-900">{viewerLessor}</div>
+                          <div className="text-[10px] text-slate-500 mt-1">Authorized Sovereign Representative</div>
+                          <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Authenticated</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSEE:</div>
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <div className="font-bold text-slate-900">{viewerTenantName}</div>
+                          <div className="text-[10px] text-slate-500 mt-1">Corporate Occupant · {viewerSpaceName}</div>
+                          <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Authenticated</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
               {/* Viewer Footer */}
               <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
@@ -828,7 +818,8 @@ export default function TenantDirectoryPage() {
               </div>
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* Unified Canonical Commercial Hierarchy & Tenant Modal */}
         <PropertyHierarchyModal

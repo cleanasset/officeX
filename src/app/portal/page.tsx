@@ -315,8 +315,10 @@ export default function TenantHomePage() {
             <Building2 size={15} className="text-indigo-600" />
             <span>
               {primaryContract
-                ? `${primaryContract.property_name} · ${primaryContract.building_name} · ${primaryContract.space_name} (${Number(primaryContract.chargeable_area_sqft || 50000).toLocaleString("en-IN")} sq.ft.)`
-                : "mango plus tower · Suite 101 (50,000 sq.ft.)"}
+                ? `${primaryContract.property_name} · ${primaryContract.building_name || "Tower 1"} · ${primaryContract.space_name} (${Number(primaryContract.chargeable_area_sqft || 0).toLocaleString("en-IN")} sq.ft.)`
+                : (typeof window !== "undefined" && (localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property")))
+                ? `${localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property")} · Demised Commercial Premises`
+                : "Demised Commercial Workspace"}
             </span>
           </p>
         </div>
@@ -337,7 +339,7 @@ export default function TenantHomePage() {
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
-                  Notice from {latestReminder.sender_name || "JPS Management"}
+                  Notice from {latestReminder.sender_name || "Property Operations"}
                 </span>
                 <span className="text-[11px] text-slate-500 font-semibold">
                   {latestReminder.created_at ? new Date(latestReminder.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "Just now"}
@@ -428,12 +430,14 @@ export default function TenantHomePage() {
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                ₹{Number(summary.security_deposit_held_inr || 3750000).toLocaleString("en-IN")}
+                ₹{Number(summary.security_deposit_held_inr || primaryContract?.deposit_held || 0).toLocaleString("en-IN")}
               </span>
               <span className="text-xs text-slate-400 font-bold">INR</span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Equivalent to 3 months gross rent held in SPV escrow
+              {Number(summary.security_deposit_held_inr || primaryContract?.deposit_held || 0) > 0
+                ? "Security deposit held in designated SPV escrow"
+                : "No deposit balance recorded for this active unit"}
             </p>
           </div>
 
@@ -465,12 +469,14 @@ export default function TenantHomePage() {
               <span className="text-xs text-slate-400 font-bold">· 0 Arrears</span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Lock-in active through 15-Nov-2029 · 0 active disputes
+              {primaryContract
+                ? `Contract ${primaryContract.contract_code || "Active"} · Lock-in compliant`
+                : "Operational lease active · 0 active disputes"}
             </p>
           </div>
 
           <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-600">
-            <span>Managed by JPS Management</span>
+            <span>{primaryContract?.property_name ? `${primaryContract.property_name} Operations` : "Property Management"}</span>
             <Link href="/portal/profile" className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
               Support Contacts →
             </Link>
@@ -481,113 +487,128 @@ export default function TenantHomePage() {
       {/* 3. Two Column Layout: Transparent Invoice Breakdown & Lease Milestones */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Transparent Invoice Breakdown (7 Cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              {brandLogo ? (
-                <div className="w-11 h-11 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
-                  <img src={brandLogo} alt="Company Logo" className="max-h-full max-w-full object-contain" />
+        {primaryInvoice ? (
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                {brandLogo ? (
+                  <div className="w-11 h-11 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                    <img src={brandLogo} alt="Company Logo" className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-teal-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                      {brandName || companyName || "Commercial Property Asset SPV"}
+                    </h2>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {primaryInvoice.invoice_number || "INV-2026-0001"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Official Tax Invoice · Due {primaryInvoice.due_date ? new Date(primaryInvoice.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "31-Oct-2026"}
+                  </p>
                 </div>
-              ) : (
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-teal-500 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
-                  {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
-                  </h2>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    INV-2026-27-0001
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  Official Tax Invoice · Dispatched 10 Days in Advance (Due: 31-Oct-2026)
-                </p>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setViewInvoiceModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
-              title="View full tax invoice document"
-            >
-              <Eye size={13} /> View Invoice
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
-              <div>
-                <p className="font-bold text-slate-800">Commercial Base Rent</p>
-                <p className="text-[10px] text-slate-400">50,000 sq.ft. @ ₹20.00 / sq.ft. / month</p>
-              </div>
-              <span className="font-black text-slate-900">₹10,00,000.00</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
-              <div>
-                <p className="font-bold text-slate-800">Common Area Maintenance (CAM)</p>
-                <p className="text-[10px] text-slate-400">HVAC, Security, Lifts, Housekeeping (50,000 sq.ft. @ ₹5.00)</p>
-              </div>
-              <span className="font-black text-slate-900">₹2,50,000.00</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
-              <div>
-                <p className="font-bold text-slate-800">Metered Power & DG Utilities</p>
-                <p className="text-[10px] text-slate-400">Check-meter reading verified for Suite 101</p>
-              </div>
-              <span className="font-black text-slate-900">₹35,000.00</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
-              <div>
-                <p className="font-bold text-slate-800">Goods & Services Tax (GST @ 18%)</p>
-                <p className="text-[10px] text-slate-400">CGST 9% (₹1,15,650) + SGST 9% (₹1,15,650)</p>
-              </div>
-              <span className="font-black text-slate-900">₹2,31,300.00</span>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-sm font-black text-slate-900">Gross Total Invoiced</span>
-              <span className="text-lg font-black text-indigo-700">₹15,16,300.00</span>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="text-[11px] text-slate-500 font-medium leading-tight">
-              <span>Billed by <strong className="text-slate-800">{brandName || companyName || "Mango Groups Ltd"}</strong></span>
-              <span className="block text-[10px] text-slate-400">Managed by JPS Management · 10-day advance dispatch window</span>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setViewInvoiceModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                title="View full tax invoice document"
               >
-                <Eye size={13} /> Full Tax Invoice
+                <Eye size={13} /> View Invoice
               </button>
+            </div>
 
-              {totalOutstanding <= 0 ? (
-                <span className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center gap-1.5 border border-emerald-200">
-                  <CheckCircle2 size={14} className="text-emerald-600" /> Settled (₹0.00 Due)
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
+                <div>
+                  <p className="font-bold text-slate-800">Commercial Base Rent</p>
+                  <p className="text-[10px] text-slate-400">
+                    {primaryContract?.space_name || "Demised Premises"} · Contracted Lease Rate
+                  </p>
+                </div>
+                <span className="font-black text-slate-900">
+                  ₹{Number(primaryInvoice.base_amount || primaryInvoice.total_amount_inr || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
-              ) : (
-                <button
-                  id="settle-invoice-now-btn"
-                  onClick={() => setPayModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                >
-                  <CreditCard size={14} /> Settle Invoice Now
-                </button>
+              </div>
+
+              {Number(primaryInvoice.tax_amount || 0) > 0 && (
+                <div className="flex items-center justify-between text-xs py-2 border-b border-slate-100">
+                  <div>
+                    <p className="font-bold text-slate-800">Statutory GST (18%)</p>
+                    <p className="text-[10px] text-slate-400">CGST 9% + SGST 9%</p>
+                  </div>
+                  <span className="font-black text-slate-900">
+                    ₹{Number(primaryInvoice.tax_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               )}
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm font-black text-slate-900">Gross Total Invoiced</span>
+                <span className="text-lg font-black text-indigo-700">
+                  ₹{Number(primaryInvoice.total_amount_inr || primaryInvoice.gross_total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-[11px] text-slate-500 font-medium leading-tight">
+                <span>Billed by <strong className="text-slate-800">{brandName || companyName || "Commercial Property Asset SPV"}</strong></span>
+                <span className="block text-[10px] text-slate-400">
+                  {primaryContract?.property_name ? `${primaryContract.property_name} Asset Management` : "Property Asset Management"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewInvoiceModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Eye size={13} /> Full Tax Invoice
+                </button>
+
+                {totalOutstanding <= 0 ? (
+                  <span className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center gap-1.5 border border-emerald-200">
+                    <CheckCircle2 size={14} className="text-emerald-600" /> Settled (₹0.00 Due)
+                  </span>
+                ) : (
+                  <button
+                    id="settle-invoice-now-btn"
+                    onClick={() => setPayModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <CreditCard size={14} /> Settle Invoice Now
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-8 shadow-2xs flex flex-col items-center justify-center text-center space-y-3 min-h-[320px]">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
+              <Receipt size={28} />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="text-base font-black text-slate-900">No Invoices Pending</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Your commercial lease is active. Monthly rental and CAM invoices will appear here once generated by the scheduled billing cycle.
+              </p>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                <CheckCircle2 size={13} /> Account In Good Standing
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Right Column: Notices & Lease Milestones (5 Cols) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
@@ -602,7 +623,7 @@ export default function TenantHomePage() {
           </div>
 
           <div className="space-y-3">
-            {/* Active Management Notices from PM */}
+            {/* Active Management Notices */}
             {reminders.slice(0, 2).map((r: any) => (
               <div key={r.id} className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 space-y-1">
                 <div className="flex items-center justify-between">
@@ -611,7 +632,7 @@ export default function TenantHomePage() {
                     {r.title || "Payment Reminder"}
                   </span>
                   <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
-                    {r.sender_name || "JPS Management"}
+                    {r.sender_name || "Property Operations"}
                   </span>
                 </div>
                 <p className="text-xs text-amber-900/90 font-medium pl-4 leading-relaxed">
@@ -635,14 +656,16 @@ export default function TenantHomePage() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  Lock-in Period (36 Months)
+                  Contractual Lease Term
                 </span>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                   Active
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium pl-3.5 leading-relaxed">
-                Contractual lock-in valid until 15-Nov-2029. 90 days mutual notice period applies.
+                {primaryContract?.end_date
+                  ? `Active term valid through ${new Date(primaryContract.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}. ${primaryContract.notice_period_days || 90} days mutual notice period applies.`
+                  : "Active commercial tenancy. Statutory lease terms and covenants apply."}
               </p>
             </div>
 
@@ -650,14 +673,16 @@ export default function TenantHomePage() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Scheduled 5% Escalation
+                  Escalation Indexation
                 </span>
                 <Link href="/portal/contract" className="text-[10px] font-bold text-indigo-600 hover:underline">
                   View Terms →
                 </Link>
               </div>
               <p className="text-xs text-slate-500 font-medium pl-3.5 leading-relaxed">
-                Next contractual rent step-up (+5%) scheduled on 01-Apr-2027.
+                {primaryContract?.escalation_percent
+                  ? `Contractual rent step-up (+${primaryContract.escalation_percent}%) applies per agreed schedule.`
+                  : "Periodic indexation applicable as per master commercial lease agreement."}
               </p>
             </div>
 
@@ -668,10 +693,10 @@ export default function TenantHomePage() {
                   <Building2 size={13} className="text-indigo-600" />
                   Facility & Property Contact
                 </span>
-                <span className="text-[10px] font-bold text-slate-500">Suite 101</span>
+                <span className="text-[10px] font-bold text-slate-500">{primaryContract?.space_name || "Demised Unit"}</span>
               </div>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                Managed by JPS Management. For fit-out requests or queries, reach facility support.
+                Managed by {primaryContract?.property_name ? `${primaryContract.property_name} Operations` : "Property Facility Management"}. For fit-out requests or queries, reach facility support.
               </p>
               <div className="pt-1 flex items-center gap-3 text-xs">
                 <Link href="/portal/profile" className="font-bold text-indigo-600 hover:text-indigo-800">
@@ -1038,15 +1063,15 @@ export default function TenantHomePage() {
                   </div>
                 ) : (
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-700 to-teal-600 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs">
-                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
+                    {brandName || companyName || "Commercial Property Asset SPV"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Managed by JPS Management
+                    Commercial Property Asset SPV · Operations
                   </p>
                   <p className="text-[11px] font-mono text-slate-600 mt-0.5">
                     GSTIN: <strong>24AAFCO9876C1Z2</strong> · PAN: <strong>AAFCO9876C</strong>
@@ -1059,13 +1084,13 @@ export default function TenantHomePage() {
                   Original Tax Invoice
                 </span>
                 <div className="text-sm font-mono font-black text-slate-900 mt-1">
-                  INV-2026-27-0001
+                  {primaryInvoice?.invoice_number || "INV-2026-0001"}
                 </div>
                 <div className="text-[11px] text-slate-600 font-medium">
-                  Issue Date: <strong className="text-slate-900">21-Oct-2026</strong>
+                  Issue Date: <strong className="text-slate-900">{primaryInvoice?.invoice_date ? String(primaryInvoice.invoice_date).split("T")[0] : "21-Oct-2026"}</strong>
                 </div>
                 <div className="text-[11px] text-indigo-700 font-bold">
-                  Due Date: <strong>31-Oct-2026</strong> (10-Day Notice)
+                  Due Date: <strong>{primaryInvoice?.due_date ? String(primaryInvoice.due_date).split("T")[0] : "31-Oct-2026"}</strong>
                 </div>
               </div>
             </div>
@@ -1076,9 +1101,9 @@ export default function TenantHomePage() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                   Billed By (Lessor / SPV):
                 </span>
-                <p className="font-bold text-slate-900 text-sm">{brandName || companyName || "Mango Groups Ltd"}</p>
+                <p className="font-bold text-slate-900 text-sm">{brandName || companyName || "Commercial Property Asset SPV"}</p>
                 <p className="text-slate-500 leading-relaxed text-[11px]">
-                  Commercial Tower 1, Nikol-Nava Naroda Road, Ahmedabad, Gujarat 380049
+                  {primaryContract?.property_name ? `${primaryContract.property_name} Premises` : "Commercial Property Asset"}
                 </p>
                 <p className="text-[11px] text-slate-600 font-medium">
                   State: <strong>Gujarat (Code: 24)</strong> · Place of Supply: Gujarat
@@ -1091,7 +1116,7 @@ export default function TenantHomePage() {
                 </span>
                 <p className="font-bold text-slate-900 text-sm">{tenantDisplayName}</p>
                 <p className="text-slate-500 leading-relaxed text-[11px]">
-                  Demised Space: Suite 101, mango plus tower (50,000 sq.ft.)
+                  Demised Space: {primaryContract ? `${primaryContract.space_name}, ${primaryContract.property_name}` : "Demised Commercial Workspace"}
                 </p>
                 <p className="text-[11px] text-slate-600 font-medium">
                   PAN: <strong>{occupant?.pan_number || "HSHS7878SD"}</strong> · Contract: <strong>{primaryContract?.contract_code || "LEAS-11886"}</strong>
@@ -1116,31 +1141,11 @@ export default function TenantHomePage() {
                     <td className="py-3 px-3.5 text-slate-400 font-mono">01</td>
                     <td className="py-3 px-3.5 font-bold">
                       Commercial Office Base Rent
-                      <span className="block text-[10px] text-slate-400 font-normal">Suite 101 Monthly Covenanted Lease</span>
+                      <span className="block text-[10px] text-slate-400 font-normal">{primaryContract?.space_name || "Demised Space"} Monthly Lease</span>
                     </td>
                     <td className="py-3 px-3.5 font-mono text-slate-600">997212</td>
-                    <td className="py-3 px-3.5 text-slate-600">50,000 sq.ft. @ ₹20.00</td>
-                    <td className="py-3 px-3.5 font-bold text-right">₹10,00,000.00</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-3.5 text-slate-400 font-mono">02</td>
-                    <td className="py-3 px-3.5 font-bold">
-                      Common Area Maintenance (CAM)
-                      <span className="block text-[10px] text-slate-400 font-normal">HVAC, 24/7 Security, Lifts, Common Areas</span>
-                    </td>
-                    <td className="py-3 px-3.5 font-mono text-slate-600">997212</td>
-                    <td className="py-3 px-3.5 text-slate-600">50,000 sq.ft. @ ₹5.00</td>
-                    <td className="py-3 px-3.5 font-bold text-right">₹2,50,000.00</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-3.5 text-slate-400 font-mono">03</td>
-                    <td className="py-3 px-3.5 font-bold">
-                      Metered Power & Utilities
-                      <span className="block text-[10px] text-slate-400 font-normal">Check-meter verified consumption for Suite 101</span>
-                    </td>
-                    <td className="py-3 px-3.5 font-mono text-slate-600">9969</td>
-                    <td className="py-3 px-3.5 text-slate-600">3,500 kWh @ ₹10.00</td>
-                    <td className="py-3 px-3.5 font-bold text-right">₹35,000.00</td>
+                    <td className="py-3 px-3.5 text-slate-600">{primaryContract?.chargeable_area_sqft ? `${Number(primaryContract.chargeable_area_sqft).toLocaleString()} sq.ft.` : "Monthly Lease"}</td>
+                    <td className="py-3 px-3.5 font-bold text-right">₹{Number(primaryInvoice?.base_amount || primaryInvoice?.total_amount_inr || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1148,19 +1153,17 @@ export default function TenantHomePage() {
               <div className="bg-slate-50/70 p-4 border-t border-slate-200 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Total Taxable Value:</span>
-                  <span className="font-bold text-slate-900">₹12,85,000.00</span>
+                  <span className="font-bold text-slate-900">₹{Number(primaryInvoice?.base_amount || primaryInvoice?.total_amount_inr || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Central GST (CGST @ 9%):</span>
-                  <span className="font-mono font-bold text-slate-800">₹1,15,650.00</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>State GST (SGST @ 9%):</span>
-                  <span className="font-mono font-bold text-slate-800">₹1,15,650.00</span>
-                </div>
+                {Number(primaryInvoice?.tax_amount || 0) > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Statutory GST (18%):</span>
+                    <span className="font-mono font-bold text-slate-800">₹{Number(primaryInvoice.tax_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-slate-200">
                   <span>Gross Invoice Total (INR):</span>
-                  <span className="text-indigo-700 text-base">₹15,16,300.00</span>
+                  <span className="text-indigo-700 text-base">₹{Number(primaryInvoice?.total_amount_inr || primaryInvoice?.gross_total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
@@ -1172,7 +1175,7 @@ export default function TenantHomePage() {
                   {landlordBank?.bank_name || "Commercial Bank"} · Current A/c {landlordBank?.account_number || "••••••••"} · IFSC {landlordBank?.ifsc_code || "••••••••"}
                 </p>
                 <p className="text-[11px] text-teal-700 font-medium">
-                  Beneficiary: {landlordBank?.spv_name || brandName || companyName || "Mango Groups Ltd"} · Remit via Corporate RTGS / NEFT before 31-Oct-2026
+                  Beneficiary: {landlordBank?.spv_name || brandName || companyName || "Commercial Property Asset SPV"} · Remit via Corporate RTGS / NEFT
                 </p>
               </div>
               <div className="sm:text-right shrink-0">
@@ -1198,15 +1201,15 @@ export default function TenantHomePage() {
                   </div>
                 ) : (
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
-                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
+                    {brandName || companyName || "Commercial Property Asset SPV"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Managed by JPS Management
+                    Commercial Property Asset SPV · Operations
                   </p>
                   <p className="text-[10px] font-mono text-slate-400">
                     GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
@@ -1246,7 +1249,7 @@ export default function TenantHomePage() {
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Demised Premises:</span>
-                <span className="font-bold text-slate-800">Suite 101, mango plus tower (50,000 sq.ft.)</span>
+                <span className="font-bold text-slate-800">{primaryContract ? `${primaryContract.space_name}, ${primaryContract.property_name}` : "Demised Premises"}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">

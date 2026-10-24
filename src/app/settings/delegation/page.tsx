@@ -207,16 +207,44 @@ function DelegationContent() {
           if (rightsList.length > 0) customServices = rightsList;
         } catch {}
 
-        if (hasMgr && mgrName) {
+        const propAssignments = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+        const assignedEntries = Object.entries(propAssignments);
+
+        if (assignedEntries.length > 0) {
+          // Render precise, per-property delegated mandates
+          assignedEntries.forEach(([propName, assign]: [string, any], idx) => {
+            if (assign && (assign.name || mgrName)) {
+              const mName = assign.name || mgrName;
+              const mEmail = assign.email || mgrEmail || "manager@management.in";
+              const mPhone = assign.phone || mgrPhone;
+              const scopeLabel = assign.scope === "specific_tenants" && assign.managedTenantNames
+                ? `${propName} (${Array.isArray(assign.managedTenantNames) ? assign.managedTenantNames.join(", ") : assign.managedTenantNames})`
+                : `${propName} (Whole Building)`;
+
+              formatted.push({
+                id: `assignment-${idx}-${propName}`,
+                manager_org_name: mName,
+                manager_contact_email: mEmail,
+                manager_contact_phone: mPhone,
+                properties: [scopeLabel],
+                mandate_services: customServices,
+                settlement_model: "direct_to_owner",
+                fee_pct: 4.5,
+                status: "active",
+                created_at: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+              });
+            }
+          });
+        } else if (hasMgr && mgrName) {
           const alreadyExists = formatted.some((m) => m.manager_org_name.toLowerCase() === mgrName.toLowerCase());
           if (!alreadyExists) {
-            const scopeProps = activePropNames.length > 0 ? activePropNames : ["All Commercial Portfolio"];
+            const designatedProp = localStorage.getItem("officex_manager_property") || (activePropNames.length > 0 ? activePropNames[0] : "Assigned Commercial Centre");
             formatted.unshift({
               id: "onboarded-mandate",
               manager_org_name: mgrName,
               manager_contact_email: mgrEmail || "manager@management.in",
               manager_contact_phone: mgrPhone,
-              properties: scopeProps,
+              properties: [designatedProp],
               mandate_services: customServices,
               settlement_model: "direct_to_owner",
               fee_pct: 4.5,

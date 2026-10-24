@@ -26,7 +26,7 @@ function InviteContent() {
   const roleParam = searchParams.get("role") || "pm_company";
   const mgrParam = searchParams.get("mgr") || "";
   const propParam = searchParams.get("prop") || "";
-  const ownerParam = searchParams.get("owner") || "mango groups";
+  const ownerParam = searchParams.get("owner") || "Commercial Property Asset SPV";
   const emailParam = searchParams.get("email") || "";
   const inviteParam = searchParams.get("invite") || "";
 
@@ -104,7 +104,7 @@ function InviteContent() {
   const handleAcceptInvite = () => {
     setIsAccepting(true);
 
-    const displayName = managerName.trim() || mgrParam || "jps management";
+    const displayName = managerName.trim() || mgrParam || "Designated Property Manager";
     const displayEmail = managerEmail.trim() || emailParam || "operations@management.com";
     const propToAssign = propertyDetails.name;
 

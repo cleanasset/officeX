@@ -1036,13 +1036,13 @@ export default function OwnerBankingAndERPPage() {
                       {inv.invoice_number || `INV-26-27-00${idx + 1}`}
                     </td>
                     <td className="py-3 px-4 font-bold text-slate-900">
-                      {inv.occupant_name || "Utkarsh Makwana"}
+                      {inv.occupant_name || "Commercial Occupant"}
                     </td>
                     <td className="py-3 px-4 text-slate-500">
                       {inv.invoice_date || "Oct 2026"}
                     </td>
                     <td className="py-3 px-4 font-mono font-bold">
-                      ₹{Number(inv.gross_total || 1475000).toLocaleString("en-IN")}
+                      ₹{Number(inv.gross_total || inv.total_amount_inr || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-slate-100 text-slate-800 border border-slate-200">
@@ -1064,27 +1064,9 @@ export default function OwnerBankingAndERPPage() {
                   </tr>
                 ))
               ) : (
-                <tr className="hover:bg-slate-50/70 transition">
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900">INV-26-27-001</td>
-                  <td className="py-3 px-4 font-bold text-slate-900">Utkarsh Makwana</td>
-                  <td className="py-3 px-4 text-slate-500">Oct 2026</td>
-                  <td className="py-3 px-4 font-mono font-bold">₹14,75,000</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-slate-100 text-slate-800 border border-slate-200">
-                      {directInvoicingMode === "tally"
-                        ? "Tally XML Voucher"
-                        : directInvoicingMode === "zoho"
-                        ? "Zoho Books API"
-                        : "OfficeX Rule 46"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                    {bankDetails.bank_name} (••••{bankDetails.account_number.slice(-4)})
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-max">
-                      <CheckCircle2 size={10} /> Synced
-                    </span>
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-semibold text-xs">
+                    No direct bank invoices generated yet for this property. Invoices will automatically sync to your escrow account once issued.
                   </td>
                 </tr>
               )}

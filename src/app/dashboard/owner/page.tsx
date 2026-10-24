@@ -916,41 +916,31 @@ export default function OwnerDashboardPage() {
             </Link>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Invoice Series</span>
-                <div className="font-extrabold text-sm text-slate-900">INV-2026-27-0001</div>
+          {agingBuckets.totalOutstanding > 0 ? (
+            <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Outstanding</span>
+                  <div className="font-extrabold text-sm text-slate-900">Active Billing Cycle</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                  Collections Active
+                </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                Issued · Due Oct 31
-              </span>
-            </div>
 
-            <div className="space-y-1.5 pt-2 border-t border-slate-200 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Base Rent (50,000 sqft @ ₹200)</span>
-                <span className="font-medium text-slate-900">₹10,00,000</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>CAM Charges (50,000 sqft @ ₹50)</span>
-                <span className="font-medium text-slate-900">₹2,50,000</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Metered Utilities</span>
-                <span className="font-medium text-slate-900">₹35,000</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>GST (18% Statutory)</span>
-                <span className="font-medium text-slate-900">₹2,31,300</span>
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900">Total Invoiced Amount</span>
+                <span className="text-base font-black text-teal-900">₹{Math.round(agingBuckets.totalOutstanding).toLocaleString("en-IN")}</span>
               </div>
             </div>
-
-            <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900">Total Invoiced Amount</span>
-              <span className="text-base font-black text-teal-900">₹15,16,300</span>
+          ) : (
+            <div className="p-6 rounded-xl bg-slate-50/70 border border-slate-200 text-center space-y-2">
+              <p className="text-xs font-bold text-slate-700">No Invoices Pending</p>
+              <p className="text-[11px] text-slate-500">
+                Execute a billing run for your active contracts to generate monthly tax invoices.
+              </p>
             </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-2 pt-1">
             <Link

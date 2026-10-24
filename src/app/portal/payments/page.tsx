@@ -19,6 +19,7 @@ import {
   Eye,
   X
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function TenantPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -29,7 +30,7 @@ export default function TenantPaymentsPage() {
   const [brandLogo, setBrandLogo] = useState<string>("");
   const [brandName, setBrandName] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
-  const [tenantDisplayName, setTenantDisplayName] = useState<string>("Utkarsh Makwana");
+  const [tenantDisplayName, setTenantDisplayName] = useState<string>("");
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [landlordBank, setLandlordBank] = useState<{
     bank_name?: string;
@@ -94,7 +95,10 @@ export default function TenantPaymentsPage() {
   async function loadPayments() {
     try {
       setLoading(true);
-      const res = await fetch("/api/payments");
+      const authHeaders = getClientAuthHeaders();
+      const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+      const url = savedOccId ? `/api/payments?occupant_id=${savedOccId}` : `/api/payments`;
+      const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setPayments(json.payments || []);
@@ -329,15 +333,15 @@ export default function TenantPaymentsPage() {
                   </div>
                 ) : (
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
-                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
+                    {brandName || companyName || "Commercial Property Asset SPV"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Managed by JPS Management
+                    Commercial Property Asset SPV · Operations
                   </p>
                   <p className="text-[10px] font-mono text-slate-400">
                     GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
@@ -372,12 +376,14 @@ export default function TenantPaymentsPage() {
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5">
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Tenant / Payee:</span>
-                <span className="font-bold text-slate-900">{tenantDisplayName}</span>
+                <span className="font-bold text-slate-900">{tenantDisplayName || selectedReceipt.occupant_name || "Commercial Tenant"}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Demised Premises:</span>
-                <span className="font-bold text-slate-800">Suite 101, mango plus tower (50,000 sq.ft.)</span>
+                <span className="font-bold text-slate-800">
+                  {selectedReceipt.space_name ? `${selectedReceipt.space_name}${selectedReceipt.property_name ? `, ${selectedReceipt.property_name}` : ""}` : (typeof window !== "undefined" && localStorage.getItem("officex_active_property")) ? `${localStorage.getItem("officex_active_property")} · Demised Premises` : "Demised Commercial Workspace"}
+                </span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">

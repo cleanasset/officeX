@@ -30,7 +30,7 @@ export async function POST(
 
     // 2. Fetch occupant details
     let recipientEmail = body.recipient_email || body.email;
-    let tenantName = "Utkarsh Makwana";
+    let tenantName = "Commercial Tenant";
 
     if (inv.occupant_id) {
       const [occ] = await db

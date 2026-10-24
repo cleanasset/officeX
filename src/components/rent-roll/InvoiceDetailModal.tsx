@@ -135,7 +135,7 @@ export default function InvoiceDetailModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipient_email: recipientEmail,
-          brand_name: brandName || companyName || "Mango Groups Ltd",
+          brand_name: brandName || companyName || "Commercial Property Asset SPV",
         }),
       });
       const json = await res.json();

@@ -469,6 +469,10 @@ export default function PropertyManagerDashboardPage() {
         const displayArea = activeProp?.total_leasable_area_sqft
           ? `${Number(activeProp.total_leasable_area_sqft).toLocaleString()} sqft`
           : "--";
+        const landlordName = (typeof window !== "undefined" ? localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || localStorage.getItem("officex_property_spv") : "") || "Commercial Property Asset SPV";
+        const managingPmName = (typeof window !== "undefined" ? localStorage.getItem("officex_pm_name") || localStorage.getItem("officex_user_name") : "") || "Assigned Property Manager";
+        const primaryTaskTenant = tasks[0]?.occupantSpace?.split(" · ")[0] || "Pending Tenant Onboarding";
+        const primaryTaskSpace = tasks[0]?.occupantSpace?.split(" · ")[1] || "All Demised Units";
 
         return (
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
@@ -481,12 +485,12 @@ export default function PropertyManagerDashboardPage() {
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-black text-slate-900">{displayPropName}</h2>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      {isAll ? `${propertiesList.length || 1} Centre(s) Managed` : "100% Occupied"}
+                      {isAll ? `${propertiesList.length || 1} Centre(s) Managed` : "Assigned Centre"}
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold">{displayCity}</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Principal Landlord: <strong className="text-slate-800">mango groups</strong> · Managing Entity: <strong className="text-teal-800">jps management</strong> (Operational PM · Under Owner Sign-Off)
+                    Principal Landlord: <strong className="text-slate-800">{landlordName}</strong> · Managing Entity: <strong className="text-teal-800">{managingPmName}</strong> (Operational PM · Under Owner Sign-Off)
                   </p>
                 </div>
               </div>
@@ -522,23 +526,23 @@ export default function PropertyManagerDashboardPage() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Demarcated Area</span>
                 <p className="text-base font-black text-slate-900 mt-1">{displayArea}</p>
                 <p className="text-[11px] text-teal-700 font-medium mt-0.5">
-                  {isAll ? "Across Managed Centres" : `${displayArea} occupied · 0 sqft vacant`}
+                  {isAll ? "Across Managed Centres" : `${displayArea} total area`}
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Primary Corporate Tenant</span>
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-sm font-black text-slate-900">{isAll ? "Utkarsh Makwana (+)" : "Utkarsh Makwana"}</p>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Suite 101</span>
+                  <p className="text-sm font-black text-slate-900">{isAll && tasks.length > 1 ? `${primaryTaskTenant} (+)` : primaryTaskTenant}</p>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-200">{primaryTaskSpace}</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">Canonical 3-Year Active Term · Lock-in Active</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Operational Tenancy</p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">Monthly Contracted Lease</span>
-                <p className="text-base font-black text-teal-900 mt-1">₹12.50 Lakhs / mo</p>
-                <p className="text-[11px] text-teal-700 mt-0.5">Oct-2026 Invoiced: ₹15.16 Lakhs (incl. GST &amp; CAM)</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">Contracted Lease Operations</span>
+                <p className="text-base font-black text-teal-900 mt-1">{tasks.length > 0 ? `${tasks.length} Active Item(s)` : "Up to Date"}</p>
+                <p className="text-[11px] text-teal-700 mt-0.5">Managed Under Owner Governance</p>
               </div>
             </div>
           </div>
@@ -845,7 +849,7 @@ export default function PropertyManagerDashboardPage() {
                     Active Lease
                   </span>
                 </div>
-                <p className="text-sm font-black text-slate-900">{reminderTarget || "Utkarsh Makwana · Suite 101"}</p>
+                <p className="text-sm font-black text-slate-900">{reminderTarget || "Demised Commercial Tenant"}</p>
 
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-slate-600">
                   <Mail size={13} className="text-slate-400 shrink-0" />

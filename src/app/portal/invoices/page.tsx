@@ -46,6 +46,7 @@ interface PortalInvoice {
   contract_code: string;
   space_name: string;
   property_name: string;
+  occupant_name?: string;
   line_items?: any[];
 }
 
@@ -95,7 +96,7 @@ function TenantInvoicesContent() {
   const [brandLogo, setBrandLogo] = useState<string>("");
   const [brandName, setBrandName] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
-  const [tenantDisplayName, setTenantDisplayName] = useState<string>("Utkarsh Makwana");
+  const [tenantDisplayName, setTenantDisplayName] = useState<string>("");
   const [landlordBank, setLandlordBank] = useState<{
     spv_name?: string;
     bank_name?: string;
@@ -739,15 +740,15 @@ function TenantInvoicesContent() {
                   </div>
                 ) : (
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-700 to-teal-600 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs">
-                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
+                    {brandName || companyName || "Commercial Property Asset SPV"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Managed by JPS Management
+                    Commercial Property Asset SPV · Operations
                   </p>
                   <p className="text-[11px] font-mono text-slate-600 mt-0.5">
                     GSTIN: <strong>24AAFCO9876C1Z2</strong> · PAN: <strong>AAFCO9876C</strong>
@@ -777,9 +778,9 @@ function TenantInvoicesContent() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                   Billed By (Lessor / SPV):
                 </span>
-                <p className="font-bold text-slate-900 text-sm">{brandName || companyName || "Mango Groups Ltd"}</p>
+                <p className="font-bold text-slate-900 text-sm">{brandName || companyName || "Commercial Property Asset SPV"}</p>
                 <p className="text-slate-500 leading-relaxed text-[11px]">
-                  Commercial Tower 1, Nikol-Nava Naroda Road, Ahmedabad, Gujarat 380049
+                  {selectedInvoice.property_name ? `${selectedInvoice.property_name} Premises` : "Commercial Property Asset"}
                 </p>
                 <p className="text-[11px] text-slate-600 font-medium">
                   State: <strong>Gujarat (Code: 24)</strong> · Place of Supply: Gujarat
@@ -790,9 +791,9 @@ function TenantInvoicesContent() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                   Billed To (Lessee / Occupant):
                 </span>
-                <p className="font-bold text-slate-900 text-sm">{tenantDisplayName}</p>
+                <p className="font-bold text-slate-900 text-sm">{tenantDisplayName || selectedInvoice.occupant_name || "Commercial Tenant"}</p>
                 <p className="text-slate-500 leading-relaxed text-[11px]">
-                  Demised Space: Suite 101, mango plus tower (50,000 sq.ft.)
+                  Demised Space: {selectedInvoice.space_name || "Demised Premises"}{selectedInvoice.property_name ? `, ${selectedInvoice.property_name}` : ""}
                 </p>
                 <p className="text-[11px] text-slate-600 font-medium">
                   Contract: <strong>{selectedInvoice.contract_code || "LEAS-11886"}</strong> · Period: <strong>{selectedInvoice.period_start} to {selectedInvoice.period_end}</strong>
@@ -1314,15 +1315,15 @@ function TenantInvoicesContent() {
                   </div>
                 ) : (
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
-                    {(brandName || companyName || "Mango Groups").charAt(0).toUpperCase()}
+                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-                    {brandName || companyName || "Mango Groups Ltd"}
+                    {brandName || companyName || "Commercial Property Asset SPV"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Managed by JPS Management
+                    Commercial Property Asset SPV · Operations
                   </p>
                   <p className="text-[10px] font-mono text-slate-400">
                     GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
@@ -1357,12 +1358,12 @@ function TenantInvoicesContent() {
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5">
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Tenant / Payee:</span>
-                <span className="font-bold text-slate-900">{tenantDisplayName}</span>
+                <span className="font-bold text-slate-900">{tenantDisplayName || "Commercial Tenant"}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500 font-semibold">Demised Premises:</span>
-                <span className="font-bold text-slate-800">Suite 101, mango plus tower (50,000 sq.ft.)</span>
+                <span className="font-bold text-slate-800">{selectedInvoice ? `${selectedInvoice.space_name || "Demised Premises"}${selectedInvoice.property_name ? `, ${selectedInvoice.property_name}` : ""}` : "Demised Commercial Workspace"}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">

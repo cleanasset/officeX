@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
       .from(occupant)
       .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`));
 
-    // Fallback if none in org (e.g. freshly onboarded under isolated org or incognito session)
-    if (!allOccupants.length) {
+    // If requested by specific occupant ID (e.g. from invite link), look up that exact occupant
+    if (!allOccupants.length && requestedOccupantId) {
       allOccupants = await db
         .select({
           id: occupant.id,
@@ -58,9 +58,7 @@ export async function GET(req: NextRequest) {
           state: occupant.state,
         })
         .from(occupant)
-        .where(sql`${occupant.deleted_at} IS NULL`)
-        .orderBy(desc(occupant.created_at))
-        .limit(10);
+        .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
     }
 
     if (!allOccupants.length) {
@@ -205,6 +203,7 @@ export async function GET(req: NextRequest) {
       const remindersRes = await db.execute(sql`
         SELECT id, target_name, property_name, invoice_number, amount_inr, sender_name, sender_role, title, message, status, is_read, created_at 
         FROM tenant_reminders 
+        WHERE (target_name ILIKE ${`%${currentOccupant.occupant_name}%`} OR (target_name IS NULL AND 1=0))
         ORDER BY created_at DESC 
         LIMIT 5
       `);
@@ -218,10 +217,10 @@ export async function GET(req: NextRequest) {
         notices.unshift({
           id: `reminder-${r.id}`,
           type: "urgent",
-          title: `⚠️ ${r.title || "Payment Reminder from JPS Management"}`,
+          title: `⚠️ ${r.title || "Payment Reminder from Property Operations"}`,
           description: r.message,
           link: "/portal/invoices?action=pay",
-          sender: r.sender_name || "JPS Management",
+          sender: r.sender_name || "Property Operations",
           created_at: r.created_at,
           is_active_reminder: true,
         });

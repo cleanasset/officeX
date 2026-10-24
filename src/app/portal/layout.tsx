@@ -115,7 +115,7 @@ export default function TenantPortalLayout({
 
   const assignedSpaceName = primaryContract
     ? `${primaryContract.property_name} · ${primaryContract.space_name}`
-    : "mango plus tower · Suite 101";
+    : (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property") : "") || "Demised Commercial Property";
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex">
