@@ -274,3 +274,27 @@ export async function PATCH(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const auth = getAuthContext(req);
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Tenant ID is required for deletion" }, { status: 400 });
+    }
+
+    await db
+      .update(occupant)
+      .set({ deleted_at: new Date(), updated_by: auth.userId })
+      .where(and(eq(occupant.id, id), eq(occupant.org_id, auth.orgId)));
+
+    return NextResponse.json({ success: true, message: "Tenant deleted successfully" });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to delete tenant", message: err.message },
+      { status: 500 }
+    );
+  }
+}
+
