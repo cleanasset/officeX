@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         tenantName: targetName,
         invoiceNumber: invNumber,
         propertyName: propName,
-        spaceName: "Suite 101",
+        spaceName: body.space_name || "Commercial Demised Space",
         balanceDue: amountVal,
         dueDate: "31-Oct-2026",
         senderName: senderName,

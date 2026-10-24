@@ -107,6 +107,40 @@ export async function POST(req: Request) {
         }
       }
 
+      // If no space matched by name, check if there's an unused space in the building with 0 active contracts
+      // (e.g. auto-provisioned placeholder like "Suite 101") to prevent duplicating square footage
+      if (!candidateSpaceId && existingSpaces.length > 0) {
+        for (const spc of existingSpaces) {
+          const contractsCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(contract)
+            .where(
+              and(
+                eq(contract.space_id, spc.spaceId),
+                sql`${contract.deleted_at} IS NULL`,
+                sql`${contract.contract_status} IN ('active', 'draft', 'future', 'notice_served', 'holding_over')`
+              )
+            );
+
+          if (Number(contractsCount[0]?.count || 0) === 0) {
+            candidateSpaceId = spc.spaceId;
+            if (targetUnitName) {
+              await db
+                .update(space)
+                .set({
+                  space_name: targetUnitName,
+                  floor_name: targetFloorName || null,
+                  chargeable_area_sqft: body.area_sqft ? String(body.area_sqft) : undefined,
+                  space_type: targetFloorName ? "floor" : "suite",
+                  occupancy_status: "occupied",
+                })
+                .where(eq(space.id, spc.spaceId));
+            }
+            break;
+          }
+        }
+      }
+
       if (candidateSpaceId) {
         targetSpaceId = candidateSpaceId;
       } else if (body.property_id || body.building_id) {

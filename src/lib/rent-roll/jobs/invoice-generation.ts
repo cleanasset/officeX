@@ -35,6 +35,7 @@ import {
   RentStepInput,
   ConcessionInput,
 } from "@/lib/rent-roll/billing/billing-calculator";
+import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 
 export interface GenerateInvoicesOptions {
   orgId?: string;
@@ -317,6 +318,9 @@ export async function generateInvoicesBatch(
 
       // Generate Invoice Number
       const invoiceNumber = await generateInvoiceNumber(c.org_id);
+
+      // Ensure organization record exists in organizations table for FK safety
+      await ensureTenantOrgRecord(c.org_id, c.client_account_id);
 
       // Initial Status: draft (awaiting finance approval) or issued if autoApprove
       const initialStatus = options.autoApprove ? "issued" : "draft";

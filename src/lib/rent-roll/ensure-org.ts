@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { organization, client_account } from "@/db/rent-roll-schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 
 export function getDeterministicOrgId(email: string): string {
@@ -33,11 +33,11 @@ export async function ensureTenantOrgRecord(
       .where(eq(organization.id, orgId))
       .limit(1);
 
-    if (existingOrg.length === 0) {
-      const emailPrefix = userEmail ? userEmail.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") : "portfolio";
-      const orgName = userEmail ? `${userEmail.split("@")[0]}'s Commercial Entity` : "Commercial Property Workspace";
-      const orgSlug = `${emailPrefix || "org"}-${orgId.slice(0, 8)}`;
+    const emailPrefix = userEmail ? userEmail.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") : "portfolio";
+    const orgName = userEmail ? `${userEmail.split("@")[0]}'s Commercial Entity` : "Commercial Property Workspace";
+    const orgSlug = `${emailPrefix || "org"}-${orgId.slice(0, 8)}`;
 
+    if (existingOrg.length === 0) {
       await db
         .insert(organization)
         .values({
@@ -47,6 +47,17 @@ export async function ensureTenantOrgRecord(
           subscription_status: "active",
         })
         .onConflictDoNothing();
+    }
+
+    // Ensure organizations (plural) table also has the record for legacy/canonical FK compatibility
+    try {
+      await db.execute(sql`
+        INSERT INTO organizations (id, name, slug, subscription_status)
+        VALUES (${orgId}, ${orgName}, ${orgSlug}, 'active')
+        ON CONFLICT (id) DO NOTHING
+      `);
+    } catch (e) {
+      // ignore
     }
 
     const existingClient = await db
