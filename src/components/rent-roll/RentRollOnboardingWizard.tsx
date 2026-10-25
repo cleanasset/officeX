@@ -115,6 +115,25 @@ export const BUSINESS_SEGMENTS = [
   },
 ];
 
+export const DELEGATED_ENTITY_TYPES = [
+  { id: "pm_company", title: "PM Company (Property Management Company)" },
+  { id: "fm_company", title: "FM Company (Facilities Management Company)" },
+  { id: "msp", title: "MSP (Managed Service Provider)" },
+  { id: "user_pm_or_admin", title: "Another User with role: Property Manager or Org Admin" },
+];
+
+export function getDelegatedEntityLabel(type?: string, userRole?: string): string {
+  if (!type || type === "pm_company" || type === "pm_agency") return "PM Company (Property Management Company)";
+  if (type === "fm_company" || type === "fm_operator") return "FM Company (Facilities Management Company)";
+  if (type === "msp") return "MSP (Managed Service Provider)";
+  if (type === "user_pm_or_admin" || type === "individual_pm" || type === "another_user") {
+    if (userRole === "org_admin") return "Another User (Role: Org Admin)";
+    if (userRole === "property_manager") return "Another User (Role: Property Manager)";
+    return "Another User with role: Property Manager or Org Admin";
+  }
+  return "PM Company (Property Management Company)";
+}
+
 // 11 Canonical Charge Types (§4.8)
 export const CANONICAL_CHARGE_TYPES = [
   {
