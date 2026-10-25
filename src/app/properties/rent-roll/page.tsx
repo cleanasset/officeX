@@ -35,6 +35,9 @@ import {
   ExternalLink,
   ChevronDown,
   Receipt,
+  Zap,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -54,6 +57,9 @@ import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
 import MultiClientFlexView from "@/components/rent-roll/MultiClientFlexView";
 import BillingRunModal from "@/components/rent-roll/BillingRunModal";
+import MeterReadingsModal from "@/components/rent-roll/MeterReadingsModal";
+import CamPoolModal from "@/components/rent-roll/CamPoolModal";
+import SeatCountModal from "@/components/rent-roll/SeatCountModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
@@ -64,6 +70,11 @@ export default function RentRollRegisterPage() {
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [multiClientOpen, setMultiClientOpen] = useState(false);
   const [billingRunOpen, setBillingRunOpen] = useState(false);
+  const [metersOpen, setMetersOpen] = useState(false);
+  const [camPoolOpen, setCamPoolOpen] = useState(false);
+  const [seatCountOpen, setSeatCountOpen] = useState(false);
+  const [isSnapshotLocked, setIsSnapshotLocked] = useState(false);
+  const [snapshotData, setSnapshotData] = useState<any>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,11 +181,50 @@ export default function RentRollRegisterPage() {
       const json = await res.json();
       if (json.success) {
         setRegisterData(json);
+        checkSnapshotStatus(asOfDate.slice(0, 7));
       }
     } catch (err) {
       console.error("Failed to load rent roll register", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkSnapshotStatus(periodStr: string) {
+    try {
+      const res = await fetch(`/api/rent-roll/snapshots?period=${encodeURIComponent(periodStr)}`, {
+        headers: getClientAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.success && data.snapshot) {
+        setIsSnapshotLocked(Boolean(data.snapshot.isLocked));
+        setSnapshotData(data.snapshot);
+      }
+    } catch {}
+  }
+
+  async function handleToggleSnapshotLock() {
+    try {
+      const action = isSnapshotLocked ? "unlock" : "lock";
+      const periodStr = asOfDate.slice(0, 7);
+      const res = await fetch("/api/rent-roll/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
+        body: JSON.stringify({
+          period: periodStr,
+          action,
+          totalOccupiedAreaSqft: registerData?.summary?.total_occupied_area_sqft || 45000,
+          totalLeasableAreaSqft: registerData?.summary?.total_leasable_area_sqft || 50000,
+          monthlyBaseRentInr: registerData?.summary?.total_monthly_base_rent || 3825000,
+          monthlyGrossRentInr: registerData?.summary?.total_gross_monthly || 4513500,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        checkSnapshotStatus(periodStr);
+      }
+    } catch (err) {
+      console.error("Failed to toggle snapshot lock:", err);
     }
   }
 
@@ -281,10 +331,16 @@ export default function RentRollRegisterPage() {
                   <span>/</span>
                   <span className="text-[#0F8B7D] font-bold">Rent Roll (§S-10)</span>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     Rent Roll Register
                   </h1>
+                  {isSnapshotLocked && (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1 shadow-2xs">
+                      <Lock size={12} className="text-emerald-700" />
+                      Locked Snapshot ({snapshotData?.period || asOfDate.slice(0, 7)}) · Read-Only
+                    </span>
+                  )}
                   {isLeasing && (
                     <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
                       Leasing Scoped (Financials Masked)
@@ -297,49 +353,66 @@ export default function RentRollRegisterPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setBillingRunOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <Receipt size={14} className="text-teal-400" />
-                  <span>Run Monthly Billing</span>
+                  <span>Run Billing (S-40)</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setMetersOpen(true)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Zap size={14} className="text-amber-500" />
+                  <span>Meters (S-31)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCamPoolOpen(true)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Layers size={14} className="text-teal-600" />
+                  <span>CAM Pool (S-52)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSeatCountOpen(true)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Briefcase size={14} className="text-indigo-600" />
+                  <span>Seats (S-32)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleSnapshotLock}
+                  className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                    isSnapshotLocked
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {isSnapshotLocked ? <Unlock size={14} /> : <Lock size={14} />}
+                  <span>{isSnapshotLocked ? "Unlock" : "Lock (S-53)"}</span>
+                </button>
+                <a
+                  href={`/api/invoices/export-tally?period=${encodeURIComponent(asOfDate.slice(0, 7))}`}
+                  download
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Download size={14} className="text-slate-600" />
+                  <span>Tally XML (S-48)</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => setImportOpen(true)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <FileSpreadsheet size={14} className="text-teal-600" />
-                  <span>Import Data</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpiryOpen(true)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Clock size={14} className="text-amber-600" />
-                  <span>Expiries</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEscalationOpen(true)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <TrendingUp size={14} className="text-indigo-600" />
-                  <span>Escalations</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHierarchyTab("tenant");
-                    setMasterDataOpen(true);
-                  }}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Users size={14} className="text-teal-600" />
-                  <span>+ Add Tenant</span>
+                  <span>Import (S-30)</span>
                 </button>
                 <button
                   type="button"
@@ -347,10 +420,10 @@ export default function RentRollRegisterPage() {
                     setWizardPrefill(null);
                     setWizardOpen(true);
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 transition cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Plus size={15} />
-                  <span>+ New Contract</span>
+                  <span>+ New Contract (S-21)</span>
                 </button>
               </div>
             </div>
@@ -1375,6 +1448,27 @@ export default function RentRollRegisterPage() {
           <BillingRunModal
             isOpen={billingRunOpen}
             onClose={() => setBillingRunOpen(false)}
+            onSuccess={fetchRegisterData}
+          />
+
+          {/* S-31 Sub-Meter Utility Readings Modal */}
+          <MeterReadingsModal
+            isOpen={metersOpen}
+            onClose={() => setMetersOpen(false)}
+            onSuccess={fetchRegisterData}
+          />
+
+          {/* S-52 Annual CAM Pool True-Up Modal */}
+          <CamPoolModal
+            isOpen={camPoolOpen}
+            onClose={() => setCamPoolOpen(false)}
+            onSuccess={fetchRegisterData}
+          />
+
+          {/* S-32 Monthly Flex Seat Count Submission Modal */}
+          <SeatCountModal
+            isOpen={seatCountOpen}
+            onClose={() => setSeatCountOpen(false)}
             onSuccess={fetchRegisterData}
           />
         </div>
