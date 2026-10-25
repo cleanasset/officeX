@@ -438,7 +438,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         setSuccessMsg(null);
         const destination = (initialRedirect && initialRedirect !== "/" && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
           ? initialRedirect
-          : "/properties/rent-roll?tab=dashboard";
+          : `/onboarding?role=${encodeURIComponent(selectedRole)}`;
         window.location.replace(destination);
       }, 500);
       return;

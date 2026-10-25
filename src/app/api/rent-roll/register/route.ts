@@ -459,22 +459,45 @@ export async function GET(req: Request) {
     const vacancyRatePercent = totalLeasableArea > 0 ? (totalVacantArea / totalLeasableArea) * 100 : 0;
     const totalArrears = contractRows.reduce((sum, r) => sum + (r.outstanding_amount_inr || 0), 0);
 
+    // Formula F-24: WALE (Weighted Average Lease Expiry in years)
+    let waleNumerator = 0;
+    let waleDenominator = 0;
+    let exceptionsCount = 0;
+
+    contractRows.forEach((r) => {
+      const remainingYears = r.days_to_expiry && r.days_to_expiry > 0 ? r.days_to_expiry / 365.25 : 0;
+      const weight = (r.monthly_base_rent || 0) > 0 ? r.monthly_base_rent : (r.area_sqft || 0);
+      waleNumerator += remainingYears * weight;
+      waleDenominator += weight;
+
+      // Exception rules: Expiring < 90 days, has arrears, or holding over
+      if ((r.days_to_expiry !== null && r.days_to_expiry <= 90) || r.has_arrears || r.status === "holding_over") {
+        exceptionsCount++;
+      }
+    });
+
+    const waleYears = waleDenominator > 0 ? Math.round((waleNumerator / waleDenominator) * 100) / 100 : 0;
+
     return NextResponse.json({
       success: true,
       as_of_date: asOfDateStr,
       view: viewType,
       is_leasing_role: isLeasing,
       summary: {
+        total_spaces_count: propertyFilteredSpaces.length,
         total_monthly_base_rent: isLeasing ? null : totalMonthlyBaseRent,
         weighted_pipeline_rent: isLeasing ? null : totalWeightedPipelineRent, // Separate pipeline total per S-10!
         total_occupied_area_sqft: totalOccupiedArea,
         total_vacant_area_sqft: totalVacantArea,
         total_leasable_area_sqft: totalLeasableArea,
+        occupancy_rate_percent: totalLeasableArea > 0 ? Math.round(((totalLeasableArea - totalVacantArea) / totalLeasableArea) * 1000) / 10 : 0,
         vacancy_rate_percent: Math.round(vacancyRatePercent * 10) / 10,
         active_contracts_count: contractRows.length,
         vacant_spaces_count: vacantRows.length,
         forecast_deals_count: dealRows.length,
         total_outstanding_arrears: isLeasing ? null : totalArrears,
+        wale_years: waleYears,
+        exceptions_count: exceptionsCount,
       },
       rows,
     });

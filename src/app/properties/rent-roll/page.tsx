@@ -52,6 +52,7 @@ import PropertyHierarchyModal, {
 import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
 import MultiClientFlexView from "@/components/rent-roll/MultiClientFlexView";
+import BillingRunModal from "@/components/rent-roll/BillingRunModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
@@ -61,6 +62,7 @@ export default function RentRollRegisterPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [multiClientOpen, setMultiClientOpen] = useState(false);
+  const [billingRunOpen, setBillingRunOpen] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,6 +131,19 @@ export default function RentRollRegisterPage() {
       const savedScope = localStorage.getItem("officex_selected_property");
       if (savedScope) setPropertyFilter(savedScope);
 
+      // Handle deep-link triggers from Onboarding or direct URL navigation
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("openContract") === "1" || urlParams.get("tab") === "newContract") {
+        setWizardPrefill(null);
+        setWizardOpen(true);
+      }
+      if (urlParams.get("openImport") === "1" || urlParams.get("tab") === "import") {
+        setImportOpen(true);
+      }
+      if (urlParams.get("openBilling") === "1" || urlParams.get("tab") === "billing") {
+        setBillingRunOpen(true);
+      }
+
       const handlePropertyUpdate = (e: any) => {
         if (e.detail?.propertyId) {
           setPropertyFilter(e.detail.propertyId);
@@ -177,6 +192,17 @@ export default function RentRollRegisterPage() {
         r.building_name?.toLowerCase().includes(q)
     );
   }, [registerData, searchQuery]);
+
+  // Group visible rows by property (§S-10: Group by Property with subtotal headers)
+  const groupedRows = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    visibleRows.forEach((r: any) => {
+      const pName = r.property_name || "Commercial Portfolio";
+      if (!groups[pName]) groups[pName] = [];
+      groups[pName].push(r);
+    });
+    return groups;
+  }, [visibleRows]);
 
   // Export CSV Handler with Role Masking (RR-VW-06)
   function handleExportCSV() {
@@ -273,6 +299,14 @@ export default function RentRollRegisterPage() {
               <div className="flex items-center gap-2.5 flex-wrap">
                 <button
                   type="button"
+                  onClick={() => setBillingRunOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Receipt size={14} className="text-teal-400" />
+                  <span>Run Monthly Billing</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setImportOpen(true)}
                   className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
@@ -347,65 +381,85 @@ export default function RentRollRegisterPage() {
               </div>
             )}
 
-            {/* KPI Summary Tiles (§S-10) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Monthly Base Rent
+            {/* S-10 Top 5-Chip KPI Bar per Document Wireframe */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              {/* Chip 1: Spaces */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Spaces
                 </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+                  {registerData?.summary?.total_spaces_count || registerData?.rows?.length || 0}
+                </p>
+                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                  {registerData?.summary?.vacant_spaces_count || 0} vacant ({registerData?.summary?.vacancy_rate_percent || 0}%)
+                </span>
+              </div>
+
+              {/* Chip 2: Occupied Area & % */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Occupied Area
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+                  {Number(registerData?.summary?.total_occupied_area_sqft || 0).toLocaleString()}{" "}
+                  <span className="text-xs font-normal text-slate-400">sqft</span>
+                </p>
+                <span className="text-[11px] text-teal-700 font-semibold block mt-0.5">
+                  {registerData?.summary?.occupancy_rate_percent || 0}% Occupancy
+                </span>
+              </div>
+
+              {/* Chip 3: Monthly Base Rent */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Monthly Base
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
                   {isLeasing ? (
-                    <span className="text-slate-400 text-sm font-bold">Confidential (Leasing)</span>
+                    <span className="text-slate-400 text-xs font-bold">Confidential</span>
                   ) : (
                     `₹${Number(registerData?.summary?.total_monthly_base_rent || 0).toLocaleString("en-IN")}`
                   )}
                 </p>
-                <span className="text-[11px] text-teal-700 font-medium flex items-center gap-1 mt-1">
+                <span className="text-[11px] text-teal-700 font-medium flex items-center gap-1 mt-0.5">
                   <TrendingUp className="w-3 h-3" /> As of {asOfDate}
                 </span>
               </div>
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Occupied Leasable Area
+              {/* Chip 4: WALE (Formula F-24) */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  WALE (F-24)
                 </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                  {Number(registerData?.summary?.total_occupied_area_sqft || 0).toLocaleString()}{" "}
-                  <span className="text-xs font-normal text-slate-400">sqft</span>
+                <p className="text-xl sm:text-2xl font-black text-teal-900 mt-0.5 font-mono">
+                  {registerData?.summary?.wale_years || 0} <span className="text-xs font-normal text-slate-500">y</span>
                 </p>
-                <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-                  {registerData?.summary?.active_contracts_count || 0} active agreements
+                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                  Weighted lease expiry
                 </span>
               </div>
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Portfolio Vacancy Rate
+              {/* Chip 5: Exceptions & Arrears */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Exceptions
                 </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                  {registerData?.summary?.vacancy_rate_percent ?? 0}%
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+                  {registerData?.summary?.exceptions_count || 0}
                 </p>
-                <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1 mt-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {registerData?.summary?.vacant_spaces_count || 0} vacant spaces
-                </span>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  {currentView === "forecast" ? "Weighted Pipeline" : "Outstanding Arrears"}
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                  {currentView === "forecast" ? (
-                    isLeasing ? "Pipeline Active" : `₹${Math.round(registerData?.summary?.weighted_pipeline_rent || 0).toLocaleString("en-IN")}`
-                  ) : isLeasing ? (
-                    <span className="text-amber-800 text-sm font-bold">Arrears Flags Only</span>
-                  ) : (
-                    `₹${Math.round(registerData?.summary?.total_outstanding_arrears || 0).toLocaleString("en-IN")}`
-                  )}
-                </p>
-                <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-                  {currentView === "forecast" ? "Probability-weighted deals" : "Active overdue balances"}
+                <span
+                  className={`text-[11px] font-medium block mt-0.5 ${
+                    (registerData?.summary?.total_outstanding_arrears || 0) > 0
+                      ? "text-rose-600 font-bold"
+                      : "text-emerald-700 font-semibold"
+                  }`}
+                >
+                  {isLeasing
+                    ? "Arrears Flagged"
+                    : (registerData?.summary?.total_outstanding_arrears || 0) > 0
+                    ? `₹${Number(registerData?.summary?.total_outstanding_arrears || 0).toLocaleString("en-IN")} arrears`
+                    : "Clear (₹0 arrears)"}
                 </span>
               </div>
             </div>
@@ -742,16 +796,64 @@ export default function RentRollRegisterPage() {
                         </td>
                       </tr>
                     ) : (
-                      visibleRows.map((r: any) => {
-                        const isVacant = r.type === "vacant_space";
-                        const isDeal = r.type === "forecast_deal";
-                        const isFuture = r.status === "future";
-                        const isHoldingOver = r.status === "holding_over";
-                        const isNotice = r.status === "notice_served";
+                      Object.entries(groupedRows).map(([propName, propRows]) => {
+                        const propArea = propRows.reduce((sum: number, r: any) => sum + (r.area_sqft || 0), 0);
+                        const propRent = propRows.reduce((sum: number, r: any) => sum + (r.monthly_base_rent || 0), 0);
+                        const propArrears = propRows.reduce((sum: number, r: any) => sum + (r.outstanding_amount_inr || 0), 0);
+                        const propHasArrears = propRows.some((r: any) => r.has_arrears);
 
                         return (
-                          <tr
-                            key={r.id}
+                          <React.Fragment key={`group-${propName}`}>
+                            {/* Property Group Subtotal Header per S-10 */}
+                            <tr className="bg-slate-100/90 border-y border-slate-300 font-bold text-xs select-none">
+                              <td colSpan={14} className="p-3 bg-slate-100/95 sticky left-0 z-10 shadow-2xs">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-teal-700 shrink-0" />
+                                    <span className="font-extrabold text-slate-900 text-sm tracking-tight">{propName}</span>
+                                    <span className="text-slate-500 font-mono text-[11px]">({propRows.length} spaces)</span>
+                                  </div>
+                                  <div className="flex items-center gap-6 font-mono text-xs pr-4 text-slate-700">
+                                    <span>
+                                      Area: <strong className="text-slate-900">{propArea.toLocaleString()}</strong> sq ft
+                                    </span>
+                                    {!isLeasing && (
+                                      <span>
+                                        Monthly Base:{" "}
+                                        <strong className="text-teal-900">
+                                          ₹{Math.round(propRent).toLocaleString("en-IN")}
+                                        </strong>
+                                      </span>
+                                    )}
+                                    <span>
+                                      Arrears:{" "}
+                                      <strong
+                                        className={
+                                          propHasArrears ? "text-rose-600 font-bold" : "text-emerald-700"
+                                        }
+                                      >
+                                        {isLeasing
+                                          ? propHasArrears
+                                            ? "Yes"
+                                            : "No"
+                                          : `₹${Math.round(propArrears).toLocaleString("en-IN")}`}
+                                      </strong>
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+
+                            {propRows.map((r: any) => {
+                              const isVacant = r.type === "vacant_space";
+                              const isDeal = r.type === "forecast_deal";
+                              const isFuture = r.status === "future";
+                              const isHoldingOver = r.status === "holding_over";
+                              const isNotice = r.status === "notice_served";
+
+                              return (
+                                <tr
+                                  key={r.id}
                             onClick={() => {
                               if (isVacant) {
                                 setSelectedVacantSpace(r);
@@ -940,8 +1042,11 @@ export default function RentRollRegisterPage() {
                             </td>
                           </tr>
                         );
-                      })
-                    )}
+                      })}
+                    </React.Fragment>
+                  );
+                })
+              )}
                   </tbody>
 
                   {/* Totals Row (§S-10: Sum of Monthly Base Rent for Visible Rows) */}
@@ -1221,6 +1326,13 @@ export default function RentRollRegisterPage() {
               </div>
             </div>
           )}
+
+          {/* S-40 Monthly Billing Run Modal */}
+          <BillingRunModal
+            isOpen={billingRunOpen}
+            onClose={() => setBillingRunOpen(false)}
+            onSuccess={fetchRegisterData}
+          />
         </div>
       </div>
 

@@ -8,152 +8,129 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialRole = searchParams.get("role") || undefined;
 
   const handleOnboardingComplete = async (data: OnboardingCompleteData) => {
+    // 1. Commit complete workspace hierarchy to database
+    try {
+      const commitRes = await fetch("/api/rent-roll/onboarding-commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
+        body: JSON.stringify({
+          businessModel: data.businessModel,
+          companyName: data.companyName,
+          brandName: data.brandName,
+          role: data.role,
+          spvs: data.spvs,
+          chargeTypes: data.chargeTypes,
+          property: {
+            propertyName: data.propertyName,
+            propertyCode: data.propertyCode,
+            propertyType: data.propertyType,
+            totalLeasableAreaSqft: data.areaSqft,
+            floors: data.floorsCount,
+            unitsPerFloor: data.unitsPerFloor,
+            askingRatePerSqft: data.askingRatePerSqft,
+            city: data.city,
+            state: data.state,
+            address: data.address,
+          },
+          team: {
+            role: data.role,
+            delegatedManager: data.hasDelegatedManager
+              ? {
+                  name: data.managerName,
+                  email: data.managerEmail,
+                  type: data.managerType,
+                  role: data.managerUserRole,
+                }
+              : undefined,
+          },
+        }),
+      });
+
+      if (!commitRes.ok) {
+        const errorJson = await commitRes.json();
+        throw new Error(errorJson.message || "Failed to commit onboarding workspace hierarchy.");
+      }
+
+      const resData = await commitRes.json();
+
+      // 2. Persist local storage & cookies for immediate frontend state alignment
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_rentroll_onboarded", "true");
+        localStorage.setItem("officex_onboarding_completed", "1");
+        sessionStorage.setItem("officex_onboarding_completed", "1");
+        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+
+        if (resData.orgId) {
+          localStorage.setItem("officex_org_id", resData.orgId);
+          document.cookie = `officex_org_id=${resData.orgId}; path=/; max-age=2592000; SameSite=Lax`;
+        }
+        if (resData.clientAccountId) {
+          localStorage.setItem("officex_client_account_id", resData.clientAccountId);
+          document.cookie = `officex_client_account_id=${resData.clientAccountId}; path=/; max-age=2592000; SameSite=Lax`;
+        }
+
+        localStorage.setItem("officex_role_key", data.role);
+        sessionStorage.setItem("officex_role_key", data.role);
+        document.cookie = `officex_role_key=${encodeURIComponent(data.role)}; path=/; max-age=2592000; SameSite=Lax`;
+
+        localStorage.setItem("officex_company_name", data.companyName);
+        localStorage.setItem("officex_brand_name", data.brandName);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+
+        localStorage.setItem("officex_active_property", data.propertyName);
+        if (resData.propertyId) {
+          localStorage.setItem("officex_active_property_id", resData.propertyId);
+        }
+
+        // Delegated Manager details
+        if (data.hasDelegatedManager) {
+          localStorage.setItem("officex_has_manager", "true");
+          localStorage.setItem("officex_manage_mode", "delegated");
+          localStorage.setItem("officex_manager_name", data.managerName || "");
+          localStorage.setItem("officex_manager_email", data.managerEmail || "");
+        } else {
+          localStorage.setItem("officex_manage_mode", "self");
+          localStorage.removeItem("officex_has_manager");
+        }
+      }
+
+      // 3. Smooth Transition Directly to Active Rent Roll (§S-10)
+      let destination = "/properties/rent-roll?tab=register";
+      if (data.startingStrategy === "create_lease") {
+        destination = "/properties/rent-roll?tab=register&openContract=1";
+      } else if (data.startingStrategy === "import_excel") {
+        destination = "/properties/rent-roll?tab=register&openImport=1";
+      }
+
+      router.push(destination);
+    } catch (err: any) {
+      console.error("Onboarding completion error:", err);
+      throw err;
+    }
+  };
+
+  const handleSkip = () => {
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_rentroll_onboarded", "true");
       localStorage.setItem("officex_onboarding_completed", "1");
       sessionStorage.setItem("officex_onboarding_completed", "1");
       document.cookie = "officex_onboarding_completed=1; path=/; max-age=86400; SameSite=Lax";
-
-      localStorage.setItem("officex_role_key", data.role);
-      sessionStorage.setItem("officex_role_key", data.role);
-      document.cookie = `officex_role_key=${encodeURIComponent(data.role)}; path=/; max-age=86400; SameSite=Lax`;
-
-      // Organization & Branding (§S-60)
-      localStorage.setItem("officex_company_name", data.companyName);
-      localStorage.setItem("officex_brand_name", data.brandName);
-      if (data.logoUrl) {
-        localStorage.setItem("officex_brand_logo", data.logoUrl);
-      }
-
-      localStorage.setItem("officex_subscription", "active");
-      sessionStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-
-      // Owner Delegation Data (Fetched in complete profile hub)
-      if (data.hasDelegatedManager) {
-        localStorage.setItem("officex_has_manager", "true");
-        localStorage.setItem("officex_manage_mode", "delegated");
-        localStorage.setItem("officex_manager_type", data.managerType || "pm_company");
-        if (data.managerUserRole) {
-          localStorage.setItem("officex_manager_user_role", data.managerUserRole);
-        } else {
-          localStorage.removeItem("officex_manager_user_role");
-        }
-        localStorage.setItem("officex_manager_name", data.managerName || "");
-        localStorage.setItem("officex_manager_email", data.managerEmail || "");
-        localStorage.setItem("officex_manager_status", "activated");
-        const origin =
-          typeof window !== "undefined" && window.location.origin
-            ? window.location.origin
-            : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
-        const inviteUrl = `${origin}/invite?role=${encodeURIComponent(data.managerType || "pm_company")}&mgr=${encodeURIComponent(data.managerName || "")}&prop=${encodeURIComponent(data.propertyName || "")}&owner=${encodeURIComponent(data.companyName || data.brandName || "Commercial Owner")}&invite=act_${Date.now()}`;
-        localStorage.setItem("officex_manager_activation_link", inviteUrl);
-
-        // Pre-assign manager to initial property
-        if (data.propertyName) {
-          const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
-          currentAssigns[data.propertyName] = {
-            name: data.managerName,
-            email: data.managerEmail || "",
-            type: data.managerType || "pm_company",
-            userRole: data.managerUserRole || undefined,
-            assignedAt: new Date().toISOString(),
-          };
-          localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
-        }
-      } else {
-        localStorage.setItem("officex_manage_mode", "self");
-        localStorage.removeItem("officex_has_manager");
-        localStorage.removeItem("officex_manager_type");
-        localStorage.removeItem("officex_manager_user_role");
-        localStorage.removeItem("officex_manager_name");
-        localStorage.removeItem("officex_manager_email");
-        localStorage.removeItem("officex_manager_activation_link");
-        localStorage.removeItem("officex_manager_dashboard_activated");
-      }
-
-      // Persist full onboarding data for PropertyHierarchyModal and downstream forms
-      localStorage.setItem("officex_onboarded_property_details", JSON.stringify(data));
-      localStorage.setItem("officex_active_property", data.propertyName);
-      if (data.propertyName) {
-        const regNames = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
-        if (!regNames.includes(data.propertyName)) {
-          regNames.push(data.propertyName);
-          localStorage.setItem("officex_registered_property_names", JSON.stringify(regNames));
-        }
-      }
-      if (data.areaSqft) localStorage.setItem("officex_used_sqft", String(data.areaSqft));
-
-      // Map role to label
-      const roleLabels: Record<string, string> = {
-        owner: "Commercial Property Owner / Landlord",
-        property_manager: "Property Manager / Centre Manager",
-        facility_manager: "Facility Manager / Site Operations Lead",
-        leasing_manager: "Commercial Leasing Manager",
-        finance_manager: "CA / Financial Controller",
-      };
-      const label = roleLabels[data.role] || "Commercial Property Owner";
-      localStorage.setItem("officex_user_role", label);
-      sessionStorage.setItem("officex_user_role", label);
-      document.cookie = `officex_user_role=${encodeURIComponent(label)}; path=/; max-age=86400; SameSite=Lax`;
     }
-
-    // Persist property in database
-    try {
-      const propRes = await fetch("/api/rent-roll/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
-        body: JSON.stringify({
-          property_name: data.propertyName,
-          property_code: data.propertyCode,
-          property_type: data.propertyType,
-          total_leasable_area_sqft: data.areaSqft,
-          city: data.city || "Bengaluru",
-          state: data.city && data.city.includes(",") ? data.city.split(",")[1].trim() : "Karnataka",
-          country: "India",
-        }),
-      });
-
-      if (propRes && propRes.ok) {
-        const json = await propRes.json();
-        if (json.data?.id && typeof window !== "undefined") {
-          const regIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
-          if (!regIds.includes(json.data.id)) {
-            regIds.push(json.data.id);
-            localStorage.setItem("officex_registered_property_ids", JSON.stringify(regIds));
-          }
-          if (data.hasDelegatedManager && data.managerName) {
-            const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
-            currentAssigns[json.data.id] = {
-              name: data.managerName,
-              email: data.managerEmail || "",
-              type: data.managerType || "pm_agency",
-              assignedAt: new Date().toISOString(),
-            };
-            localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Property persistence error:", err);
-    }
-
-    // Route to Complete Your Profile Hub
-    router.push("/profile/complete");
-  };
-
-  const handleSkip = () => {
-    router.push("/profile/complete");
+    router.push("/properties/rent-roll?tab=register");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 flex flex-col justify-center items-center">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen bg-slate-900 py-10 px-4 flex flex-col justify-center items-center">
+      <div className="w-full max-w-5xl">
         <RentRollOnboardingWizard
           onComplete={handleOnboardingComplete}
           onSkip={handleSkip}
+          initialRole={initialRole}
         />
       </div>
     </div>
@@ -162,7 +139,13 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-500">Loading Onboarding Suite...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center font-bold text-slate-300">
+          Loading Commercial Onboarding Suite...
+        </div>
+      }
+    >
       <OnboardingContent />
     </Suspense>
   );
