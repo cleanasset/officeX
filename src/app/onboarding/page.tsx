@@ -27,13 +27,19 @@ function OnboardingContent() {
             propertyName: data.propertyName,
             propertyCode: data.propertyCode,
             propertyType: data.propertyType,
+            grade: data.buildingGrade,
             totalLeasableAreaSqft: data.areaSqft,
+            carpetAreaSqft: data.carpetAreaSqft,
             floors: data.floorsCount,
             unitsPerFloor: data.unitsPerFloor,
             askingRatePerSqft: data.askingRatePerSqft,
             city: data.city,
             state: data.state,
+            microMarket: data.microMarket,
+            pincode: data.pincode,
             address: data.address,
+            buildingName: data.buildingName,
+            fitoutCondition: data.fitoutCondition,
           },
           team: {
             role: data.role,
@@ -43,6 +49,7 @@ function OnboardingContent() {
                   email: data.managerEmail,
                   type: data.managerType,
                   role: data.managerUserRole,
+                  delegationScope: data.delegationScope,
                 }
               : undefined,
           },
@@ -105,6 +112,8 @@ function OnboardingContent() {
         destination = "/properties/rent-roll?tab=register&openContract=1";
       } else if (data.startingStrategy === "import_excel") {
         destination = "/properties/rent-roll?tab=register&openImport=1";
+      } else if (data.startingStrategy === "assisted_concierge") {
+        destination = "/properties/rent-roll?tab=register&concierge=1";
       }
 
       router.push(destination);

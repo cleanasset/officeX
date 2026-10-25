@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
   Building,
   ShieldCheck,
   FileText,
@@ -19,12 +18,13 @@ import {
   Check,
   AlertCircle,
   Briefcase,
+  Sparkles,
   HelpCircle,
+  ChevronDown,
+  Info,
 } from "lucide-react";
 import {
-  INDIAN_STATES_CITIES,
   ALL_INDIAN_STATES,
-  COMMERCIAL_ASSET_TYPES,
 } from "@/lib/india-locations";
 
 export interface SPVData {
@@ -50,19 +50,26 @@ export interface OnboardingCompleteData {
   propertyName: string;
   propertyCode: string;
   propertyType: string;
+  buildingGrade?: string;
   areaSqft: number;
+  carpetAreaSqft?: number;
   floorsCount: number;
   unitsPerFloor: number;
   askingRatePerSqft: number;
   state: string;
   city: string;
+  microMarket?: string;
+  pincode?: string;
   address: string;
+  buildingName?: string;
+  fitoutCondition?: string;
   hasDelegatedManager?: boolean;
   managerType?: string;
   managerName?: string;
   managerEmail?: string;
   managerUserRole?: "property_manager" | "org_admin";
-  startingStrategy: "rent_roll" | "create_lease" | "import_excel";
+  delegationScope?: string;
+  startingStrategy: "rent_roll" | "create_lease" | "import_excel" | "assisted_concierge";
 }
 
 interface RentRollOnboardingWizardProps {
@@ -71,7 +78,7 @@ interface RentRollOnboardingWizardProps {
   initialRole?: string;
 }
 
-// 5 Commercial Customer Segments (§2.1 & §4.4)
+// 5 Commercial Customer Segments
 export const BUSINESS_SEGMENTS = [
   {
     id: "owner",
@@ -111,11 +118,16 @@ export const BUSINESS_SEGMENTS = [
     title: "Flex Workspace / Co-working Operator",
     badge: "Seat & Cabin Billing",
     desc: "Operates dedicated desks, private cabins, enterprise managed offices, and head lease liabilities.",
-    defaultCharges: ["base_rent", "cam", "parking", "grid_power", "security_deposit"],
+    defaultCharges: ["base_rent", "seat_fee", "cam", "parking", "grid_power", "security_deposit"],
   },
 ];
 
-export const DELEGATED_ENTITY_TYPES = [
+export interface DelegatedEntityType {
+  id: string;
+  title: string;
+}
+
+export const DELEGATED_ENTITY_TYPES: DelegatedEntityType[] = [
   { id: "pm_company", title: "PM Company (Property Management Company)" },
   { id: "fm_company", title: "FM Company (Facilities Management Company)" },
   { id: "msp", title: "MSP (Managed Service Provider)" },
@@ -126,7 +138,7 @@ export function getDelegatedEntityLabel(type?: string, userRole?: string): strin
   if (!type || type === "pm_company" || type === "pm_agency") return "PM Company (Property Management Company)";
   if (type === "fm_company" || type === "fm_operator") return "FM Company (Facilities Management Company)";
   if (type === "msp") return "MSP (Managed Service Provider)";
-  if (type === "user_pm_or_admin" || type === "individual_pm" || type === "another_user") {
+  if (type === "user_pm_or_admin" || type === "individual_pm" || type === "another_user" || type === "user_pm") {
     if (userRole === "org_admin") return "Another User (Role: Org Admin)";
     if (userRole === "property_manager") return "Another User (Role: Property Manager)";
     return "Another User with role: Property Manager or Org Admin";
@@ -134,144 +146,244 @@ export function getDelegatedEntityLabel(type?: string, userRole?: string): strin
   return "PM Company (Property Management Company)";
 }
 
-// 11 Canonical Charge Types (§4.8)
-export const CANONICAL_CHARGE_TYPES = [
+// 12 Canonical Roles for Dropdowns
+export const CANONICAL_ROLES = [
+  { id: "owner", title: "Property Owner / Principal Landlord", group: "Asset Leadership" },
+  { id: "asset_manager", title: "Asset Manager / Portfolio Lead", group: "Asset Leadership" },
+  { id: "client_principal", title: "Client Principal (Managed Portfolio Owner)", group: "Asset Leadership" },
+  { id: "management", title: "Executive Leadership / Portfolio Director", group: "Asset Leadership" },
+  { id: "property_manager", title: "Property Manager / Centre Head", group: "Operations" },
+  { id: "facility_manager", title: "Facility Manager / Site Operations Lead", group: "Operations" },
+  { id: "leasing_manager", title: "Leasing Manager / Commercial Deals Lead", group: "Operations" },
+  { id: "finance_manager", title: "Financial Controller / CA / Billing Lead", group: "Finance & Accounts" },
+  { id: "org_admin", title: "Organization Administrator", group: "System & Governance" },
+  { id: "auditor", title: "Statutory & Tax Auditor (Read-Only)", group: "System & Governance" },
+  { id: "tenant", title: "Occupant / Tenant Representative", group: "Tenant Experience" },
+  { id: "platform_support", title: "OfficeX Platform Support Engineer", group: "System & Governance" },
+];
+
+export interface ChargeTypeConfig {
+  id: string;
+  name: string;
+  code: string;
+  category: "Core Rental" | "CAM & Utilities" | "Services & Amenities" | "Statutory Recoveries" | "Deposits & Penalties";
+  defaultBasis: "per_area" | "per_seat" | "fixed" | "metered" | "per_slot" | "pro_rata_share" | "pct_of_turnover" | "per_use";
+  taxRate: string;
+  isTaxable: boolean;
+  invoiceGroup: string;
+  desc: string;
+  required?: boolean;
+}
+
+// Canonical Charge Types
+export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
+  // Core Rental
   {
     id: "base_rent",
     name: "Base Rent",
     code: "SAC 997212",
-    category: "Base Revenue",
+    category: "Core Rental",
+    defaultBasis: "per_area",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Contractual fixed or area-based commercial rent payable in advance.",
+    invoiceGroup: "rent",
+    desc: "Fixed or area-based commercial rent payable in advance as per contract terms.",
     required: true,
   },
+  {
+    id: "seat_fee",
+    name: "Seat Fee / Dedicated Cabin",
+    code: "SAC 997212",
+    category: "Core Rental",
+    defaultBasis: "per_seat",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "rent",
+    desc: "Per-seat monthly membership fee for flex workspaces and private managed suites.",
+  },
+  {
+    id: "fitout_recovery",
+    name: "Fitout Capex Amortization",
+    code: "SAC 997212",
+    category: "Core Rental",
+    defaultBasis: "per_area",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "rent",
+    desc: "Monthly capital recovery of landlord-funded tenant interior fitout works.",
+  },
+  {
+    id: "turnover_rent",
+    name: "Turnover / Revenue Share Rent",
+    code: "SAC 997212",
+    category: "Core Rental",
+    defaultBasis: "pct_of_turnover",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "rent",
+    desc: "Percentage of gross turnover / sales revenue share for prime retail and anchor tenants.",
+  },
+
+  // Operational CAM & Utilities
   {
     id: "cam",
     name: "Common Area Maintenance (CAM)",
     code: "SAC 997221",
-    category: "Recovery",
+    category: "CAM & Utilities",
+    defaultBasis: "per_area",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Building security, housekeeping, lift maintenance, and common lighting upkeep.",
-    required: false,
+    invoiceGroup: "cam",
+    desc: "Building security, housekeeping, BMS, lift AMC, facade cleaning, and common area upkeep.",
   },
   {
     id: "grid_power",
-    name: "Electricity Grid Power",
-    code: "Utility",
-    category: "Utility Pass-through",
+    name: "Electricity Grid Power Pass-through",
+    code: "DISCOM Meter",
+    category: "CAM & Utilities",
+    defaultBasis: "metered",
     taxRate: "0% GST (Exempt)",
     isTaxable: false,
-    desc: "Government power discom meter consumption pass-through without markup.",
-    required: false,
+    invoiceGroup: "electricity",
+    desc: "Direct discom sub-metered electricity consumption pass-through without commercial markup.",
   },
   {
     id: "dg_backup",
     name: "DG Power Backup",
-    code: "Utility Recovery",
-    category: "Utility",
+    code: "SAC 9987",
+    category: "CAM & Utilities",
+    defaultBasis: "metered",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Diesel generator emergency power units or fixed kVA backup allowance.",
-    required: false,
+    invoiceGroup: "electricity",
+    desc: "Diesel generator emergency backup units or fixed kVA backup allowance.",
   },
   {
     id: "water",
-    name: "Water Supply Charges",
-    code: "Utility",
-    category: "Utility",
+    name: "Water Supply & Sewage Charges",
+    code: "Utility Meter",
+    category: "CAM & Utilities",
+    defaultBasis: "metered",
     taxRate: "0% GST (Exempt)",
     isTaxable: false,
-    desc: "Municipal and tanker water supply metered consumption.",
-    required: false,
-  },
-  {
-    id: "parking",
-    name: "Reserved Parking Bay",
-    code: "SAC 9967",
-    category: "Service Charge",
-    taxRate: "18% GST",
-    isTaxable: true,
-    desc: "Dedicated 4-wheeler and 2-wheeler basement parking slot allocations.",
-    required: false,
+    invoiceGroup: "water",
+    desc: "Municipal water connection and tanker supply metered consumption.",
   },
   {
     id: "hvac_extended",
     name: "After-Hours HVAC Cooling",
     code: "SAC 9954",
-    category: "Service Charge",
+    category: "CAM & Utilities",
+    defaultBasis: "per_use",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Hourly chilled water air conditioning outside standard commercial tower hours.",
-    required: false,
+    invoiceGroup: "services",
+    desc: "Hourly chilled water air-conditioning usage outside standard commercial operating hours.",
   },
+
+  // Services & Amenities
   {
-    id: "fitout_recovery",
-    name: "Fitout Capex Amortization",
-    code: "Recovery",
-    category: "Capex Amortization",
+    id: "parking",
+    name: "Reserved Parking Bay",
+    code: "SAC 9967",
+    category: "Services & Amenities",
+    defaultBasis: "per_slot",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Monthly recovery of interior fitout capital funded by the landlord.",
-    required: false,
+    invoiceGroup: "parking",
+    desc: "Dedicated 4-wheeler and 2-wheeler basement or podium parking slot allocations.",
   },
   {
-    id: "security_deposit",
-    name: "Security Deposit (Refundable)",
-    code: "Deposit",
-    category: "Balance Sheet",
-    taxRate: "0% (Non-taxable)",
-    isTaxable: false,
-    desc: "Interest-free refundable security deposit held in trust during the lease term.",
-    required: false,
-  },
-  {
-    id: "late_fee",
-    name: "Late Payment Interest",
-    code: "SAC 9997",
-    category: "Penalty / Interest",
+    id: "meeting_room",
+    name: "Meeting & Conference Rooms",
+    code: "SAC 9983",
+    category: "Services & Amenities",
+    defaultBasis: "per_use",
     taxRate: "18% GST",
     isTaxable: true,
-    desc: "Standard 18% p.a. default interest on overdue rental invoices.",
-    required: false,
+    invoiceGroup: "services",
+    desc: "On-demand boardroom, video conferencing room, and training facility bookings.",
   },
+  {
+    id: "internet",
+    name: "Enterprise Internet & Bandwidth",
+    code: "SAC 9984",
+    category: "Services & Amenities",
+    defaultBasis: "fixed",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "services",
+    desc: "Dedicated lease line high-speed internet, firewall, and static IP allocation.",
+  },
+  {
+    id: "housekeeping",
+    name: "Demised Office Deep Cleaning",
+    code: "SAC 9985",
+    category: "Services & Amenities",
+    defaultBasis: "fixed",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "services",
+    desc: "In-suite dedicated janitorial and daily office sanitation services.",
+  },
+  {
+    id: "signage",
+    name: "Facade & Building Signage",
+    code: "SAC 9983",
+    category: "Services & Amenities",
+    defaultBasis: "fixed",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "services",
+    desc: "Pylon totem, lobby directory board, and external building facade branding rights.",
+  },
+
+  // Statutory Recoveries
   {
     id: "property_tax",
     name: "Property Tax Reimbursement",
     code: "Statutory",
-    category: "Statutory Recovery",
+    category: "Statutory Recoveries",
+    defaultBasis: "pro_rata_share",
     taxRate: "0% GST",
     isTaxable: false,
-    desc: "Pro-rata municipal tax reimbursement charged to tenants.",
-    required: false,
+    invoiceGroup: "statutory",
+    desc: "Pro-rata municipal commercial property tax recovery billed to long-term tenants.",
   },
-];
+  {
+    id: "insurance",
+    name: "Building Insurance Reimbursement",
+    code: "Statutory",
+    category: "Statutory Recoveries",
+    defaultBasis: "pro_rata_share",
+    taxRate: "0% GST",
+    isTaxable: false,
+    invoiceGroup: "statutory",
+    desc: "Commercial building comprehensive fire and special perils insurance recovery.",
+  },
 
-export const CANONICAL_ROLES = [
+  // Deposits & Penalties
   {
-    id: "owner",
-    title: "Property Owner / Landlord",
-    badge: "Principal",
-    desc: "Asset owner or fund manager with high-level financial reporting, approvals, and portfolio ROI metrics.",
+    id: "security_deposit",
+    name: "Security Deposit (Refundable)",
+    code: "Deposit",
+    category: "Deposits & Penalties",
+    defaultBasis: "fixed",
+    taxRate: "0% (Non-taxable)",
+    isTaxable: false,
+    invoiceGroup: "deposit",
+    desc: "Interest-free refundable security deposit held in trust during the lease term.",
   },
   {
-    id: "property_manager",
-    title: "Property Manager / Centre Head",
-    badge: "Operations",
-    desc: "Hands-on lease administration, vacancy management, contract drafting, and tenant onboarding.",
-  },
-  {
-    id: "finance_manager",
-    title: "CA / Financial Controller",
-    badge: "Controllership",
-    desc: "Lease-to-Cash monthly billing batch runs, GST Tax Invoices, Section 194-I TDS ledgers, and bank reconciliations.",
-  },
-  {
-    id: "facility_manager",
-    title: "Facility Manager / Site Ops Lead",
-    badge: "Engineering",
-    desc: "On-site utility meters, CAM cost pool budgeting, and space readiness.",
+    id: "late_fee",
+    name: "Late Payment Default Interest",
+    code: "SAC 9997",
+    category: "Deposits & Penalties",
+    defaultBasis: "fixed",
+    taxRate: "18% GST",
+    isTaxable: true,
+    invoiceGroup: "services",
+    desc: "Standard 18% p.a. default interest on overdue rental invoices past the credit period.",
   },
 ];
 
@@ -284,7 +396,7 @@ export default function RentRollOnboardingWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Form State
+  // Step 1: Business Model & User Role
   const [businessModel, setBusinessModel] = useState("owner");
   const [companyName, setCompanyName] = useState("");
   const [brandName, setBrandName] = useState("");
@@ -314,28 +426,38 @@ export default function RentRollOnboardingWizard({
     "parking",
     "security_deposit",
   ]);
+  const [chargeBasisOverrides, setChargeBasisOverrides] = useState<Record<string, string>>({});
 
   // Step 4: Physical Space Hierarchy
   const [propertyName, setPropertyName] = useState("");
   const [propertyCode, setPropertyCode] = useState("");
   const [propertyType, setPropertyType] = useState("office");
+  const [buildingGrade, setBuildingGrade] = useState("A");
+  const [buildingName, setBuildingName] = useState("Tower 1");
   const [areaSqft, setAreaSqft] = useState<number>(40000);
+  const [carpetAreaSqft, setCarpetAreaSqft] = useState<number>(28800);
   const [floorsCount, setFloorsCount] = useState<number>(4);
+  const [basementCount, setBasementCount] = useState<number>(1);
   const [unitsPerFloor, setUnitsPerFloor] = useState<number>(4);
   const [askingRatePerSqft, setAskingRatePerSqft] = useState<number>(125);
+  const [fitoutCondition, setFitoutCondition] = useState("warm_shell");
   const [propertyState, setPropertyState] = useState("Karnataka");
   const [propertyCity, setPropertyCity] = useState("Bengaluru");
+  const [microMarket, setMicroMarket] = useState("Outer Ring Road");
+  const [pincode, setPincode] = useState("560103");
   const [propertyAddress, setPropertyAddress] = useState("");
 
-  // Step 5: Team & Delegation
-  const [hasDelegatedManager, setHasDelegatedManager] = useState(false);
+  // Step 5: Team Configuration & Delegation
+  const [managementMode, setManagementMode] = useState<"self" | "delegated">("self");
   const [managerType, setManagerType] = useState("pm_company");
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
-  const [managerUserRole, setManagerUserRole] = useState<"property_manager" | "org_admin">("property_manager");
+  const [delegationScope, setDelegationScope] = useState("full_operations");
 
   // Step 6: Starting Strategy
-  const [startingStrategy, setStartingStrategy] = useState<"rent_roll" | "create_lease" | "import_excel">("rent_roll");
+  const [startingStrategy, setStartingStrategy] = useState<
+    "rent_roll" | "create_lease" | "import_excel" | "assisted_concierge"
+  >("rent_roll");
 
   // Auto-generate code when property name changes
   useEffect(() => {
@@ -350,6 +472,13 @@ export default function RentRollOnboardingWizard({
     }
   }, [propertyName, propertyCode]);
 
+  // Auto-calculate default carpet area as 72% of chargeable area when chargeable area changes
+  useEffect(() => {
+    if (areaSqft && (!carpetAreaSqft || carpetAreaSqft === Math.round(areaSqft * 0.72))) {
+      setCarpetAreaSqft(Math.round(areaSqft * 0.72));
+    }
+  }, [areaSqft]);
+
   // Auto-populate SPV legal name from company name if empty
   useEffect(() => {
     if (companyName && spvs.length === 1 && !spvs[0].legalName) {
@@ -357,7 +486,7 @@ export default function RentRollOnboardingWizard({
     }
   }, [companyName, spvs]);
 
-  // Handle adding an additional SPV
+  // SPV Actions
   const handleAddSpv = () => {
     setSpvs((prev) => [
       ...prev,
@@ -397,12 +526,17 @@ export default function RentRollOnboardingWizard({
     );
   };
 
-  // Toggle charge type selection
-  const handleToggleCharge = (id: string) => {
-    if (id === "base_rent") return; // mandatory
-    setSelectedCharges((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
+  // Charge Actions
+  const handleAddChargeFromDropdown = (chargeId: string) => {
+    if (!chargeId) return;
+    if (!selectedCharges.includes(chargeId)) {
+      setSelectedCharges((prev) => [...prev, chargeId]);
+    }
+  };
+
+  const handleRemoveCharge = (id: string) => {
+    if (id === "base_rent") return; // mandatory core revenue
+    setSelectedCharges((prev) => prev.filter((c) => c !== id));
   };
 
   // Step Validation
@@ -419,7 +553,7 @@ export default function RentRollOnboardingWizard({
       for (let i = 0; i < spvs.length; i++) {
         const s = spvs[i];
         if (!s.legalName.trim()) {
-          setErrorMessage(`SPV #${i + 1} requires a Legal Entity Name.`);
+          setErrorMessage(`Billing Entity #${i + 1} requires a Legal Entity Name.`);
           return false;
         }
         if (s.gstin && s.gstin.trim().length !== 15) {
@@ -431,7 +565,7 @@ export default function RentRollOnboardingWizard({
     }
     if (step === 3) {
       if (!selectedCharges.includes("base_rent")) {
-        setErrorMessage("Base Rent is required as the core revenue charge.");
+        setErrorMessage("Base Rent is mandatory as the core rental revenue line.");
         return false;
       }
       return true;
@@ -452,9 +586,9 @@ export default function RentRollOnboardingWizard({
       return true;
     }
     if (step === 5) {
-      if (hasDelegatedManager) {
+      if (managementMode === "delegated") {
         if (!managerName.trim()) {
-          setErrorMessage("Please provide the Delegated Manager or Firm Name.");
+          setErrorMessage("Please provide the Delegated Partner Firm or Manager Name.");
           return false;
         }
       }
@@ -479,6 +613,8 @@ export default function RentRollOnboardingWizard({
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const hasDelegated = managementMode === "delegated";
+
     const data: OnboardingCompleteData = {
       businessModel,
       companyName: companyName.trim(),
@@ -489,18 +625,25 @@ export default function RentRollOnboardingWizard({
       propertyName: propertyName.trim(),
       propertyCode: (propertyCode || "PROP-01").trim(),
       propertyType,
+      buildingGrade,
+      buildingName: buildingName.trim() || "Tower 1",
       areaSqft,
+      carpetAreaSqft,
       floorsCount,
       unitsPerFloor,
       askingRatePerSqft,
+      fitoutCondition,
       state: propertyState,
       city: propertyCity,
-      address: propertyAddress.trim() || `${propertyCity}, ${propertyState}`,
-      hasDelegatedManager,
-      managerType: hasDelegatedManager ? managerType : undefined,
-      managerName: hasDelegatedManager ? managerName.trim() : undefined,
-      managerEmail: hasDelegatedManager ? managerEmail.trim() : undefined,
-      managerUserRole: hasDelegatedManager ? managerUserRole : undefined,
+      microMarket: microMarket.trim() || propertyCity,
+      pincode: pincode.trim(),
+      address: propertyAddress.trim() || `${microMarket}, ${propertyCity}, ${propertyState}`,
+      hasDelegatedManager: hasDelegated,
+      managerType: hasDelegated ? managerType : undefined,
+      managerName: hasDelegated ? managerName.trim() : undefined,
+      managerEmail: hasDelegated ? managerEmail.trim() : undefined,
+      managerUserRole: "property_manager",
+      delegationScope: hasDelegated ? delegationScope : undefined,
       startingStrategy,
     };
 
@@ -515,35 +658,42 @@ export default function RentRollOnboardingWizard({
   // Calculations for Space Generator Preview
   const totalUnits = floorsCount * unitsPerFloor;
   const areaPerUnit = totalUnits > 0 ? Math.round(areaSqft / totalUnits) : 0;
-  const carpetPerUnit = Math.round(areaPerUnit * 0.72);
+  const effectiveCarpet = carpetAreaSqft || Math.round(areaSqft * 0.72);
+  const carpetPerUnit = totalUnits > 0 ? Math.round(effectiveCarpet / totalUnits) : 0;
+  const efficiencyPercent = areaSqft > 0 ? Math.round((effectiveCarpet / areaSqft) * 100) : 72;
+  const loadingPercent = 100 - efficiencyPercent;
 
   return (
     <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden font-sans">
-      {/* Wizard Header */}
+      {/* Wizard Header with Brand Logo */}
       <div className="bg-slate-900 text-white px-8 py-6 border-b border-slate-800">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg shadow-md text-white">
-              OX
+          <div className="flex items-center space-x-4">
+            <div className="h-10 px-3 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center justify-center shadow-inner">
+              <img
+                src="/name-removebg-preview.png"
+                alt="OfficeX"
+                className="h-7 w-auto object-contain brightness-0 invert"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                OFFICEX Commercial Onboarding Suite
-                <span className="text-xs uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
+                Commercial Onboarding Suite
+                <span className="text-[11px] uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold tracking-wider">
                   Lease-to-Cash
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Setup your legal entities, tax profiles, charges, and physical space hierarchy in 6 steps
+                Setup your operating entities, tax profiles, billable charge rules, and physical space hierarchy
               </p>
             </div>
           </div>
           {onSkip && (
             <button
               onClick={onSkip}
-              className="text-xs text-slate-400 hover:text-white transition underline"
+              className="text-xs text-slate-400 hover:text-white transition underline cursor-pointer"
             >
-              Skip Setup & Explore
+              Skip Setup &amp; Explore
             </button>
           )}
         </div>
@@ -554,9 +704,9 @@ export default function RentRollOnboardingWizard({
             {[
               { num: 1, label: "Business Model" },
               { num: 2, label: "SPVs & Tax" },
-              { num: 3, label: "Charge Types" },
-              { num: 4, label: "Physical Spaces" },
-              { num: 5, label: "Team & Roles" },
+              { num: 3, label: "Charge Rules" },
+              { num: 4, label: "Space Hierarchy" },
+              { num: 5, label: "Team & Delegation" },
               { num: 6, label: "Go-Live Strategy" },
             ].map((step) => {
               const isActive = currentStep === step.num;
@@ -569,13 +719,13 @@ export default function RentRollOnboardingWizard({
                   }}
                   className={`flex flex-col border-t-2 pt-2 transition-all ${
                     isActive
-                      ? "border-blue-500 text-white font-semibold"
+                      ? "border-teal-500 text-white font-semibold"
                       : isPast
                       ? "border-emerald-500 text-emerald-400 cursor-pointer"
                       : "border-slate-800 text-slate-500"
                   }`}
                 >
-                  <span className="text-[10px] uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-wider flex items-center gap-1 font-bold">
                     {isPast && <Check className="w-3 h-3 text-emerald-400" />}
                     Step {step.num}
                   </span>
@@ -596,14 +746,14 @@ export default function RentRollOnboardingWizard({
       )}
 
       {/* Step Body */}
-      <div className="p-8 min-h-[480px]">
+      <div className="p-8 min-h-[500px]">
         {/* STEP 1: BUSINESS MODEL / CUSTOMER SEGMENT */}
         {currentStep === 1 && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Step 1: Select Your Commercial Business Model</h2>
               <p className="text-xs text-slate-500 mt-1">
-                OFFICEX configures default workflows and templates based on your operational segment (§2.1, §4.4).
+                OfficeX customizes default lease templates, accounting schedules, and billing workflows based on your operating profile.
               </p>
             </div>
 
@@ -619,7 +769,7 @@ export default function RentRollOnboardingWizard({
                     }}
                     className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
                       isSelected
-                        ? "border-blue-600 bg-blue-50/40 shadow-sm"
+                        ? "border-[#0F8B7D] bg-teal-50/40 shadow-sm"
                         : "border-slate-200 hover:border-slate-300 bg-white"
                     }`}
                   >
@@ -629,7 +779,7 @@ export default function RentRollOnboardingWizard({
                           {seg.code}
                         </span>
                         {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
                             <Check className="w-3 h-3" />
                           </div>
                         )}
@@ -638,14 +788,14 @@ export default function RentRollOnboardingWizard({
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">{seg.desc}</p>
                     </div>
                     <div className="mt-3 pt-2 border-t border-slate-100">
-                      <span className="text-[11px] font-medium text-blue-700">{seg.badge}</span>
+                      <span className="text-[11px] font-bold text-[#0F8B7D]">{seg.badge}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Legal Entity / Organization Name <span className="text-rose-500">*</span>
@@ -654,8 +804,8 @@ export default function RentRollOnboardingWizard({
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g. Apex Real Estate Holdings Pvt Ltd"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Apex Commercial Holdings Pvt Ltd"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                 />
               </div>
 
@@ -668,8 +818,49 @@ export default function RentRollOnboardingWizard({
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                   placeholder="e.g. Apex Business Parks"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                 />
+              </div>
+
+              {/* Roles presented in clean dropdown only */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Your Primary Administrative Role <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={userRole}
+                  onChange={(e) => setUserRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                >
+                  <optgroup label="Asset Leadership">
+                    {CANONICAL_ROLES.filter((r) => r.group === "Asset Leadership").map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Operations &amp; Leasing">
+                    {CANONICAL_ROLES.filter((r) => r.group === "Operations").map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Finance &amp; Controllership">
+                    {CANONICAL_ROLES.filter((r) => r.group === "Finance & Accounts").map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Governance &amp; Support">
+                    {CANONICAL_ROLES.filter((r) => r.group === "System & Governance").map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
             </div>
           </div>
@@ -680,15 +871,15 @@ export default function RentRollOnboardingWizard({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Step 2: Billing Entities & Tax Profiles</h2>
+                <h2 className="text-lg font-bold text-slate-900">Step 2: Billing Entities &amp; Tax Profiles</h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Configure legal SPVs that issue GST Tax Invoices. Tax rates are driven by configuration (§4.8).
+                  Configure corporate SPVs that issue GST tax invoices and legally execute lease contracts.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleAddSpv}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-bold transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 text-[#0F8B7D] border border-teal-200 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 Add Another SPV
@@ -709,7 +900,7 @@ export default function RentRollOnboardingWizard({
                       <button
                         type="button"
                         onClick={() => handleRemoveSpv(spv.id)}
-                        className="text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1"
+                        className="text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove SPV
                       </button>
@@ -726,7 +917,7 @@ export default function RentRollOnboardingWizard({
                         value={spv.legalName}
                         onChange={(e) => handleUpdateSpv(spv.id, "legalName", e.target.value)}
                         placeholder="e.g. Apex Tech Park Phase-1 LLP"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                       />
                     </div>
 
@@ -737,7 +928,7 @@ export default function RentRollOnboardingWizard({
                       <select
                         value={spv.taxProfile}
                         onChange={(e) => handleUpdateSpv(spv.id, "taxProfile", e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                       >
                         <option value="gst_18">Standard Commercial GST (18%)</option>
                         <option value="exempt_0">Exempt / Nil Rated (0%)</option>
@@ -756,7 +947,7 @@ export default function RentRollOnboardingWizard({
                         value={spv.gstin}
                         onChange={(e) => handleUpdateSpv(spv.id, "gstin", e.target.value.toUpperCase())}
                         placeholder="29AABCS1429B1Z1"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase bg-white font-mono"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase bg-white font-mono"
                       />
                     </div>
 
@@ -770,7 +961,7 @@ export default function RentRollOnboardingWizard({
                         value={spv.pan}
                         onChange={(e) => handleUpdateSpv(spv.id, "pan", e.target.value.toUpperCase())}
                         placeholder="AABCS1429B"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase bg-white font-mono"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase bg-white font-mono"
                       />
                     </div>
 
@@ -781,7 +972,7 @@ export default function RentRollOnboardingWizard({
                       <select
                         value={spv.state}
                         onChange={(e) => handleUpdateSpv(spv.id, "state", e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                       >
                         {ALL_INDIAN_STATES.map((st) => (
                           <option key={st} value={st}>
@@ -797,170 +988,389 @@ export default function RentRollOnboardingWizard({
           </div>
         )}
 
-        {/* STEP 3: CANONICAL CHARGE TYPES */}
+        {/* STEP 3: CANONICAL CHARGE TYPES IN DROPDOWNS */}
         {currentStep === 3 && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 3: Canonical Charge Types (§4.8)</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Select the billable line items active for your portfolio. Rent Roll will track and invoice each item according to its SAC code and GST rate.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Step 3: Canonical Charge Types &amp; Invoicing Rules</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Configure billable revenue lines, utility pass-throughs, and recoveries matching your lease contracts.
+                </p>
+              </div>
+
+              {/* Add Charge Dropdown */}
+              <div className="w-full sm:w-auto min-w-[280px]">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Add Charge from Standard Catalog
+                </label>
+                <select
+                  value=""
+                  onChange={(e) => handleAddChargeFromDropdown(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border-2 border-[#0F8B7D] text-[#0F8B7D] bg-teal-50/50 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                >
+                  <option value="">+ Select Charge Type to Add...</option>
+                  <optgroup label="Core Rental &amp; Seats">
+                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Core Rental").map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        disabled={selectedCharges.includes(c.id)}
+                      >
+                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Operational CAM &amp; Utilities">
+                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "CAM & Utilities").map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        disabled={selectedCharges.includes(c.id)}
+                      >
+                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Services &amp; Amenities">
+                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Services & Amenities").map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        disabled={selectedCharges.includes(c.id)}
+                      >
+                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Statutory Recoveries">
+                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Statutory Recoveries").map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        disabled={selectedCharges.includes(c.id)}
+                      >
+                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Deposits &amp; Penalties">
+                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Deposits & Penalties").map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        disabled={selectedCharges.includes(c.id)}
+                      >
+                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {CANONICAL_CHARGE_TYPES.map((charge) => {
-                const isSelected = selectedCharges.includes(charge.id);
-                return (
-                  <div
-                    key={charge.id}
-                    onClick={() => handleToggleCharge(charge.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? "border-blue-600 bg-blue-50/30 shadow-sm"
-                        : "border-slate-200 hover:border-slate-300 bg-white opacity-70"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+            {/* Active Charges List Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 grid grid-cols-12 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-4">Charge Name &amp; Description</div>
+                <div className="col-span-2">SAC / Code</div>
+                <div className="col-span-3">Calculation Basis (Dropdown)</div>
+                <div className="col-span-2">GST Tax Rate</div>
+                <div className="col-span-1 text-right">Action</div>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {selectedCharges.map((chargeId) => {
+                  const charge = CANONICAL_CHARGE_TYPES.find((c) => c.id === chargeId);
+                  if (!charge) return null;
+                  const currentBasis = chargeBasisOverrides[charge.id] || charge.defaultBasis;
+
+                  return (
+                    <div
+                      key={charge.id}
+                      className="px-4 py-3 grid grid-cols-12 items-center hover:bg-slate-50/70 transition-colors"
+                    >
+                      <div className="col-span-4 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-900">{charge.name}</span>
+                          {charge.required && (
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                              Mandatory
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{charge.desc}</p>
+                      </div>
+
+                      <div className="col-span-2">
+                        <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                           {charge.code}
                         </span>
-                        <div
-                          className={`w-5 h-5 rounded flex items-center justify-center border ${
-                            isSelected
-                              ? "bg-blue-600 border-blue-600 text-white"
-                              : "border-slate-300 bg-white"
+                      </div>
+
+                      <div className="col-span-3 pr-2">
+                        <select
+                          value={currentBasis}
+                          onChange={(e) =>
+                            setChargeBasisOverrides((prev) => ({
+                              ...prev,
+                              [charge.id]: e.target.value,
+                            }))
+                          }
+                          className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                        >
+                          <option value="per_area">Area-based (₹ / sq ft / mo)</option>
+                          <option value="per_seat">Seat-based (₹ / seat / mo)</option>
+                          <option value="fixed">Fixed Lumpsum (₹ / mo)</option>
+                          <option value="metered">Metered Sub-Meter Units</option>
+                          <option value="per_slot">Slot-based (₹ / slot / mo)</option>
+                          <option value="pro_rata_share">Pro-rata Area Share</option>
+                          <option value="pct_of_turnover">Turnover Percentage (%)</option>
+                          <option value="per_use">Per Use / Hourly Rate</option>
+                        </select>
+                      </div>
+
+                      <div className="col-span-2">
+                        <span
+                          className={`text-xs font-bold ${
+                            charge.isTaxable ? "text-[#0F8B7D]" : "text-slate-600"
                           }`}
                         >
-                          {isSelected && <Check className="w-3.5 h-3.5" />}
-                        </div>
+                          {charge.taxRate}
+                        </span>
+                        <div className="text-[10px] text-slate-400 font-medium">Group: {charge.invoiceGroup}</div>
                       </div>
-                      <h3 className="text-sm font-bold text-slate-900">{charge.name}</h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{charge.desc}</p>
-                    </div>
 
-                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-slate-700">{charge.category}</span>
-                      <span className={`font-bold ${charge.isTaxable ? "text-blue-700" : "text-slate-500"}`}>
-                        {charge.taxRate}
-                      </span>
+                      <div className="col-span-1 text-right">
+                        {charge.required ? (
+                          <span className="text-[11px] text-slate-300 italic font-medium">Locked</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCharge(charge.id)}
+                            className="text-xs text-rose-500 hover:text-rose-700 p-1 transition cursor-pointer"
+                            title="Remove charge rule"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* STEP 4: PHYSICAL SPACE HIERARCHY */}
+        {/* STEP 4: PHYSICAL SPACE HIERARCHY GENERATOR */}
         {currentStep === 4 && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Step 4: Physical Space Hierarchy Generator</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Define your building and floors. Real physical space units will be generated in PostgreSQL for immediate leasing (§4.5).
+                Define your commercial building, stacking floorplates, and leasable suites for real inventory tracking.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Property Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={propertyName}
-                  onChange={(e) => setPropertyName(e.target.value)}
-                  placeholder="e.g. Apex Business Tower"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+            {/* Section A: Property Master */}
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Building className="w-4 h-4 text-[#0F8B7D]" /> Property &amp; Commercial Classification
+              </h3>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Property Code
-                </label>
-                <input
-                  type="text"
-                  value={propertyCode}
-                  onChange={(e) => setPropertyCode(e.target.value.toUpperCase())}
-                  placeholder="APX-BKC"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Property Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyName}
+                    onChange={(e) => setPropertyName(e.target.value)}
+                    placeholder="e.g. Apex Business Tower"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Asset Classification
-                </label>
-                <select
-                  value={propertyType}
-                  onChange={(e) => setPropertyType(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="office">Commercial Office</option>
-                  <option value="flex_workspace">Flex / Co-working Centre</option>
-                  <option value="retail">Retail Mall / High Street</option>
-                  <option value="mixed">Mixed-Use Commercial</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Property Code (Unique)
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyCode}
+                    onChange={(e) => setPropertyCode(e.target.value.toUpperCase())}
+                    placeholder="APX-BKC"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase font-mono bg-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Total Leasable Area (sq ft) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={areaSqft || ""}
-                  onChange={(e) => setAreaSqft(Number(e.target.value))}
-                  placeholder="40000"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Asset Classification
+                  </label>
+                  <select
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    <option value="office">Commercial Office</option>
+                    <option value="it_park">IT / Tech Park</option>
+                    <option value="flex_workspace">Flex / Co-working Centre</option>
+                    <option value="retail">Retail Mall / High Street</option>
+                    <option value="industrial">Industrial &amp; Logistics Park</option>
+                    <option value="warehouse">Commercial Warehouse</option>
+                    <option value="mixed_use">Mixed-Use Commercial</option>
+                    <option value="sez_ifsc">SEZ / IFSC Financial Tower</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Number of Floors
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={floorsCount || ""}
-                  onChange={(e) => setFloorsCount(Math.max(1, Number(e.target.value)))}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Building Grade
+                  </label>
+                  <select
+                    value={buildingGrade}
+                    onChange={(e) => setBuildingGrade(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    <option value="A+">Grade A+ (Institutional Tech Park)</option>
+                    <option value="A">Grade A (Prime Commercial Tower)</option>
+                    <option value="B+">Grade B+ (High-Street Commercial)</option>
+                    <option value="B">Grade B (Established Commercial)</option>
+                    <option value="C">Grade C (Standard Commercial)</option>
+                  </select>
+                </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Suites / Units Per Floor
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={unitsPerFloor || ""}
-                  onChange={(e) => setUnitsPerFloor(Math.max(1, Number(e.target.value)))}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {/* Section B: Spatial Dimensions & Floorplate Stacking */}
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#0F8B7D]" /> Building &amp; Stacking Dimensions
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Building / Tower Name
+                  </label>
+                  <input
+                    type="text"
+                    value={buildingName}
+                    onChange={(e) => setBuildingName(e.target.value)}
+                    placeholder="Tower 1 / North Wing"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Chargeable Area (sq ft) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={areaSqft || ""}
+                    onChange={(e) => setAreaSqft(Number(e.target.value))}
+                    placeholder="40000"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Carpet Area (sq ft)
+                  </label>
+                  <input
+                    type="number"
+                    value={carpetAreaSqft || ""}
+                    onChange={(e) => setCarpetAreaSqft(Number(e.target.value))}
+                    placeholder="28800"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                  <span className="text-[10px] text-teal-700 font-bold block mt-0.5">
+                    {efficiencyPercent}% Efficiency ({loadingPercent}% Loading)
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Asking Rate (₹ / sq ft / mo)
+                  </label>
+                  <input
+                    type="number"
+                    value={askingRatePerSqft || ""}
+                    onChange={(e) => setAskingRatePerSqft(Number(e.target.value))}
+                    placeholder="125"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Floors Above Ground
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={floorsCount || ""}
+                    onChange={(e) => setFloorsCount(Math.max(1, Number(e.target.value)))}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Basement Levels (Below Ground)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={basementCount}
+                    onChange={(e) => setBasementCount(Math.max(0, Number(e.target.value)))}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Suites / Units Per Floor
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={unitsPerFloor || ""}
+                    onChange={(e) => setUnitsPerFloor(Math.max(1, Number(e.target.value)))}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Fitout Handover Condition
+                  </label>
+                  <select
+                    value={fitoutCondition}
+                    onChange={(e) => setFitoutCondition(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    <option value="warm_shell">Warm Shell (HVAC + Screed)</option>
+                    <option value="bare_shell">Bare Shell (Raw Concrete)</option>
+                    <option value="plug_and_play">Fully Fitted / Plug &amp; Play</option>
+                    <option value="furnished">Enterprise Furnished Suites</option>
+                  </select>
+                </div>
               </div>
+            </div>
 
+            {/* Section C: Geographic Location */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Asking Rate (₹ / sq ft / month)
-                </label>
-                <input
-                  type="number"
-                  value={askingRatePerSqft || ""}
-                  onChange={(e) => setAskingRatePerSqft(Number(e.target.value))}
-                  placeholder="125"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                   City
                 </label>
                 <input
@@ -968,18 +1378,45 @@ export default function RentRollOnboardingWizard({
                   value={propertyCity}
                   onChange={(e) => setPropertyCity(e.target.value)}
                   placeholder="Bengaluru"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Commercial Micro-Market
+                </label>
+                <input
+                  type="text"
+                  value={microMarket}
+                  onChange={(e) => setMicroMarket(e.target.value)}
+                  placeholder="Outer Ring Road / BKC"
+                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  placeholder="560103"
+                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] font-mono bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                   State
                 </label>
                 <select
                   value={propertyState}
                   onChange={(e) => setPropertyState(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                 >
                   {ALL_INDIAN_STATES.map((st) => (
                     <option key={st} value={st}>
@@ -991,18 +1428,18 @@ export default function RentRollOnboardingWizard({
             </div>
 
             {/* Live Generator Preview Box */}
-            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+            <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/50">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-[#0F8B7D]" />
                   Live Physical Space Generator Preview
                 </span>
-                <span className="text-xs font-bold text-blue-700">
+                <span className="text-xs font-bold text-[#0F8B7D]">
                   {totalUnits} Units Total ({areaPerUnit.toLocaleString("en-IN")} sq ft / unit)
                 </span>
               </div>
-              <p className="text-xs text-blue-800">
-                The wizard will auto-generate {totalUnits} physical spaces across {floorsCount} floors with ~{carpetPerUnit.toLocaleString("en-IN")} sq ft carpet area and asking rate of ₹{askingRatePerSqft}/sqft.
+              <p className="text-xs text-teal-800">
+                The generator will create {totalUnits} physical space records across {floorsCount} floors with ~{carpetPerUnit.toLocaleString("en-IN")} sq ft carpet area and asking rate of ₹{askingRatePerSqft}/sq ft/month.
               </p>
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {Array.from({ length: Math.min(8, totalUnits) }).map((_, i) => {
@@ -1011,15 +1448,15 @@ export default function RentRollOnboardingWizard({
                   return (
                     <span
                       key={i}
-                      className="px-2.5 py-1 rounded bg-white border border-blue-200 text-[11px] font-mono text-blue-900 font-semibold"
+                      className="px-2.5 py-1 rounded bg-white border border-teal-200 text-[11px] font-mono text-teal-900 font-semibold"
                     >
                       {propertyCode || "PROP"}-F0{f}-U0{u} ({areaPerUnit.toLocaleString("en-IN")} sqft)
                     </span>
                   );
                 })}
                 {totalUnits > 8 && (
-                  <span className="px-2.5 py-1 rounded bg-blue-100 text-[11px] text-blue-800 font-semibold">
-                    +{totalUnits - 8} more units
+                  <span className="px-2.5 py-1 rounded bg-teal-100 text-[11px] text-teal-800 font-bold">
+                    +{totalUnits - 8} more units across all levels
                   </span>
                 )}
               </div>
@@ -1027,94 +1464,174 @@ export default function RentRollOnboardingWizard({
           </div>
         )}
 
-        {/* STEP 5: TEAM & ROLES */}
+        {/* STEP 5: TEAM & DELEGATION (ROLES IN DROPDOWN ONLY) */}
         {currentStep === 5 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 5: Team Configuration & Delegation (§5.14)</h2>
+              <h2 className="text-lg font-bold text-slate-900">Step 5: Team Configuration &amp; Delegation</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Select your primary administrative role and declare property management delegation if applicable.
+                Configure your operating administrative account and declare property management delegation if applicable.
               </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">
-                Your Primary User Role in OFFICEX
+            {/* Part A: User Role Dropdown */}
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Your Primary Administrative Role
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {CANONICAL_ROLES.map((r) => {
-                  const isSelected = userRole === r.id;
-                  return (
-                    <div
-                      key={r.id}
-                      onClick={() => setUserRole(r.id)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? "border-blue-600 bg-blue-50/40 shadow-sm"
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-900">{r.title}</span>
-                          {isSelected && (
-                            <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                              <Check className="w-2.5 h-2.5" />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500">{r.desc}</p>
-                      </div>
-                      <div className="mt-2 text-[10px] font-bold uppercase text-blue-700 tracking-wider">
-                        {r.badge}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <select
+                value={userRole}
+                onChange={(e) => setUserRole(e.target.value)}
+                className="w-full px-4 py-2.5 text-sm font-bold rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+              >
+                <optgroup label="Asset Leadership">
+                  {CANONICAL_ROLES.filter((r) => r.group === "Asset Leadership").map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Operations &amp; Leasing">
+                  {CANONICAL_ROLES.filter((r) => r.group === "Operations").map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Finance &amp; Accounts">
+                  {CANONICAL_ROLES.filter((r) => r.group === "Finance & Accounts").map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="System &amp; Governance">
+                  {CANONICAL_ROLES.filter((r) => r.group === "System & Governance").map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <p className="text-xs text-slate-500">
+                Your role determines default dashboard metrics, approval authority, and tenant dispute oversight.
+              </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">Delegate to Property Management Company?</h4>
+            {/* Part B: Portfolio Management Mode */}
+            <div className="space-y-4">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Portfolio Management Mode
+              </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div
+                  onClick={() => setManagementMode("self")}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    managementMode === "self"
+                      ? "border-[#0F8B7D] bg-teal-50/40 shadow-xs"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-bold text-slate-900">Self-Managed Portfolio</h4>
+                    {managementMode === "self" && (
+                      <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
+                        <Check size={11} />
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">
-                    If an external PM firm or agency manages day-to-day operations and lease deeds on your behalf.
+                    Day-to-day tenant relations, commercial lease deeds, and facility upkeep are managed directly by your in-house operations team.
                   </p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={hasDelegatedManager}
-                  onChange={(e) => setHasDelegatedManager(e.target.checked)}
-                  className="w-5 h-5 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
-                />
+
+                <div
+                  onClick={() => setManagementMode("delegated")}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    managementMode === "delegated"
+                      ? "border-[#0F8B7D] bg-teal-50/40 shadow-xs"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-bold text-slate-900">Delegated Portfolio Management</h4>
+                    {managementMode === "delegated" && (
+                      <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
+                        <Check size={11} />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    An external PMC, facility management partner, or managed service agency administers the property on your behalf under a formal mandate.
+                  </p>
+                </div>
               </div>
 
-              {hasDelegatedManager && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/30">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Manager / Agency Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={managerName}
-                      onChange={(e) => setManagerName(e.target.value)}
-                      placeholder="e.g. Cushman & Wakefield / JLL"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    />
+              {/* If Delegated: Partner Configuration */}
+              {managementMode === "delegated" && (
+                <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/30 space-y-4 mt-3">
+                  <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider">
+                    Delegated Management Partner Details
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        Partner Entity Type
+                      </label>
+                      <select
+                        value={managerType}
+                        onChange={(e) => setManagerType(e.target.value)}
+                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                      >
+                        <option value="pm_company">Property Management Company (PMC)</option>
+                        <option value="fm_company">Facility Management Company (FMC)</option>
+                        <option value="msp">Managed Service Provider (MSP)</option>
+                        <option value="user_pm">Individual Centre Head / Operations Lead</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        Partner Firm / Agency Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={managerName}
+                        onChange={(e) => setManagerName(e.target.value)}
+                        placeholder="e.g. Cushman &amp; Wakefield / JLL"
+                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        Operating Manager Email
+                      </label>
+                      <input
+                        type="email"
+                        value={managerEmail}
+                        onChange={(e) => setManagerEmail(e.target.value)}
+                        placeholder="centremanager@agency.com"
+                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Manager Email Address
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Delegation Mandate Scope
                     </label>
-                    <input
-                      type="email"
-                      value={managerEmail}
-                      onChange={(e) => setManagerEmail(e.target.value)}
-                      placeholder="centremanager@pmagency.com"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    />
+                    <select
+                      value={delegationScope}
+                      onChange={(e) => setDelegationScope(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                    >
+                      <option value="full_operations">Full Operations &amp; Lease Administration (Leases, Invoicing &amp; Facilities)</option>
+                      <option value="cam_facilities">Facilities &amp; CAM Operations Only (Maintenance &amp; Utilities)</option>
+                      <option value="lease_admin">Lease Administration &amp; Rent Collection Only</option>
+                    </select>
                   </div>
                 </div>
               )}
@@ -1122,38 +1639,89 @@ export default function RentRollOnboardingWizard({
           </div>
         )}
 
-        {/* STEP 6: GO-LIVE STRATEGY */}
+        {/* STEP 6: GO-LIVE STRATEGY SELECTION */}
         {currentStep === 6 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 6: Go-Live & Strategy Selection</h2>
+              <h2 className="text-lg font-bold text-slate-900">Step 6: Go-Live &amp; Strategy Selection</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Your workspace structure is configured. Choose how you would like to begin working in Rent Roll:
+                Your workspace structure is configured. Review your pre-flight summary and select your operational starting strategy:
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Pre-Flight Workspace Summary Card */}
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Legal SPV</span>
+                <span className="font-bold text-slate-800 truncate block mt-0.5">
+                  {spvs[0]?.legalName || companyName}
+                </span>
+                <span className="text-[11px] text-slate-500 font-mono">
+                  {spvs[0]?.gstin || "Standard GST"}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Physical Space</span>
+                <span className="font-bold text-slate-800 truncate block mt-0.5">
+                  {propertyName}
+                </span>
+                <span className="text-[11px] text-teal-700 font-bold block">
+                  {totalUnits} Units ({areaSqft.toLocaleString("en-IN")} sq ft)
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Charge Rules</span>
+                <span className="font-bold text-slate-800 block mt-0.5">
+                  {selectedCharges.length} Active Lines
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  Base Rent, CAM, Power, Deposit
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Operating Role</span>
+                <span className="font-bold text-slate-800 truncate block mt-0.5">
+                  {CANONICAL_ROLES.find((r) => r.id === userRole)?.title || userRole}
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  {managementMode === "delegated" ? `Delegated to ${managerName || "Partner"}` : "Self-Managed"}
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Clean Go-Live Strategies */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {[
                 {
                   id: "rent_roll" as const,
                   title: "Clean Live Rent Roll",
-                  desc: "Open active Rent Roll with generated vacant spaces ready for leasing and occupancy updates.",
+                  desc: "Open active Rent Roll with generated vacant spaces ready for tenant allocations and immediate occupancy tracking.",
                   icon: Layers,
                   badge: "Recommended",
                 },
                 {
                   id: "create_lease" as const,
-                  title: "Execute First Lease (S-21)",
-                  desc: "Immediately launch the 7-step Contract Wizard to create your first executed commercial lease deed.",
+                  title: "Execute First Commercial Lease",
+                  desc: "Launch the guided Contract Wizard to draft or execute your first formal commercial lease deed with rent escalation schedule.",
                   icon: FileText,
-                  badge: "Step-by-Step",
+                  badge: "Direct Draft",
                 },
                 {
                   id: "import_excel" as const,
-                  title: "Import Existing Excel (S-30)",
-                  desc: "Upload your current landlord spreadsheet using our smart column mapper and synonym dictionary.",
+                  title: "Import Existing Excel",
+                  desc: "Upload legacy Excel spreadsheets using our Smart Column Mapper, synonym dictionary, and control-total reconciliation.",
                   icon: FileSpreadsheet,
                   badge: "Bulk Migration",
+                },
+                {
+                  id: "assisted_concierge" as const,
+                  title: "Assisted Concierge Ingestion",
+                  desc: "Request dedicated OfficeX onboarding support for contract document abstraction and historical audit balancing.",
+                  icon: Sparkles,
+                  badge: "Concierge",
                 },
               ].map((opt) => {
                 const isSelected = startingStrategy === opt.id;
@@ -1162,33 +1730,33 @@ export default function RentRollOnboardingWizard({
                   <div
                     key={opt.id}
                     onClick={() => setStartingStrategy(opt.id)}
-                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected
-                        ? "border-blue-600 bg-blue-50/40 shadow-md ring-1 ring-blue-500"
+                        ? "border-[#0F8B7D] bg-teal-50/40 shadow-md ring-1 ring-[#0F8B7D]"
                         : "border-slate-200 hover:border-slate-300 bg-white"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                            isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isSelected ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-700"
                           }`}
                         >
-                          <IconComponent className="w-5 h-5" />
+                          <IconComponent className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 uppercase">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
                           {opt.badge}
                         </span>
                       </div>
-                      <h3 className="text-sm font-bold text-slate-900">{opt.title}</h3>
-                      <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{opt.desc}</p>
+                      <h3 className="text-xs font-bold text-slate-900">{opt.title}</h3>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{opt.desc}</p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-blue-700">Select Path</span>
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[#0F8B7D]">Select Path</span>
                       {isSelected ? (
-                        <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
                           <Check className="w-2.5 h-2.5" />
                         </div>
                       ) : (
@@ -1199,77 +1767,50 @@ export default function RentRollOnboardingWizard({
                 );
               })}
             </div>
-
-            {/* Final Confirmation Summary */}
-            <div className="p-4 rounded-xl bg-slate-900 text-white text-xs space-y-2">
-              <div className="font-bold uppercase tracking-wider text-slate-400">
-                Workspace Configuration Summary
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-                <div>
-                  <span className="text-slate-400 block">Organization:</span>
-                  <span className="font-semibold text-white">{companyName || "Commercial Holdings"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">Property & Units:</span>
-                  <span className="font-semibold text-white">
-                    {propertyName || "Tower A"} ({totalUnits} units, {areaSqft.toLocaleString("en-IN")} sqft)
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">SPVs & Tax:</span>
-                  <span className="font-semibold text-white">
-                    {spvs.length} Entity ({spvs[0]?.taxProfile === "gst_18" ? "18% GST" : "Exempt"})
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">Charge Types:</span>
-                  <span className="font-semibold text-white">{selectedCharges.length} canonical charges</span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Wizard Footer Navigation */}
-      <div className="bg-slate-50 px-8 py-5 border-t border-slate-200 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handlePrev}
-          disabled={currentStep === 1 || isSubmitting}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 disabled:opacity-40 transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+      {/* Wizard Footer Controls */}
+      <div className="px-8 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <div>
+          {currentStep > 1 && (
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 border border-slate-300 hover:bg-white rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <ArrowLeft className="w-4 h-4" /> Previous Step
+            </button>
+          )}
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center space-x-3">
+          <span className="text-xs text-slate-500 font-medium">Step {currentStep} of 6</span>
           {currentStep < 6 ? (
             <button
               type="button"
               onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition"
+              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              Next Step
-              <ArrowRight className="w-4 h-4" />
+              Next Step <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinish}
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition disabled:opacity-50"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-bold text-xs transition flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Initializing Workspace...
+                  Generating Workspace...
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  Launch Workspace & Open Rent Roll
+                  Commit &amp; Launch Rent Roll <Sparkles className="w-4 h-4" />
                 </>
               )}
             </button>

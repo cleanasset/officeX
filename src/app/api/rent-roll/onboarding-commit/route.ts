@@ -256,6 +256,13 @@ export async function POST(req: Request) {
     const state = propData.state || "Karnataka";
     const address = propData.address || "Outer Ring Road";
 
+    const rawType = (propData.propertyType || "office").toLowerCase();
+    let dbPropertyType: "office" | "residential" | "retail" | "flex_workspace" | "mixed" = "office";
+    if (rawType.includes("retail")) dbPropertyType = "retail";
+    else if (rawType.includes("flex") || rawType.includes("coworking")) dbPropertyType = "flex_workspace";
+    else if (rawType.includes("mixed")) dbPropertyType = "mixed";
+    else if (rawType.includes("residential")) dbPropertyType = "residential";
+
     await db
       .insert(property)
       .values({
@@ -264,11 +271,12 @@ export async function POST(req: Request) {
         client_account_id: targetClientAccountId,
         property_name: propertyName,
         property_code: propertyCode,
-        property_type: (propData.propertyType || "office") as any,
+        property_type: dbPropertyType,
         total_leasable_area_sqft: String(totalAreaSqft),
         city: city,
         state: state,
         address: address,
+        postal_code: propData.pincode || null,
         country_code: "IN",
       })
       .onConflictDoNothing();
@@ -318,7 +326,9 @@ export async function POST(req: Request) {
     // 8. Auto-generate Physical Spaces (Units / Suites)
     const totalUnits = floorsCount * unitsPerFloor;
     const areaPerUnit = Math.round(totalAreaSqft / totalUnits);
-    const carpetAreaPerUnit = Math.round(areaPerUnit * 0.72); // Standard 72% carpet ratio
+    const carpetAreaPerUnit = propData.carpetAreaSqft
+      ? Math.round(Number(propData.carpetAreaSqft) / totalUnits)
+      : Math.round(areaPerUnit * 0.72);
     const askingRate = Number(propData.askingRatePerSqft) || 120.0;
 
     const createdSpaces: any[] = [];
