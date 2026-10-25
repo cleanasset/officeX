@@ -64,6 +64,7 @@ export default function VisitorComplianceLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState("CyberCity Tech Tower A");
+  const [activeMode, setActiveMode] = useState<"all" | "visitor" | "compliance">("all");
   const [currentTime, setCurrentTime] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -209,6 +210,21 @@ export default function VisitorComplianceLayout({
           icon: Wrench,
         },
         {
+          name: "Vendor Compliance",
+          href: "/vc/compliance/vendor",
+          icon: Users,
+        },
+        {
+          name: "Asset Compliance",
+          href: "/vc/compliance/assets",
+          icon: Building,
+        },
+        {
+          name: "Contract Compliance",
+          href: "/vc/compliance/contracts",
+          icon: FileCheck2,
+        },
+        {
           name: "Risk Heatmap",
           href: "/vc/compliance/risks",
           icon: Activity,
@@ -243,6 +259,16 @@ export default function VisitorComplianceLayout({
       ],
     },
   ];
+
+  const filteredSections = navigationSections.filter((section) => {
+    if (activeMode === "visitor") {
+      return section.title !== "Compliance & EHS (CM)";
+    }
+    if (activeMode === "compliance") {
+      return section.title !== "Visitor Management (VC)";
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-[#070A0F] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white antialiased">
@@ -290,10 +316,49 @@ export default function VisitorComplianceLayout({
           </div>
         </div>
 
-        {/* Center: Live Gate Status Pill */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+        {/* Center: Two-Mode Work Switcher (Visitor Flow vs Compliance Radar vs All-in-One) */}
+        <div className="hidden md:flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveMode("all")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              activeMode === "all"
+                ? "bg-slate-800 text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            All-In-One
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMode("visitor")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeMode === "visitor"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                : "text-slate-400 hover:text-blue-300"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Visitor Flow</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMode("compliance")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeMode === "compliance"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                : "text-slate-400 hover:text-emerald-300"
+            }`}
+          >
+            <FileCheck2 className="w-3.5 h-3.5" />
+            <span>Compliance Radar</span>
+          </button>
+        </div>
+
+        {/* Live Gate Status Pill */}
+        <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Turnstiles & QR Scanners Online</span>
+          <span>Turnstiles Online</span>
           <span className="text-slate-500 font-mono">| {currentTime}</span>
         </div>
 
@@ -378,7 +443,7 @@ export default function VisitorComplianceLayout({
         >
           {/* Scrollable Navigation */}
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
-            {navigationSections.map((section, idx) => (
+            {filteredSections.map((section, idx) => (
               <div key={idx} className="space-y-1">
                 {!sidebarCollapsed && (
                   <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
@@ -451,7 +516,7 @@ export default function VisitorComplianceLayout({
                 </button>
               </div>
 
-              {navigationSections.map((section, idx) => (
+              {filteredSections.map((section, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
                     {section.title}
