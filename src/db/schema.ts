@@ -1285,3 +1285,4 @@ export const contractClauses = pgTable("contract_clauses", {
 export * from "./rent-roll-schema";
 export * from "./validation";
 export * from "./marketplace-schema";
+export * from "./visitor-compliance-schema";
