@@ -24,7 +24,7 @@ function getMasterListings(): any[] {
     const jsonPath = path.join(process.cwd(), "office marketplace data", "json", "all_properties_master.json");
     if (fs.existsSync(jsonPath)) {
       const raw = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-      masterCache = raw.map((p: any, idx: number) => {
+      const parsed: any[] = raw.map((p: any, idx: number) => {
         const rawPhotoUrls = (p["Photo URLs"] || "").split(";").map((s: string) => s.trim()).filter(Boolean);
         const photos = rawPhotoUrls.map(cleanImageUrl);
         const featuredImage = photos[0] || cleanImageUrl(p["Featured Image"]);
@@ -87,7 +87,8 @@ function getMasterListings(): any[] {
           source: "verified_listing",
         };
       });
-      return masterCache;
+      masterCache = parsed;
+      return parsed;
     }
   } catch (err) {
     console.warn("Failed to load master properties JSON:", err);
