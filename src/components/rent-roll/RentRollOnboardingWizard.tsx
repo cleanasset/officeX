@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import Image from "next/image";
 import {
   Building2,
   CheckCircle2,
@@ -9,23 +10,19 @@ import {
   Building,
   ShieldCheck,
   FileText,
-  Plus,
-  Trash2,
-  Layers,
-  Users,
-  Receipt,
   FileSpreadsheet,
   Check,
   AlertCircle,
   Briefcase,
-  Sparkles,
-  HelpCircle,
+  Users,
+  Layers,
   ChevronDown,
   Info,
+  Sparkles,
 } from "lucide-react";
-import {
-  ALL_INDIAN_STATES,
-} from "@/lib/india-locations";
+import { INDIAN_STATES_CITIES } from "@/lib/india-locations";
+
+export const ALL_INDIAN_STATES = Object.keys(INDIAN_STATES_CITIES);
 
 export interface SPVData {
   id: string;
@@ -78,14 +75,15 @@ interface RentRollOnboardingWizardProps {
   initialRole?: string;
 }
 
-// 5 Commercial Customer Segments
-export const BUSINESS_SEGMENTS = [
+// 5 Commercial Operating Profiles
+export const BUSINESS_MODELS = [
   {
     id: "owner",
     code: "Segment A",
     title: "Commercial Property Owner / Landlord",
     badge: "Principal Asset Owner",
     desc: "Single or multi-asset owner, investment fund, or REIT managing owned commercial real estate.",
+    subtitle: "Principal asset owner, REIT, or investment fund managing owned real estate",
     defaultCharges: ["base_rent", "cam", "grid_power", "dg_backup", "parking", "security_deposit"],
   },
   {
@@ -94,6 +92,7 @@ export const BUSINESS_SEGMENTS = [
     title: "Property Management Company (PMC)",
     badge: "Multi-Client Operator",
     desc: "Professional agency administering leases, rent collection, and escalations across multiple client owner portfolios.",
+    subtitle: "Professional agency administering leases and rent collection across client portfolios",
     defaultCharges: ["base_rent", "cam", "parking", "late_fee", "security_deposit"],
   },
   {
@@ -102,6 +101,7 @@ export const BUSINESS_SEGMENTS = [
     title: "Facility Management Company (FMC)",
     badge: "Operations & CAM Pools",
     desc: "Focuses on common area maintenance recoveries, utility sub-metering, and technical vendor SLAs.",
+    subtitle: "Focuses on CAM recoveries, utility sub-metering, and technical vendor SLAs",
     defaultCharges: ["cam", "grid_power", "dg_backup", "water", "hvac_extended"],
   },
   {
@@ -110,6 +110,7 @@ export const BUSINESS_SEGMENTS = [
     title: "Managed Service Provider (MSP)",
     badge: "Turnkey Commercial Ops",
     desc: "End-to-end lease administration, fitout amortizations, facility upkeep, and owner monthly remittance ledgers.",
+    subtitle: "End-to-end lease administration, fitout amortizations, and owner remittance ledgers",
     defaultCharges: ["base_rent", "cam", "fitout_recovery", "parking", "grid_power", "security_deposit"],
   },
   {
@@ -118,9 +119,13 @@ export const BUSINESS_SEGMENTS = [
     title: "Flex Workspace / Co-working Operator",
     badge: "Seat & Cabin Billing",
     desc: "Operates dedicated desks, private cabins, enterprise managed offices, and head lease liabilities.",
+    subtitle: "Operates dedicated desks, private cabins, managed offices, and head lease liabilities",
     defaultCharges: ["base_rent", "seat_fee", "cam", "parking", "grid_power", "security_deposit"],
   },
 ];
+
+// Backwards compatibility alias
+export const BUSINESS_SEGMENTS = BUSINESS_MODELS;
 
 export interface DelegatedEntityType {
   id: string;
@@ -152,9 +157,9 @@ export const CANONICAL_ROLES = [
   { id: "asset_manager", title: "Asset Manager / Portfolio Lead", group: "Asset Leadership" },
   { id: "client_principal", title: "Client Principal (Managed Portfolio Owner)", group: "Asset Leadership" },
   { id: "management", title: "Executive Leadership / Portfolio Director", group: "Asset Leadership" },
-  { id: "property_manager", title: "Property Manager / Centre Head", group: "Operations" },
-  { id: "facility_manager", title: "Facility Manager / Site Operations Lead", group: "Operations" },
-  { id: "leasing_manager", title: "Leasing Manager / Commercial Deals Lead", group: "Operations" },
+  { id: "property_manager", title: "Property Manager / Centre Head", group: "Operations & Leasing" },
+  { id: "facility_manager", title: "Facility Manager / Site Operations Lead", group: "Operations & Leasing" },
+  { id: "leasing_manager", title: "Leasing Manager / Commercial Deals Lead", group: "Operations & Leasing" },
   { id: "finance_manager", title: "Financial Controller / CA / Billing Lead", group: "Finance & Accounts" },
   { id: "org_admin", title: "Organization Administrator", group: "System & Governance" },
   { id: "auditor", title: "Statutory & Tax Auditor (Read-Only)", group: "System & Governance" },
@@ -175,9 +180,7 @@ export interface ChargeTypeConfig {
   required?: boolean;
 }
 
-// Canonical Charge Types
 export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
-  // Core Rental
   {
     id: "base_rent",
     name: "Base Rent",
@@ -213,19 +216,6 @@ export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
     desc: "Monthly capital recovery of landlord-funded tenant interior fitout works.",
   },
   {
-    id: "turnover_rent",
-    name: "Turnover / Revenue Share Rent",
-    code: "SAC 997212",
-    category: "Core Rental",
-    defaultBasis: "pct_of_turnover",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "rent",
-    desc: "Percentage of gross turnover / sales revenue share for prime retail and anchor tenants.",
-  },
-
-  // Operational CAM & Utilities
-  {
     id: "cam",
     name: "Common Area Maintenance (CAM)",
     code: "SAC 997221",
@@ -249,142 +239,55 @@ export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
   },
   {
     id: "dg_backup",
-    name: "DG Power Backup",
-    code: "SAC 9987",
+    name: "Diesel Generator (DG) Power Backup",
+    code: "SAC 997221",
     category: "CAM & Utilities",
     defaultBasis: "metered",
     taxRate: "18% GST",
     isTaxable: true,
     invoiceGroup: "electricity",
-    desc: "Diesel generator emergency backup units or fixed kVA backup allowance.",
+    desc: "Captive diesel generator backup power charged per sub-metered run unit or kVA contracted.",
   },
-  {
-    id: "water",
-    name: "Water Supply & Sewage Charges",
-    code: "Utility Meter",
-    category: "CAM & Utilities",
-    defaultBasis: "metered",
-    taxRate: "0% GST (Exempt)",
-    isTaxable: false,
-    invoiceGroup: "water",
-    desc: "Municipal water connection and tanker supply metered consumption.",
-  },
-  {
-    id: "hvac_extended",
-    name: "After-Hours HVAC Cooling",
-    code: "SAC 9954",
-    category: "CAM & Utilities",
-    defaultBasis: "per_use",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "Hourly chilled water air-conditioning usage outside standard commercial operating hours.",
-  },
-
-  // Services & Amenities
   {
     id: "parking",
-    name: "Reserved Parking Bay",
-    code: "SAC 9967",
+    name: "Reserved Parking Slots",
+    code: "SAC 997212",
     category: "Services & Amenities",
     defaultBasis: "per_slot",
     taxRate: "18% GST",
     isTaxable: true,
     invoiceGroup: "parking",
-    desc: "Dedicated 4-wheeler and 2-wheeler basement or podium parking slot allocations.",
+    desc: "Allocated basement and surface car/two-wheeler parking slots charged per month.",
   },
-  {
-    id: "meeting_room",
-    name: "Meeting & Conference Rooms",
-    code: "SAC 9983",
-    category: "Services & Amenities",
-    defaultBasis: "per_use",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "On-demand boardroom, video conferencing room, and training facility bookings.",
-  },
-  {
-    id: "internet",
-    name: "Enterprise Internet & Bandwidth",
-    code: "SAC 9984",
-    category: "Services & Amenities",
-    defaultBasis: "fixed",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "Dedicated lease line high-speed internet, firewall, and static IP allocation.",
-  },
-  {
-    id: "housekeeping",
-    name: "Demised Office Deep Cleaning",
-    code: "SAC 9985",
-    category: "Services & Amenities",
-    defaultBasis: "fixed",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "In-suite dedicated janitorial and daily office sanitation services.",
-  },
-  {
-    id: "signage",
-    name: "Facade & Building Signage",
-    code: "SAC 9983",
-    category: "Services & Amenities",
-    defaultBasis: "fixed",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "Pylon totem, lobby directory board, and external building facade branding rights.",
-  },
+];
 
-  // Statutory Recoveries
-  {
-    id: "property_tax",
-    name: "Property Tax Reimbursement",
-    code: "Statutory",
-    category: "Statutory Recoveries",
-    defaultBasis: "pro_rata_share",
-    taxRate: "0% GST",
-    isTaxable: false,
-    invoiceGroup: "statutory",
-    desc: "Pro-rata municipal commercial property tax recovery billed to long-term tenants.",
-  },
-  {
-    id: "insurance",
-    name: "Building Insurance Reimbursement",
-    code: "Statutory",
-    category: "Statutory Recoveries",
-    defaultBasis: "pro_rata_share",
-    taxRate: "0% GST",
-    isTaxable: false,
-    invoiceGroup: "statutory",
-    desc: "Commercial building comprehensive fire and special perils insurance recovery.",
-  },
+// Commercial Property Types
+export const PROPERTY_TYPES = [
+  { id: "office", label: "Commercial Office Building" },
+  { id: "it_park", label: "IT / Tech Park" },
+  { id: "retail", label: "Retail / Commercial Mall" },
+  { id: "mixed_use", label: "Mixed-Use Commercial" },
+  { id: "industrial", label: "Industrial / Logistics Hub" },
+  { id: "warehouse", label: "Commercial Warehouse" },
+  { id: "flex_centre", label: "Flex / Coworking Centre" },
+  { id: "sez_ifsc", label: "SEZ / IFSC Zone" },
+];
 
-  // Deposits & Penalties
-  {
-    id: "security_deposit",
-    name: "Security Deposit (Refundable)",
-    code: "Deposit",
-    category: "Deposits & Penalties",
-    defaultBasis: "fixed",
-    taxRate: "0% (Non-taxable)",
-    isTaxable: false,
-    invoiceGroup: "deposit",
-    desc: "Interest-free refundable security deposit held in trust during the lease term.",
-  },
-  {
-    id: "late_fee",
-    name: "Late Payment Default Interest",
-    code: "SAC 9997",
-    category: "Deposits & Penalties",
-    defaultBasis: "fixed",
-    taxRate: "18% GST",
-    isTaxable: true,
-    invoiceGroup: "services",
-    desc: "Standard 18% p.a. default interest on overdue rental invoices past the credit period.",
-  },
+// Building Grades
+export const BUILDING_GRADES = [
+  { id: "A+", label: "Grade A+ (Institutional Grade / LEED Platinum)" },
+  { id: "A", label: "Grade A (Prime Commercial)" },
+  { id: "B+", label: "Grade B+ (Modern Commercial)" },
+  { id: "B", label: "Grade B (Standard Commercial)" },
+  { id: "C", label: "Grade C (Functional Commercial)" },
+];
+
+// Fitout Conditions
+export const FITOUT_CONDITIONS = [
+  { id: "warm_shell", label: "Warm Shell (HVAC, screed flooring, power tapped)" },
+  { id: "bare_shell", label: "Bare Shell (Raw RCC structure)" },
+  { id: "fully_fitted", label: "Fully Fitted (Workstations, cabins, meeting rooms ready)" },
+  { id: "plug_and_play", label: "Plug and Play (Furnished with IT, internet, utilities)" },
 ];
 
 export default function RentRollOnboardingWizard({
@@ -392,203 +295,112 @@ export default function RentRollOnboardingWizard({
   onSkip,
   initialRole,
 }: RentRollOnboardingWizardProps) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Wizard operates in 3 streamlined steps
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Step 1: Business Model & User Role
-  const [businessModel, setBusinessModel] = useState("owner");
-  const [companyName, setCompanyName] = useState("");
-  const [brandName, setBrandName] = useState("");
-  const [userRole, setUserRole] = useState(initialRole || "owner");
+  // Step 1: Organization & Operating Profile State
+  const [businessModel, setBusinessModel] = useState<string>("owner");
+  const [companyName, setCompanyName] = useState<string>("");
+  const [brandName, setBrandName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>(initialRole || "owner");
 
-  // Step 2: SPVs / Billing Entities
-  const [spvs, setSpvs] = useState<SPVData[]>([
-    {
-      id: "spv-1",
-      legalName: "",
-      entityType: "owner",
-      gstin: "",
-      pan: "",
-      state: "Karnataka",
-      city: "Bengaluru",
-      address: "",
-      taxProfile: "gst_18",
-    },
-  ]);
+  // Step 1: Billing Entity / SPV
+  const [entityName, setEntityName] = useState<string>("");
+  const [gstin, setGstin] = useState<string>("");
+  const [pan, setPan] = useState<string>("");
+  const [spvState, setSpvState] = useState<string>("Gujarat");
+  const [spvCity, setSpvCity] = useState<string>("Ahmedabad");
+  const [taxProfile, setTaxProfile] = useState<"gst_18" | "exempt_0" | "sez_0" | "composition_1">("gst_18");
 
-  // Step 3: Selected Charges
-  const [selectedCharges, setSelectedCharges] = useState<string[]>([
-    "base_rent",
-    "cam",
-    "grid_power",
-    "dg_backup",
-    "parking",
-    "security_deposit",
-  ]);
-  const [chargeBasisOverrides, setChargeBasisOverrides] = useState<Record<string, string>>({});
-
-  // Step 4: Physical Space Hierarchy
-  const [propertyName, setPropertyName] = useState("");
-  const [propertyCode, setPropertyCode] = useState("");
-  const [propertyType, setPropertyType] = useState("office");
-  const [buildingGrade, setBuildingGrade] = useState("A");
-  const [buildingName, setBuildingName] = useState("Tower 1");
-  const [areaSqft, setAreaSqft] = useState<number>(40000);
-  const [carpetAreaSqft, setCarpetAreaSqft] = useState<number>(28800);
-  const [floorsCount, setFloorsCount] = useState<number>(4);
-  const [basementCount, setBasementCount] = useState<number>(1);
+  // Step 2: Commercial Property & Space Hierarchy
+  const [propertyName, setPropertyName] = useState<string>("");
+  const [propertyCode, setPropertyCode] = useState<string>("");
+  const [propertyType, setPropertyType] = useState<string>("office");
+  const [buildingGrade, setBuildingGrade] = useState<string>("A");
+  const [areaSqft, setAreaSqft] = useState<number>(25000);
+  const [carpetAreaSqft, setCarpetAreaSqft] = useState<number>(18000);
+  const [buildingName, setBuildingName] = useState<string>("Main Tower");
+  const [floorsCount, setFloorsCount] = useState<number>(5);
   const [unitsPerFloor, setUnitsPerFloor] = useState<number>(4);
-  const [askingRatePerSqft, setAskingRatePerSqft] = useState<number>(125);
-  const [fitoutCondition, setFitoutCondition] = useState("warm_shell");
-  const [propertyState, setPropertyState] = useState("Karnataka");
-  const [propertyCity, setPropertyCity] = useState("Bengaluru");
-  const [microMarket, setMicroMarket] = useState("Outer Ring Road");
-  const [pincode, setPincode] = useState("560103");
-  const [propertyAddress, setPropertyAddress] = useState("");
+  const [askingRatePerSqft, setAskingRatePerSqft] = useState<number>(85);
+  const [fitoutCondition, setFitoutCondition] = useState<string>("warm_shell");
+  const [propertyState, setPropertyState] = useState<string>("Gujarat");
+  const [propertyCity, setPropertyCity] = useState<string>("Ahmedabad");
+  const [microMarket, setMicroMarket] = useState<string>("SG Highway");
+  const [pincode, setPincode] = useState<string>("380015");
+  const [propertyAddress, setPropertyAddress] = useState<string>("");
 
-  // Step 5: Team Configuration & Delegation
-  const [managementMode, setManagementMode] = useState<"self" | "delegated">("self");
-  const [managerType, setManagerType] = useState("pm_company");
-  const [managerName, setManagerName] = useState("");
-  const [managerEmail, setManagerEmail] = useState("");
-  const [delegationScope, setDelegationScope] = useState("full_operations");
-
-  // Step 6: Starting Strategy
+  // Step 3: Go-Live Strategy & Delegation
   const [startingStrategy, setStartingStrategy] = useState<
     "rent_roll" | "create_lease" | "import_excel" | "assisted_concierge"
   >("rent_roll");
+  const [managementMode, setManagementMode] = useState<"self" | "delegated">("self");
+  const [managerType, setManagerType] = useState<string>("pm_company");
+  const [managerName, setManagerName] = useState<string>("");
+  const [managerEmail, setManagerEmail] = useState<string>("");
+  const [delegationScope, setDelegationScope] = useState<string>("full_operations");
 
-  // Auto-generate code when property name changes
-  useEffect(() => {
-    if (propertyName && !propertyCode) {
-      const generated = propertyName
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
+  // Auto-sync property code when property name changes
+  const handlePropertyNameChange = (name: string) => {
+    setPropertyName(name);
+    if (!propertyCode || propertyCode.startsWith("PROP-") || propertyCode === "") {
+      const slug = name
         .toUpperCase()
-        .slice(0, 4);
-      setPropertyCode(`${generated || "PROP"}-01`);
-    }
-  }, [propertyName, propertyCode]);
-
-  // Auto-calculate default carpet area as 72% of chargeable area when chargeable area changes
-  useEffect(() => {
-    if (areaSqft && (!carpetAreaSqft || carpetAreaSqft === Math.round(areaSqft * 0.72))) {
-      setCarpetAreaSqft(Math.round(areaSqft * 0.72));
-    }
-  }, [areaSqft]);
-
-  // Auto-populate SPV legal name from company name if empty
-  useEffect(() => {
-    if (companyName && spvs.length === 1 && !spvs[0].legalName) {
-      setSpvs((prev) => [{ ...prev[0], legalName: `${companyName} LLP` }]);
-    }
-  }, [companyName, spvs]);
-
-  // SPV Actions
-  const handleAddSpv = () => {
-    setSpvs((prev) => [
-      ...prev,
-      {
-        id: `spv-${Date.now()}`,
-        legalName: "",
-        entityType: "owner",
-        gstin: "",
-        pan: "",
-        state: propertyState,
-        city: propertyCity,
-        address: "",
-        taxProfile: "gst_18",
-      },
-    ]);
-  };
-
-  const handleRemoveSpv = (id: string) => {
-    if (spvs.length <= 1) return;
-    setSpvs((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  const handleUpdateSpv = (id: string, field: keyof SPVData, val: any) => {
-    setSpvs((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        const updated = { ...s, [field]: val };
-        // Auto-extract PAN from GSTIN if 15 chars provided
-        if (field === "gstin" && typeof val === "string" && val.length === 15) {
-          const panCandidate = val.slice(2, 12).toUpperCase();
-          if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panCandidate)) {
-            updated.pan = panCandidate;
-          }
-        }
-        return updated;
-      })
-    );
-  };
-
-  // Charge Actions
-  const handleAddChargeFromDropdown = (chargeId: string) => {
-    if (!chargeId) return;
-    if (!selectedCharges.includes(chargeId)) {
-      setSelectedCharges((prev) => [...prev, chargeId]);
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 6);
+      if (slug) setPropertyCode(`${slug}-01`);
     }
   };
 
-  const handleRemoveCharge = (id: string) => {
-    if (id === "base_rent") return; // mandatory core revenue
-    setSelectedCharges((prev) => prev.filter((c) => c !== id));
+  // Auto-calculate carpet area if not customized
+  const handleAreaChange = (val: number) => {
+    setAreaSqft(val);
+    setCarpetAreaSqft(Math.round(val * 0.72));
   };
 
-  // Step Validation
+  // Auto-extract PAN from 15-character GSTIN
+  const handleGstinChange = (val: string) => {
+    const clean = val.toUpperCase().trim();
+    setGstin(clean);
+    if (clean.length === 15) {
+      const panPart = clean.slice(2, 12);
+      if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panPart)) {
+        setPan(panPart);
+      }
+    }
+  };
+
+  // Validation across 3 steps
   const validateStep = (step: number): boolean => {
     setErrorMessage(null);
     if (step === 1) {
       if (!companyName.trim()) {
-        setErrorMessage("Please enter your Organization / Entity legal name.");
+        setErrorMessage("Please enter your Legal Entity / Organization Name.");
+        return false;
+      }
+      if (gstin && gstin.trim().length !== 15) {
+        setErrorMessage("GSTIN must be exactly 15 characters (e.g. 24AAACS1429B1Z1).");
         return false;
       }
       return true;
     }
     if (step === 2) {
-      for (let i = 0; i < spvs.length; i++) {
-        const s = spvs[i];
-        if (!s.legalName.trim()) {
-          setErrorMessage(`Billing Entity #${i + 1} requires a Legal Entity Name.`);
-          return false;
-        }
-        if (s.gstin && s.gstin.trim().length !== 15) {
-          setErrorMessage(`GSTIN for "${s.legalName}" must be exactly 15 characters (e.g. 29AABCS1429B1Z1).`);
-          return false;
-        }
+      if (!propertyName.trim()) {
+        setErrorMessage("Please enter a Property Name (e.g. Apex Business Tower).");
+        return false;
+      }
+      if (!areaSqft || areaSqft <= 0) {
+        setErrorMessage("Total Chargeable Area must be greater than zero.");
+        return false;
       }
       return true;
     }
     if (step === 3) {
-      if (!selectedCharges.includes("base_rent")) {
-        setErrorMessage("Base Rent is mandatory as the core rental revenue line.");
-        return false;
-      }
-      return true;
-    }
-    if (step === 4) {
-      if (!propertyName.trim()) {
-        setErrorMessage("Please enter your Property Name (e.g. Apex Business Tower).");
-        return false;
-      }
-      if (!areaSqft || areaSqft < 1000) {
-        setErrorMessage("Please provide a valid Leasable Area (minimum 1,000 sq ft).");
-        return false;
-      }
-      if (floorsCount < 1 || unitsPerFloor < 1) {
-        setErrorMessage("Floors and Units per Floor must each be at least 1.");
-        return false;
-      }
-      return true;
-    }
-    if (step === 5) {
       if (managementMode === "delegated") {
         if (!managerName.trim()) {
-          setErrorMessage("Please provide the Delegated Partner Firm or Manager Name.");
+          setErrorMessage("Please enter the Delegated Property Manager or Agency Name.");
           return false;
         }
       }
@@ -599,7 +411,7 @@ export default function RentRollOnboardingWizard({
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(6, prev + 1));
+      setCurrentStep((prev) => Math.min(3, prev + 1));
     }
   };
 
@@ -614,19 +426,34 @@ export default function RentRollOnboardingWizard({
     setErrorMessage(null);
 
     const hasDelegated = managementMode === "delegated";
+    const selectedModelObj = BUSINESS_MODELS.find((m) => m.id === businessModel) || BUSINESS_MODELS[0];
+
+    const spvList: SPVData[] = [
+      {
+        id: "spv-1",
+        legalName: (entityName || companyName).trim(),
+        entityType: "Private Limited",
+        gstin: gstin.trim(),
+        pan: pan.trim(),
+        state: spvState,
+        city: spvCity,
+        address: propertyAddress.trim() || `${spvCity}, ${spvState}`,
+        taxProfile: taxProfile,
+      },
+    ];
 
     const data: OnboardingCompleteData = {
       businessModel,
       companyName: companyName.trim(),
       brandName: (brandName || companyName).trim(),
       role: userRole,
-      spvs,
-      chargeTypes: selectedCharges,
+      spvs: spvList,
+      chargeTypes: selectedModelObj.defaultCharges,
       propertyName: propertyName.trim(),
       propertyCode: (propertyCode || "PROP-01").trim(),
       propertyType,
       buildingGrade,
-      buildingName: buildingName.trim() || "Tower 1",
+      buildingName: buildingName.trim() || "Main Tower",
       areaSqft,
       carpetAreaSqft,
       floorsCount,
@@ -655,59 +482,64 @@ export default function RentRollOnboardingWizard({
     }
   };
 
-  // Calculations for Space Generator Preview
-  const totalUnits = floorsCount * unitsPerFloor;
-  const areaPerUnit = totalUnits > 0 ? Math.round(areaSqft / totalUnits) : 0;
-  const effectiveCarpet = carpetAreaSqft || Math.round(areaSqft * 0.72);
-  const carpetPerUnit = totalUnits > 0 ? Math.round(effectiveCarpet / totalUnits) : 0;
-  const efficiencyPercent = areaSqft > 0 ? Math.round((effectiveCarpet / areaSqft) * 100) : 72;
-  const loadingPercent = 100 - efficiencyPercent;
-
   return (
     <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden font-sans">
-      {/* Wizard Header with Brand Logo */}
-      <div className="bg-slate-900 text-white px-8 py-6 border-b border-slate-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="h-10 px-3 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center justify-center shadow-inner">
-              <img
+      {/* 1. Header with Authentic OfficeX Logo */}
+      <div className="bg-slate-900 text-white px-6 sm:px-8 py-5 border-b border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            {/* Authentic OfficeX Logo Pair */}
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15">
+              <Image
+                src="/logo-removebg-preview.png"
+                alt="OfficeX Logo"
+                width={32}
+                height={32}
+                priority
+                className="object-contain"
+                style={{ width: "auto", height: "26px" }}
+              />
+              <Image
                 src="/name-removebg-preview.png"
                 alt="OfficeX"
-                className="h-7 w-auto object-contain brightness-0 invert"
+                width={100}
+                height={22}
+                priority
+                className="object-contain brightness-0 invert"
+                style={{ width: "auto", height: "20px" }}
               />
             </div>
+
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 Commercial Onboarding Suite
-                <span className="text-[11px] uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold tracking-wider">
+                <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold tracking-wider">
                   Lease-to-Cash
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Setup your operating entities, tax profiles, billable charge rules, and physical space hierarchy
+                Quick 3-step setup: Operating Profile, First Commercial Property, and Go-Live Strategy
               </p>
             </div>
           </div>
+
           {onSkip && (
             <button
               onClick={onSkip}
-              className="text-xs text-slate-400 hover:text-white transition underline cursor-pointer"
+              className="text-xs text-slate-400 hover:text-white transition underline cursor-pointer self-start sm:self-auto"
             >
               Skip Setup &amp; Explore
             </button>
           )}
         </div>
 
-        {/* Progress Bar & Steps Tabs */}
-        <div className="mt-6">
-          <div className="grid grid-cols-6 gap-2 text-xs">
+        {/* 2. Simplified 3-Step Progress Stepper */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80">
+          <div className="grid grid-cols-3 gap-3 text-xs">
             {[
-              { num: 1, label: "Business Model" },
-              { num: 2, label: "SPVs & Tax" },
-              { num: 3, label: "Charge Rules" },
-              { num: 4, label: "Space Hierarchy" },
-              { num: 5, label: "Team & Delegation" },
-              { num: 6, label: "Go-Live Strategy" },
+              { num: 1, label: "Organization & Profile", desc: "Entity, model & role" },
+              { num: 2, label: "Property & Space", desc: "Hierarchy, area & specs" },
+              { num: 3, label: "Go-Live Strategy", desc: "Register, lease or import" },
             ].map((step) => {
               const isActive = currentStep === step.num;
               const isPast = currentStep > step.num;
@@ -717,7 +549,7 @@ export default function RentRollOnboardingWizard({
                   onClick={() => {
                     if (isPast) setCurrentStep(step.num);
                   }}
-                  className={`flex flex-col border-t-2 pt-2 transition-all ${
+                  className={`flex flex-col border-t-2 pt-2.5 transition-all ${
                     isActive
                       ? "border-teal-500 text-white font-semibold"
                       : isPast
@@ -725,11 +557,18 @@ export default function RentRollOnboardingWizard({
                       : "border-slate-800 text-slate-500"
                   }`}
                 >
-                  <span className="text-[10px] uppercase tracking-wider flex items-center gap-1 font-bold">
-                    {isPast && <Check className="w-3 h-3 text-emerald-400" />}
+                  <span className="text-[10px] uppercase tracking-wider flex items-center gap-1.5 font-bold">
+                    {isPast ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${isActive ? "bg-teal-500 text-slate-900 font-extrabold" : "bg-slate-800 text-slate-400"}`}>
+                        {step.num}
+                      </span>
+                    )}
                     Step {step.num}
                   </span>
-                  <span className="truncate">{step.label}</span>
+                  <span className="text-xs font-bold text-slate-200 truncate mt-0.5">{step.label}</span>
+                  <span className="text-[10px] text-slate-400 hidden sm:block truncate">{step.desc}</span>
                 </div>
               );
             })}
@@ -739,98 +578,60 @@ export default function RentRollOnboardingWizard({
 
       {/* Error Banner */}
       {errorMessage && (
-        <div className="mx-8 mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-3">
+        <div className="mx-6 sm:mx-8 mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm flex items-center gap-3">
           <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Step Body */}
-      <div className="p-8 min-h-[500px]">
-        {/* STEP 1: BUSINESS MODEL / CUSTOMER SEGMENT */}
+      <div className="p-6 sm:p-8 min-h-[460px]">
+        {/* ========================================================================= */}
+        {/* STEP 1: ORGANIZATION & OPERATING PROFILE (CLEAN DROPDOWNS ONLY)           */}
+        {/* ========================================================================= */}
         {currentStep === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-4xl">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 1: Select Your Commercial Business Model</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                OfficeX customizes default lease templates, accounting schedules, and billing workflows based on your operating profile.
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                Step 1: Organization &amp; Commercial Operating Profile
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Select your business model and administrative role to configure default lease templates and billing rules.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {BUSINESS_SEGMENTS.map((seg) => {
-                const isSelected = businessModel === seg.id;
-                return (
-                  <div
-                    key={seg.id}
-                    onClick={() => {
-                      setBusinessModel(seg.id);
-                      setSelectedCharges(seg.defaultCharges);
-                    }}
-                    className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? "border-[#0F8B7D] bg-teal-50/40 shadow-sm"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 uppercase">
-                          {seg.code}
-                        </span>
-                        {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
-                            <Check className="w-3 h-3" />
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-900">{seg.title}</h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{seg.desc}</p>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-100">
-                      <span className="text-[11px] font-bold text-[#0F8B7D]">{seg.badge}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+            {/* Core Profile Dropdowns & Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80">
+              {/* Business Model Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Legal Entity / Organization Name <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  Commercial Business Model <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g. Apex Commercial Holdings Pvt Ltd"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                />
+                <select
+                  value={businessModel}
+                  onChange={(e) => setBusinessModel(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-medium cursor-pointer shadow-xs"
+                >
+                  {BUSINESS_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {BUSINESS_MODELS.find((m) => m.id === businessModel)?.subtitle}
+                </p>
               </div>
 
+              {/* Administrative Role Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Commercial Brand / Portfolio Name
-                </label>
-                <input
-                  type="text"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  placeholder="e.g. Apex Business Parks"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                />
-              </div>
-
-              {/* Roles presented in clean dropdown only */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Your Primary Administrative Role <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={userRole}
                   onChange={(e) => setUserRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-medium cursor-pointer shadow-xs"
                 >
                   <optgroup label="Asset Leadership">
                     {CANONICAL_ROLES.filter((r) => r.group === "Asset Leadership").map((r) => (
@@ -840,20 +641,20 @@ export default function RentRollOnboardingWizard({
                     ))}
                   </optgroup>
                   <optgroup label="Operations &amp; Leasing">
-                    {CANONICAL_ROLES.filter((r) => r.group === "Operations").map((r) => (
+                    {CANONICAL_ROLES.filter((r) => r.group === "Operations & Leasing").map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.title}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Finance &amp; Controllership">
+                  <optgroup label="Finance &amp; Accounts">
                     {CANONICAL_ROLES.filter((r) => r.group === "Finance & Accounts").map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.title}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Governance &amp; Support">
+                  <optgroup label="System &amp; Governance">
                     {CANONICAL_ROLES.filter((r) => r.group === "System & Governance").map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.title}
@@ -861,449 +662,334 @@ export default function RentRollOnboardingWizard({
                     ))}
                   </optgroup>
                 </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: BILLING ENTITIES & TAX PROFILES */}
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Step 2: Billing Entities &amp; Tax Profiles</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Configure corporate SPVs that issue GST tax invoices and legally execute lease contracts.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddSpv}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 text-[#0F8B7D] border border-teal-200 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                Add Another SPV
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {spvs.map((spv, index) => (
-                <div
-                  key={spv.id}
-                  className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4 relative"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Billing Entity / SPV #{index + 1}
-                    </span>
-                    {spvs.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSpv(spv.id)}
-                        className="text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Remove SPV
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Legal SPV Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={spv.legalName}
-                        onChange={(e) => handleUpdateSpv(spv.id, "legalName", e.target.value)}
-                        placeholder="e.g. Apex Tech Park Phase-1 LLP"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Tax Profile
-                      </label>
-                      <select
-                        value={spv.taxProfile}
-                        onChange={(e) => handleUpdateSpv(spv.id, "taxProfile", e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
-                      >
-                        <option value="gst_18">Standard Commercial GST (18%)</option>
-                        <option value="exempt_0">Exempt / Nil Rated (0%)</option>
-                        <option value="sez_0">SEZ / IFSC Zero-Rated (0%)</option>
-                        <option value="composition_1">Composition Scheme (1%)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        GSTIN (15 characters)
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={15}
-                        value={spv.gstin}
-                        onChange={(e) => handleUpdateSpv(spv.id, "gstin", e.target.value.toUpperCase())}
-                        placeholder="29AABCS1429B1Z1"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase bg-white font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        PAN (10 characters)
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={10}
-                        value={spv.pan}
-                        onChange={(e) => handleUpdateSpv(spv.id, "pan", e.target.value.toUpperCase())}
-                        placeholder="AABCS1429B"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase bg-white font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        State
-                      </label>
-                      <select
-                        value={spv.state}
-                        onChange={(e) => handleUpdateSpv(spv.id, "state", e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
-                      >
-                        {ALL_INDIAN_STATES.map((st) => (
-                          <option key={st} value={st}>
-                            {st}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: CANONICAL CHARGE TYPES IN DROPDOWNS */}
-        {currentStep === 3 && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Step 3: Canonical Charge Types &amp; Invoicing Rules</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Configure billable revenue lines, utility pass-throughs, and recoveries matching your lease contracts.
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Determines your default dashboard, maker-checker permissions, and approval mandates.
                 </p>
               </div>
 
-              {/* Add Charge Dropdown */}
-              <div className="w-full sm:w-auto min-w-[280px]">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Add Charge from Standard Catalog
+              {/* Legal Entity Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  Legal Entity / Organization Name <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value=""
-                  onChange={(e) => handleAddChargeFromDropdown(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border-2 border-[#0F8B7D] text-[#0F8B7D] bg-teal-50/50 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
-                >
-                  <option value="">+ Select Charge Type to Add...</option>
-                  <optgroup label="Core Rental &amp; Seats">
-                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Core Rental").map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        disabled={selectedCharges.includes(c.id)}
-                      >
-                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Operational CAM &amp; Utilities">
-                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "CAM & Utilities").map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        disabled={selectedCharges.includes(c.id)}
-                      >
-                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Services &amp; Amenities">
-                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Services & Amenities").map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        disabled={selectedCharges.includes(c.id)}
-                      >
-                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Statutory Recoveries">
-                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Statutory Recoveries").map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        disabled={selectedCharges.includes(c.id)}
-                      >
-                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Deposits &amp; Penalties">
-                    {CANONICAL_CHARGE_TYPES.filter((c) => c.category === "Deposits & Penalties").map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        disabled={selectedCharges.includes(c.id)}
-                      >
-                        {c.name} ({c.code}) {selectedCharges.includes(c.id) ? "— Added" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g. Apex Commercial Holdings Pvt Ltd"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Brand Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  Commercial Brand / Portfolio Name
+                </label>
+                <input
+                  type="text"
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  placeholder="e.g. Apex Business Parks"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 placeholder:text-slate-400"
+                />
               </div>
             </div>
 
-            {/* Active Charges List Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 grid grid-cols-12 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <div className="col-span-4">Charge Name &amp; Description</div>
-                <div className="col-span-2">SAC / Code</div>
-                <div className="col-span-3">Calculation Basis (Dropdown)</div>
-                <div className="col-span-2">GST Tax Rate</div>
-                <div className="col-span-1 text-right">Action</div>
+            {/* Billing Entity & Tax Details */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Primary Billing Entity &amp; GSTIN
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    The legal entity that executes tenant leases and issues GST tax invoices.
+                  </p>
+                </div>
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {selectedCharges.map((chargeId) => {
-                  const charge = CANONICAL_CHARGE_TYPES.find((c) => c.id === chargeId);
-                  if (!charge) return null;
-                  const currentBasis = chargeBasisOverrides[charge.id] || charge.defaultBasis;
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Invoicing Entity Name
+                  </label>
+                  <input
+                    type="text"
+                    value={entityName}
+                    onChange={(e) => setEntityName(e.target.value)}
+                    placeholder={companyName || "e.g. Apex Tech Park SPV-1"}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
 
-                  return (
-                    <div
-                      key={charge.id}
-                      className="px-4 py-3 grid grid-cols-12 items-center hover:bg-slate-50/70 transition-colors"
-                    >
-                      <div className="col-span-4 pr-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-900">{charge.name}</span>
-                          {charge.required && (
-                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
-                              Mandatory
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{charge.desc}</p>
-                      </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    GSTIN (15 Digits)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    value={gstin}
+                    onChange={(e) => handleGstinChange(e.target.value)}
+                    placeholder="24AAACS1429B1Z1"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
 
-                      <div className="col-span-2">
-                        <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                          {charge.code}
-                        </span>
-                      </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    PAN (10 Digits)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={pan}
+                    onChange={(e) => setPan(e.target.value.toUpperCase())}
+                    placeholder="AAACS1429B"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
 
-                      <div className="col-span-3 pr-2">
-                        <select
-                          value={currentBasis}
-                          onChange={(e) =>
-                            setChargeBasisOverrides((prev) => ({
-                              ...prev,
-                              [charge.id]: e.target.value,
-                            }))
-                          }
-                          className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
-                        >
-                          <option value="per_area">Area-based (₹ / sq ft / mo)</option>
-                          <option value="per_seat">Seat-based (₹ / seat / mo)</option>
-                          <option value="fixed">Fixed Lumpsum (₹ / mo)</option>
-                          <option value="metered">Metered Sub-Meter Units</option>
-                          <option value="per_slot">Slot-based (₹ / slot / mo)</option>
-                          <option value="pro_rata_share">Pro-rata Area Share</option>
-                          <option value="pct_of_turnover">Turnover Percentage (%)</option>
-                          <option value="per_use">Per Use / Hourly Rate</option>
-                        </select>
-                      </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    GST State
+                  </label>
+                  <select
+                    value={spvState}
+                    onChange={(e) => setSpvState(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    {ALL_INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                      <div className="col-span-2">
-                        <span
-                          className={`text-xs font-bold ${
-                            charge.isTaxable ? "text-[#0F8B7D]" : "text-slate-600"
-                          }`}
-                        >
-                          {charge.taxRate}
-                        </span>
-                        <div className="text-[10px] text-slate-400 font-medium">Group: {charge.invoiceGroup}</div>
-                      </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    City / Center
+                  </label>
+                  <input
+                    type="text"
+                    value={spvCity}
+                    onChange={(e) => setSpvCity(e.target.value)}
+                    placeholder="Ahmedabad"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
 
-                      <div className="col-span-1 text-right">
-                        {charge.required ? (
-                          <span className="text-[11px] text-slate-300 italic font-medium">Locked</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCharge(charge.id)}
-                            className="text-xs text-rose-500 hover:text-rose-700 p-1 transition cursor-pointer"
-                            title="Remove charge rule"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Default Tax Profile
+                  </label>
+                  <select
+                    value={taxProfile}
+                    onChange={(e) => setTaxProfile(e.target.value as any)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    <option value="gst_18">Standard Commercial Rent (18% GST - SAC 997212)</option>
+                    <option value="sez_0">SEZ / IFSC Zero-Rated (0% GST - Letter of Undertaking)</option>
+                    <option value="exempt_0">Exempt Commercial Supply (0% GST)</option>
+                    <option value="composition_1">Small Taxpayer Scheme (1% GST)</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 4: PHYSICAL SPACE HIERARCHY GENERATOR */}
-        {currentStep === 4 && (
-          <div className="space-y-6">
+        {/* ========================================================================= */}
+        {/* STEP 2: PROPERTY & PHYSICAL SPACE HIERARCHY (S-11 & S-13)                 */}
+        {/* ========================================================================= */}
+        {currentStep === 2 && (
+          <div className="space-y-6 max-w-4xl">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 4: Physical Space Hierarchy Generator</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Define your commercial building, stacking floorplates, and leasable suites for real inventory tracking.
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                Step 2: Add First Commercial Property &amp; Space Schedule
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Define your property asset, leasable area, building structure, and initial space configuration.
               </p>
             </div>
 
-            {/* Section A: Property Master */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Building className="w-4 h-4 text-[#0F8B7D]" /> Property &amp; Commercial Classification
+            {/* Property Master Details */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Property Specifications
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Property Name <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={propertyName}
-                    onChange={(e) => setPropertyName(e.target.value)}
+                    onChange={(e) => handlePropertyNameChange(e.target.value)}
                     placeholder="e.g. Apex Business Tower"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Property Code (Unique)
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Property Code <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={propertyCode}
                     onChange={(e) => setPropertyCode(e.target.value.toUpperCase())}
-                    placeholder="APX-BKC"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] uppercase font-mono bg-white"
+                    placeholder="APEX-01"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Asset Classification
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Property Type
                   </label>
                   <select
                     value={propertyType}
                     onChange={(e) => setPropertyType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
-                    <option value="office">Commercial Office</option>
-                    <option value="it_park">IT / Tech Park</option>
-                    <option value="flex_workspace">Flex / Co-working Centre</option>
-                    <option value="retail">Retail Mall / High Street</option>
-                    <option value="industrial">Industrial &amp; Logistics Park</option>
-                    <option value="warehouse">Commercial Warehouse</option>
-                    <option value="mixed_use">Mixed-Use Commercial</option>
-                    <option value="sez_ifsc">SEZ / IFSC Financial Tower</option>
+                    {PROPERTY_TYPES.map((pt) => (
+                      <option key={pt.id} value={pt.id}>
+                        {pt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Building Grade
                   </label>
                   <select
                     value={buildingGrade}
                     onChange={(e) => setBuildingGrade(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
-                    <option value="A+">Grade A+ (Institutional Tech Park)</option>
-                    <option value="A">Grade A (Prime Commercial Tower)</option>
-                    <option value="B+">Grade B+ (High-Street Commercial)</option>
-                    <option value="B">Grade B (Established Commercial)</option>
-                    <option value="C">Grade C (Standard Commercial)</option>
+                    {BUILDING_GRADES.map((bg) => (
+                      <option key={bg.id} value={bg.id}>
+                        {bg.label}
+                      </option>
+                    ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Total Chargeable Area (sq ft) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={100}
+                    value={areaSqft}
+                    onChange={(e) => handleAreaChange(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Carpet Area (sq ft)
+                  </label>
+                  <input
+                    type="number"
+                    min={50}
+                    value={carpetAreaSqft}
+                    onChange={(e) => setCarpetAreaSqft(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                  <span className="text-[10px] text-slate-500">
+                    Loading: {areaSqft > 0 ? Math.round(((areaSqft - carpetAreaSqft) / areaSqft) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Location Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-slate-200">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    State
+                  </label>
+                  <select
+                    value={propertyState}
+                    onChange={(e) => setPropertyState(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    {ALL_INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyCity}
+                    onChange={(e) => setPropertyCity(e.target.value)}
+                    placeholder="Ahmedabad"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Micro-Market
+                  </label>
+                  <input
+                    type="text"
+                    value={microMarket}
+                    onChange={(e) => setMicroMarket(e.target.value)}
+                    placeholder="SG Highway / Prahlad Nagar"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    PIN Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    placeholder="380015"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Section B: Spatial Dimensions & Floorplate Stacking */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-[#0F8B7D]" /> Building &amp; Stacking Dimensions
+            {/* Building & Initial Space Schedule */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Building &amp; Space Hierarchy
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Building / Tower Name
+                    Building Name
                   </label>
                   <input
                     type="text"
                     value={buildingName}
                     onChange={(e) => setBuildingName(e.target.value)}
-                    placeholder="Tower 1 / North Wing"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Chargeable Area (sq ft) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={areaSqft || ""}
-                    onChange={(e) => setAreaSqft(Number(e.target.value))}
-                    placeholder="40000"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Carpet Area (sq ft)
-                  </label>
-                  <input
-                    type="number"
-                    value={carpetAreaSqft || ""}
-                    onChange={(e) => setCarpetAreaSqft(Number(e.target.value))}
-                    placeholder="28800"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                  />
-                  <span className="text-[10px] text-teal-700 font-bold block mt-0.5">
-                    {efficiencyPercent}% Efficiency ({loadingPercent}% Loading)
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Asking Rate (₹ / sq ft / mo)
-                  </label>
-                  <input
-                    type="number"
-                    value={askingRatePerSqft || ""}
-                    onChange={(e) => setAskingRatePerSqft(Number(e.target.value))}
-                    placeholder="125"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    placeholder="Tower 1 / Main Wing"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                 </div>
 
@@ -1314,323 +1000,216 @@ export default function RentRollOnboardingWizard({
                   <input
                     type="number"
                     min={1}
-                    max={50}
-                    value={floorsCount || ""}
+                    max={150}
+                    value={floorsCount}
                     onChange={(e) => setFloorsCount(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Basement Levels (Below Ground)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={basementCount}
-                    onChange={(e) => setBasementCount(Math.max(0, Number(e.target.value)))}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Suites / Units Per Floor
+                    Units per Floor
                   </label>
                   <input
                     type="number"
                     min={1}
-                    max={20}
-                    value={unitsPerFloor || ""}
+                    max={50}
+                    value={unitsPerFloor}
                     onChange={(e) => setUnitsPerFloor(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Fitout Handover Condition
+                    Base Asking Rate (₹ / sq ft / mo)
+                  </label>
+                  <input
+                    type="number"
+                    min={10}
+                    value={askingRatePerSqft}
+                    onChange={(e) => setAskingRatePerSqft(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] font-semibold"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Default Fit-out Condition
                   </label>
                   <select
                     value={fitoutCondition}
                     onChange={(e) => setFitoutCondition(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
-                    <option value="warm_shell">Warm Shell (HVAC + Screed)</option>
-                    <option value="bare_shell">Bare Shell (Raw Concrete)</option>
-                    <option value="plug_and_play">Fully Fitted / Plug &amp; Play</option>
-                    <option value="furnished">Enterprise Furnished Suites</option>
+                    {FITOUT_CONDITIONS.map((fc) => (
+                      <option key={fc.id} value={fc.id}>
+                        {fc.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-              </div>
-            </div>
 
-            {/* Section C: Geographic Location */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={propertyCity}
-                  onChange={(e) => setPropertyCity(e.target.value)}
-                  placeholder="Bengaluru"
-                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Commercial Micro-Market
-                </label>
-                <input
-                  type="text"
-                  value={microMarket}
-                  onChange={(e) => setMicroMarket(e.target.value)}
-                  placeholder="Outer Ring Road / BKC"
-                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
-                  placeholder="560103"
-                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] font-mono bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  State
-                </label>
-                <select
-                  value={propertyState}
-                  onChange={(e) => setPropertyState(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
-                >
-                  {ALL_INDIAN_STATES.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Live Generator Preview Box */}
-            <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-[#0F8B7D]" />
-                  Live Physical Space Generator Preview
-                </span>
-                <span className="text-xs font-bold text-[#0F8B7D]">
-                  {totalUnits} Units Total ({areaPerUnit.toLocaleString("en-IN")} sq ft / unit)
-                </span>
-              </div>
-              <p className="text-xs text-teal-800">
-                The generator will create {totalUnits} physical space records across {floorsCount} floors with ~{carpetPerUnit.toLocaleString("en-IN")} sq ft carpet area and asking rate of ₹{askingRatePerSqft}/sq ft/month.
-              </p>
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {Array.from({ length: Math.min(8, totalUnits) }).map((_, i) => {
-                  const f = Math.floor(i / unitsPerFloor) + 1;
-                  const u = (i % unitsPerFloor) + 1;
-                  return (
-                    <span
-                      key={i}
-                      className="px-2.5 py-1 rounded bg-white border border-teal-200 text-[11px] font-mono text-teal-900 font-semibold"
-                    >
-                      {propertyCode || "PROP"}-F0{f}-U0{u} ({areaPerUnit.toLocaleString("en-IN")} sqft)
-                    </span>
-                  );
-                })}
-                {totalUnits > 8 && (
-                  <span className="px-2.5 py-1 rounded bg-teal-100 text-[11px] text-teal-800 font-bold">
-                    +{totalUnits - 8} more units across all levels
+                <div className="md:col-span-2 flex items-center gap-2 p-3 rounded-lg bg-teal-50/60 border border-teal-200/60 text-teal-900 text-xs">
+                  <Info size={16} className="text-[#0F8B7D] shrink-0" />
+                  <span>
+                    Generates <strong>{floorsCount * unitsPerFloor} leasable units</strong> (~{Math.round(areaSqft / (floorsCount * unitsPerFloor)).toLocaleString()} sq ft each) ready for contract mapping.
                   </span>
-                )}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 5: TEAM & DELEGATION (ROLES IN DROPDOWN ONLY) */}
-        {currentStep === 5 && (
-          <div className="space-y-6">
+        {/* ========================================================================= */}
+        {/* STEP 3: GO-LIVE STRATEGY & DELEGATION (CLEAN DROPDOWNS ONLY)              */}
+        {/* ========================================================================= */}
+        {currentStep === 3 && (
+          <div className="space-y-6 max-w-4xl">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 5: Team Configuration &amp; Delegation</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Configure your operating administrative account and declare property management delegation if applicable.
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                Step 3: Go-Live Strategy &amp; Delegation
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Choose how you want to begin managing your contracts and configure operational delegation.
               </p>
             </div>
 
-            {/* Part A: User Role Dropdown */}
-            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Your Primary Administrative Role
+            {/* Go-Live Strategy Selection */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                Select Your Onboarding Route <span className="text-rose-500">*</span>
               </label>
+
               <select
-                value={userRole}
-                onChange={(e) => setUserRole(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm font-bold rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                value={startingStrategy}
+                onChange={(e) => setStartingStrategy(e.target.value as any)}
+                className="w-full px-3.5 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-semibold cursor-pointer shadow-xs"
               >
-                <optgroup label="Asset Leadership">
-                  {CANONICAL_ROLES.filter((r) => r.group === "Asset Leadership").map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Operations &amp; Leasing">
-                  {CANONICAL_ROLES.filter((r) => r.group === "Operations").map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Finance &amp; Accounts">
-                  {CANONICAL_ROLES.filter((r) => r.group === "Finance & Accounts").map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="System &amp; Governance">
-                  {CANONICAL_ROLES.filter((r) => r.group === "System & Governance").map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.title}
-                    </option>
-                  ))}
-                </optgroup>
+                <option value="rent_roll">
+                  Option 1: Self-Serve Rent Roll Register — Direct entry in the live space-by-space register
+                </option>
+                <option value="create_lease">
+                  Option 2: Create First Contract — Launch directly into the 7-step Contract Creation Wizard
+                </option>
+                <option value="import_excel">
+                  Option 3: Bulk Import Excel — Launch the 6-step Excel Import Wizard (.xlsx schedule)
+                </option>
+                <option value="assisted_concierge">
+                  Option 4: Assisted Concierge Onboarding — Scalezix / OfficeX assisted lease abstraction
+                </option>
               </select>
-              <p className="text-xs text-slate-500">
-                Your role determines default dashboard metrics, approval authority, and tenant dispute oversight.
-              </p>
+
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-1">
+                {startingStrategy === "rent_roll" && (
+                  <p>
+                    <strong>Self-Serve Rent Roll:</strong> Lands directly on the Rent Roll Register. Shows all units with occupied and vacant status, where you can click any space to draft leases or record member deals.
+                  </p>
+                )}
+                {startingStrategy === "create_lease" && (
+                  <p>
+                    <strong>Direct Contract Creation:</strong> Opens the 7-step contract wizard to capture contract terms, rent steps, CAM rules, escalation cycles, deposits, and execute your first agreement.
+                  </p>
+                )}
+                {startingStrategy === "import_excel" && (
+                  <p>
+                    <strong>Bulk Import Center:</strong> Provides standard 10-sheet and quick 1-sheet Excel templates with automatic header profiling, confidence scoring, variance checks, and error correction.
+                  </p>
+                )}
+                {startingStrategy === "assisted_concierge" && (
+                  <p>
+                    <strong>Assisted Concierge:</strong> OfficeX onboarding specialists review your deeds, extract amendment variations, and perform data reconciliation against bank deposits.
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Part B: Portfolio Management Mode */}
-            <div className="space-y-4">
-              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Portfolio Management Mode
-              </label>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div
-                  onClick={() => setManagementMode("self")}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    managementMode === "self"
-                      ? "border-[#0F8B7D] bg-teal-50/40 shadow-xs"
-                      : "border-slate-200 hover:border-slate-300 bg-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-sm font-bold text-slate-900">Self-Managed Portfolio</h4>
-                    {managementMode === "self" && (
-                      <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
-                        <Check size={11} />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Day-to-day tenant relations, commercial lease deeds, and facility upkeep are managed directly by your in-house operations team.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setManagementMode("delegated")}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    managementMode === "delegated"
-                      ? "border-[#0F8B7D] bg-teal-50/40 shadow-xs"
-                      : "border-slate-200 hover:border-slate-300 bg-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-sm font-bold text-slate-900">Delegated Portfolio Management</h4>
-                    {managementMode === "delegated" && (
-                      <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
-                        <Check size={11} />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    An external PMC, facility management partner, or managed service agency administers the property on your behalf under a formal mandate.
-                  </p>
-                </div>
+            {/* Management & Delegation Options */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Portfolio Operations &amp; Team Delegation
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Decide whether this property will be managed directly in-house or delegated to an external operator.
+                </p>
               </div>
 
-              {/* If Delegated: Partner Configuration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Management Model
+                  </label>
+                  <select
+                    value={managementMode}
+                    onChange={(e) => setManagementMode(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer font-medium"
+                  >
+                    <option value="self">Direct Management (In-house Landlord / Owner Team)</option>
+                    <option value="delegated">Delegated Operator (Third-Party PM Company, FM Company, or MSP)</option>
+                  </select>
+                </div>
+
+                {managementMode === "delegated" && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Delegated Agency Type
+                    </label>
+                    <select
+                      value={managerType}
+                      onChange={(e) => setManagerType(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer font-medium"
+                    >
+                      <option value="pm_company">PM Company (Property Management Company)</option>
+                      <option value="fm_company">FM Company (Facilities Management Company)</option>
+                      <option value="msp">MSP (Managed Service Provider)</option>
+                      <option value="user_pm">Another User (Assigned Property Manager)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               {managementMode === "delegated" && (
-                <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/30 space-y-4 mt-3">
-                  <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider">
-                    Delegated Management Partner Details
-                  </h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                        Partner Entity Type
-                      </label>
-                      <select
-                        value={managerType}
-                        onChange={(e) => setManagerType(e.target.value)}
-                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
-                      >
-                        <option value="pm_company">Property Management Company (PMC)</option>
-                        <option value="fm_company">Facility Management Company (FMC)</option>
-                        <option value="msp">Managed Service Provider (MSP)</option>
-                        <option value="user_pm">Individual Centre Head / Operations Lead</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                        Partner Firm / Agency Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={managerName}
-                        onChange={(e) => setManagerName(e.target.value)}
-                        placeholder="e.g. Cushman &amp; Wakefield / JLL"
-                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                        Operating Manager Email
-                      </label>
-                      <input
-                        type="email"
-                        value={managerEmail}
-                        onChange={(e) => setManagerEmail(e.target.value)}
-                        placeholder="centremanager@agency.com"
-                        className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                      />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Partner / Manager Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={managerName}
+                      onChange={(e) => setManagerName(e.target.value)}
+                      placeholder="e.g. Knight Frank / CBRE Operations"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                      Delegation Mandate Scope
+                      Manager Email (Login Invite)
+                    </label>
+                    <input
+                      type="email"
+                      value={managerEmail}
+                      onChange={(e) => setManagerEmail(e.target.value)}
+                      placeholder="pm.lead@agency.com"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Delegation Scope
                     </label>
                     <select
                       value={delegationScope}
                       onChange={(e) => setDelegationScope(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] cursor-pointer"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                     >
-                      <option value="full_operations">Full Operations &amp; Lease Administration (Leases, Invoicing &amp; Facilities)</option>
-                      <option value="cam_facilities">Facilities &amp; CAM Operations Only (Maintenance &amp; Utilities)</option>
-                      <option value="lease_admin">Lease Administration &amp; Rent Collection Only</option>
+                      <option value="full_operations">Full Site Operations &amp; Lease Administration</option>
+                      <option value="fm_only">CAM &amp; Facilities Only (No Commercial Terms)</option>
+                      <option value="leasing_only">Vacant Space Marketing &amp; Deal Intake</option>
                     </select>
                   </div>
                 </div>
@@ -1638,179 +1217,52 @@ export default function RentRollOnboardingWizard({
             </div>
           </div>
         )}
-
-        {/* STEP 6: GO-LIVE STRATEGY SELECTION */}
-        {currentStep === 6 && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Step 6: Go-Live &amp; Strategy Selection</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Your workspace structure is configured. Review your pre-flight summary and select your operational starting strategy:
-              </p>
-            </div>
-
-            {/* Pre-Flight Workspace Summary Card */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Legal SPV</span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5">
-                  {spvs[0]?.legalName || companyName}
-                </span>
-                <span className="text-[11px] text-slate-500 font-mono">
-                  {spvs[0]?.gstin || "Standard GST"}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Physical Space</span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5">
-                  {propertyName}
-                </span>
-                <span className="text-[11px] text-teal-700 font-bold block">
-                  {totalUnits} Units ({areaSqft.toLocaleString("en-IN")} sq ft)
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Charge Rules</span>
-                <span className="font-bold text-slate-800 block mt-0.5">
-                  {selectedCharges.length} Active Lines
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  Base Rent, CAM, Power, Deposit
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Operating Role</span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5">
-                  {CANONICAL_ROLES.find((r) => r.id === userRole)?.title || userRole}
-                </span>
-                <span className="text-[11px] text-slate-500 block">
-                  {managementMode === "delegated" ? `Delegated to ${managerName || "Partner"}` : "Self-Managed"}
-                </span>
-              </div>
-            </div>
-
-            {/* 4 Clean Go-Live Strategies */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                {
-                  id: "rent_roll" as const,
-                  title: "Clean Live Rent Roll",
-                  desc: "Open active Rent Roll with generated vacant spaces ready for tenant allocations and immediate occupancy tracking.",
-                  icon: Layers,
-                  badge: "Recommended",
-                },
-                {
-                  id: "create_lease" as const,
-                  title: "Execute First Commercial Lease",
-                  desc: "Launch the guided Contract Wizard to draft or execute your first formal commercial lease deed with rent escalation schedule.",
-                  icon: FileText,
-                  badge: "Direct Draft",
-                },
-                {
-                  id: "import_excel" as const,
-                  title: "Import Existing Excel",
-                  desc: "Upload legacy Excel spreadsheets using our Smart Column Mapper, synonym dictionary, and control-total reconciliation.",
-                  icon: FileSpreadsheet,
-                  badge: "Bulk Migration",
-                },
-                {
-                  id: "assisted_concierge" as const,
-                  title: "Assisted Concierge Ingestion",
-                  desc: "Request dedicated OfficeX onboarding support for contract document abstraction and historical audit balancing.",
-                  icon: Sparkles,
-                  badge: "Concierge",
-                },
-              ].map((opt) => {
-                const isSelected = startingStrategy === opt.id;
-                const IconComponent = opt.icon;
-                return (
-                  <div
-                    key={opt.id}
-                    onClick={() => setStartingStrategy(opt.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? "border-[#0F8B7D] bg-teal-50/40 shadow-md ring-1 ring-[#0F8B7D]"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            isSelected ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          <IconComponent className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-                          {opt.badge}
-                        </span>
-                      </div>
-                      <h3 className="text-xs font-bold text-slate-900">{opt.title}</h3>
-                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{opt.desc}</p>
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#0F8B7D]">Select Path</span>
-                      {isSelected ? (
-                        <div className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center">
-                          <Check className="w-2.5 h-2.5" />
-                        </div>
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-300" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Wizard Footer Controls */}
-      <div className="px-8 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+      {/* 3. Wizard Footer Navigation */}
+      <div className="bg-slate-50 px-6 sm:px-8 py-4 border-t border-slate-200 flex items-center justify-between">
         <div>
           {currentStep > 1 && (
             <button
               type="button"
               onClick={handlePrev}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 border border-slate-300 hover:bg-white rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" /> Previous Step
+              <ArrowLeft size={14} /> Back
             </button>
           )}
         </div>
 
-        <div className="flex items-center space-x-3">
-          <span className="text-xs text-slate-500 font-medium">Step {currentStep} of 6</span>
-          {currentStep < 6 ? (
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+            Step {currentStep} of 3
+          </span>
+
+          {currentStep < 3 ? (
             <button
               type="button"
               onClick={handleNext}
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition shadow-xs cursor-pointer"
             >
-              Next Step <ArrowRight className="w-4 h-4" />
+              Continue <ArrowRight size={14} />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinish}
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-bold text-xs transition flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#192A56] hover:bg-[#122044] text-white text-xs font-bold transition shadow-md cursor-pointer disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating Workspace...
+                  <span>Launching Workspace...</span>
                 </>
               ) : (
                 <>
-                  Commit &amp; Launch Rent Roll <Sparkles className="w-4 h-4" />
+                  <Sparkles size={14} className="text-amber-400" />
+                  <span>Complete Setup &amp; Launch Rent Roll</span>
                 </>
               )}
             </button>

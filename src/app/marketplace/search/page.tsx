@@ -71,7 +71,7 @@ function MarketplaceSearchContent() {
   const searchParams = useSearchParams();
 
   // URL Query Parameters
-  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? (localStorage.getItem("officex_marketplace_city") === "Ahmedabad" ? "Delhi NCR" : localStorage.getItem("officex_marketplace_city") || "Delhi NCR") : "Delhi NCR");
+  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") || "Delhi NCR" : "Delhi NCR");
   const initialQ = searchParams?.get("q") || "";
   const initialLocality = searchParams?.get("locality") || "";
   const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "all";

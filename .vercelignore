@@ -3,6 +3,7 @@
 
 # Heavy raw data and local scrapers (saves ~100MB+ per deployment)
 office marketplace data/
+!office marketplace data/json/all_properties_master.json
 client response/
 documents/
 scratch/
