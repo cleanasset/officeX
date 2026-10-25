@@ -114,7 +114,7 @@ export default function MarketplaceSlugPage() {
             The workspace listing you are looking for may have been leased or moved to another market corridor.
           </p>
           <Link
-            href="/public/search"
+            href="/marketplace/search"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shadow-sm hover:bg-[#0D7A6E]"
           >
             <ArrowLeft size={14} /> Browse All Workspaces

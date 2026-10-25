@@ -34,8 +34,21 @@ const nextConfig: NextConfig = {
       }
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/assets/spaces/:path*",
+        destination: "https://res.cloudinary.com/myhq/image/upload/:path*",
+      },
+    ];
+  },
   async redirects() {
     return [
+      {
+        source: "/public/search",
+        destination: "/marketplace/search",
+        permanent: false,
+      },
       {
         source: "/operations",
         destination: "/operate",

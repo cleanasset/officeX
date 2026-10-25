@@ -165,31 +165,27 @@ export default function ManagedServicesPage() {
     "Single Direct Accountability: Designated Property Director"
   ];
 
-  // Institutional Testimonials (Executive Proof)
-  const testimonials = [
+  // Institutional Governance Framework Pillars (Replacing Unverified Testimonials)
+  const governancePillars = [
     {
-      name: "Pavan Vaish",
-      role: "Founding Partner, Prime Commercial Real Estate Fund",
-      quote: "OfficeX's one-stop managed stewardship has ensured our 3 commercial grade-A assets are impeccably maintained, fully compliant, and consistently cash-flow positive without our investment committee getting into daily operational friction. The single point of contact model brings absolute peace of mind.",
-      tag: "Multi-Asset Commercial Portfolio"
+      title: "Designated Property Director",
+      tag: "Direct Accountability",
+      desc: "A single senior corporate point of contact oversees on-site MEP engineers, security rosters, soft service contractors, and tenant communications."
     },
     {
-      name: "Rohit Bansal",
-      role: "Co-Founder & Technology Enterprise Trustee",
-      quote: "We engaged OfficeX for managing our commercial headquarters and tech campus. Their team conveniently takes care of everything — from tenant fit-outs and lease documentation to 24/7 MEP operations and open-book CAM audits. It makes the entire ownership experience completely seamless.",
-      tag: "Commercial Campus & Headquarters"
+      title: "100% Open-Book Pass-Through Billing",
+      tag: "Financial Transparency",
+      desc: "All original utility bills, contractor work order receipts, and material invoices are passed at actual cost with zero hidden commissions."
     },
     {
-      name: "Suresh Raman",
-      role: "Managing Director & Senior Real Estate Risk Officer",
-      quote: "Managing premium assets remotely from overseas used to be an administrative nightmare. Partnering with OfficeX gave us institutional-grade rigor. Their monthly MIS reports, predictive equipment health checks, and transparent pass-through accounting have raised the standard for property management.",
-      tag: "Cross-Border Family Office Assets"
+      title: "Contractual Plant Uptime SLAs",
+      tag: "Technical Reliability",
+      desc: "Rigorous 52-week PPM schedules contractually targeting 99.8% plant uptime for HVAC chillers, DG backups, transformers, and lift systems."
     },
     {
-      name: "Archana & Rajarshri Panja",
-      role: "Corporate Asset Directors, Global Logistics Enterprise",
-      quote: "Being architects and enterprise asset owners, we were exceptionally specific about technical MEP compliance and aesthetic upkeep. OfficeX interpreted our standards to the core, converted bare shells into fully leased spaces, and maintain 99.8% mechanical uptime with zero excuses.",
-      tag: "Grade-A Office Asset Portfolio"
+      title: "Auditable Statutory NOC Vault",
+      tag: "Regulatory Governance",
+      desc: "Proactive automated 60/30/15-day renewal radars for Fire NOC, Lift Form A, CEIG, and environmental approvals to prevent compliance lapses."
     }
   ];
 
@@ -768,44 +764,35 @@ export default function ManagedServicesPage() {
         </div>
       </section>
 
-      {/* ═══ NATIVE SUTRA INSPIRED: EXECUTIVE CLIENT TESTIMONIALS ═══ */}
+      {/* ═══ INSTITUTIONAL GOVERNANCE PILLARS ═══ */}
       <section className="py-20 px-4 sm:px-8 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
-              Client Voices
+              Operational Standards
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-4 tracking-tight">
-              What Our Clients Say
+              Institutional Governance &amp; Operational Rigor
             </h2>
             <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
-              Trusted by commercial building owners, family offices, fund partners, and enterprise tenants.
+              Built to serve institutional building owners, family offices, fund trustees, and commercial asset managers.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {testimonials.map((t, i) => (
-              <div key={i} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-7 relative flex flex-col justify-between">
+            {governancePillars.map((p, i) => (
+              <div key={i} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-7 relative flex flex-col justify-between hover:border-teal-200 transition-all">
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-1">
-                      {Array.from({ length: 5 }).map((_, j) => (
-                        <Star key={j} size={14} className="text-amber-400 fill-amber-400" />
-                      ))}
-                    </div>
                     <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
-                      {t.tag}
+                      {p.tag}
                     </span>
+                    <ShieldCheck size={18} className="text-[#0F8B7D]" />
                   </div>
-                  <Quote size={28} className="text-teal-200/70 mb-2" />
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed mb-6 italic">
-                    &ldquo;{t.quote}&rdquo;
+                  <h3 className="text-base font-extrabold text-slate-900 mb-2">{p.title}</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+                    {p.desc}
                   </p>
-                </div>
-                
-                <div className="pt-4 border-t border-slate-200/60">
-                  <div className="font-extrabold text-slate-900 text-sm">{t.name}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{t.role}</div>
                 </div>
               </div>
             ))}

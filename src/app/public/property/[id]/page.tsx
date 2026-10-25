@@ -133,7 +133,7 @@ export default function PropertyPage() {
           </div>
           <div className="pt-2">
             <Link
-              href="/public/search"
+              href="/marketplace/search"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition shadow-xs"
             >
               <ArrowLeft size={14} /> Back to Commercial Listings

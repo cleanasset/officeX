@@ -1926,7 +1926,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         {/* Footer Trust Strip */}
         <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-slate-500 font-semibold">
           <span className="flex items-center gap-1">
-            <ShieldCheck size={13} className="text-blue-600" /> SOC 2 Type II
+            <ShieldCheck size={13} className="text-blue-600" /> DPDP Act 2023
           </span>
           <span>•</span>
           <span>Indian Data Center</span>

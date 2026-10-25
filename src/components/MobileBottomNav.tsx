@@ -90,7 +90,7 @@ const roleBottomTabs: Record<string, NavItem[]> = {
     { label: "AI Insights", href: "/reporting/ai", icon: Cpu }
   ],
   public: [
-    { label: "Search", href: "/public/search", icon: Building },
+    { label: "Search", href: "/marketplace/search", icon: Building },
     { label: "Offices", href: "/marketplace", icon: Layers },
     { label: "FM", href: "/fm-marketplace", icon: Truck },
     { label: "Login", href: "/login", icon: Users }

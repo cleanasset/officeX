@@ -38,8 +38,7 @@ import {
 } from "@/data/marketplace-cities";
 
 const BRANDS = [
-  "All Brands", "Awfis", "DevX", "WeWork", "91springboard", "Innov8",
-  "Regus", "Incuspaze", "Smartworks", "The Address", "IndiQube", "BHIVE", "Tablespace", "Workafella", "Strata", "Oyo Workflo"
+  "All Operators", "Enterprise Managed", "Grade-A Commercial", "Boutique Coworking", "Institutional Tech Park", "Owner Direct"
 ];
 
 const PRODUCTS = [
@@ -72,7 +71,7 @@ function MarketplaceSearchContent() {
   const searchParams = useSearchParams();
 
   // URL Query Parameters
-  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") || "Ahmedabad" : "Ahmedabad");
+  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? (localStorage.getItem("officex_marketplace_city") === "Ahmedabad" ? "Delhi NCR" : localStorage.getItem("officex_marketplace_city") || "Delhi NCR") : "Delhi NCR");
   const initialQ = searchParams?.get("q") || "";
   const initialLocality = searchParams?.get("locality") || "";
   const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "all";
@@ -82,7 +81,7 @@ function MarketplaceSearchContent() {
   const [searchQuery, setSearchQuery] = useState(initialQ);
   const [selectedLocality, setSelectedLocality] = useState(initialLocality);
   const [selectedProduct, setSelectedProduct] = useState(initialVertical);
-  const [selectedBrand, setSelectedBrand] = useState("All Brands");
+  const [selectedBrand, setSelectedBrand] = useState("All Operators");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
@@ -142,11 +141,12 @@ function MarketplaceSearchContent() {
       if (c && c !== city) {
         setCity(c);
       } else if (!c) {
-        // No city specified in URL: check localStorage or auto-detect
-        const saved = typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") : null;
-        if (saved && saved !== city) {
-          setCity(saved);
-        } else if (!saved) {
+        // No city specified in URL: check if user explicitly picked a city in this session, otherwise auto-detect
+        const sessionManual = typeof window !== "undefined" ? sessionStorage.getItem("officex_manual_city_chosen") : null;
+        if (sessionManual && sessionManual !== city) {
+          setCity(sessionManual);
+        } else {
+          // Auto-detect visitor location dynamically (IP / edge headers)
           fetch("/api/marketplace/detect-location")
             .then((res) => res.json())
             .then((data) => {
@@ -181,7 +181,7 @@ function MarketplaceSearchContent() {
         if (selectedLocality) params.set("locality", selectedLocality);
         if (searchQuery && searchQuery.trim()) params.set("q", searchQuery.trim());
         if (sortBy) params.set("sort", sortBy);
-        if (selectedBrand && selectedBrand !== "All Brands") {
+        if (selectedBrand && selectedBrand !== "All Operators") {
           params.set("brand", selectedBrand);
         }
         params.set("limit", "100");
@@ -204,7 +204,7 @@ function MarketplaceSearchContent() {
           if (!isCancelled) {
             let items = Array.isArray(data.listings) ? data.listings : [];
             // Brand client filter if selected
-            if (selectedBrand && selectedBrand !== "All Brands") {
+            if (selectedBrand && selectedBrand !== "All Operators") {
               items = items.filter((item: any) =>
                 (item.brandName || "").toLowerCase().includes(selectedBrand.toLowerCase()) ||
                 (item.name || "").toLowerCase().includes(selectedBrand.toLowerCase())
@@ -655,13 +655,13 @@ function MarketplaceSearchContent() {
             </div>
 
             {/* Reset Filters Text Button */}
-            {(selectedLocality || searchQuery || selectedBrand !== "All Brands" || selectedPriceRange !== "all" || sortBy !== "popular" || (selectedProduct && selectedProduct !== "all")) && (
+            {(selectedLocality || searchQuery || selectedBrand !== "All Operators" || selectedPriceRange !== "all" || sortBy !== "popular" || (selectedProduct && selectedProduct !== "all")) && (
               <button
                 onClick={() => {
                   setSelectedProduct("all");
                   setSelectedLocality("");
                   setSearchQuery("");
-                  setSelectedBrand("All Brands");
+                  setSelectedBrand("All Operators");
                   setSelectedPriceRange("all");
                   setSortBy("popular");
                 }}
@@ -827,7 +827,7 @@ function MarketplaceSearchContent() {
                   setSelectedProduct("all");
                   setSelectedLocality("");
                   setSearchQuery("");
-                  setSelectedBrand("All Brands");
+                  setSelectedBrand("All Operators");
                   setSelectedPriceRange("all");
                   setSortBy("popular");
                 }}

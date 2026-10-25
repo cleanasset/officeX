@@ -18,7 +18,7 @@ export default function CalQStandalonePage() {
       <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
         <OfficeSpaceCalculator
           onExploreSpaces={(city, micromarket) => {
-            router.push(`/public/search?city=${encodeURIComponent(city)}&q=${encodeURIComponent(micromarket)}`);
+            router.push(`/marketplace/search?city=${encodeURIComponent(city)}&q=${encodeURIComponent(micromarket)}`);
           }}
           onOpenAdvisor={() => setSlideInOpen(true)}
         />

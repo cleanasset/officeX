@@ -79,7 +79,7 @@ export default function PlatformPage() {
           {
             icon: Lock,
             title: "Security & Global Compliance",
-            description: "Strict adherence to enterprise data privacy acts (DPDP, GDPR), SOC 2 Type II certified practices, and end-to-end AES-256 data encryption at rest and in transit.",
+            description: "Strict adherence to enterprise data privacy acts (DPDP Act 2023), strict multi-tenant database isolation, and end-to-end AES-256 data encryption at rest and in transit.",
             tag: "Security"
           },
           {
@@ -159,14 +159,14 @@ export default function PlatformPage() {
                 </div>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
                   <Shield size={13} className="text-[#0F8B7D]" />
-                  SOC 2 Type II &amp; ISO 27001 Certified
+                  DPDP Act 2023 &amp; AES-256 Vaulted
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-left">
                 {[
                   { title: "Identity & RBAC", desc: "SAML SSO & Roles", icon: KeyRound },
-                  { title: "Fintech & Escrow", desc: "Milestone Payouts", icon: CreditCard },
+                  { title: "Fintech & Billing", desc: "Milestone Payouts", icon: CreditCard },
                   { title: "Unified DB", desc: "Single Source of Truth", icon: Database },
                   { title: "REST & Webhooks", desc: "Open Integration APIs", icon: Cpu },
                   { title: "DPDP & GDPR", desc: "End-to-End AES-256", icon: Lock },

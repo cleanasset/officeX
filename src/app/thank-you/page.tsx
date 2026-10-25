@@ -42,7 +42,7 @@ function ThankYouContent() {
           </p>
         </div>
         <a
-          href="https://calendly.com/admin-cleanasset/30min"
+          href={process.env.NEXT_PUBLIC_CALENDLY_URL || "https://calendly.com/officex-commercial/30min"}
           data-calendly="true"
           className="shrink-0 px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer"
         >

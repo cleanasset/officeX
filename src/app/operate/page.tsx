@@ -207,7 +207,7 @@ export default function OperatePage() {
             <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300" />
             <div className="flex items-center gap-1.5 font-bold text-slate-700">
               <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-              <span>ISO 27001 &amp; SOC2 Type II</span>
+              <span>DPDP Act 2023 &amp; AES-256</span>
             </div>
             <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300" />
             <div className="flex items-center gap-1.5 font-bold text-slate-700">
@@ -221,18 +221,21 @@ export default function OperatePage() {
             <ModuleCoverFlow />
           </div>
 
-          {/* Institutional Portfolio Trust Strip */}
+          {/* Institutional Commercial Hubs Strip */}
           <div className="w-full max-w-5xl mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-slate-200/70">
             <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-slate-400 text-center mb-3 sm:mb-4">
-              POWERING COMMERCIAL ASSETS &amp; TECH PARKS ACROSS 15M+ SQ.FT
+              COMMERCIAL OPERATING HUBS ACROSS TIER-1 METROS
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-10 gap-y-2.5 text-xs sm:text-sm font-black tracking-wider text-slate-400">
-              <span className="hover:text-slate-700 transition-colors cursor-default">PRESTIGE GROUP</span>
-              <span className="hover:text-slate-700 transition-colors cursor-default">BRIGADE TECH</span>
-              <span className="hover:text-slate-700 transition-colors cursor-default">EMBASSY PARKS REIT</span>
-              <span className="hover:text-slate-700 transition-colors cursor-default">BROOKFIELD</span>
-              <span className="hover:text-slate-700 transition-colors cursor-default">MINDSPACE REIT</span>
-              <span className="hover:text-slate-700 transition-colors cursor-default">DLF COMMERCIAL</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-10 gap-y-2.5 text-xs sm:text-sm font-black tracking-wider text-slate-500">
+              <span>DELHI NCR</span>
+              <span className="text-teal-500">•</span>
+              <span>BENGALURU</span>
+              <span className="text-teal-500">•</span>
+              <span>MUMBAI MMR</span>
+              <span className="text-teal-500">•</span>
+              <span>PUNE</span>
+              <span className="text-teal-500">•</span>
+              <span>HYDERABAD</span>
             </div>
           </div>
         </div>

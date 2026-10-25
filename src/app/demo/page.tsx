@@ -138,7 +138,7 @@ export default function DemoPage() {
                   <button
                     type="button"
                     data-calendly="true"
-                    data-calendly-url="https://calendly.com/admin-cleanasset/30min"
+                    data-calendly-url="https://calendly.com/officex-commercial/30min"
                     className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-xl transition-all shadow-md cursor-pointer mb-6"
                   >
                     <Calendar size={16} />
@@ -146,7 +146,7 @@ export default function DemoPage() {
                   </button>
                   <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 h-[620px] w-full">
                     <iframe
-                      src="https://calendly.com/admin-cleanasset/30min?embed_type=Inline&hide_gdpr_banner=1&primary_color=2563eb"
+                      src="https://calendly.com/officex-commercial/30min?embed_type=Inline&hide_gdpr_banner=1&primary_color=2563eb"
                       width="100%"
                       height="100%"
                       frameBorder="0"

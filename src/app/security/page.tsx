@@ -87,11 +87,11 @@ export default function SecurityPage() {
         <div className="relative z-10 max-w-7xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-bold mb-4 backdrop-blur-sm">
             <ShieldCheck size={14} />
-            <span>SOC 2 Type II & ISO 27001 Certified Framework</span>
+            <span>DPDP Act 2023 &amp; Enterprise Cloud Architecture</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight">Security & Infrastructure Architecture</h1>
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight">Security &amp; Infrastructure Architecture</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-3 font-medium leading-relaxed">
-            Discover how OfficeX protects institutional property portfolios, lease financial records, and vendor escrow transactions with enterprise security controls.
+            Discover how OfficeX protects institutional property portfolios, lease financial records, and operational telemetry with enterprise security controls.
           </p>
 
           <div className="flex flex-wrap items-center gap-6 mt-6 text-xs text-slate-300 font-semibold border-t border-white/10 pt-4">
@@ -99,7 +99,7 @@ export default function SecurityPage() {
               <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span> System Status: 99.8% Uptime
             </span>
             <span>•</span>
-            <span>PCI-DSS Level 1 Escrow Gateway</span>
+            <span>PCI-DSS Level 1 Payment Processing</span>
             <span>•</span>
             <span>AWS Mumbai Cloud</span>
           </div>
@@ -197,16 +197,16 @@ export default function SecurityPage() {
               <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <Award size={24} className="text-[#0F8B7D]" />
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-900">SOC 2 Type II Attestation</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">Independent annual audit covering Security, Availability, and Confidentiality trust principles.</p>
+                  <h4 className="text-xs font-extrabold text-slate-900">DPDP Act 2023 Compliant Architecture</h4>
+                  <p className="text-[11px] text-slate-500 font-medium">Strict data localization and privacy framework aligning with India Digital Personal Data Protection Act.</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <ShieldCheck size={24} className="text-emerald-600" />
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-900">ISO/IEC 27001:2022 Certified</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">International standard for Information Security Management Systems (ISMS).</p>
+                  <h4 className="text-xs font-extrabold text-slate-900">AES-256 Bit Encryption &amp; TLS 1.3</h4>
+                  <p className="text-[11px] text-slate-500 font-medium">Enterprise-grade cryptographic protections for all data stored at rest and transmitted across networks.</p>
                 </div>
               </div>
 

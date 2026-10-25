@@ -227,7 +227,7 @@ export default function RentRollProductPage() {
               {/* Trust Badges */}
               <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 font-semibold border-t border-slate-100 pt-5">
                 <span className="flex items-center gap-1.5"><ShieldCheck size={15} className="text-[#0D7B6C]" /> 100% Audit-Ready</span>
-                <span className="flex items-center gap-1.5"><Lock size={15} className="text-[#0D7B6C]" /> RBI Escrow Settled</span>
+                <span className="flex items-center gap-1.5"><Lock size={15} className="text-[#0D7B6C]" /> Automated Direct Settlement</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 size={15} className="text-[#0D7B6C]" /> RERA &amp; BOMA Compliant</span>
               </div>
 

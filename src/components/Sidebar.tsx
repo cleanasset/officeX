@@ -319,7 +319,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
   // PUBLIC DISCOVERY (MARKETPLACE)
   public: [
-    { name: "Search Spaces", href: "/public/search", icon: Building },
+    { name: "Search Spaces", href: "/marketplace/search", icon: Building },
     { name: "Office Marketplace", href: "/marketplace", icon: Layers },
     { name: "FM Marketplace", href: "/fm-marketplace", icon: Truck },
     { name: "Sign In / Register", href: "/login", icon: Users }
@@ -365,7 +365,7 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
   leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/dashboard/leasing" },
   marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace" },
   reporting: { label: "Workplace Analytics", roleName: "Workplace Analytics", route: "/reporting" },
-  public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/public/search" }
+  public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/marketplace/search" }
 };
 
 // Mapping alias paths to corresponding portal keys

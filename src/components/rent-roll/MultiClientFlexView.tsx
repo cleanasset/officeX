@@ -118,7 +118,7 @@ export default function MultiClientFlexView({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold tracking-tight text-white">
-                  Multi-Client Portfolios & Flex Operations (§4.3, §4.7, §5.10–11)
+                  Multi-Client Portfolios & Flex Operations
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
                   PHASE P4 LIVE
@@ -388,7 +388,7 @@ export default function MultiClientFlexView({
             <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-4 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-indigo-950 uppercase">
-                  Flex Operator Centre P&amp;L Matrix (§4.8, §5.10–11)
+                  Flex Operator Centre P&amp;L Matrix
                 </h4>
                 <p className="text-xs text-indigo-800 mt-0.5">
                   Centre P&amp;L = Flex Seat Revenue − Head Lease Cost (direction=payable to Landlord) − Operating Expenses.

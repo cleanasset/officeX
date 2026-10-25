@@ -240,13 +240,13 @@ export default function Topbar() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setIsDropdownOpen(false);
-    router.push(`/public/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    router.push(`/marketplace/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   const handleSelectSuggestion = (name: string) => {
     setSearchQuery(name);
     setIsDropdownOpen(false);
-    router.push(`/public/search?q=${encodeURIComponent(name)}`);
+    router.push(`/marketplace/search?q=${encodeURIComponent(name)}`);
   };
 
   // Sign out handler
@@ -519,7 +519,7 @@ export default function Topbar() {
         </div>
       </div>
 
-      {/* Owner Statement Modal (§5.10 / Table 103) */}
+      {/* Owner Statement Modal (Owner Settlement Ledger) */}
       <OwnerStatementModal
         isOpen={isOwnerStatementOpen}
         onClose={() => setIsOwnerStatementOpen(false)}

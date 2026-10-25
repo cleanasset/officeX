@@ -7,14 +7,15 @@ export interface CityOption {
 
 // Top Tier-1 Metros (Representing ~85% of listings)
 export const TOP_METROS: CityOption[] = [
-  { name: "Ahmedabad", count: 115 },
-  { name: "Bangalore", count: 1543 },
-  { name: "Delhi", count: 476 },
+  { name: "Delhi NCR", count: 1504 },
   { name: "Gurgaon", count: 659 },
+  { name: "Delhi", count: 476 },
   { name: "Noida", count: 369 },
+  { name: "Bangalore", count: 1543 },
   { name: "Mumbai", count: 483 },
   { name: "Pune", count: 490 },
   { name: "Hyderabad", count: 388 },
+  { name: "Ahmedabad", count: 115 },
   { name: "Chennai", count: 346 },
   { name: "Kolkata", count: 230 },
 ];

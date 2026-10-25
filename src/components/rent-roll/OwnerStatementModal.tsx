@@ -89,7 +89,7 @@ export default function OwnerStatementModal({
           <div>
             <div className="flex items-center gap-2 text-teal-400 text-xs font-semibold">
               <Sparkles size={14} />
-              <span>Multi-Client Operator · §5.10 & Table 103</span>
+              <span>Multi-Client Operator · Owner Settlement Ledger</span>
             </div>
             <h2 className="text-xl font-black tracking-tight mt-0.5">
               Owner Statement — {period}
@@ -120,7 +120,7 @@ export default function OwnerStatementModal({
             </div>
             <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 shadow-2xs">
               <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">
-                Net Remittance to Owner (F-21)
+                Net Remittance to Owner
               </span>
               <span className="text-lg font-black text-teal-950 font-mono mt-0.5 block">
                 ₹{Number(statement.net_remittance_inr || 0).toLocaleString("en-IN")}
@@ -128,7 +128,7 @@ export default function OwnerStatementModal({
             </div>
           </div>
 
-          {/* Table 103 Breakdown */}
+          {/* Owner Settlement Ledger Breakdown */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
             <div className="px-4 py-2.5 bg-slate-100/70 border-b border-slate-200 flex justify-between text-xs font-bold text-slate-700">
               <span>Financial Line Item</span>
@@ -223,7 +223,7 @@ export default function OwnerStatementModal({
         {/* Footer */}
         <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between">
           <div className="text-[11px] text-slate-500">
-            Audit-ready statement per §5.10 multi-client protocol
+            Audit-ready statement · Multi-client institutional protocol
           </div>
           <div className="flex items-center gap-2">
             <button

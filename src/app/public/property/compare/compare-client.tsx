@@ -65,7 +65,7 @@ export default function PropertyCompareClient({ initialProperties }: { initialPr
           <Building size={48} className="text-gray-300 mx-auto mb-4" />
           <h3 className="font-bold text-gray-900 text-sm">No properties in comparisons list</h3>
           <p className="text-xs text-gray-500 mt-1">Go back and select properties to compare side-by-side.</p>
-          <Link href="/public/search" className="mt-4 px-4 py-2 bg-[#0F8B7D] hover:bg-[#0d7569] text-white rounded-lg text-xs font-bold inline-block shadow-sm">
+          <Link href="/marketplace/search" className="mt-4 px-4 py-2 bg-[#0F8B7D] hover:bg-[#0d7569] text-white rounded-lg text-xs font-bold inline-block shadow-sm">
             Search Workspace Listings
           </Link>
         </div>

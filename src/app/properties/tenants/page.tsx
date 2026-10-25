@@ -636,7 +636,7 @@ export default function TenantDirectoryPage() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        Document Code: {contractToView.contract_code || "LEAS-2026-0001"} · Registration Authority: Government of Gujarat (§Table 103)
+                        Document Code: {contractToView.contract_code || "LEAS-2026-0001"} · Registration Authority: Competent Commercial Inspectorate
                       </p>
                     </div>
                   </div>

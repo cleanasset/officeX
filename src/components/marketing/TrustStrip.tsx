@@ -22,12 +22,12 @@ export default function TrustStrip({
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-slate-400 font-semibold">
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">
             <ShieldCheck size={14} className="text-[#0F8B7D]" />
-            <span className="text-slate-200">SOC 2 Type II</span>
+            <span className="text-slate-200">TLS 1.3 Transit</span>
           </div>
 
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">
             <Lock size={14} className="text-[#0F8B7D]" />
-            <span className="text-slate-200">AES-256</span>
+            <span className="text-slate-200">AES-256 Vaulted</span>
           </div>
 
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">
@@ -37,7 +37,7 @@ export default function TrustStrip({
 
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">
             <Award size={14} className="text-blue-400" />
-            <span className="text-slate-200">Razorpay Escrow</span>
+            <span className="text-slate-200">Direct Bank Settlements</span>
           </div>
 
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">

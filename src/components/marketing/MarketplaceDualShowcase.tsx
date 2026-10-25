@@ -77,7 +77,7 @@ export default function MarketplaceDualShowcase({
       location: "BKC, Mumbai",
       facilities: "120 Seats · 8,500 sq.ft. · Triple-Height Lobby · 100% DG Backup",
       specPill: "Dedicated Floor",
-      linkUrl: "/public/search?query=Pinnacle+BKC"
+      linkUrl: "/marketplace/search?city=Mumbai&q=Pinnacle+BKC"
     },
     {
       id: "metro-whitefield",
@@ -87,7 +87,7 @@ export default function MarketplaceDualShowcase({
       location: "Whitefield, Bengaluru",
       facilities: "45 Desks · Ergonomic Chairs · Acoustic Phone Booths · Leased Line",
       specPill: "Plug & Play",
-      linkUrl: "/public/search?query=Metro+Whitefield"
+      linkUrl: "/marketplace/search?city=Bangalore&q=Whitefield"
     },
     {
       id: "tech-horizon",
@@ -97,7 +97,7 @@ export default function MarketplaceDualShowcase({
       location: "Cyber City, Gurugram",
       facilities: "180 Seats · 14,000 sq.ft. · Private Cafeteria · Server Room · EV Hub",
       specPill: "Enterprise Wing",
-      linkUrl: "/public/search?query=Tech+Horizon"
+      linkUrl: "/marketplace/search?city=Delhi+NCR&q=Cyber+City"
     },
     {
       id: "nexus-warmshell",
@@ -107,7 +107,7 @@ export default function MarketplaceDualShowcase({
       location: "Hinjewadi, Pune",
       facilities: "6,500 sq.ft. Open Floor · Central AC Ducts · 4.2m Slab Height · Lifts",
       specPill: "Fit-out Ready",
-      linkUrl: "/public/search?query=Nexus+Hub"
+      linkUrl: "/marketplace/search?city=Pune&q=Hinjewadi"
     }
   ];
 
@@ -231,7 +231,7 @@ export default function MarketplaceDualShowcase({
             </div>
 
             <Link
-              href="/public/search"
+              href="/marketplace"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group"
             >
               <span>Explore all spaces</span>

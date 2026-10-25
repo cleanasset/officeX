@@ -25,7 +25,7 @@ import {
 export default function PropertyMarketplacePage() {
   const router = useRouter();
   const [slideInOpen, setSlideInOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState("Ahmedabad");
+  const [selectedCity, setSelectedCity] = useState("Delhi NCR");
   const [detectedLocationBadge, setDetectedLocationBadge] = useState<string | null>(null);
   type SolutionType = "longterm" | "daypass" | "events" | "virtual";
 
@@ -40,9 +40,9 @@ export default function PropertyMarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTeamSize, setSelectedTeamSize] = useState("all");
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
-  const [districtFilter, setDistrictFilter] = useState("all");
+  const [districtFilter, setDistrictFilter] = useState("delhi-ncr");
 
-  // Synchronize city selection across all sections and persist to localStorage
+  // Synchronize city selection across all sections and persist
   const handleCityChange = (newCity: string, isManual: boolean = true) => {
     setSelectedCity(newCity);
     const featuredMapped =
@@ -55,6 +55,7 @@ export default function PropertyMarketplacePage() {
 
     if (isManual && typeof window !== "undefined") {
       try {
+        sessionStorage.setItem("officex_manual_city_chosen", newCity);
         localStorage.setItem("officex_marketplace_city", newCity);
       } catch {}
     }
@@ -62,12 +63,12 @@ export default function PropertyMarketplacePage() {
     const lower = newCity.toLowerCase();
     if (lower.includes("delhi") || lower.includes("gurgaon") || lower.includes("noida")) {
       setDistrictFilter("delhi-ncr");
+    } else if (lower.includes("pune")) {
+      setDistrictFilter("pune");
     } else if (lower.includes("mumbai")) {
       setDistrictFilter("mumbai");
     } else if (lower.includes("bengaluru") || lower.includes("bangalore")) {
       setDistrictFilter("bengaluru");
-    } else if (lower.includes("pune")) {
-      setDistrictFilter("pune");
     } else if (lower.includes("hyderabad")) {
       setDistrictFilter("hyderabad");
     } else if (lower.includes("ahmedabad") || lower.includes("gandhinagar")) {
@@ -75,16 +76,24 @@ export default function PropertyMarketplacePage() {
     }
   };
 
-  // Auto-detect visitor location on first load (IP-based, zero permission prompts)
+  // Auto-detect visitor location on first load (traveling-aware: always detects current visitor city unless manually chosen in session)
   useEffect(() => {
-    // 1. Check if user already manually selected or saved a city
-    const savedCity = typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") : null;
-    if (savedCity) {
-      handleCityChange(savedCity, false);
+    // 1. If user explicitly clicked a city in this active browsing session, respect it
+    const explicitSessionCity = typeof window !== "undefined" ? sessionStorage.getItem("officex_manual_city_chosen") : null;
+    if (explicitSessionCity) {
+      handleCityChange(explicitSessionCity, false);
       return;
     }
 
-    // 2. Auto-detect from server IP headers / geo lookup
+    // 2. Clear old stale default "Ahmedabad" from past sessions so travelers to Delhi/Pune get their real current city
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("officex_marketplace_city");
+      if (stored === "Ahmedabad") {
+        try { localStorage.removeItem("officex_marketplace_city"); } catch {}
+      }
+    }
+
+    // 3. Auto-detect from server IP headers / geo lookup
     async function autoDetectLocation() {
       try {
         const res = await fetch("/api/marketplace/detect-location");
@@ -93,14 +102,34 @@ export default function PropertyMarketplacePage() {
           if (data?.city) {
             handleCityChange(data.city, false);
             setDetectedLocationBadge(data.rawCity || data.city);
-            try {
-              localStorage.setItem("officex_marketplace_city", data.city);
-            } catch {}
+            return;
           }
         }
       } catch (err) {
         console.warn("Marketplace location auto-detection error:", err);
       }
+
+      // Fast client-side fallback if server was behind a corporate/mobile proxy
+      try {
+        const clientGeoRes = await fetch("https://freeipapi.com/api/json");
+        if (clientGeoRes.ok) {
+          const clientGeo = await clientGeoRes.json();
+          const rawCity = (clientGeo.cityName || "").toLowerCase();
+          if (rawCity.includes("pune") || rawCity.includes("poona")) {
+            handleCityChange("Pune", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          } else if (rawCity.includes("delhi") || rawCity.includes("gurgaon") || rawCity.includes("noida")) {
+            handleCityChange("Delhi NCR", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          } else if (rawCity.includes("mumbai")) {
+            handleCityChange("Mumbai", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          } else if (rawCity.includes("bangalore") || rawCity.includes("bengaluru")) {
+            handleCityChange("Bengaluru", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          }
+        }
+      } catch {}
     }
     autoDetectLocation();
   }, []);
@@ -291,6 +320,49 @@ export default function PropertyMarketplacePage() {
 
   // Top Workspace Hubs across India (Coworking, Managed Suites & Enterprise Floors)
   const topWorkspaceHubs = [
+    // Delhi NCR Hubs (Lead Market)
+    {
+      id: "cyber-city-gurgaon",
+      name: "DLF Cyber City & Golf Course Rd, Gurgaon",
+      shortName: "Cyber City & GCR Hub",
+      city: "Gurgaon, Haryana",
+      searchCity: "Gurgaon",
+      searchQuery: "DLF Cyber City",
+      region: "delhi-ncr",
+      tag: "Fortune 500 Hub",
+      spaces: "46+ Verified Spaces",
+      desc: "Futuristic integrated business district featuring direct Rapid Metro connectivity and world-class CyberHub.",
+      image: "/images/district_cybercity.jpg",
+      highlights: ["Rapid Metro Access", "CyberHub Dining", "Fortune 500 Campuses"],
+    },
+    {
+      id: "connaught-place-delhi",
+      name: "Connaught Place & Barakhamba, Central Delhi",
+      shortName: "CP Central CBD",
+      city: "New Delhi, Delhi",
+      searchCity: "Delhi",
+      searchQuery: "Connaught Place",
+      region: "delhi-ncr",
+      tag: "Heritage Central CBD",
+      spaces: "59+ Verified Spaces",
+      desc: "India's most prestigious central address with Rajiv Chowk metro junction and colonial corporate arcades.",
+      image: "/images/workspace_managed_suite.jpg",
+      highlights: ["Rajiv Chowk Metro Interchange", "Inner & Outer Circles", "Grade-A Managed Workspaces"],
+    },
+    {
+      id: "sector-62-noida",
+      name: "Sector 62 & 126, Noida Expressway",
+      shortName: "Noida Tech Corridor",
+      city: "Noida, Uttar Pradesh",
+      searchCity: "Noida",
+      searchQuery: "Sector 62",
+      region: "delhi-ncr",
+      tag: "Noida Tech Cluster",
+      spaces: "100+ Verified Spaces",
+      desc: "Noida's premier IT corridor directly connected by the Blue Line metro and Delhi-Meerut Expressway.",
+      image: "/images/showcase_office_techhorizon_hd.jpg",
+      highlights: ["Blue Line Metro", "Tech Park Campuses", "Value Enterprise Desks"],
+    },
     // Ahmedabad Hubs
     {
       id: "sg-highway",
@@ -302,9 +374,9 @@ export default function PropertyMarketplacePage() {
       region: "ahmedabad",
       tag: "Top Tech Corridor",
       spaces: "16+ Verified Spaces",
-      desc: "Ahmedabad's premier corporate corridor hosting Grade-A coworking hubs like Awfis, Smartworks, and DevX.",
+      desc: "Ahmedabad's premier corporate corridor hosting Grade-A coworking hubs and enterprise managed offices.",
       image: "/images/district_sghighway.jpg",
-      highlights: ["Titanium City Center", "Awfis & Smartworks", "S.P. Ring Road Access"],
+      highlights: ["Titanium City Center", "Enterprise Managed Suites", "S.P. Ring Road Access"],
     },
     {
       id: "prahlad-nagar",
@@ -389,7 +461,7 @@ export default function PropertyMarketplacePage() {
       spaces: "190+ Verified Spaces",
       desc: "The epicentre of Indian venture-backed startups with vibrant cafes, high-energy incubators, and enterprise floors.",
       image: "/images/district_bangaloreorr.jpg",
-      highlights: ["WeWork & 91springboard", "Sector 1-7 Startups", "Outer Ring Road Link"],
+      highlights: ["Tier-1 Flex Operators", "Sector 1-7 Startups", "Outer Ring Road Link"],
     },
     {
       id: "blr-koramangala",
@@ -431,7 +503,7 @@ export default function PropertyMarketplacePage() {
       spaces: "115+ Verified Spaces",
       desc: "Boutique creative workspaces nestled on 100 Feet and 12th Main Roads with elite connectivity.",
       image: "/images/hero_scene_campus_atrium.jpg",
-      highlights: ["100 Feet Road", "Awfis & Indiqube", "Creative & Media Agencies"],
+      highlights: ["100 Feet Road", "Design & Tech Studios", "Creative & Media Agencies"],
     },
     // Mumbai Hubs
     {
@@ -446,7 +518,7 @@ export default function PropertyMarketplacePage() {
       spaces: "43+ Verified Spaces",
       desc: "The nerve center of Indian banking, private equity, consulates, and Fortune 500 headquarters.",
       image: "/images/district_mumbaibkc.jpg",
-      highlights: ["WeWork BKC & Godrej", "Jio World Centre", "Metro Line 3 Link"],
+      highlights: ["Prime Grade-A Towers", "Jio World Centre", "Metro Line 3 Link"],
     },
     {
       id: "andheri-mumbai",
@@ -476,50 +548,21 @@ export default function PropertyMarketplacePage() {
       image: "/images/space_gift_one_tower.jpg",
       highlights: ["One World Center", "Kamala Mills", "Boutique Managed Suites"],
     },
-    // Delhi NCR Hubs
-    {
-      id: "cyber-city-gurgaon",
-      name: "DLF Cyber City, Gurgaon",
-      shortName: "Cyber City Hub",
-      city: "Gurgaon, Haryana",
-      searchCity: "Gurgaon",
-      searchQuery: "DLF Cyber City",
-      region: "delhi-ncr",
-      tag: "Fortune 500 Hub",
-      spaces: "46+ Verified Spaces",
-      desc: "Futuristic integrated business district featuring direct Rapid Metro connectivity and world-class CyberHub.",
-      image: "/images/district_cybercity.jpg",
-      highlights: ["Rapid Metro Access", "CyberHub Dining", "Fortune 500 Campuses"],
-    },
-    {
-      id: "connaught-place-delhi",
-      name: "Connaught Place, Central Delhi",
-      shortName: "CP Central CBD",
-      city: "New Delhi, Delhi",
-      searchCity: "Delhi",
-      searchQuery: "Connaught Place",
-      region: "delhi-ncr",
-      tag: "Heritage Central CBD",
-      spaces: "59+ Verified Spaces",
-      desc: "India's most prestigious central address with Rajiv Chowk metro junction and colonial corporate arcades.",
-      image: "/images/workspace_managed_suite.jpg",
-      highlights: ["Rajiv Chowk Metro Interchange", "Inner & Outer Circles", "Awfis & Innov8 CP"],
-    },
-    {
-      id: "sector-62-noida",
-      name: "Sector 62 & 63, Noida",
-      shortName: "Noida Tech Corridor",
-      city: "Noida, Uttar Pradesh",
-      searchCity: "Noida",
-      searchQuery: "Sector 62",
-      region: "delhi-ncr",
-      tag: "Noida Tech Cluster",
-      spaces: "100+ Verified Spaces",
-      desc: "Noida's premier IT corridor directly connected by the Blue Line metro and Delhi-Meerut Expressway.",
-      image: "/images/showcase_office_techhorizon_hd.jpg",
-      highlights: ["Blue Line Metro", "Tech Park Campuses", "Value Enterprise Desks"],
-    },
     // Pune Hubs
+    {
+      id: "hinjewadi-pune",
+      name: "Hinjewadi IT Park (Phases 1-3), Pune",
+      shortName: "Hinjewadi Tech Hub",
+      city: "Pune, Maharashtra",
+      searchCity: "Pune",
+      searchQuery: "Hinjewadi",
+      region: "pune",
+      tag: "Mega IT Park Hub",
+      spaces: "185+ Verified Spaces",
+      desc: "Pune's sprawling tech epicenter home to multinational IT services campuses, SEZs, and grade-A managed spaces.",
+      image: "/images/showcase_single_tower.jpg",
+      highlights: ["Phase 1 & 2 SEZ", "Quadron Business Park", "Enterprise Tech Suites"],
+    },
     {
       id: "baner-pune",
       name: "Baner & Balewadi, Pune",
@@ -533,6 +576,20 @@ export default function PropertyMarketplacePage() {
       desc: "Pune's fastest-expanding IT hub along Mumbai-Bengaluru Highway with high-density coworking supply.",
       image: "/images/district_sghighway.jpg",
       highlights: ["Mumbai-Pune Highway", "Balewadi High Street", "Tech & FinTech Clusters"],
+    },
+    {
+      id: "kharadi-pune",
+      name: "Kharadi & Viman Nagar, Pune",
+      shortName: "Kharadi EON Corridor",
+      city: "Pune, Maharashtra",
+      searchCity: "Pune",
+      searchQuery: "Kharadi",
+      region: "pune",
+      tag: "Eastern IT Hub",
+      spaces: "142+ Verified Spaces",
+      desc: "Eastern Pune's prime business district featuring EON Free Zone, World Trade Center, and close airport connectivity.",
+      image: "/images/district_cybercity.jpg",
+      highlights: ["EON IT Park", "World Trade Center Pune", "Airport Connectivity"],
     },
     // Hyderabad Hubs
     {
@@ -555,16 +612,16 @@ export default function PropertyMarketplacePage() {
   // Real Database Marketplace Listings state for homepage showcase
   const [featuredListings, setFeaturedListings] = useState<any[]>([]);
   const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
-  const [featuredCity, setFeaturedCity] = useState("Ahmedabad");
-  const [featuredTotal, setFeaturedTotal] = useState(116);
+  const [featuredCity, setFeaturedCity] = useState("Delhi NCR");
+  const [featuredTotal, setFeaturedTotal] = useState(1525);
 
   const cityTabs = [
-    { id: "Ahmedabad", label: "Ahmedabad", count: 115 },
-    { id: "Bangalore", label: "Bengaluru", count: 1543 },
     { id: "Delhi NCR", label: "Delhi NCR", count: 1525 },
-    { id: "Mumbai", label: "Mumbai", count: 483 },
     { id: "Pune", label: "Pune", count: 490 },
+    { id: "Mumbai", label: "Mumbai", count: 483 },
+    { id: "Bangalore", label: "Bengaluru", count: 1543 },
     { id: "Hyderabad", label: "Hyderabad", count: 388 },
+    { id: "Ahmedabad", label: "Ahmedabad", count: 115 },
     { id: "Chennai", label: "Chennai", count: 346 },
     { id: "Kolkata", label: "Kolkata", count: 230 },
     { id: "Jaipur", label: "Jaipur", count: 122 },
@@ -606,12 +663,12 @@ export default function PropertyMarketplacePage() {
 
   const districtFilters = [
     { id: "all", label: "All Hubs", count: topWorkspaceHubs.length },
-    { id: "ahmedabad", label: "Ahmedabad", count: topWorkspaceHubs.filter(d => d.region === "ahmedabad").length },
-    { id: "bengaluru", label: "Bengaluru", count: topWorkspaceHubs.filter(d => d.region === "bengaluru").length },
     { id: "delhi-ncr", label: "Delhi NCR", count: topWorkspaceHubs.filter(d => d.region === "delhi-ncr").length },
-    { id: "mumbai", label: "Mumbai", count: topWorkspaceHubs.filter(d => d.region === "mumbai").length },
     { id: "pune", label: "Pune", count: topWorkspaceHubs.filter(d => d.region === "pune").length },
+    { id: "mumbai", label: "Mumbai", count: topWorkspaceHubs.filter(d => d.region === "mumbai").length },
+    { id: "bengaluru", label: "Bengaluru", count: topWorkspaceHubs.filter(d => d.region === "bengaluru").length },
     { id: "hyderabad", label: "Hyderabad", count: topWorkspaceHubs.filter(d => d.region === "hyderabad").length },
+    { id: "ahmedabad", label: "Ahmedabad", count: topWorkspaceHubs.filter(d => d.region === "ahmedabad").length },
   ];
 
   const filteredDistricts = districtFilter === "all"
@@ -629,7 +686,7 @@ export default function PropertyMarketplacePage() {
         {/* Background Canvas — Crisp Marketplace Banner with Enhanced Readability Scrim */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
           <Image
-            src="/images/marketplace_myhq_hero.jpg"
+            src="/images/marketplace_commercial_hero.jpg"
             alt="Modern Flexible Coworking & Commercial Workspace"
             fill
             priority

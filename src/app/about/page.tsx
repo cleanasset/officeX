@@ -110,7 +110,7 @@ export default function AboutPage() {
                 <span>•</span>
                 <span>Enterprise Ready</span>
                 <span>•</span>
-                <span>SOC 2 Type II Aligned</span>
+                <span>DPDP Act 2023 Compliant</span>
               </div>
             </div>
           </div>

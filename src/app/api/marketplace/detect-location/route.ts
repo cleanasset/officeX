@@ -2,11 +2,95 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Normalizes any incoming city, town, or region name to an OfficeX primary hub
 function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
-  if (!rawCity && !rawRegion) return "Ahmedabad"; // Default fallback
+  if (!rawCity && !rawRegion) return "Delhi NCR"; // Default lead market fallback
   const c = (rawCity || "").toLowerCase().trim();
   const r = (rawRegion || "").toLowerCase().trim();
 
-  // 1. Ahmedabad & Gandhinagar (Gujarat)
+  // 1. Pune & Pimpri-Chinchwad
+  if (
+    c.includes("pune") ||
+    c.includes("poona") ||
+    c.includes("pimpri") ||
+    c.includes("chinchwad") ||
+    c.includes("hinjewadi") ||
+    c.includes("baner") ||
+    c.includes("magarpatta") ||
+    c.includes("kharadi") ||
+    c.includes("hadapsar") ||
+    c.includes("viman nagar") ||
+    c.includes("kothrud") ||
+    c.includes("wakad") ||
+    c.includes("balewadi") ||
+    c.includes("bavdhan")
+  ) {
+    return "Pune";
+  }
+
+  // 2. Delhi NCR (Gurgaon, Noida, Delhi, Faridabad, Ghaziabad)
+  if (
+    c.includes("delhi") ||
+    c.includes("gurgaon") ||
+    c.includes("gurugram") ||
+    c.includes("noida") ||
+    c.includes("faridabad") ||
+    c.includes("ghaziabad") ||
+    c.includes("manesar") ||
+    c.includes("kundli") ||
+    c.includes("greater noida") ||
+    c.includes("sohna") ||
+    r === "dl" ||
+    r.includes("delhi")
+  ) {
+    return "Delhi NCR";
+  }
+
+  // 3. Mumbai MMR
+  if (
+    c.includes("mumbai") ||
+    c.includes("bombay") ||
+    c.includes("thane") ||
+    c.includes("navi mumbai") ||
+    c.includes("kalyan") ||
+    c.includes("dombivli") ||
+    c.includes("vasai") ||
+    c.includes("virar") ||
+    c.includes("panvel") ||
+    c.includes("andheri") ||
+    c.includes("bkc")
+  ) {
+    return "Mumbai";
+  }
+
+  // 4. Bengaluru
+  if (
+    c.includes("bengaluru") ||
+    c.includes("bangalore") ||
+    c.includes("whitefield") ||
+    c.includes("koramangala") ||
+    c.includes("indiranagar") ||
+    c.includes("electronic city") ||
+    c.includes("hosur") ||
+    r === "ka" ||
+    r.includes("karnataka")
+  ) {
+    return "Bengaluru";
+  }
+
+  // 5. Hyderabad
+  if (
+    c.includes("hyderabad") ||
+    c.includes("secunderabad") ||
+    c.includes("cyberabad") ||
+    c.includes("hitec") ||
+    c.includes("gachibowli") ||
+    c.includes("madhapur") ||
+    r === "tg" ||
+    r.includes("telangana")
+  ) {
+    return "Hyderabad";
+  }
+
+  // 6. Ahmedabad & Gandhinagar (Gujarat)
   if (
     c.includes("ahmedabad") ||
     c.includes("ahemedabad") ||
@@ -24,65 +108,47 @@ function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
     return "Ahmedabad";
   }
 
-  // 2. Delhi NCR
-  if (
-    c.includes("delhi") ||
-    c.includes("gurgaon") ||
-    c.includes("gurugram") ||
-    c.includes("noida") ||
-    c.includes("faridabad") ||
-    c.includes("ghaziabad") ||
-    c.includes("manesar") ||
-    c.includes("kundli") ||
-    r === "dl" ||
-    r.includes("delhi")
-  ) {
-    return "Delhi";
+  // 7. Chennai
+  if (c.includes("chennai") || c.includes("madras") || r === "tn" || r.includes("tamil nadu")) {
+    return "Chennai";
   }
 
-  // 3. Mumbai MMR
-  if (
-    c.includes("mumbai") ||
-    c.includes("bombay") ||
-    c.includes("thane") ||
-    c.includes("navi mumbai") ||
-    c.includes("kalyan") ||
-    c.includes("dombivli") ||
-    c.includes("vasai") ||
-    c.includes("virar") ||
-    c.includes("panvel")
-  ) {
-    return "Mumbai";
+  // 8. Kolkata
+  if (c.includes("kolkata") || c.includes("calcutta") || r === "wb" || r.includes("west bengal")) {
+    return "Kolkata";
   }
 
-  // 4. Bengaluru
-  if (
-    c.includes("bengaluru") ||
-    c.includes("bangalore") ||
-    c.includes("whitefield") ||
-    c.includes("hosur") ||
-    r === "ka" ||
-    r.includes("karnataka")
-  ) {
-    return "Bengaluru";
+  // 9. Jaipur
+  if (c.includes("jaipur") || r === "rj" || r.includes("rajasthan")) {
+    return "Jaipur";
   }
 
-  // 5. Pune
-  if (c.includes("pune") || c.includes("poona") || c.includes("pimpri") || c.includes("chinchwad") || c.includes("hinjewadi")) {
-    return "Pune";
+  // 10. Indore
+  if (c.includes("indore") || r === "mp" || r.includes("madhya pradesh")) {
+    return "Indore";
   }
 
-  // 6. Hyderabad
-  if (c.includes("hyderabad") || c.includes("secunderabad") || c.includes("cyberabad") || r === "tg" || r.includes("telangana")) {
-    return "Hyderabad";
+  // 11. Kochi
+  if (c.includes("kochi") || c.includes("cochin") || r === "kl" || r.includes("kerala")) {
+    return "Kochi";
   }
 
-  // If outside these cities but in Maharashtra
+  // 12. Chandigarh
+  if (c.includes("chandigarh") || c.includes("mohali") || c.includes("panchkula")) {
+    return "Chandigarh";
+  }
+
+  // 13. Goa
+  if (c.includes("goa") || c.includes("panaji") || c.includes("panjim") || r === "ga") {
+    return "Goa";
+  }
+
+  // If in Maharashtra outside Mumbai/Pune, check if near Pune
   if (r === "mh" || r.includes("maharashtra")) {
     return "Mumbai";
   }
 
-  return "Ahmedabad"; // Safe default
+  return "Delhi NCR"; // Safe default to lead commercial metro
 }
 
 export async function GET(request: NextRequest) {
@@ -143,10 +209,10 @@ export async function GET(request: NextRequest) {
       clientIp.startsWith("172.16.");
 
     if (isPrivateIp) {
-      // In local dev, query public IP service to detect developer's actual real internet location
+      // In local dev, query public IP service with 1000ms strict timeout
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const timeout = setTimeout(() => controller.abort(), 1000);
         const geoRes = await fetch("https://get.geojs.io/v1/ip/geo.json", {
           signal: controller.signal,
           headers: { "User-Agent": "OfficeX-Geo-Detector/1.0" },
@@ -174,7 +240,7 @@ export async function GET(request: NextRequest) {
       // External IP lookup for the client's public IP
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const timeout = setTimeout(() => controller.abort(), 1000);
         const geoRes = await fetch(`https://ipwho.is/${clientIp}`, {
           signal: controller.signal,
         });
@@ -201,19 +267,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Default safe fallback
+    // Default safe fallback - Lead with Delhi NCR
     return NextResponse.json({
       success: true,
       source: "default",
-      city: "Ahmedabad",
-      rawCity: "Ahmedabad",
+      city: "Delhi NCR",
+      rawCity: "Delhi NCR",
       country: "IN",
     });
   } catch (err: any) {
     return NextResponse.json({
       success: false,
       error: err?.message || "Location detection failed",
-      city: "Ahmedabad",
+      city: "Delhi NCR",
     });
   }
 }

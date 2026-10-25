@@ -79,7 +79,7 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
         {/* Right: Actions */}
         <div className="hidden md:flex items-center gap-4 shrink-0">
           <button 
-            onClick={() => router.push("/public/search")}
+            onClick={() => router.push("/marketplace/search")}
             className="p-2 text-slate-600 hover:text-slate-900 transition-colors rounded-full hover:bg-slate-100 cursor-pointer"
             title="Search Spaces"
           >

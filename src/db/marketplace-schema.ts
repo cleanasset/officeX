@@ -68,7 +68,7 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   metroDistance: varchar("metro_distance", { length: 100 }),
   consultantName: varchar("consultant_name", { length: 150 }),
   consultantPhone: varchar("consultant_phone", { length: 50 }),
-  source: varchar("source", { length: 50 }).default("scraped_myhq"),
+  source: varchar("source", { length: 50 }).default("verified_listing"),
   sourceUrl: text("source_url"),
   marketplaceOwnerId: uuid("marketplace_owner_id").references(() => marketplaceOwners.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

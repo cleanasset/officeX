@@ -51,35 +51,35 @@ export default function IntelligencePage() {
         bgImage="/images/work_intelligence_analytics.jpg"
         customVisual={
           <div className="flex flex-col gap-3 max-w-md ml-auto text-slate-900">
-            {/* Holographic Digital Twin Telemetry Callout — Light Theme */}
+            {/* Commercial Analytics Telemetry Callout — Light Theme */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xl">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-black uppercase text-[#0F8B7D] tracking-wider flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#0F8B7D] animate-pulse" />
-                  OfficeX Spatial AI · Digital Twin Active
+                  OfficeX Analytics Engine · Portfolio Radar
                 </span>
                 <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                  ● 3D Sync: 99.8%
+                  ● Data Feeds Active
                 </span>
               </div>
               
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">AI PREDICTIVE YIELD</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">PORTFOLIO NET NOI</span>
                   <div className="flex items-baseline gap-1.5 mt-0.5">
                     <span className="text-base font-black text-slate-900">₹14.2 Cr</span>
-                    <span className="text-[10px] font-bold text-emerald-600">+18.4%</span>
+                    <span className="text-[10px] font-bold text-emerald-600">Run Rate</span>
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">ENERGY AI (BMS)</span>
-                  <span className="text-sm font-black text-emerald-600 block mt-0.5">-24% kWh</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">SUB-METER BENCHMARK</span>
+                  <span className="text-sm font-black text-emerald-600 block mt-0.5">-24% CAM kWh</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-500">
-                <span>SEBI BRSR &amp; Scope 1-3 ESG Live</span>
-                <span className="text-[#0F8B7D] font-bold">Real-time Telemetry</span>
+                <span>SEBI BRSR Core Aligned Reporting</span>
+                <span className="text-[#0F8B7D] font-bold">Automated MIS Packs</span>
               </div>
             </div>
           </div>
@@ -212,8 +212,8 @@ export default function IntelligencePage() {
       <FAQAccordion
         faqs={[
           {
-            q: "Why is the full AI assistant phased for late 2026?",
-            a: "Enterprise-grade predictive AI and natural language queries require at least 9-12 months of high-fidelity operational data (PPM logs, tenant work orders, and sensor telemetry) to generate statistically reliable insights without hallucinations."
+            q: "How does OfficeX approach predictive AI and analytics?",
+            a: "Enterprise-grade predictive modeling requires high-fidelity historical operational data (PPM logs, tenant work orders, and sub-meter telemetry) to generate statistically sound insights. While core rule-based variance analytics and financial dashboards operate live today, advanced predictive models roll out once building portfolios establish verified telemetry baselines."
           },
           {
             q: "Can we export data to Microsoft PowerBI, Tableau, or Snowflake?",

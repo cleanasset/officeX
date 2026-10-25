@@ -33,7 +33,7 @@ export default function ITWorkplaceTechJourney() {
         badge="AUDIENCE JOURNEY — IT &amp; WORKPLACE TECHNOLOGY"
         headline="Enterprise APIs, Touchless Access &amp; Scalable IoT Infrastructure"
         subheadline="Integrate BMS telemetry, digital access credentials, and tenant workflows on an institutional security foundation."
-        description="Replace fragmented proprietary building hardware with unified cloud APIs. Connect BACnet/Modbus telemetry, enforce SAML 2.0 / Okta Single Sign-On, and maintain strict DPDP Act 2023 and SOC 2 Type II compliance across your entire commercial real estate footprint."
+        description="Replace fragmented proprietary building hardware with unified cloud APIs. Connect BACnet/Modbus telemetry, enforce SAML 2.0 / Okta Single Sign-On, and maintain strict DPDP Act 2023 and enterprise cloud security compliance across your entire commercial real estate footprint."
         primaryCta={{
           label: "Start Free Trial",
           href: "/signup"
@@ -48,7 +48,7 @@ export default function ITWorkplaceTechJourney() {
         visualMetrics={[
           { label: "API Latency", value: "<45ms" },
           { label: "Uptime SLA", value: "99.95%" },
-          { label: "Security", value: "SOC 2 Type II" }
+          { label: "Security", value: "AES-256 / RBAC" }
         ]}
       />
 
@@ -93,7 +93,7 @@ export default function ITWorkplaceTechJourney() {
               <span className="text-2xl font-mono font-black text-[#2563EB]">03</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Enforce Institutional Security</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Stream real-time audit logs into your SIEM, enforce Okta/Azure AD SAML SSO, and ensure all data processing complies with Digital Personal Data Protection (DPDP) and SOC 2 Type II standards.
+                Stream real-time audit logs into your SIEM, enforce Okta/Azure AD SAML SSO, and ensure all data processing complies with Digital Personal Data Protection (DPDP Act 2023) standards.
               </p>
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1.5 text-xs font-bold text-[#2563EB]">
                 <span>Connected Module: Platform Core</span>
@@ -130,7 +130,7 @@ export default function ITWorkplaceTechJourney() {
           },
           {
             icon: Shield,
-            title: "DPDP Act 2023 &amp; SOC 2 Type II",
+            title: "DPDP Act 2023 &amp; AES-256 Vault",
             description: "Bank-grade AES-256 encryption at rest, TLS 1.3 in transit, automated data retention schedules, and sovereign Tier-4 data center storage.",
             tag: "Compliance"
           },

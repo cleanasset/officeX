@@ -753,7 +753,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
               <p className="text-xs text-gray-400 mt-0.5">Top-scoring Grade A commercial towers in the same micromarket</p>
             </div>
             <Link
-              href="/public/search"
+              href="/marketplace/search"
               className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
             >
               Browse All Spaces <ChevronRight size={13} />
@@ -837,7 +837,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">Marketplaces</h4>
             <ul className="space-y-1.5 text-gray-400">
-              <li><Link href="/public/search" className="hover:text-white">Find Office Space</Link></li>
+              <li><Link href="/marketplace/search" className="hover:text-white">Find Office Space</Link></li>
               <li><Link href="/marketplace" className="hover:text-white">Hire FM Vendors</Link></li>
               <li><Link href="/public/wizard" className="hover:text-white">Workspace Intake Wizard</Link></li>
               <li><Link href="/marketplace/compare" className="hover:text-white">Quote Comparison</Link></li>
@@ -857,7 +857,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">Trust & Security</h4>
             <p className="text-gray-400 text-[11px] leading-relaxed">
-              SOC 2 Type II Certified • AES-256 Encryption • Razorpay Escrow Nodal Integrated
+              DPDP Act 2023 Compliant • AES-256 Bit Encryption • Direct Bank Settlement Integrated
             </p>
             <p className="text-[10px] text-gray-500 pt-2">© 2026 OfficeX Workspaces Pvt Ltd. All rights reserved.</p>
           </div>

@@ -1242,7 +1242,7 @@ export default function OwnerDashboardPage() {
         </div>
       </div>
 
-      {/* Owner Statement Modal (§Table 103) */}
+      {/* Owner Statement Modal (Owner Settlement Ledger) */}
       <OwnerStatementModal
         isOpen={statementModalOpen}
         onClose={() => setStatementModalOpen(false)}

@@ -262,7 +262,7 @@ export default function ListSpacePage() {
                       onChange={(e) => setFormData({ ...formData, operatorType: e.target.value })}
                       className="w-full p-3 rounded-xl border border-gray-200 bg-slate-50/50 font-medium focus:ring-2 focus:ring-[#0F8B7D] focus:outline-none"
                     >
-                      <option value="coworking_operator">Coworking Space Operator (Awfis, WeWork, 91springboard, etc.)</option>
+                      <option value="coworking_operator">Coworking &amp; Flex Space Operator</option>
                       <option value="managed_provider">Managed Office &amp; Enterprise Suite Provider</option>
                       <option value="commercial_landlord">Commercial Building Owner / Asset Landlord</option>
                       <option value="business_center">Executive Business Center / Virtual Office Host</option>

@@ -47,34 +47,34 @@ export default function Footer() {
             The unified operating system for commercial real estate discoverability, leasing transactions, statutory compliance, and facility operations.
           </p>
           <div className="flex items-center gap-3 mt-1 text-[11px] font-semibold text-slate-400">
-            <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-[#0F8B7D]" /> SOC 2 Type II</span>
-            <span className="flex items-center gap-1"><Lock size={14} className="text-[#0F8B7D]" /> AES-256</span>
+            <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-[#0F8B7D]" /> DPDP Act 2023 Compliant</span>
+            <span className="flex items-center gap-1"><Lock size={14} className="text-[#0F8B7D]" /> AES-256 Bit Encryption</span>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <a
-              href="https://linkedin.com/company/officex"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
+              onClick={(e) => e.preventDefault()}
               className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
               aria-label="OfficeX on LinkedIn"
+              title="Official channel coming soon"
             >
               in
             </a>
             <a
-              href="https://twitter.com/officex_in"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
+              onClick={(e) => e.preventDefault()}
               className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
-              aria-label="OfficeX on X (Twitter)"
+              aria-label="OfficeX on X"
+              title="Official channel coming soon"
             >
               𝕏
             </a>
             <a
-              href="https://instagram.com/officex_india"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
+              onClick={(e) => e.preventDefault()}
               className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all"
               aria-label="OfficeX on Instagram"
+              title="Official channel coming soon"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -83,11 +83,11 @@ export default function Footer() {
               </svg>
             </a>
             <a
-              href="https://facebook.com/officexindia"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
+              onClick={(e) => e.preventDefault()}
               className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all"
               aria-label="OfficeX on Facebook"
+              title="Official channel coming soon"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />

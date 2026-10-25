@@ -669,8 +669,8 @@ export default function FMMarketplacePage() {
                     <Users size={17} />
                   </div>
                   <div>
-                    <span className="block text-base font-black text-slate-900 leading-tight">2,500+</span>
-                    <span className="text-[11px] text-slate-500 font-medium">Verified Vendors</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">50+</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Vetted Vendors</span>
                   </div>
                 </div>
 
@@ -679,8 +679,8 @@ export default function FMMarketplacePage() {
                     <ShieldCheck size={17} />
                   </div>
                   <div>
-                    <span className="block text-base font-black text-slate-900 leading-tight">100%</span>
-                    <span className="text-[11px] text-slate-500 font-medium">Compliance Audited</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">24</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Trade Categories</span>
                   </div>
                 </div>
 
@@ -689,8 +689,8 @@ export default function FMMarketplacePage() {
                     <TrendingUp size={17} />
                   </div>
                   <div>
-                    <span className="block text-base font-black text-slate-900 leading-tight">4.92 / 5</span>
-                    <span className="text-[11px] text-slate-500 font-medium">SLA Quality Score</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">100%</span>
+                    <span className="text-[11px] text-slate-500 font-medium">SLA Verified</span>
                   </div>
                 </div>
               </div>
@@ -796,7 +796,7 @@ export default function FMMarketplacePage() {
               {/* Live Adherence Badge - Cleanly positioned below grid */}
               <div className="mt-3 py-2 px-3.5 rounded-xl bg-white border border-teal-100 shadow-xs flex items-center justify-center gap-2 text-xs font-bold text-slate-700">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="truncate">99.2% On-Time SLA Adherence across 18M+ sq.ft.</span>
+                <span className="truncate">99.2% On-Time SLA Adherence across Commercial Portfolios</span>
               </div>
             </div>
 
@@ -822,8 +822,8 @@ export default function FMMarketplacePage() {
               <Lock size={18} />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-900 leading-tight">100% Escrow Protection</p>
-              <p className="text-[11px] text-slate-500">Funds released on SLA sign-off</p>
+              <p className="text-xs font-black text-slate-900 leading-tight">Milestone Approval Gate</p>
+              <p className="text-[11px] text-slate-500">Funds released on verified sign-off</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -831,7 +831,7 @@ export default function FMMarketplacePage() {
               <Award size={18} />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-900 leading-tight">PSARA &amp; ISO Audited</p>
+              <p className="text-xs font-black text-slate-900 leading-tight">PSARA &amp; Statutory Audited</p>
               <p className="text-[11px] text-slate-500">100% police &amp; statutory vetted</p>
             </div>
           </div>
@@ -1499,9 +1499,9 @@ export default function FMMarketplacePage() {
                       <CheckCircle2 size={12} className="text-[#0F8B7D]" />
                       Verified
                     </span>
-                    <div className="flex items-center gap-1 backdrop-blur-md bg-white/95 text-slate-800 font-bold text-xs px-2.5 py-1 rounded-full border border-white/80 shadow-xs">
-                      <Star size={11} className="fill-amber-400 text-amber-400" />
-                      <span>{vendor.rating}</span>
+                    <div className="flex items-center gap-1 backdrop-blur-md bg-white/95 text-slate-800 font-bold text-[11px] px-2.5 py-1 rounded-full border border-white/80 shadow-xs">
+                      <ShieldCheck size={11} className="text-[#0F8B7D]" />
+                      <span>SLA Certified</span>
                     </div>
                   </div>
                 </div>

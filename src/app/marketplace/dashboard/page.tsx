@@ -280,7 +280,7 @@ export default function MarketplaceOwnerDashboard() {
                       companyName: "FinScale Technologies",
                       seekerEmail: "rohan@finscale.io",
                       seekerPhone: "+91 98450 11223",
-                      listingName: "Awfis Coworking - Connaught Place",
+                      listingName: "Executive Hub - Connaught Place",
                       seatsRequired: 35,
                       moveInDate: "Immediate",
                       status: "new"
@@ -291,7 +291,7 @@ export default function MarketplaceOwnerDashboard() {
                       companyName: "Cognitive AI Labs",
                       seekerEmail: "priya@cognitive.ai",
                       seekerPhone: "+91 97120 44556",
-                      listingName: "WeWork - Embassy GolfLinks",
+                      listingName: "Apex Workspaces - GolfLinks Tech Park",
                       seatsRequired: 50,
                       moveInDate: "Next Month",
                       status: "visit_scheduled"
@@ -351,7 +351,7 @@ export default function MarketplaceOwnerDashboard() {
                   <span className="font-bold text-emerald-700">Confirmed</span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm">FinScale Technologies (35 Seats)</h4>
-                <p className="text-slate-600 flex items-center gap-1"><MapPin size={12} className="text-[#0F8B7D]" /> Awfis Center - 4th Floor</p>
+                <p className="text-slate-600 flex items-center gap-1"><MapPin size={12} className="text-[#0F8B7D]" /> Executive Suites - 4th Floor</p>
                 <p className="text-slate-500 text-[11px]">Visitor: Rohan Varma (+91 98450 11223)</p>
               </div>
 
@@ -361,7 +361,7 @@ export default function MarketplaceOwnerDashboard() {
                   <span className="font-bold text-teal-700">Scheduled</span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm">Cognitive AI Labs (50 Seats)</h4>
-                <p className="text-slate-600 flex items-center gap-1"><MapPin size={12} className="text-[#0F8B7D]" /> WeWork Center - Tower B</p>
+                <p className="text-slate-600 flex items-center gap-1"><MapPin size={12} className="text-[#0F8B7D]" /> Prime Workspaces - Tower B</p>
                 <p className="text-slate-500 text-[11px]">Visitor: Priya Nair (+91 97120 44556)</p>
               </div>
             </div>
@@ -378,7 +378,7 @@ export default function MarketplaceOwnerDashboard() {
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">3</span>
               </div>
               <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs space-y-1.5">
-                <span className="text-[10px] font-bold text-teal-700">Awfis Connaught Place</span>
+                <span className="text-[10px] font-bold text-teal-700">Executive Hub CP</span>
                 <p className="font-bold text-slate-900">Apex Global Logistics</p>
                 <p className="text-slate-500 text-[11px]">25 Seats · ₹2.1L/mo</p>
               </div>
@@ -391,7 +391,7 @@ export default function MarketplaceOwnerDashboard() {
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">2</span>
               </div>
               <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs space-y-1.5">
-                <span className="text-[10px] font-bold text-teal-700">WeWork Embassy</span>
+                <span className="text-[10px] font-bold text-teal-700">Apex GolfLinks</span>
                 <p className="font-bold text-slate-900">FinScale Technologies</p>
                 <p className="text-slate-500 text-[11px]">35 Seats · Tour Today</p>
               </div>

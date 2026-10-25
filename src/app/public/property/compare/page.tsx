@@ -64,7 +64,7 @@ export default async function PropertyComparePage() {
           <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={32} height={32} className="object-contain" style={{ width: "auto", height: "28px" }} />
           <Image src="/name-removebg-preview.png" alt="OfficeX" width={110} height={25} className="object-contain" style={{ width: "auto", height: "24px" }} />
         </Link>
-        <Link href="/public/search" className="text-xs font-semibold text-gray-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
+        <Link href="/marketplace/search" className="text-xs font-semibold text-gray-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Listings
         </Link>
       </header>

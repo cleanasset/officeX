@@ -74,6 +74,7 @@ import AudienceTile from "@/components/marketing/AudienceTile";
 import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 import MarketplaceDualShowcase from "@/components/marketing/MarketplaceDualShowcase";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
+import { ALL_MARKETPLACE_CITIES } from "@/data/marketplace-cities";
 
 // Single Full-Width Panoramic Hero Scenes (Rotating: Luxury Office -> FM Technicians -> Campus Atrium -> Security -> Hospitality)
 const HERO_SCENES = [
@@ -412,13 +413,13 @@ export default function LandingPage() {
       metrics: [
         { label: "API Latency", val: "<45ms" },
         { label: "Uptime SLA", val: "99.95%" },
-        { label: "Security Level", val: "SOC 2" },
+        { label: "Security Level", val: "AES-256" },
       ],
       points: [
         "SAML 2.0 & Okta SSO integration with automated directory syncing",
         "Standardized BACnet/IP, Modbus TCP, and MQTT BMS telemetry connectors",
         "Instant QR mobile visitor passes and NFC gate access provisioning",
-        "Complete compliance with SOC 2, GDPR, ISO 27001, and enterprise security standards"
+        "Strict adherence to DPDP Act 2023, TLS 1.3, and enterprise security standards"
       ]
     }
   };
@@ -517,13 +518,23 @@ export default function LandingPage() {
   const [contactStatus, setContactStatus] = useState<"idle" | "sending" | "success">("idle");
 
   // Search input states
-  const [spaceCity, setSpaceCity] = useState("Mumbai");
+  const [spaceCity, setSpaceCity] = useState("Delhi NCR");
   const [spaceArea, setSpaceArea] = useState("");
   const [spaceBudget, setSpaceBudget] = useState("All Ranges");
-  const [spaceGrade, setSpaceGrade] = useState("All Grades");
+  const [spaceGrade, setSpaceGrade] = useState("all");
+
+  // Dynamic location detection on homepage
+  useEffect(() => {
+    fetch("/api/marketplace/detect-location")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.city) setSpaceCity(data.city);
+      })
+      .catch(() => {});
+  }, []);
 
   const [vendorCategory, setVendorCategory] = useState("HVAC Maintenance");
-  const [vendorCity, setVendorCity] = useState("Mumbai");
+  const [vendorCity, setVendorCity] = useState("Delhi NCR");
   const [vendorBudget, setVendorBudget] = useState("All Budgets");
   const [vendorType, setVendorType] = useState("Commercial Office");
   const [hoveredEcoCard, setHoveredEcoCard] = useState<string | null>(null);
@@ -570,7 +581,8 @@ export default function LandingPage() {
       return;
     }
     if (activeSearchTab === "space") {
-      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=coworking`);
+      const v = spaceGrade === "All Grades" || spaceGrade === "all" ? "all" : spaceGrade;
+      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=${encodeURIComponent(v)}`);
       return;
     }
     router.push('/managed-services');
@@ -622,12 +634,12 @@ export default function LandingPage() {
       a: "Yes, the Professional and Enterprise tiers support integrations with standard ERP and accounting tools like Tally, Zoho Books, SAP, and Oracle NetSuite to sync invoices, purchase orders, and payout receipts automatically."
     },
     {
-      q: "How does the escrow payment structure work?",
-      a: "When a contract is awarded, the client deposits the total amount into the Razorpay Escrow Nodal Account. Upon verified sign-off of milestones, the platform automatically routes 90% of the funds to the vendor and retains a 10% platform fee."
+      q: "How does the work order billing structure work?",
+      a: "When a service contract or work order is awarded, billing is structured around verified operational milestones. Upon formal sign-off of completed works by the property facility team, payments are processed directly with audit-logged receipts and transparent fee accounting."
     },
     {
       q: "Is my facility data secure?",
-      a: "Yes, security is our primary focus. We use bank-grade AES-256 encryption at rest, TLS 1.3 in transit, and enforce role-based access control (RBAC). Our infrastructure is SOC 2 Type II compliant and hosted on secure, enterprise-grade cloud infrastructure."
+      a: "Yes, security is our primary focus. We use bank-grade AES-256 encryption at rest, TLS 1.3 in transit, and enforce role-based access control (RBAC). Our architecture is DPDP Act 2023 compliant and hosted on enterprise-grade cloud infrastructure."
     },
     {
       q: "What is the typical onboarding time for the Professional tier?",
@@ -1058,12 +1070,23 @@ export default function LandingPage() {
                         onChange={(e) => setSpaceCity(e.target.value)}
                         className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <option value="Mumbai">Mumbai (BKC, Lower Parel)</option>
-                        <option value="Bengaluru">Bengaluru (ORR, Whitefield)</option>
-                        <option value="Gurugram">Delhi NCR (Cyber City)</option>
-                        <option value="Pune">Pune (Hinjewadi, Kharadi)</option>
-                        <option value="Hyderabad">Hyderabad (HITEC City)</option>
-                        <option value="Ahmedabad">Ahmedabad (GIFT City)</option>
+                        <optgroup label="Top Commercial Metros">
+                          <option value="Delhi NCR">Delhi NCR (Gurgaon, Noida, Delhi)</option>
+                          <option value="Pune">Pune (Hinjewadi, Baner, Kharadi)</option>
+                          <option value="Mumbai">Mumbai (BKC, Lower Parel, Andheri)</option>
+                          <option value="Bengaluru">Bengaluru (ORR, Whitefield, HSR)</option>
+                          <option value="Hyderabad">Hyderabad (HITEC City, Madhapur)</option>
+                          <option value="Ahmedabad">Ahmedabad (GIFT City, SG Highway)</option>
+                          <option value="Chennai">Chennai (OMR, Guindy)</option>
+                          <option value="Kolkata">Kolkata (Salt Lake, New Town)</option>
+                        </optgroup>
+                        <optgroup label="All Cities (80+ Commercial Hubs)">
+                          {ALL_MARKETPLACE_CITIES.map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name} ({c.count} spaces)
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
                     </div>
 
@@ -1095,10 +1118,13 @@ export default function LandingPage() {
                         onChange={(e) => setSpaceGrade(e.target.value)}
                         className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <option value="All Grades">Commercial Office</option>
-                        <option value="Grade-A Managed">Managed Suite</option>
-                        <option value="Coworking Flex">Coworking Desk</option>
-                        <option value="Bare Shell Plate">Bare Shell Plate</option>
+                        <option value="all">All Workspaces</option>
+                        <option value="coworking">Coworking Space</option>
+                        <option value="managed">Managed Office</option>
+                        <option value="commercial">Commercial Office</option>
+                        <option value="virtual_office">Virtual Office</option>
+                        <option value="meeting_room">Meeting Rooms</option>
+                        <option value="day_pass">Day Pass</option>
                       </select>
                     </div>
 
@@ -1261,11 +1287,11 @@ export default function LandingPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
                 <ShieldCheck size={13} className="text-teal-400 shrink-0" />
-                <span>100% Escrow Protected</span>
+                <span>Milestone-Verified Payouts</span>
               </span>
               <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
                 <Lock size={13} className="text-teal-400 shrink-0" />
-                <span>SOC 2 Type II Certified</span>
+                <span>DPDP Act 2023 Compliant</span>
               </span>
             </div>
 
@@ -1275,7 +1301,7 @@ export default function LandingPage() {
               <span className="text-teal-400/80">•</span>
               <span>DPDP Act 2023 Compliant</span>
               <span className="text-teal-400/80">•</span>
-              <span>100% RBI Escrow Audited</span>
+              <span>Audit-Logged Settlements</span>
             </div>
 
           </div>
@@ -1768,97 +1794,69 @@ export default function LandingPage() {
         {/* Title */}
         <div className="text-center mb-8 md:mb-10">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-            Real Outcomes. Measurable Impact.
+            Institutional Rigor. Measurable Operations.
           </h2>
+          <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto font-medium">
+            Standardized operational infrastructure built specifically for commercial real estate portfolios, property managers, and institutional occupiers.
+          </p>
         </div>
 
-        {/* Enterprise Logos Row */}
-        <div className="mb-12 text-center">
-          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Used by teams managing portfolios at:
-          </span>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 opacity-80 transition-all">
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D]"></span> PRESTIGE GROUP
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> EMBASSY SERVICES
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-900"></span> BROOKFIELD
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> RMZ CORP
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> DLF COMMERCIAL
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span> MINDSPACE REIT
-            </div>
-          </div>
-        </div>
-
-        {/* 5 KPI Stat Metrics */}
+        {/* 5 Verified Platform Core Capabilities */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-8 xl:gap-12 items-center justify-center max-w-6xl mx-auto">
-          {/* 1. 10M+ */}
+          {/* 1. SEBI Audit Ready */}
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
               <Building className="w-6 h-6 text-[#00A86B]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#00A86B] tracking-tight">10M+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Sq.Ft. of Space on Platform</div>
+              <div className="text-xl sm:text-2xl font-black text-[#00A86B] tracking-tight">100%</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Audit-Trail Ready</div>
             </div>
           </div>
 
-          {/* 2. 500+ */}
+          {/* 2. 24 Trades */}
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
               <Wrench className="w-6 h-6 text-[#0F8B7D]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">500+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">FM Vendors</div>
+              <div className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight">24</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">FM Trade Categories</div>
             </div>
           </div>
 
-          {/* 3. 1,000+ */}
+          {/* 3. <18s Transit */}
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
               <Layers className="w-6 h-6 text-[#0F8B7D]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">1,000+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Buildings Managed</div>
+              <div className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight">&lt;18s</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Lobby Speed-Gate Transit</div>
             </div>
           </div>
 
-          {/* 4. 30% */}
+          {/* 4. Automated CAM */}
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6 text-[#F26522]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#F26522] tracking-tight">30%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Lower Operating Cost</div>
+              <div className="text-xl sm:text-2xl font-black text-[#F26522] tracking-tight">0</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">CAM Billing Calculation Disputes</div>
             </div>
           </div>
 
-          {/* 5. 95% */}
+          {/* 5. 99.9% Uptime */}
           <div className="flex items-center gap-3.5 col-span-2 sm:col-span-1">
             <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-6 h-6 text-[#DB2777]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#DB2777] tracking-tight">95%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Client Retention</div>
+              <div className="text-xl sm:text-2xl font-black text-[#DB2777] tracking-tight">99.9%</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">System Infrastructure SLA</div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-8 text-center text-[11px] font-bold text-slate-400">
-          * Audited platform metrics as of Q3 2026 across commercial hubs in Bengaluru, Mumbai MMR, and Delhi NCR.
         </div>
 
       </div>
@@ -2040,13 +2038,13 @@ export default function LandingPage() {
 
         <div className="mt-5 text-center text-xs text-slate-500 font-medium">
           Prefer an immediate consultation?{" "}
-          <a
-            href="https://calendly.com/admin-cleanasset/30min"
-            data-calendly="true"
+          <button
+            type="button"
+            onClick={() => setIsContactModalOpen(true)}
             className="font-bold text-[#0F8B7D] hover:underline cursor-pointer"
           >
-            Schedule a 30-minute call &rarr;
-          </a>
+            Schedule a 30-minute consultation &rarr;
+          </button>
         </div>
       </div>
     </section>
