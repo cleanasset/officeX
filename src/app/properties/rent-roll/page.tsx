@@ -34,6 +34,7 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
+  Receipt,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
