@@ -108,17 +108,24 @@ export default function MarketingHeader({
                       <div className="text-xs font-bold text-slate-900">Rent Roll &amp; Billing</div>
                       <div className="text-[11px] text-slate-500">Auto escalations, CAM pooling, bank escrow</div>
                     </Link>
+                    <Link href="/operate/visitors" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                      <div className="text-xs font-bold text-slate-900">Visitor Flow &amp; Speed-Gates</div>
+                      <div className="text-[11px] text-slate-500">WhatsApp QR passes &amp; turnstile integration</div>
+                    </Link>
                     <Link href="/operate/compliance" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">Statutory Compliance Calendar</div>
                       <div className="text-[11px] text-slate-500">48 Pre-configured commercial tower licenses</div>
                     </Link>
+                    <Link href="/vc/dashboard" className="block p-2 rounded-xl bg-teal-50/70 border border-teal-200/80 hover:bg-teal-100/70 transition-colors">
+                      <div className="text-xs font-black text-[#0D7B6C] flex items-center justify-between">
+                        <span>Visitor &amp; Compliance Center</span>
+                        <span className="text-[9px] bg-[#0D7B6C] text-white px-1.5 py-0.5 rounded font-extrabold">31 Screens</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600">Dual-mode console · ₹999/mo (visitor001 Free)</div>
+                    </Link>
                     <Link href="/operate/ppm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">52-Week PPM &amp; CAFM</div>
                       <div className="text-[11px] text-slate-500">Equipment servicing matrices &amp; QR passports</div>
-                    </Link>
-                    <Link href="/operate/visitors" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Visitor Flow &amp; Speed-Gates</div>
-                      <div className="text-[11px] text-slate-500">WhatsApp QR passes &amp; turnstile integration</div>
                     </Link>
                     <Link href="/operate/lease-crm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">Commercial Lease CRM</div>

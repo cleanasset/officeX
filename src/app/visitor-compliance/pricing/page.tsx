@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -31,8 +31,9 @@ declare global {
   }
 }
 
-export default function VisitorCompliancePricingPage() {
+function VisitorCompliancePricingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // State
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
@@ -53,13 +54,9 @@ export default function VisitorCompliancePricingPage() {
   const basePrice = billingCycle === "monthly" ? 999 : 849;
   const currentPrice = appliedCoupon ? appliedCoupon.finalPrice : basePrice;
 
-  // Validate coupon handler
-  const handleApplyCoupon = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!couponCode.trim()) {
-      setCouponError("Please enter a coupon code");
-      return;
-    }
+  // Auto-apply coupon from URL or default to visitor001
+  const applyCouponWithCode = async (codeToVerify: string) => {
+    if (!codeToVerify.trim()) return;
 
     setIsVerifyingCoupon(true);
     setCouponError("");
@@ -69,7 +66,7 @@ export default function VisitorCompliancePricingPage() {
       const res = await fetch("/api/vc/coupon/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode }),
+        body: JSON.stringify({ code: codeToVerify.trim() }),
       });
       const data = await res.json();
 
@@ -91,6 +88,23 @@ export default function VisitorCompliancePricingPage() {
     } finally {
       setIsVerifyingCoupon(false);
     }
+  };
+
+  useEffect(() => {
+    const paramCoupon = searchParams.get("coupon");
+    const code = paramCoupon || "visitor001";
+    setCouponCode(code);
+    applyCouponWithCode(code);
+  }, [searchParams]);
+
+  // Validate coupon handler
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!couponCode.trim()) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+    await applyCouponWithCode(couponCode);
   };
 
   const handleRemoveCoupon = () => {
@@ -127,7 +141,7 @@ export default function VisitorCompliancePricingPage() {
 
       // If 100% off via coupon visitor001 -> immediate activation!
       if (data.freeAccess) {
-        router.push("/vc/dashboard?activated=free");
+        router.push(`/vc/dashboard?activated=free&coupon=${encodeURIComponent(appliedCoupon?.code || "visitor001")}&plan=Commercial%20Pass`);
         return;
       }
 
@@ -221,13 +235,37 @@ export default function VisitorCompliancePricingPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-blue-600/20 via-emerald-500/10 to-transparent blur-3xl pointer-events-none rounded-full" />
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
+          {/* SaaS Customer Journey: 3-Step Flow Indicator */}
+          <div className="inline-flex items-center gap-2 sm:gap-4 py-2 px-4 rounded-full bg-slate-900/90 border border-slate-800 text-xs text-slate-400 font-semibold max-w-xl mx-auto shadow-xl mb-6">
+            <Link
+              href="/visitor-compliance"
+              className="flex items-center gap-1.5 text-emerald-400 hover:text-white transition-colors"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>1. Product Showcase</span>
+            </Link>
+            <span className="text-slate-600 font-mono">──►</span>
+            <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-md shadow-blue-600/50">2</span>
+              <span>2. Subscription &amp; Activation</span>
+            </span>
+            <span className="text-slate-600 font-mono">──►</span>
+            <Link
+              href="/vc/dashboard"
+              className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <span className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-400">3</span>
+              <span>3. SaaS Dashboard</span>
+            </Link>
+          </div>
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-6 animate-pulse">
             <Sparkles className="w-3.5 h-3.5" />
             Commercial SaaS Launch Edition
           </div>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight">
-            Commercial Security & Compliance.
+            Commercial Security &amp; Compliance.
             <br />
             <span className="bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
               Flat ₹999 / Month.
@@ -625,5 +663,19 @@ export default function VisitorCompliancePricingPage() {
       {/* Universal Footer */}
       <Footer />
     </div>
+  );
+}
+
+export default function VisitorCompliancePricingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center text-slate-400 font-mono text-sm">
+          Loading OFFICEX Subscription Portal...
+        </div>
+      }
+    >
+      <VisitorCompliancePricingContent />
+    </Suspense>
   );
 }

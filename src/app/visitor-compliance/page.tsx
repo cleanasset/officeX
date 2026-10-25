@@ -145,15 +145,39 @@ export default function VisitorComplianceLandingPage() {
         <div className="absolute bottom-10 right-8 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-6xl mx-auto text-center relative z-10 space-y-6">
+          {/* SaaS Customer Journey: 3-Step Flow Indicator */}
+          <div className="inline-flex items-center gap-2 sm:gap-4 py-2 px-4 rounded-full bg-slate-900/90 border border-slate-800 text-xs text-slate-400 font-semibold max-w-xl mx-auto shadow-xl">
+            <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
+              <span className="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center text-[10px] font-bold text-cyan-300">1</span>
+              <span>1. Product Showcase</span>
+            </span>
+            <span className="text-slate-600 font-mono">──►</span>
+            <Link
+              href="/visitor-compliance/pricing?coupon=visitor001"
+              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+            >
+              <span className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-400">2</span>
+              <span>2. Subscribe &amp; Activate</span>
+            </Link>
+            <span className="text-slate-600 font-mono">──►</span>
+            <Link
+              href="/vc/dashboard"
+              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+            >
+              <span className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-400">3</span>
+              <span>3. SaaS Dashboard</span>
+            </Link>
+          </div>
+
           {/* Top Pill Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-400 text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-950/50">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            Commercial Front-Desk & Statutory Radar
+            Commercial Front-Desk &amp; Statutory Radar
           </div>
 
           {/* Master Headline */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.08] max-w-5xl mx-auto">
-            Commercial Security & Compliance.
+            Commercial Security &amp; Compliance.
             <br />
             <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
               Engineered for Grade-A Assets.
@@ -168,10 +192,10 @@ export default function VisitorComplianceLandingPage() {
           {/* Action CTAs */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/visitor-compliance/pricing"
+              href="/visitor-compliance/pricing?coupon=visitor001"
               className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-cyan-600/30 transition-all flex items-center gap-2.5 group hover:scale-[1.02]"
             >
-              <span>Get Started for ₹999/mo</span>
+              <span>Step 2: Subscribe &amp; Activate License (₹999/mo)</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
 
@@ -180,7 +204,7 @@ export default function VisitorComplianceLandingPage() {
               className="px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-850 text-slate-200 border border-slate-700/80 font-bold text-sm sm:text-base transition-all flex items-center gap-2 shadow-xl hover:border-cyan-500/50"
             >
               <Activity className="w-4 h-4 text-emerald-400" />
-              <span>Launch Live SaaS Dashboard</span>
+              <span>Preview 31-Screen Dashboard</span>
             </Link>
           </div>
 
@@ -188,7 +212,12 @@ export default function VisitorComplianceLandingPage() {
           <div className="text-xs text-slate-400 flex items-center justify-center gap-2 pt-1">
             <span className="text-emerald-400 font-bold">✓ Launch Offer:</span>
             <span>Use coupon code</span>
-            <code className="text-cyan-300 font-mono font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-700">visitor001</code>
+            <Link
+              href="/visitor-compliance/pricing?coupon=visitor001"
+              className="text-cyan-300 font-mono font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-700 hover:border-cyan-400 transition-colors"
+            >
+              visitor001
+            </Link>
             <span>for 100% free instant access</span>
           </div>
 
@@ -968,10 +997,10 @@ export default function VisitorComplianceLandingPage() {
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
-              href="/visitor-compliance/pricing"
+              href={`/visitor-compliance/pricing?coupon=${encodeURIComponent(sandboxCoupon.trim() || "visitor001")}`}
               className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/30 flex items-center gap-2"
             >
-              <span>Go to Checkout Page (₹999/mo)</span>
+              <span>Step 2: Proceed to Checkout ({couponApplied ? "Free via visitor001" : "₹999/mo"})</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -979,7 +1008,7 @@ export default function VisitorComplianceLandingPage() {
               className="px-8 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm flex items-center gap-2"
             >
               <Activity className="w-4 h-4 text-emerald-400" />
-              <span>Open SaaS Dashboard</span>
+              <span>Step 3: Preview SaaS Dashboard</span>
             </Link>
           </div>
         </div>

@@ -30,18 +30,49 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import VisitorManagementConsole from "@/components/visitor/VisitorManagementConsole";
+import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
 
 export default function VisitorsProductPage() {
-  const [viewMode, setViewMode] = useState<"workspace" | "overview">("workspace");
+  // Default viewMode MUST BE overview (the landing page showcase), just like rent-roll
+  const [viewMode, setViewMode] = useState<"workspace" | "overview">("overview");
   const [activeWorkspaceModule, setActiveWorkspaceModule] = useState<"visitors" | "compliance">("visitors");
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subGateOpen, setSubGateOpen] = useState(false);
+  const [pendingModule, setPendingModule] = useState<"visitors" | "compliance">("visitors");
 
   // Live telemetry for preview card
   const [liveVisits, setLiveVisits] = useState<any[]>([]);
   const [loadingVisits, setLoadingVisits] = useState(true);
 
   useEffect(() => {
+    // 1. Check local storage / cookies for active subscription
+    if (typeof window !== "undefined") {
+      const localSub =
+        localStorage.getItem("officex_vc_sub_active") === "active" ||
+        sessionStorage.getItem("officex_vc_sub_active") === "active" ||
+        document.cookie.includes("officex_vc_sub_active=active");
+      setIsSubscribed(localSub);
+    }
+
+    // 2. Sync with server database status
+    async function checkServerSub() {
+      try {
+        const subRes = await fetch("/api/vc/subscription/status");
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData?.subscribed) {
+            setIsSubscribed(true);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("officex_vc_sub_active", "active");
+            }
+          }
+        }
+      } catch {}
+    }
+    checkServerSub();
+
     async function loadTelemetry() {
       try {
         const res = await fetch("/api/v1/visits");
@@ -59,6 +90,16 @@ export default function VisitorsProductPage() {
     }
     loadTelemetry();
   }, []);
+
+  const handleOpenWorkspace = (module: "visitors" | "compliance" = "visitors") => {
+    setActiveWorkspaceModule(module);
+    if (isSubscribed) {
+      setViewMode("workspace");
+    } else {
+      setPendingModule(module);
+      setSubGateOpen(true);
+    }
+  };
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -111,58 +152,82 @@ export default function VisitorsProductPage() {
       <MarketingHeader activePath="/operate" />
 
       {/* ── Breadcrumb & Top Mode Switcher Bar ── */}
-      <div className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <Link href="/" className="hover:text-slate-900 transition-colors">
-              Home
+      <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium flex-wrap">
+            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">SaaS Flow:</span>
+            <Link href="/visitor-compliance" className="text-[#0D7B6C] font-semibold hover:underline">
+              1. Landing Page
             </Link>
-            <span>/</span>
-            <Link href="/operate" className="hover:text-slate-900 transition-colors">
-              Operations
+            <span className="text-slate-400 font-mono">──►</span>
+            <Link href="/visitor-compliance/pricing?coupon=visitor001" className="text-[#0D7B6C] font-semibold hover:underline">
+              2. Subscription (₹999/mo)
             </Link>
-            <span>/</span>
-            <span className="text-[#0D7B6C] font-bold">Visitor Flow &amp; Statutory Compliance SaaS</span>
+            <span className="text-slate-400 font-mono">──►</span>
+            <Link href="/vc/dashboard" className="text-slate-800 font-bold hover:underline">
+              3. Sovereign Command Center
+            </Link>
           </div>
 
-          {/* Dual Mode Switcher */}
-          <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/90 self-start sm:self-auto shadow-inner">
-            <button
-              type="button"
-              onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("visitors"); }}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "workspace" && activeWorkspaceModule === "visitors"
-                  ? "bg-[#0D7B6C] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+          {/* Unified SaaS Mode Switcher Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Active: Visitor Flow Lens */}
+            <Link
+              href="/operate/visitors"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0D7B6C] text-white shadow-xs"
             >
               <Sparkles size={13} />
-              <span>⚡ Live Visitor Console (VC-01..15)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("compliance"); }}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "workspace" && activeWorkspaceModule === "compliance"
-                  ? "bg-[#0D7B6C] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              <span>⚡ Visitor Flow (VC-01..15)</span>
+            </Link>
+
+            {/* Switch to Compliance Lens */}
+            <Link
+              href="/operate/compliance"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 border border-slate-200"
             >
               <ShieldCheck size={13} />
               <span>🛡️ Statutory Compliance (CM-01..16)</span>
-            </button>
+            </Link>
+
+            {/* Spec / Architecture Toggle */}
             <button
               type="button"
-              onClick={() => setViewMode("overview")}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "overview"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              onClick={() => {
+                if (viewMode === "workspace") {
+                  setViewMode("overview");
+                } else {
+                  handleOpenWorkspace("visitors");
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 cursor-pointer"
             >
               <Layers size={13} />
-              <span>📖 Architecture &amp; Specs</span>
+              <span>{viewMode === "workspace" ? "📖 Spec & Architecture" : "⚡ Back to Live Console"}</span>
             </button>
+
+            {/* Launch Full Sovereign Command Center */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isSubscribed) {
+                  window.location.href = "/vc/dashboard?mode=visitor";
+                } else {
+                  setSubGateOpen(true);
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-900 text-cyan-300 hover:bg-slate-800 shadow-xs border border-slate-800 cursor-pointer"
+            >
+              <ExternalLink size={12} />
+              <span>Launch 31-Screen Center</span>
+            </button>
+
+            {/* Pricing Link */}
+            <Link
+              href="/visitor-compliance/pricing?coupon=visitor001"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+            >
+              <span>₹999/mo (visitor001 Free)</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -172,11 +237,82 @@ export default function VisitorsProductPage() {
           ═══════════════════════════════════════════════════════════════ */}
       {viewMode === "workspace" && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-200">
-          <VisitorManagementConsole
-            portalRole="security"
-            defaultProperty="Devasya Gold - Commercial Tower"
-            initialModule={activeWorkspaceModule}
-          />
+          {!isSubscribed ? (
+            /* SUBSCRIPTION GATE WALL (WHEN UNSUBSCRIBED USER TRIES TO ENTER CONSOLE) */
+            <div className="p-8 sm:p-14 rounded-3xl bg-white border border-slate-200/90 shadow-xl text-center max-w-2xl mx-auto my-10 space-y-6">
+              <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center mx-auto shadow-md">
+                <Lock size={32} />
+              </div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold uppercase tracking-wider">
+                Commercial License Required
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Live Visitor &amp; Turnstile Console Gated
+              </h2>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                Access to live optical speed-gates, WhatsApp QR pass issuance, and statutory compliance radars requires an active commercial subscription.
+              </p>
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSubGateOpen(true)}
+                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/25 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Sparkles size={16} />
+                  <span>Activate License (100% Free with visitor001)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("overview")}
+                  className="px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  Back to Showcase
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Architecture Clarification Callout Banner */}
+              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-slate-50 to-emerald-50 border border-teal-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 text-slate-800">
+                  <div className="w-8 h-8 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-2">
+                      <span>One SaaS, Two Coordinated Lenses: Visitor Flow &amp; Statutory Compliance</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-100 text-[#0D7B6C] font-extrabold">ONE CORE PLATFORM</span>
+                    </div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">
+                      Front-desk turnstiles and building statutory NOCs share canonical properties, tenants, and contractor permits.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+                  <Link
+                    href="/operate/compliance"
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#0D7B6C]" />
+                    <span>Switch to Compliance Lens &rarr;</span>
+                  </Link>
+                  <Link
+                    href="/vc/dashboard"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#0D7B6C] text-white font-bold hover:bg-[#0A6357] transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center gap-1.5"
+                  >
+                    <span>Open All-In-One Hub</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              <VisitorManagementConsole
+                portalRole="security"
+                defaultProperty="Devasya Gold - Commercial Tower"
+                initialModule={activeWorkspaceModule}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -211,20 +347,28 @@ export default function VisitorsProductPage() {
                   <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
                     <button
                       type="button"
-                      onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("visitors"); }}
-                      className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                      onClick={() => handleOpenWorkspace("visitors")}
+                      className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                     >
-                      <Sparkles size={15} />
-                      <span>Launch Live Visitor Console</span>
+                      {isSubscribed ? <Sparkles size={16} /> : <Lock size={16} />}
+                      <span>{isSubscribed ? "Open Live Visitor Console" : "Get Started · Subscribe (visitor001 Free)"}</span>
+                      <ArrowRight size={15} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("compliance"); }}
-                      className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                      onClick={() => handleOpenWorkspace("compliance")}
+                      className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                     >
                       <ShieldCheck size={15} className="text-[#0D7B6C]" />
-                      <span>Open Statutory Compliance</span>
+                      <span>Statutory Compliance Radar</span>
                     </button>
+                    <Link
+                      href="/visitor-compliance/pricing?coupon=visitor001"
+                      className="px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                    >
+                      <span>View Pricing (₹999/mo)</span>
+                      <ArrowRight size={14} className="text-[#0D7B6C]" />
+                    </Link>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 font-semibold border-t border-slate-100 pt-5">
@@ -295,7 +439,7 @@ export default function VisitorsProductPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("visitors"); }}
+                        onClick={() => handleOpenWorkspace("visitors")}
                         className="text-[#0D7B6C] hover:text-[#0A6357] font-bold flex items-center gap-1 cursor-pointer"
                       >
                         <span>Open Interactive Console</span>
@@ -387,10 +531,11 @@ export default function VisitorsProductPage() {
               <div className="flex flex-wrap items-center justify-center gap-3.5">
                 <button
                   type="button"
-                  onClick={() => { setViewMode("workspace"); setActiveWorkspaceModule("visitors"); }}
-                  className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+                  onClick={() => handleOpenWorkspace("visitors")}
+                  className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
                 >
-                  ⚡ Open Live Interactive Workspace
+                  {isSubscribed ? <Sparkles size={16} /> : <Lock size={16} />}
+                  <span>{isSubscribed ? "Open Live Interactive Workspace" : "Subscribe to Enter Workspace (visitor001 Free)"}</span>
                 </button>
                 <button
                   type="button"
@@ -411,6 +556,18 @@ export default function VisitorsProductPage() {
         isOpen={enquiryOpen}
         onClose={() => setEnquiryOpen(false)}
         prefill={{ modules: ["Visitor Flow & Speed-Gate Access"] }}
+      />
+
+      {/* Institutional Commercial Subscription Gate Modal */}
+      <SubscriptionGateModal
+        isOpen={subGateOpen}
+        onClose={() => setSubGateOpen(false)}
+        onSuccess={() => {
+          setIsSubscribed(true);
+          setSubGateOpen(false);
+          setViewMode("workspace");
+        }}
+        moduleName={pendingModule === "compliance" ? "Statutory Compliance Radar" : "Touchless Visitor Flow Console"}
       />
     </div>
   );

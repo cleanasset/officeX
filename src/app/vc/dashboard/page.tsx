@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Users,
   UserCheck,
@@ -31,8 +32,13 @@ import {
   Mail,
   ExternalLink,
 } from "lucide-react";
+import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
 
-export default function VisitorComplianceDashboard() {
+function VisitorComplianceDashboardContent() {
+  const searchParams = useSearchParams();
+  const activatedParam = searchParams.get("activated");
+  const couponParam = searchParams.get("coupon");
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"all" | "inside" | "expected" | "overstay">("inside");
@@ -43,6 +49,9 @@ export default function VisitorComplianceDashboard() {
   const [quickVisitorCompany, setQuickVisitorCompany] = useState("");
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState("");
+  const [showCelebration, setShowCelebration] = useState(Boolean(activatedParam));
+  const [subGateOpen, setSubGateOpen] = useState(false);
+  const [isLocalSub, setIsLocalSub] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -59,6 +68,13 @@ export default function VisitorComplianceDashboard() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sub =
+        localStorage.getItem("officex_vc_sub_active") === "active" ||
+        sessionStorage.getItem("officex_vc_sub_active") === "active" ||
+        document.cookie.includes("officex_vc_sub_active=active");
+      setIsLocalSub(Boolean(sub));
+    }
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 15000); // 15s live polling
     return () => clearInterval(interval);
@@ -118,12 +134,116 @@ export default function VisitorComplianceDashboard() {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn">
       {/* Toast Notification */}
       {actionSuccessMsg && (
         <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 text-xs font-semibold shadow-2xl flex items-center gap-2 backdrop-blur-md animate-bounce">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{actionSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* SaaS Customer Lifecycle Funnel Progression Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 shadow-md">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">SaaS Funnel:</span>
+          <Link
+            href="/visitor-compliance"
+            className="text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>1. Product Showcase</span>
+          </Link>
+          <span className="text-slate-600 font-mono">──►</span>
+          <Link
+            href="/visitor-compliance/pricing?coupon=visitor001"
+            className="text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>2. Subscription &amp; Activation</span>
+          </Link>
+          <span className="text-slate-600 font-mono">──►</span>
+          <span className="text-white font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span>3. Live 31-Screen Command Center</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 text-[11px] hidden md:inline">Console Lenses:</span>
+          <Link
+            href="/operate/visitors"
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold border border-slate-700 transition-colors"
+          >
+            Front-Desk View
+          </Link>
+          <Link
+            href="/operate/compliance"
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700 transition-colors"
+          >
+            Compliance View
+          </Link>
+        </div>
+      </div>
+
+      {/* Activation Celebration Card (when user lands from checkout / activation) */}
+      {showCelebration && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-950/90 via-slate-900 to-teal-950/90 border border-emerald-500/50 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/20">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    🎉 Commercial SaaS License Activated!
+                  </h3>
+                  <span className="text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    {couponParam ? `100% OFF via ${couponParam}` : "Commercial Pass • ₹999/mo"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
+                  Welcome to OFFICEX Visitor &amp; Compliance. All 31 commercial modules, optical speed-gate turnstiles, WhatsApp QR passes, contractor PTW workflows, and 48 statutory fire/elevator compliance radars are active for CyberCity Tech Tower A.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCelebration(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 shrink-0 self-end sm:self-center transition-colors"
+            >
+              Dismiss Notice
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Demo Sandbox Alert if not activated */}
+      {!showCelebration && !isLocalSub && (!data?.subscription || data?.subscription?.status !== "active") && (
+        <div className="p-4 rounded-2xl bg-slate-900/90 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+          <div className="flex items-center gap-2.5 text-slate-300">
+            <Zap className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>
+              <strong>Demo Preview Mode:</strong> Viewing live simulated commercial telemetry for CyberCity Tech Tower A.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setSubGateOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Activate License (Free with visitor001)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <Link
+              href="/visitor-compliance/pricing?coupon=visitor001"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors"
+            >
+              Pricing Details
+            </Link>
+          </div>
         </div>
       )}
 
@@ -661,6 +781,34 @@ export default function VisitorComplianceDashboard() {
           </div>
         </div>
       )}
+
+      {/* Subscription Gate Modal */}
+      <SubscriptionGateModal
+        isOpen={subGateOpen}
+        onClose={() => setSubGateOpen(false)}
+        onSuccess={() => {
+          setIsLocalSub(true);
+          setSubGateOpen(false);
+          setActionSuccessMsg("Commercial Subscription Activated Successfully!");
+          fetchDashboardData();
+          setTimeout(() => setActionSuccessMsg(""), 4000);
+        }}
+        moduleName="31-Screen Command Center"
+      />
     </div>
+  );
+}
+
+export default function VisitorComplianceDashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-slate-400 font-mono text-sm">
+          Loading Live Command Center Telemetry...
+        </div>
+      }
+    >
+      <VisitorComplianceDashboardContent />
+    </Suspense>
   );
 }

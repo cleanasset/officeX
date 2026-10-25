@@ -4,6 +4,7 @@ import {
   vcVisitors,
   vcVisits,
   vcAccessPasses,
+  vcSubscriptions,
   cmObligations,
   cmIncidents,
   cmCapa,
@@ -17,6 +18,23 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || "org_officex_demo";
+
+    // 0. Fetch Active Subscription
+    const subscriptionRecord = await db
+      .select()
+      .from(vcSubscriptions)
+      .where(eq(vcSubscriptions.status, "active"))
+      .orderBy(desc(vcSubscriptions.createdAt))
+      .limit(1);
+
+    const subscription = subscriptionRecord.length > 0 ? {
+      status: subscriptionRecord[0].status,
+      planName: subscriptionRecord[0].planName,
+      billingCycle: subscriptionRecord[0].billingCycle,
+      couponCode: subscriptionRecord[0].couponCode,
+      amount: subscriptionRecord[0].amount,
+      createdAt: subscriptionRecord[0].createdAt,
+    } : null;
 
     // 1. Fetch visits with visitor info
     const visits = await db
@@ -120,6 +138,7 @@ export async function GET(req: NextRequest) {
         recentIncidents: incidents,
         recentCapas: capas,
         recentPermits: permits,
+        subscription,
       },
     });
   } catch (err: any) {
