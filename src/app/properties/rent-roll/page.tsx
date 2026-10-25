@@ -608,8 +608,29 @@ export default function RentRollRegisterPage() {
                     Recalculating rent roll register for {asOfDate}...
                   </div>
                 ) : visibleRows.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">
-                    No contracts or spaces matching the filter.
+                  <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                    <FileText className="w-8 h-8 text-slate-300 mb-1" />
+                    <span className="font-bold text-slate-800 text-sm">Your Commercial Rent Roll is Empty</span>
+                    <span className="text-xs text-slate-400 max-w-xs">No active leases or pre-seeded data in your portfolio. Get started by onboarding a property or creating your first contract.</span>
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                      <Link
+                        href="/onboarding"
+                        className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5"
+                      >
+                        <Building2 size={13} />
+                        <span>Onboard Property</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWizardPrefill(null);
+                          setWizardOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                      >
+                        + New Contract
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -778,21 +799,43 @@ export default function RentRollRegisterPage() {
                       </tr>
                     ) : visibleRows.length === 0 ? (
                       <tr>
-                        <td colSpan={14} className="p-12 text-center text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
-                            <FileText className="w-8 h-8 text-slate-300 mb-1" />
-                            <span className="font-bold text-slate-700 text-sm">No contracts or spaces recorded yet</span>
-                            <span className="text-xs text-slate-400">Initialize your rent roll register by creating your first lease contract or importing data.</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setWizardPrefill(null);
-                                setWizardOpen(true);
-                              }}
-                              className="mt-2 px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs cursor-pointer"
-                            >
-                              + Add First Contract
-                            </button>
+                        <td colSpan={14} className="p-16 text-center text-slate-500">
+                          <div className="flex flex-col items-center justify-center gap-2.5 max-w-md mx-auto">
+                            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0F8B7D] mb-1 shadow-2xs">
+                              <Building2 className="w-6 h-6" />
+                            </div>
+                            <span className="font-extrabold text-slate-900 text-base">Your Commercial Rent Roll is Empty</span>
+                            <span className="text-xs text-slate-400 leading-relaxed max-w-sm">
+                              No active contracts or pre-seeded spaces in this workspace. Set up your commercial property hierarchy or create your first lease deed to start tracking collections and escalations.
+                            </span>
+                            <div className="flex items-center gap-2.5 mt-3">
+                              <Link
+                                href="/onboarding"
+                                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5"
+                              >
+                                <Building2 size={14} />
+                                <span>Onboard Commercial Suite</span>
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWizardPrefill(null);
+                                  setWizardOpen(true);
+                                }}
+                                className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
+                              >
+                                <Plus size={14} />
+                                <span>+ New Contract</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setImportOpen(true)}
+                                className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer inline-flex items-center gap-1.5"
+                              >
+                                <FileSpreadsheet size={14} />
+                                <span>Import Excel</span>
+                              </button>
+                            </div>
                           </div>
                         </td>
                       </tr>
