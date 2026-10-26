@@ -17,6 +17,8 @@ import {
   Users,
   Coins,
   ChevronRight,
+  Edit2,
+  Eye,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -24,6 +26,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import PropertyDetailModal from "@/components/rent-roll/PropertyDetailModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
@@ -35,6 +38,8 @@ export default function SpaceAndBuildingRegistryPage() {
   const [selectedBuilding, setSelectedBuilding] = useState("all");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
+  const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
+  const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
 
   useEffect(() => {
     fetchRegistryData();
@@ -274,14 +279,21 @@ export default function SpaceAndBuildingRegistryPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredProperties.map((p) => (
-                        <tr key={p.id} className="hover:bg-teal-50/30 transition">
+                        <tr
+                          key={p.id}
+                          onClick={() => {
+                            setSelectedPropertyForDetail(p);
+                            setPropertyDetailMode("view");
+                          }}
+                          className="hover:bg-teal-50/40 transition cursor-pointer group"
+                        >
                           <td className="py-3.5 px-4 font-black text-slate-900">
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0">
+                              <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-[#0F8B7D] group-hover:text-white transition">
                                 <Building size={14} />
                               </div>
                               <div>
-                                <span>{p.property_name}</span>
+                                <span className="group-hover:text-[#0F8B7D] transition">{p.property_name}</span>
                                 <div className="text-[10px] text-slate-400 font-normal">
                                   {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
                                 </div>
@@ -309,19 +321,41 @@ export default function SpaceAndBuildingRegistryPage() {
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPropertyForDetail(p);
+                                  setPropertyDetailMode("view");
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                title="View All Details"
+                              >
+                                <Eye size={12} />
+                                <span>Details</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedPropertyForDetail(p);
+                                  setPropertyDetailMode("edit");
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                title="Edit Property"
+                              >
+                                <Edit2 size={12} />
+                                <span>Edit</span>
+                              </button>
                               <button
                                 onClick={() => {
                                   setHierarchyTab("tenant");
                                   setHierarchyModalOpen(true);
                                 }}
-                                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold transition cursor-pointer"
                               >
-                                + Add Tenant
+                                + Tenant
                               </button>
                               <Link
-                                href="/properties/rent-roll"
-                                className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5"
+                                href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
+                                className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1"
                               >
                                 <span>Rent Roll</span>
                                 <ChevronRight size={13} />
@@ -434,6 +468,15 @@ export default function SpaceAndBuildingRegistryPage() {
           onClose={() => setHierarchyModalOpen(false)}
           initialTab={hierarchyTab}
           onSuccess={fetchRegistryData}
+        />
+
+        {/* Full Property Detail & Edit Modal */}
+        <PropertyDetailModal
+          property={selectedPropertyForDetail}
+          isOpen={Boolean(selectedPropertyForDetail)}
+          onClose={() => setSelectedPropertyForDetail(null)}
+          onPropertyUpdated={fetchRegistryData}
+          initialMode={propertyDetailMode}
         />
 
         <MobileBottomNav />

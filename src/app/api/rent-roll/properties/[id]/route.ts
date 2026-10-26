@@ -40,6 +40,7 @@ export async function PATCH(
         address: body.address,
         city: body.city,
         state: body.state,
+        postal_code: body.postal_code || body.pincode,
         total_leasable_area_sqft: body.total_leasable_area_sqft ? String(body.total_leasable_area_sqft) : undefined,
         total_leasable_seats: body.total_leasable_seats !== undefined ? Number(body.total_leasable_seats) : undefined,
         property_type: body.property_type,

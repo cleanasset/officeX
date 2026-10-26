@@ -17,6 +17,8 @@ import {
   Landmark,
   UserCheck,
   Briefcase,
+  Edit2,
+  Eye,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -25,6 +27,7 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import PropertyDetailModal from "@/components/rent-roll/PropertyDetailModal";
 
 export default function PropertiesPortfolioPage() {
   const [properties, setProperties] = useState<any[]>([]);
@@ -32,6 +35,8 @@ export default function PropertiesPortfolioPage() {
   const [assignments, setAssignments] = useState<Record<string, any>>({});
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
+  const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
+  const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
 
   // Licensed Capacity Telemetry
   const [subscribedSqft, setSubscribedSqft] = useState<number>(0);
@@ -347,14 +352,23 @@ export default function PropertiesPortfolioPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {properties.map((prop) => (
-                      <tr key={prop.id} className="hover:bg-teal-50/30 transition">
+                      <tr
+                        key={prop.id}
+                        onClick={() => {
+                          setSelectedPropertyForDetail(prop);
+                          setPropertyDetailMode("view");
+                        }}
+                        className="hover:bg-teal-50/40 transition cursor-pointer group"
+                      >
                         <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0 group-hover:bg-[#0F8B7D] group-hover:text-white transition">
                               <Building2 size={16} />
                             </div>
                             <div>
-                              <div className="font-black text-slate-900 text-xs">{prop.property_name || prop.name}</div>
+                              <div className="font-black text-slate-900 text-xs group-hover:text-[#0F8B7D] transition">
+                                {prop.property_name || prop.name}
+                              </div>
                               <div className="text-[10px] text-slate-400 font-mono">{prop.property_code || "PROP-ID"}</div>
                             </div>
                           </div>
@@ -405,13 +419,37 @@ export default function PropertiesPortfolioPage() {
                           })()}
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <Link
-                            href={`/properties/rent-roll?property=${encodeURIComponent(prop.id)}`}
-                            className="inline-flex items-center gap-1 text-[#0F8B7D] font-bold text-xs hover:underline"
-                          >
-                            <span>Open Rent Roll</span>
-                            <ArrowRight size={13} />
-                          </Link>
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                setSelectedPropertyForDetail(prop);
+                                setPropertyDetailMode("view");
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="View Property Details"
+                            >
+                              <Eye size={12} />
+                              <span>Details</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedPropertyForDetail(prop);
+                                setPropertyDetailMode("edit");
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="Edit Property"
+                            >
+                              <Edit2 size={12} />
+                              <span>Edit</span>
+                            </button>
+                            <Link
+                              href={`/properties/rent-roll?property=${encodeURIComponent(prop.id)}`}
+                              className="inline-flex items-center gap-1 text-[#0F8B7D] font-bold text-xs hover:underline ml-1"
+                            >
+                              <span>Rent Roll</span>
+                              <ArrowRight size={13} />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -430,6 +468,15 @@ export default function PropertiesPortfolioPage() {
           onClose={() => setHierarchyModalOpen(false)}
           initialTab={hierarchyTab}
           onSuccess={fetchProperties}
+        />
+
+        {/* Full Property Detail & Edit Modal */}
+        <PropertyDetailModal
+          property={selectedPropertyForDetail}
+          isOpen={Boolean(selectedPropertyForDetail)}
+          onClose={() => setSelectedPropertyForDetail(null)}
+          onPropertyUpdated={fetchProperties}
+          initialMode={propertyDetailMode}
         />
       </div>
     </div>
