@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       occupant_name: body.occupant_name,
       occupant_type: body.occupant_type || "company",
       is_critical_occupant: body.is_critical_occupant ?? false,
-      occupant_status: body.occupant_status || "active",
+      occupant_status: body.occupant_status || "pending_acceptance",
     };
 
     const reqVal = validateRequiredFields("occupant", payload);

@@ -285,17 +285,17 @@ export default function Topbar() {
           <PropertySelector />
         </div>
 
-        {/* Persona / Role Selector (§5.14 Access Control & Table 5.14a) */}
+        {/* Persona / Role Selector */}
         <div className="relative shrink-0" ref={roleDropdownRef}>
           <button
             type="button"
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-500 bg-white hover:bg-slate-50 transition-all text-xs font-bold text-slate-800 shadow-2xs cursor-pointer"
-            title="Switch Workspace Persona (§5.14 Access Control & Table 5.14a)"
+            title="Switch Workspace Role"
           >
             <activeRole.icon size={15} className="text-[#0F8B7D] shrink-0" />
             <div className="hidden sm:flex flex-col text-left leading-tight">
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Persona</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Role</span>
               <span className="text-xs font-extrabold text-slate-900 truncate max-w-[110px] md:max-w-[140px] lg:max-w-[170px]">{activeRole.label}</span>
             </div>
             <ChevronDown size={13} className={`text-slate-400 transition-transform ${isRoleDropdownOpen ? "rotate-180" : ""}`} />
@@ -305,10 +305,10 @@ export default function Topbar() {
             <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
               <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 block">OFFICEX Access Control</span>
-                  <span className="text-xs font-black text-slate-900">Switch Persona (Table 5.14a)</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 block">Workspace Access</span>
+                  <span className="text-xs font-black text-slate-900">Switch Role</span>
                 </div>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Spec Roles</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Active</span>
               </div>
               <div className="flex flex-col gap-1 py-1 max-h-80 overflow-y-auto">
                 {AVAILABLE_ROLES.map((r) => {

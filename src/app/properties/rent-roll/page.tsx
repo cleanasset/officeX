@@ -38,6 +38,9 @@ import {
   Zap,
   Lock,
   Unlock,
+  IndianRupee,
+  LayoutGrid,
+  Maximize2,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -75,6 +78,8 @@ export default function RentRollRegisterPage() {
   const [seatCountOpen, setSeatCountOpen] = useState(false);
   const [isSnapshotLocked, setIsSnapshotLocked] = useState(false);
   const [snapshotData, setSnapshotData] = useState<any>(null);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const moreToolsRef = React.useRef<HTMLDivElement>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -145,6 +150,12 @@ export default function RentRollRegisterPage() {
 
       // Handle deep-link triggers from Onboarding or direct URL navigation
       const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("tab") === "contracts") {
+        setCurrentView("contracted");
+      }
+      if (urlParams.get("tab") === "rentroll") {
+        setCurrentView("current");
+      }
       if (urlParams.get("openContract") === "1" || urlParams.get("tab") === "newContract") {
         setWizardPrefill(null);
         setWizardOpen(true);
@@ -164,6 +175,16 @@ export default function RentRollRegisterPage() {
       window.addEventListener("officex-property-change", handlePropertyUpdate);
       return () => window.removeEventListener("officex-property-change", handlePropertyUpdate);
     }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (moreToolsRef.current && !moreToolsRef.current.contains(event.target as Node)) {
+        setMoreToolsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   async function fetchRegisterData() {
@@ -324,12 +345,12 @@ export default function RentRollRegisterPage() {
           {/* Main SaaS Workspace */}
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6 pb-28 md:pb-8">
             {/* Clean Executive Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <Link href="/properties" className="hover:text-slate-800 transition">Portfolio</Link>
                   <span>/</span>
-                  <span className="text-[#0F8B7D] font-bold">Rent Roll (§S-10)</span>
+                  <span className="text-teal-700 font-bold">Rent Roll Register</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -352,78 +373,114 @@ export default function RentRollRegisterPage() {
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Action Buttons Suite */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {/* Secondary: Run Billing */}
                 <button
                   type="button"
                   onClick={() => setBillingRunOpen(true)}
-                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Receipt size={14} className="text-teal-400" />
-                  <span>Run Billing (S-40)</span>
+                  <span>Run Billing</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setMetersOpen(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Zap size={14} className="text-amber-500" />
-                  <span>Meters (S-31)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCamPoolOpen(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Layers size={14} className="text-teal-600" />
-                  <span>CAM Pool (S-52)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSeatCountOpen(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Briefcase size={14} className="text-indigo-600" />
-                  <span>Seats (S-32)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleToggleSnapshotLock}
-                  className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
-                    isSnapshotLocked
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  {isSnapshotLocked ? <Unlock size={14} /> : <Lock size={14} />}
-                  <span>{isSnapshotLocked ? "Unlock" : "Lock (S-53)"}</span>
-                </button>
-                <a
-                  href={`/api/invoices/export-tally?period=${encodeURIComponent(asOfDate.slice(0, 7))}`}
-                  download
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Download size={14} className="text-slate-600" />
-                  <span>Tally XML (S-48)</span>
-                </a>
+
+                {/* Secondary: Import */}
                 <button
                   type="button"
                   onClick={() => setImportOpen(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <FileSpreadsheet size={14} className="text-teal-600" />
-                  <span>Import (S-30)</span>
+                  <span>Import</span>
                 </button>
+
+                {/* Operations Dropdown */}
+                <div className="relative" ref={moreToolsRef}>
+                  <button
+                    type="button"
+                    onClick={() => setMoreToolsOpen(!moreToolsOpen)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <SlidersHorizontal size={14} className="text-slate-500" />
+                    <span>Operations</span>
+                    <ChevronDown size={13} className={`text-slate-400 transition-transform ${moreToolsOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {moreToolsOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in duration-100">
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        Operations & Utilities
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMetersOpen(true);
+                          setMoreToolsOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Zap size={14} className="text-amber-500" />
+                        <span>Utility Meters</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCamPoolOpen(true);
+                          setMoreToolsOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Layers size={14} className="text-teal-600" />
+                        <span>CAM Pools & Recoveries</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSeatCountOpen(true);
+                          setMoreToolsOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Briefcase size={14} className="text-indigo-600" />
+                        <span>Seat & Flex Tracking</span>
+                      </button>
+                      <div className="my-1 border-t border-slate-100" />
+                      <a
+                        href={`/api/invoices/export-tally?period=${encodeURIComponent(asOfDate.slice(0, 7))}`}
+                        download
+                        onClick={() => setMoreToolsOpen(false)}
+                        className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Download size={14} className="text-slate-500" />
+                        <span>Export Tally XML</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleToggleSnapshotLock();
+                          setMoreToolsOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        {isSnapshotLocked ? <Unlock size={14} className="text-emerald-600" /> : <Lock size={14} className="text-slate-500" />}
+                        <span>{isSnapshotLocked ? "Unlock Period Snapshot" : "Lock Period Snapshot"}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Primary CTA: New Contract */}
                 <button
                   type="button"
                   onClick={() => {
                     setWizardPrefill(null);
                     setWizardOpen(true);
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-sm shadow-teal-900/10 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Plus size={15} />
-                  <span>+ New Contract (S-21)</span>
+                  <span>New Contract</span>
                 </button>
               </div>
             </div>
@@ -455,75 +512,90 @@ export default function RentRollRegisterPage() {
               </div>
             )}
 
-            {/* S-10 Top 5-Chip KPI Bar per Document Wireframe */}
+            {/* Top 5 KPI Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
               {/* Chip 1: Spaces */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Spaces
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Spaces
+                  </span>
+                  <LayoutGrid className="w-4 h-4 text-slate-400" />
+                </div>
+                <p className="text-2xl font-black text-slate-900 mt-1 font-mono tracking-tight">
                   {registerData?.summary?.total_spaces_count || registerData?.rows?.length || 0}
                 </p>
-                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                <span className="text-[11px] text-slate-500 font-medium block mt-1">
                   {registerData?.summary?.vacant_spaces_count || 0} vacant ({registerData?.summary?.vacancy_rate_percent || 0}%)
                 </span>
               </div>
 
               {/* Chip 2: Occupied Area & % */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Occupied Area
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Occupied Area
+                  </span>
+                  <Maximize2 className="w-4 h-4 text-slate-400" />
+                </div>
+                <p className="text-2xl font-black text-slate-900 mt-1 font-mono tracking-tight">
                   {Number(registerData?.summary?.total_occupied_area_sqft || 0).toLocaleString()}{" "}
                   <span className="text-xs font-normal text-slate-400">sqft</span>
                 </p>
-                <span className="text-[11px] text-teal-700 font-semibold block mt-0.5">
+                <span className="text-[11px] text-teal-700 font-semibold block mt-1">
                   {registerData?.summary?.occupancy_rate_percent || 0}% Occupancy
                 </span>
               </div>
 
               {/* Chip 3: Monthly Base Rent */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Monthly Base
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Monthly Base
+                  </span>
+                  <IndianRupee className="w-4 h-4 text-slate-400" />
+                </div>
+                <p className="text-2xl font-black text-slate-900 mt-1 font-mono tracking-tight">
                   {isLeasing ? (
                     <span className="text-slate-400 text-xs font-bold">Confidential</span>
                   ) : (
                     `₹${Number(registerData?.summary?.total_monthly_base_rent || 0).toLocaleString("en-IN")}`
                   )}
                 </p>
-                <span className="text-[11px] text-teal-700 font-medium flex items-center gap-1 mt-0.5">
+                <span className="text-[11px] text-teal-700 font-medium flex items-center gap-1 mt-1">
                   <TrendingUp className="w-3 h-3" /> As of {asOfDate}
                 </span>
               </div>
 
-              {/* Chip 4: WALE (Formula F-24) */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  WALE (F-24)
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-teal-900 mt-0.5 font-mono">
+              {/* Chip 4: WALE */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    WALE
+                  </span>
+                  <Clock className="w-4 h-4 text-slate-400" />
+                </div>
+                <p className="text-2xl font-black text-teal-900 mt-1 font-mono tracking-tight">
                   {registerData?.summary?.wale_years || 0} <span className="text-xs font-normal text-slate-500">y</span>
                 </p>
-                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                <span className="text-[11px] text-slate-500 font-medium block mt-1">
                   Weighted lease expiry
                 </span>
               </div>
 
               {/* Chip 5: Exceptions & Arrears */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Exceptions
-                </span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 font-mono">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Exceptions
+                  </span>
+                  <ShieldCheck className="w-4 h-4 text-slate-400" />
+                </div>
+                <p className="text-2xl font-black text-slate-900 mt-1 font-mono tracking-tight">
                   {registerData?.summary?.exceptions_count || 0}
                 </p>
                 <span
-                  className={`text-[11px] font-medium block mt-0.5 ${
+                  className={`text-[11px] font-medium block mt-1 ${
                     (registerData?.summary?.total_outstanding_arrears || 0) > 0
                       ? "text-rose-600 font-bold"
                       : "text-emerald-700 font-semibold"
@@ -603,7 +675,7 @@ export default function RentRollRegisterPage() {
                     {showColumnChooser && (
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-40 space-y-2 animate-in fade-in duration-100">
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-                          Toggle S-10 Columns
+                          Customize Columns
                         </p>
                         <div className="space-y-1.5 max-h-60 overflow-y-auto">
                           {Object.keys(visibleColumns).map((colKey) => (
@@ -646,15 +718,15 @@ export default function RentRollRegisterPage() {
               </div>
 
               {/* Search & Filter Bar */}
-              <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="relative flex-1 min-w-[200px] max-w-md">
+              <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs bg-white">
+                <div className="relative flex-1 min-w-[220px] max-w-md">
                   <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Search by space, occupant, building, contract code..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-700 focus:outline-none"
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 bg-slate-50/60 hover:bg-white focus:bg-white rounded-xl text-xs focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 focus:outline-none transition"
                   />
                 </div>
 
@@ -662,7 +734,7 @@ export default function RentRollRegisterPage() {
                   <select
                     value={expiryFilter}
                     onChange={(e) => setExpiryFilter(e.target.value)}
-                    className="p-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-700 outline-none"
+                    className="py-2 px-3 border border-slate-200 bg-white hover:border-slate-300 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 transition cursor-pointer"
                   >
                     <option value="all">All Expiry Windows</option>
                     <option value="1">Expiring in 1 Month</option>

@@ -145,7 +145,8 @@ export default function PropertyHierarchyModal({
     areaSqft: "",
     totalSeats: "",
     propertyType: "Office",
-    buildingsCount: "",
+    hasMultipleBuildings: false,
+    buildingsCount: "1",
     floorsCount: "",
     wingsCount: "1",
     ownershipStructure: "pvt_ltd",
@@ -687,7 +688,11 @@ export default function PropertyHierarchyModal({
         }
 
         await loadHierarchyDropdowns();
-        setActiveTab("building");
+        if (propForm.hasMultipleBuildings || Number(propForm.buildingsCount) > 1) {
+          setActiveTab("building");
+        } else {
+          setActiveTab("space");
+        }
         onSuccess?.();
       } else {
         showToast(data.message || data.error || "Failed to create property", "error");
@@ -1406,8 +1411,8 @@ export default function PropertyHierarchyModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                  Zero Mock Data Master
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  Asset &amp; Lease Setup
                 </span>
                 <span className="text-xs text-slate-400 font-semibold">Live Operational Setup</span>
               </div>
@@ -1643,17 +1648,53 @@ export default function PropertyHierarchyModal({
                     />
                   </div>
 
-                  {/* Number of Buildings */}
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Number of Buildings</label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="e.g. 1"
-                      value={propForm.buildingsCount}
-                      onChange={(e) => setPropForm({ ...propForm, buildingsCount: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none"
-                    />
+                  {/* Tower / Building Architecture */}
+                  <div className="sm:col-span-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200">
+                    <label className="font-bold text-slate-800 text-xs block mb-1">
+                      Does this property have multiple towers / buildings?
+                    </label>
+                    <div className="flex flex-wrap items-center gap-4 text-xs mt-1.5">
+                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 select-none">
+                        <input
+                          type="radio"
+                          name="towerStructure"
+                          checked={!propForm.hasMultipleBuildings}
+                          onChange={() => setPropForm({ ...propForm, hasMultipleBuildings: false, buildingsCount: "1" })}
+                          className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                        />
+                        <span>No &mdash; Single Standalone Building (1 Tower)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 select-none">
+                        <input
+                          type="radio"
+                          name="towerStructure"
+                          checked={Boolean(propForm.hasMultipleBuildings)}
+                          onChange={() => setPropForm({ ...propForm, hasMultipleBuildings: true, buildingsCount: "2" })}
+                          className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                        />
+                        <span>Yes &mdash; Campus / Tech Park with Multiple Towers</span>
+                      </label>
+                    </div>
+
+                    {propForm.hasMultipleBuildings ? (
+                      <div className="mt-3 flex items-center gap-2 text-xs animate-in fade-in">
+                        <span className="font-bold text-slate-700">Total Towers in Campus:</span>
+                        <input
+                          type="number"
+                          min="2"
+                          max="50"
+                          placeholder="e.g. 2"
+                          value={propForm.buildingsCount || "2"}
+                          onChange={(e) => setPropForm({ ...propForm, buildingsCount: e.target.value })}
+                          className="w-20 px-2.5 py-1 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                        />
+                        <span className="text-slate-400 text-[11px]">(Tower A, Tower B, etc.)</span>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 mt-1.5">
+                        This property is treated as a single building. The main tower is automatically provisioned, so you can go straight to leasable spaces or lease contracts without having to re-enter building details.
+                      </p>
+                    )}
                   </div>
 
                   {/* Number of Floors */}
@@ -2281,21 +2322,43 @@ export default function PropertyHierarchyModal({
                   className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
                   {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>Save Property &amp; Next (Add Buildings) →</span>
+                  <span>
+                    {propForm.hasMultipleBuildings
+                      ? "Save Property & Configure Towers →"
+                      : "Save Property & Next (Add Spaces / Units) →"}
+                  </span>
                 </button>
               </div>
             </form>
           )}
 
-          {/* ════════════════ TAB 2: BUILDING MASTER (3 Fields) ════════════════ */}
+          {/* ════════════════ TAB 2: BUILDING MASTER (Towers) ════════════════ */}
           {activeTab === "building" && (
             <form onSubmit={handleSaveBuilding} className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Step 2: Building Details (3 Fields)
+                  Step 2: Building / Tower Details
                 </span>
-                <span className="text-[11px] font-medium text-slate-400">Zero pre-fed values</span>
+                <span className="text-[11px] font-medium text-slate-400">Multiple Towers Configuration</span>
               </div>
+
+              {!propForm.hasMultipleBuildings && (
+                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+                  <div>
+                    <span className="font-bold text-teal-900 block">Single Standalone Building</span>
+                    <span className="text-teal-700 text-[11px]">
+                      Your property is configured as a single tower. The primary building is automatically set up, so you can skip directly to Units or Contracts.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("space")}
+                    className="px-3 py-1.5 rounded-lg bg-teal-700 text-white font-bold text-[11px] shrink-0 hover:bg-teal-800 transition cursor-pointer"
+                  >
+                    Skip to Units (Step 3) →
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-3.5 text-xs">
                 {/* Associated Property */}

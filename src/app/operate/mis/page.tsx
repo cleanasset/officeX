@@ -57,11 +57,11 @@ export default function MonthlyMisPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Screen S-54 &middot; Monthly MIS
+            <span className="px-2.5 py-0.5 text-xs font-bold bg-teal-50 text-teal-800 rounded-full border border-teal-200">
+              Monthly MIS Report
             </span>
-            <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-              Multi-Sheet Investor Pack
+            <span className="px-2.5 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+              Institutional Investor Pack
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -165,10 +165,10 @@ export default function MonthlyMisPage() {
                 Economic Occupancy %
               </span>
               <div className="text-2xl font-black text-slate-900">
-                {summary?.economic_occupancy_pct || "89.5%"}
+                {summary?.economic_occupancy_pct ?? "0.0%"}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Physical: {summary?.physical_occupancy_pct || "91.2%"}
+                Physical: {summary?.physical_occupancy_pct ?? "0.0%"}
               </div>
             </div>
 
@@ -177,7 +177,7 @@ export default function MonthlyMisPage() {
                 WALE / WALT
               </span>
               <div className="text-2xl font-black text-indigo-600">
-                {summary?.weighted_average_lease_expiry_years || 4.2} Years
+                {summary?.weighted_average_lease_expiry_years !== undefined ? summary.weighted_average_lease_expiry_years : 0} Years
               </div>
               <div className="text-xs text-slate-500 mt-1">
                 Weighted average lease expiry
@@ -189,7 +189,7 @@ export default function MonthlyMisPage() {
                 Collections Efficiency %
               </span>
               <div className="text-2xl font-black text-emerald-600">
-                {summary?.collections_efficiency_pct || "96.4%"}
+                {summary?.collections_efficiency_pct ?? "0.0%"}
               </div>
               <div className="text-xs text-slate-500 mt-1">
                 30-day collection velocity
@@ -201,10 +201,10 @@ export default function MonthlyMisPage() {
                 Net Operating Income (NOI)
               </span>
               <div className="text-2xl font-black text-white">
-                ₹{(summary?.net_operating_income_monthly_inr || 8093088).toLocaleString("en-IN")}
+                ₹{Number(summary?.net_operating_income_monthly_inr || 0).toLocaleString("en-IN")}
               </div>
               <div className="text-xs text-slate-400 mt-1">
-                NOI Margin: {summary?.noi_margin_pct || "76.0%"}
+                NOI Margin: {summary?.noi_margin_pct ?? "0.0%"}
               </div>
             </div>
           </div>
@@ -216,15 +216,15 @@ export default function MonthlyMisPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-slate-500 block">Portfolio Asset Name:</span>
-                <span className="font-bold text-slate-900 text-sm">{summary?.portfolio_name || "Cyber Greens Commercial Complex"}</span>
+                <span className="font-bold text-slate-900 text-sm">{summary?.portfolio_name || "Commercial Real Estate Portfolio"}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-slate-500 block">Total Leasable Area:</span>
-                <span className="font-bold text-slate-900 text-sm">{(summary?.total_chargeable_area_sqft || 110000).toLocaleString("en-IN")} sq ft</span>
+                <span className="font-bold text-slate-900 text-sm">{Number(summary?.total_chargeable_area_sqft || 0).toLocaleString("en-IN")} sq ft</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block">Data Quality Score (K-23):</span>
-                <span className="font-bold text-emerald-700 text-sm">{summary?.k23_data_quality_score || "98.8%"} (Passed)</span>
+                <span className="text-slate-500 block">Data Quality Score:</span>
+                <span className="font-bold text-emerald-700 text-sm">{summary?.k23_data_quality_score ?? "100.0%"} (Audited)</span>
               </div>
             </div>
           </div>

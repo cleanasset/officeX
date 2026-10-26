@@ -630,7 +630,16 @@ export default function RentRollOnboardingWizard({
 
           {onSkip && (
             <button
-              onClick={onSkip}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("officex_rentroll_onboarded", "true");
+                  localStorage.setItem("officex_onboarding_completed", "1");
+                  localStorage.setItem("officex_onboarding_skipped", "true");
+                  sessionStorage.setItem("officex_onboarding_completed", "1");
+                  document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                }
+                onSkip();
+              }}
               className="text-xs text-slate-400 hover:text-white transition underline cursor-pointer self-start sm:self-auto"
             >
               Skip Setup &amp; Explore

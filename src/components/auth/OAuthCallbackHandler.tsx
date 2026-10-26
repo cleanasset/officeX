@@ -76,49 +76,68 @@ export default function OAuthCallbackHandler() {
         lastRentRoll === "1" ||
         referrerHasRentRoll;
 
-      // Check if current URL represents an OAuth callback landing
+      // Redirection should ONLY occur if:
+      // 1. This is a genuine OAuth callback landing (URL has access_token or authorization code)
+      // 2. OR the user is on an explicit auth page (/login or /signup) and needs to be forwarded to their workspace.
+      // Under NO CIRCUMSTANCES should visits to the root homepage ("/") or public pages be redirected!
       const currentHash = window.location.hash;
-      const isOAuthHashLanding = hasInitialAuthHash || currentHash.includes("access_token=") || currentHash === "#";
-      const isLandingPage = pathname === "/" || pathname === "/login" || pathname === "/signup";
+      const isOAuthHashLanding = hasInitialAuthHash || currentHash.includes("access_token=") || window.location.search.includes("code=");
+      const isAuthPage = pathname === "/login" || pathname === "/signup";
 
-      // If user came via OAuth or landed on root/login
-      if (isOAuthHashLanding || isLandingPage) {
-        if (isRentRoll) {
-          redirectedRef.current = true;
-
-          // Consume intent
+      // If the user is on the homepage, NEVER redirect away! Clean up any stale redirect artifacts.
+      if (pathname === "/") {
+        if (!isOAuthHashLanding) {
           clearAuthCookie("officex_oauth_context");
+          clearAuthCookie("officex_oauth_redirect");
           clearAuthCookie("officex_last_rent_roll");
-          localStorage.removeItem("officex_oauth_context");
-          sessionStorage.removeItem("officex_oauth_context");
+          try {
+            localStorage.removeItem("officex_oauth_context");
+            localStorage.removeItem("officex_oauth_redirect");
+            sessionStorage.removeItem("officex_oauth_context");
+            sessionStorage.removeItem("officex_oauth_redirect");
+          } catch {}
+        }
+        return;
+      }
 
+      // Only perform redirection if completing an OAuth callback or currently on login/signup
+      if (isOAuthHashLanding || isAuthPage) {
+        redirectedRef.current = true;
+
+        // Clean up all OAuth redirection tokens so they never fire again
+        clearAuthCookie("officex_oauth_context");
+        clearAuthCookie("officex_oauth_redirect");
+        clearAuthCookie("officex_last_rent_roll");
+        try {
+          localStorage.removeItem("officex_oauth_context");
+          localStorage.removeItem("officex_oauth_redirect");
+          sessionStorage.removeItem("officex_oauth_context");
+          sessionStorage.removeItem("officex_oauth_redirect");
+        } catch {}
+
+        if (savedRedirect && savedRedirect !== "/" && savedRedirect !== pathname) {
+          window.location.replace(savedRedirect);
+          return;
+        }
+
+        if (isRentRoll) {
           // Set Rent Roll context and role
           setAuthCookie("officex_user_role", "Property Owner & Asset Manager", 2592000);
-          localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
-          sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+          try {
+            localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+            sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+          } catch {}
 
-          // Direct redirect into Rent Roll Dashboard
           const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/properties/rent-roll?tab=dashboard";
           window.location.replace(targetUrl);
           return;
         }
 
-        if (savedRedirect && savedRedirect !== "/" && savedRedirect !== pathname) {
-          redirectedRef.current = true;
-          clearAuthCookie("officex_oauth_context");
-          clearAuthCookie("officex_oauth_redirect");
-          localStorage.removeItem("officex_oauth_context");
-          localStorage.removeItem("officex_oauth_redirect");
-          sessionStorage.removeItem("officex_oauth_context");
-          sessionStorage.removeItem("officex_oauth_redirect");
-          window.location.replace(savedRedirect);
-          return;
-        }
-
-        // If on login/signup page and authenticated, send to properties rent-roll
-        if (isLandingPage && isOAuthHashLanding) {
-          redirectedRef.current = true;
-          window.location.replace("/properties/rent-roll?tab=dashboard");
+        // Default post-login destination if on login/signup
+        if (isAuthPage) {
+          const userRoleKey = localStorage.getItem("officex_role_key") || "owner";
+          const defaultDash = userRoleKey === "property_manager" ? "/dashboard/pm" : "/dashboard/owner";
+          window.location.replace(defaultDash);
           return;
         }
       }

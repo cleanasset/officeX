@@ -103,6 +103,16 @@ export async function GET(req: NextRequest) {
       if (matched) currentOccupant = matched;
     }
 
+    // Mark tenant as active on OfficeX once they access their portal
+    if (currentOccupant?.id) {
+      try {
+        await db
+          .update(occupant)
+          .set({ occupant_status: "active" as any, updated_at: new Date() })
+          .where(eq(occupant.id, currentOccupant.id));
+      } catch (e) {}
+    }
+
     // 2. Fetch Active Contracts for this occupant
     const contracts = await db
       .select({

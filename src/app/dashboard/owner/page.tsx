@@ -38,10 +38,10 @@ import {
   FileSpreadsheet,
   Landmark
 } from "lucide-react";
-import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
-import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
+import { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
 import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
+import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface PropertySummary {
@@ -482,17 +482,7 @@ export default function OwnerDashboardPage() {
     }
   };
 
-  // If user hasn't onboarded yet and there are 0 properties, show single page onboarding wizard with 5 canonical roles
-  if (!isOnboarded && properties.length === 0) {
-    return (
-      <div className="max-w-4xl mx-auto py-2">
-        <RentRollOnboardingWizard
-          onComplete={handleOnboardingComplete}
-          onSkip={() => setIsOnboarded(true)}
-        />
-      </div>
-    );
-  }
+
 
   // Header KPI Computations (Clean, live computations with zero fake data)
   const displayedProperties = scope === "all" ? properties : properties.filter((p) => p.id === scope);

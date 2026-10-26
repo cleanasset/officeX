@@ -314,7 +314,7 @@ export default function TenantDirectoryPage() {
                       <th className="py-3 px-4">Trade Name</th>
                       <th className="py-3 px-4">PAN / GSTIN</th>
                       <th className="py-3 px-4">Leased Unit</th>
-                      <th className="py-3 px-4">Lease Status</th>
+                      <th className="py-3 px-4">Portal Status</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -328,9 +328,9 @@ export default function TenantDirectoryPage() {
                       >
                         <td className="py-3.5 px-4">
                           <div className="font-black text-slate-900 group-hover:text-teal-900 transition flex items-center gap-2">
-                            <span>{t.tenant_name}</span>
+                            <span>{t.tenant_name || t.occupant_name}</span>
                             <span className="text-[10px] text-teal-700 font-semibold opacity-0 group-hover:opacity-100 transition">
-                              (View Lease Details)
+                              (View Details)
                             </span>
                           </div>
                           <div className="text-[10px] text-slate-400">{t.email || "—"}</div>
@@ -342,24 +342,26 @@ export default function TenantDirectoryPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-700 font-semibold">
-                          {t.trade_name || "—"}
+                          {t.trade_name || t.occupant_name || "—"}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                          {t.pan || "—"}
+                          {t.pan || t.pan_number || "—"}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 font-medium">
-                          {t.unit_number || "—"}
+                          {t.unit_number || t.space_code || "—"}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              t.lease_status === "Active Lease" || !t.lease_status
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {t.lease_status || "Active Lease"}
-                          </span>
+                          {t.is_activated || t.portal_status === "active" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Live on OfficeX
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+                              <Clock size={10} className="text-amber-600" />
+                              Pending Acceptance
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">

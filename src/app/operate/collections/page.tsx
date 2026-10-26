@@ -260,11 +260,11 @@ export default function AgeingCollectionsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-rose-50 text-rose-700 rounded-full border border-rose-200">
-              Screen S-45 &middot; Ageing & Collections
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-teal-50 text-teal-800 rounded-full border border-teal-200">
+              Receivables & Collections
             </span>
-            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Formula F-13 (4-Bucket Ageing)
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+              Aging Schedule
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -280,7 +280,7 @@ export default function AgeingCollectionsPage() {
             href="/operate/payments"
             className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-sm"
           >
-            Payment Centre (S-43)
+            Payment Centre
           </Link>
 
           <button
@@ -337,7 +337,7 @@ export default function AgeingCollectionsPage() {
             ₹{(summary?.bucket_31_60 ?? rows.reduce((s, r) => s + (r.bucket_31_60 || 0), 0)).toLocaleString("en-IN")}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            Triggers AL-10 warning alerts
+            Actionable follow-up required
           </div>
         </div>
 
