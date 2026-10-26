@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { INDIAN_STATES_CITIES } from "@/lib/india-locations";
 
-export const ALL_INDIAN_STATES = Object.keys(INDIAN_STATES_CITIES);
+export const ALL_INDIAN_STATES = Object.keys(INDIAN_STATES_CITIES).sort();
 
 export interface SPVData {
   id: string;
@@ -33,7 +33,19 @@ export interface SPVData {
   state: string;
   city: string;
   address: string;
-  taxProfile: "gst_18" | "exempt_0" | "sez_0" | "composition_1";
+  taxProfile: "gst_18" | "gst_12" | "gst_5" | "exempt_0" | "sez_0" | "composition_1" | "custom" | string;
+  customTaxRate?: number;
+  customSacCode?: string;
+  customTaxDescription?: string;
+}
+
+export interface FitoutDetails {
+  baseBareRent?: number;
+  fitoutCapexRent?: number;
+  workstationsCount?: number;
+  cabinsCount?: number;
+  meetingRoomsCount?: number;
+  inclusions?: string[];
 }
 
 export interface OnboardingCompleteData {
@@ -59,7 +71,9 @@ export interface OnboardingCompleteData {
   pincode?: string;
   address: string;
   buildingName?: string;
+  isSingleBuilding?: boolean;
   fitoutCondition?: string;
+  fitoutDetails?: FitoutDetails;
   hasDelegatedManager?: boolean;
   managerType?: string;
   managerName?: string;
@@ -265,12 +279,15 @@ export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
 export const PROPERTY_TYPES = [
   { id: "office", label: "Commercial Office Building" },
   { id: "it_park", label: "IT / Tech Park" },
-  { id: "retail", label: "Retail / Commercial Mall" },
-  { id: "mixed_use", label: "Mixed-Use Commercial" },
-  { id: "industrial", label: "Industrial / Logistics Hub" },
-  { id: "warehouse", label: "Commercial Warehouse" },
+  { id: "warehouse", label: "Commercial Warehouse / Logistics Godown" },
+  { id: "cold_storage", label: "Cold Storage & Supply Chain Unit" },
+  { id: "industrial", label: "Industrial / Factory / Logistics Park" },
+  { id: "retail", label: "Retail / Commercial Mall / High Street" },
+  { id: "mixed_use", label: "Mixed-Use Commercial Complex" },
+  { id: "data_centre", label: "Data Centre / Hyperscale Facility" },
   { id: "flex_centre", label: "Flex / Coworking Centre" },
   { id: "sez_ifsc", label: "SEZ / IFSC Zone" },
+  { id: "other", label: "Other Commercial Property Type (Specify)" },
 ];
 
 // Building Grades
@@ -311,23 +328,52 @@ export default function RentRollOnboardingWizard({
   const [gstin, setGstin] = useState<string>("");
   const [pan, setPan] = useState<string>("");
   const [spvState, setSpvState] = useState<string>("Gujarat");
+  const [customSpvState, setCustomSpvState] = useState<string>("");
   const [spvCity, setSpvCity] = useState<string>("Ahmedabad");
-  const [taxProfile, setTaxProfile] = useState<"gst_18" | "exempt_0" | "sez_0" | "composition_1">("gst_18");
+  const [customSpvCity, setCustomSpvCity] = useState<string>("");
+  const [taxProfile, setTaxProfile] = useState<
+    "gst_18" | "gst_12" | "gst_5" | "exempt_0" | "sez_0" | "composition_1" | "custom"
+  >("gst_18");
+  const [customTaxRate, setCustomTaxRate] = useState<number>(18);
+  const [customSacCode, setCustomSacCode] = useState<string>("SAC 997212");
+  const [customTaxDescription, setCustomTaxDescription] = useState<string>("");
 
   // Step 2: Commercial Property & Space Hierarchy
   const [propertyName, setPropertyName] = useState<string>("");
   const [propertyCode, setPropertyCode] = useState<string>("");
   const [propertyType, setPropertyType] = useState<string>("office");
+  const [customPropertyType, setCustomPropertyType] = useState<string>("");
   const [buildingGrade, setBuildingGrade] = useState<string>("A");
   const [areaSqft, setAreaSqft] = useState<number>(25000);
   const [carpetAreaSqft, setCarpetAreaSqft] = useState<number>(18000);
+
+  // Single-building vs Multi-building toggle (fixes Question 4!)
+  const [isSingleBuilding, setIsSingleBuilding] = useState<boolean>(true);
   const [buildingName, setBuildingName] = useState<string>("Main Tower");
+
   const [floorsCount, setFloorsCount] = useState<number>(5);
   const [unitsPerFloor, setUnitsPerFloor] = useState<number>(4);
   const [askingRatePerSqft, setAskingRatePerSqft] = useState<number>(85);
   const [fitoutCondition, setFitoutCondition] = useState<string>("warm_shell");
+
+  // Detailed Fit-out parameters (fixes Question 5!)
+  const [baseBareRent, setBaseBareRent] = useState<number>(65);
+  const [fitoutCapexRent, setFitoutCapexRent] = useState<number>(20);
+  const [workstationsCount, setWorkstationsCount] = useState<number>(100);
+  const [cabinsCount, setCabinsCount] = useState<number>(4);
+  const [meetingRoomsCount, setMeetingRoomsCount] = useState<number>(2);
+  const [fitoutInclusions, setFitoutInclusions] = useState<string[]>([
+    "hvac",
+    "workstations",
+    "server_rack",
+    "biometric",
+  ]);
+
+  // Dynamic Location selectors (fixes Question 3!)
   const [propertyState, setPropertyState] = useState<string>("Gujarat");
+  const [customPropertyState, setCustomPropertyState] = useState<string>("");
   const [propertyCity, setPropertyCity] = useState<string>("Ahmedabad");
+  const [customPropertyCity, setCustomPropertyCity] = useState<string>("");
   const [microMarket, setMicroMarket] = useState<string>("SG Highway");
   const [pincode, setPincode] = useState<string>("380015");
   const [propertyAddress, setPropertyAddress] = useState<string>("");
@@ -342,9 +388,43 @@ export default function RentRollOnboardingWizard({
   const [managerEmail, setManagerEmail] = useState<string>("");
   const [delegationScope, setDelegationScope] = useState<string>("full_operations");
 
-  // Auto-sync property code when property name changes
+  // Derived available cities
+  const availableSpvCities =
+    spvState !== "Other" && INDIAN_STATES_CITIES[spvState]
+      ? INDIAN_STATES_CITIES[spvState]
+      : [];
+
+  const availablePropertyCities =
+    propertyState !== "Other" && INDIAN_STATES_CITIES[propertyState]
+      ? INDIAN_STATES_CITIES[propertyState]
+      : [];
+
+  const handleSpvStateChange = (stateVal: string) => {
+    setSpvState(stateVal);
+    if (stateVal === "Other") {
+      setSpvCity("Other");
+    } else {
+      const cities = INDIAN_STATES_CITIES[stateVal] || [];
+      setSpvCity(cities[0] || "Other");
+    }
+  };
+
+  const handlePropertyStateChange = (stateVal: string) => {
+    setPropertyState(stateVal);
+    if (stateVal === "Other") {
+      setPropertyCity("Other");
+    } else {
+      const cities = INDIAN_STATES_CITIES[stateVal] || [];
+      setPropertyCity(cities[0] || "Other");
+    }
+  };
+
+  // Auto-sync property code & single building name when property name changes
   const handlePropertyNameChange = (name: string) => {
     setPropertyName(name);
+    if (isSingleBuilding) {
+      setBuildingName(name ? `${name} - Main Tower` : "Main Tower");
+    }
     if (!propertyCode || propertyCode.startsWith("PROP-") || propertyCode === "") {
       const slug = name
         .toUpperCase()
@@ -428,6 +508,15 @@ export default function RentRollOnboardingWizard({
     const hasDelegated = managementMode === "delegated";
     const selectedModelObj = BUSINESS_MODELS.find((m) => m.id === businessModel) || BUSINESS_MODELS[0];
 
+    const finalSpvState = spvState === "Other" && customSpvState.trim() ? customSpvState.trim() : spvState;
+    const finalSpvCity = spvCity === "Other" && customSpvCity.trim() ? customSpvCity.trim() : spvCity;
+    const finalPropState = propertyState === "Other" && customPropertyState.trim() ? customPropertyState.trim() : propertyState;
+    const finalPropCity = propertyCity === "Other" && customPropertyCity.trim() ? customPropertyCity.trim() : propertyCity;
+    const finalPropType = propertyType === "other" && customPropertyType.trim() ? customPropertyType.trim() : propertyType;
+    const finalBuildingName = isSingleBuilding
+      ? (propertyName.trim() ? `${propertyName.trim()} - Main Tower` : "Main Tower")
+      : (buildingName.trim() || "Main Tower");
+
     const spvList: SPVData[] = [
       {
         id: "spv-1",
@@ -435,12 +524,17 @@ export default function RentRollOnboardingWizard({
         entityType: "Private Limited",
         gstin: gstin.trim(),
         pan: pan.trim(),
-        state: spvState,
-        city: spvCity,
-        address: propertyAddress.trim() || `${spvCity}, ${spvState}`,
+        state: finalSpvState,
+        city: finalSpvCity,
+        address: propertyAddress.trim() || `${finalSpvCity}, ${finalSpvState}`,
         taxProfile: taxProfile,
+        customTaxRate: taxProfile === "custom" ? customTaxRate : undefined,
+        customSacCode: taxProfile === "custom" ? customSacCode.trim() : undefined,
+        customTaxDescription: taxProfile === "custom" ? customTaxDescription.trim() : undefined,
       },
     ];
+
+    const isFitted = fitoutCondition === "fully_fitted" || fitoutCondition === "plug_and_play";
 
     const data: OnboardingCompleteData = {
       businessModel,
@@ -451,20 +545,31 @@ export default function RentRollOnboardingWizard({
       chargeTypes: selectedModelObj.defaultCharges,
       propertyName: propertyName.trim(),
       propertyCode: (propertyCode || "PROP-01").trim(),
-      propertyType,
+      propertyType: finalPropType,
       buildingGrade,
-      buildingName: buildingName.trim() || "Main Tower",
+      buildingName: finalBuildingName,
+      isSingleBuilding,
       areaSqft,
       carpetAreaSqft,
       floorsCount,
       unitsPerFloor,
       askingRatePerSqft,
       fitoutCondition,
-      state: propertyState,
-      city: propertyCity,
-      microMarket: microMarket.trim() || propertyCity,
+      fitoutDetails: isFitted
+        ? {
+            baseBareRent,
+            fitoutCapexRent,
+            workstationsCount,
+            cabinsCount,
+            meetingRoomsCount,
+            inclusions: fitoutInclusions,
+          }
+        : undefined,
+      state: finalPropState,
+      city: finalPropCity,
+      microMarket: microMarket.trim() || finalPropCity,
       pincode: pincode.trim(),
-      address: propertyAddress.trim() || `${microMarket}, ${propertyCity}, ${propertyState}`,
+      address: propertyAddress.trim() || `${microMarket}, ${finalPropCity}, ${finalPropState}`,
       hasDelegatedManager: hasDelegated,
       managerType: hasDelegated ? managerType : undefined,
       managerName: hasDelegated ? managerName.trim() : undefined,
@@ -757,7 +862,7 @@ export default function RentRollOnboardingWizard({
                   </label>
                   <select
                     value={spvState}
-                    onChange={(e) => setSpvState(e.target.value)}
+                    onChange={(e) => handleSpvStateChange(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
                     {ALL_INDIAN_STATES.map((st) => (
@@ -765,20 +870,44 @@ export default function RentRollOnboardingWizard({
                         {st}
                       </option>
                     ))}
+                    <option value="Other">Other (Write Custom State)</option>
                   </select>
+                  {spvState === "Other" && (
+                    <input
+                      type="text"
+                      value={customSpvState}
+                      onChange={(e) => setCustomSpvState(e.target.value)}
+                      placeholder="Enter custom State"
+                      className="mt-1.5 w-full px-2.5 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                     City / Center
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={spvCity}
                     onChange={(e) => setSpvCity(e.target.value)}
-                    placeholder="Ahmedabad"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                  />
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    {availableSpvCities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="Other">Other (Write Custom City)</option>
+                  </select>
+                  {spvCity === "Other" && (
+                    <input
+                      type="text"
+                      value={customSpvCity}
+                      onChange={(e) => setCustomSpvCity(e.target.value)}
+                      placeholder="Enter custom City"
+                      className="mt-1.5 w-full px-2.5 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
@@ -788,14 +917,67 @@ export default function RentRollOnboardingWizard({
                   <select
                     value={taxProfile}
                     onChange={(e) => setTaxProfile(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer font-medium"
                   >
                     <option value="gst_18">Standard Commercial Rent (18% GST - SAC 997212)</option>
+                    <option value="gst_12">Industrial / Warehouse Leases (12% GST - SAC 997212)</option>
+                    <option value="gst_5">Special Concession / RCM Commercial Rate (5% GST)</option>
                     <option value="sez_0">SEZ / IFSC Zero-Rated (0% GST - Letter of Undertaking)</option>
                     <option value="exempt_0">Exempt Commercial Supply (0% GST)</option>
                     <option value="composition_1">Small Taxpayer Scheme (1% GST)</option>
+                    <option value="custom">Custom Tax Rate &amp; SAC Profile (Set Your Own Rate)</option>
                   </select>
                 </div>
+
+                {taxProfile === "custom" && (
+                  <div className="md:col-span-4 p-3.5 bg-teal-50/70 border border-teal-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-teal-900">
+                      <Sparkles size={14} className="text-[#0F8B7D]" />
+                      Custom GST &amp; Tax Profile Configuration
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          GST Rate (%)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.1}
+                          value={customTaxRate}
+                          onChange={(e) => setCustomTaxRate(Number(e.target.value))}
+                          placeholder="18"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          SAC / HSN Code
+                        </label>
+                        <input
+                          type="text"
+                          value={customSacCode}
+                          onChange={(e) => setCustomSacCode(e.target.value)}
+                          placeholder="e.g. SAC 997212"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          Profile Description
+                        </label>
+                        <input
+                          type="text"
+                          value={customTaxDescription}
+                          onChange={(e) => setCustomTaxDescription(e.target.value)}
+                          placeholder="e.g. City/Industry Specific Commercial Rate"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -863,6 +1045,15 @@ export default function RentRollOnboardingWizard({
                       </option>
                     ))}
                   </select>
+                  {propertyType === "other" && (
+                    <input
+                      type="text"
+                      value={customPropertyType}
+                      onChange={(e) => setCustomPropertyType(e.target.value)}
+                      placeholder="Specify custom type (e.g. Cold Storage, Auto Showroom)"
+                      className="mt-2 w-full px-3 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -912,7 +1103,7 @@ export default function RentRollOnboardingWizard({
                 </div>
               </div>
 
-              {/* Location Fields */}
+              {/* Location Fields with Dynamic City Dropdown & Other Options */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-slate-200">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
@@ -920,7 +1111,7 @@ export default function RentRollOnboardingWizard({
                   </label>
                   <select
                     value={propertyState}
-                    onChange={(e) => setPropertyState(e.target.value)}
+                    onChange={(e) => handlePropertyStateChange(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
                     {ALL_INDIAN_STATES.map((st) => (
@@ -928,20 +1119,44 @@ export default function RentRollOnboardingWizard({
                         {st}
                       </option>
                     ))}
+                    <option value="Other">Other (Write Custom State)</option>
                   </select>
+                  {propertyState === "Other" && (
+                    <input
+                      type="text"
+                      value={customPropertyState}
+                      onChange={(e) => setCustomPropertyState(e.target.value)}
+                      placeholder="Enter custom State"
+                      className="mt-1.5 w-full px-2.5 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                     City
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={propertyCity}
                     onChange={(e) => setPropertyCity(e.target.value)}
-                    placeholder="Ahmedabad"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
-                  />
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                  >
+                    {availablePropertyCities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="Other">Other (Write Custom City)</option>
+                  </select>
+                  {propertyCity === "Other" && (
+                    <input
+                      type="text"
+                      value={customPropertyCity}
+                      onChange={(e) => setCustomPropertyCity(e.target.value)}
+                      placeholder="Enter custom City"
+                      className="mt-1.5 w-full px-2.5 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -975,23 +1190,60 @@ export default function RentRollOnboardingWizard({
 
             {/* Building & Initial Space Schedule */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Building &amp; Space Hierarchy
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Building &amp; Space Hierarchy
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Defines physical structure and floor divisions for contract mapping.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 select-none hover:bg-slate-100 transition">
+                  <input
+                    type="checkbox"
+                    checked={isSingleBuilding}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsSingleBuilding(checked);
+                      if (checked) {
+                        setBuildingName(propertyName ? `${propertyName} - Main Tower` : "Main Tower");
+                      }
+                    }}
+                    className="w-4 h-4 text-[#0F8B7D] rounded focus:ring-0 cursor-pointer"
+                  />
+                  <span>Standalone Building (Property &amp; Building are identical)</span>
+                </label>
+              </div>
+
+              {!isSingleBuilding && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-[11px] text-amber-900 leading-relaxed">
+                  <strong>Multi-Tower / Campus Mode:</strong> Your campus (e.g. <em>{propertyName || "Business Park"}</em>) contains multiple separate buildings. Specify the specific tower or block name below.
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Building Name
-                  </label>
-                  <input
-                    type="text"
-                    value={buildingName}
-                    onChange={(e) => setBuildingName(e.target.value)}
-                    placeholder="Tower 1 / Main Wing"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                  />
-                </div>
+                {!isSingleBuilding ? (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Tower / Building Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={buildingName}
+                      onChange={(e) => setBuildingName(e.target.value)}
+                      placeholder="e.g. Tower A, North Wing"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col justify-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tower / Building</span>
+                    <span className="font-semibold text-slate-800 truncate">
+                      {propertyName ? `${propertyName} (Single Asset)` : "Main Tower"}
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
@@ -1040,7 +1292,14 @@ export default function RentRollOnboardingWizard({
                   </label>
                   <select
                     value={fitoutCondition}
-                    onChange={(e) => setFitoutCondition(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFitoutCondition(val);
+                      if (val === "fully_fitted" || val === "plug_and_play") {
+                        setBaseBareRent(Math.round(askingRatePerSqft * 0.75));
+                        setFitoutCapexRent(Math.round(askingRatePerSqft * 0.25));
+                      }
+                    }}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
                     {FITOUT_CONDITIONS.map((fc) => (
@@ -1057,6 +1316,130 @@ export default function RentRollOnboardingWizard({
                     Generates <strong>{floorsCount * unitsPerFloor} leasable units</strong> (~{Math.round(areaSqft / (floorsCount * unitsPerFloor)).toLocaleString()} sq ft each) ready for contract mapping.
                   </span>
                 </div>
+
+                {/* Detailed Fit-out Specifications when Fully Fitted or Plug and Play */}
+                {(fitoutCondition === "fully_fitted" || fitoutCondition === "plug_and_play") && (
+                  <div className="md:col-span-4 p-4 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={15} className="text-[#0F8B7D]" />
+                        <h4 className="text-xs font-bold text-teal-950 uppercase tracking-wider">
+                          Fully Fitted &amp; Plug-and-Play Specifications
+                        </h4>
+                      </div>
+                      <span className="text-[11px] font-semibold text-teal-800 bg-teal-100/80 px-2.5 py-0.5 rounded-full">
+                        Total Rent: ₹{baseBareRent + fitoutCapexRent} / sq ft / mo
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          Base Warm Shell Rent (₹/sqft)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={baseBareRent}
+                          onChange={(e) => {
+                            const b = Number(e.target.value);
+                            setBaseBareRent(b);
+                            setAskingRatePerSqft(b + fitoutCapexRent);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          Fit-out Capex Surcharge (₹/sqft)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={fitoutCapexRent}
+                          onChange={(e) => {
+                            const f = Number(e.target.value);
+                            setFitoutCapexRent(f);
+                            setAskingRatePerSqft(baseBareRent + f);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          Fitted Workstations (Desks)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={workstationsCount}
+                          onChange={(e) => setWorkstationsCount(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                          Cabins &amp; Meeting Rooms
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={cabinsCount}
+                            onChange={(e) => setCabinsCount(Number(e.target.value))}
+                            title="Executive Cabins"
+                            placeholder="Cabins"
+                            className="w-1/2 px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            value={meetingRoomsCount}
+                            onChange={(e) => setMeetingRoomsCount(Number(e.target.value))}
+                            title="Meeting Rooms"
+                            placeholder="Conf Rms"
+                            className="w-1/2 px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-teal-200/60">
+                      <span className="block text-[10px] font-bold text-slate-700 uppercase mb-1.5">
+                        Included Fit-out Assets &amp; Utilities
+                      </span>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        {[
+                          { id: "hvac", label: "Central HVAC / Ducting" },
+                          { id: "workstations", label: "Modular Desks & Chairs" },
+                          { id: "server_rack", label: "Server Rack & Cat6 LAN" },
+                          { id: "dg_tap", label: "100% DG Power Backup Tap" },
+                          { id: "pantry", label: "Dry Pantry / Cafeteria" },
+                          { id: "biometric", label: "Biometric Access Control" },
+                        ].map((item) => (
+                          <label key={item.id} className="flex items-center gap-1.5 text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={fitoutInclusions.includes(item.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFitoutInclusions([...fitoutInclusions, item.id]);
+                                } else {
+                                  setFitoutInclusions(fitoutInclusions.filter((x) => x !== item.id));
+                                }
+                              }}
+                              className="w-3.5 h-3.5 text-[#0F8B7D] rounded focus:ring-0"
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1078,9 +1461,14 @@ export default function RentRollOnboardingWizard({
 
             {/* Go-Live Strategy Selection */}
             <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
-                Select Your Onboarding Route <span className="text-rose-500">*</span>
-              </label>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Select Your Onboarding Route <span className="text-rose-500">*</span>
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Select how you want to input your contracts, space schedule, and tenant billing data.
+                </p>
+              </div>
 
               <select
                 value={startingStrategy}
@@ -1088,40 +1476,92 @@ export default function RentRollOnboardingWizard({
                 className="w-full px-3.5 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-semibold cursor-pointer shadow-xs"
               >
                 <option value="rent_roll">
-                  Option 1: Self-Serve Rent Roll Register — Direct entry in the live space-by-space register
+                  Option 1: Self-Serve Rent Roll Register — Interactive Space Grid
                 </option>
                 <option value="create_lease">
-                  Option 2: Create First Contract — Launch directly into the 7-step Contract Creation Wizard
+                  Option 2: Create First Contract — Step-by-Step Contract Wizard
                 </option>
                 <option value="import_excel">
-                  Option 3: Bulk Import Excel — Launch the 6-step Excel Import Wizard (.xlsx schedule)
+                  Option 3: Bulk Import Excel — Spreadsheet Schedule Upload
                 </option>
                 <option value="assisted_concierge">
-                  Option 4: Assisted Concierge Onboarding — Scalezix / OfficeX assisted lease abstraction
+                  Option 4: Assisted Concierge Onboarding — Expert Lease Abstraction
                 </option>
               </select>
 
-              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-1">
-                {startingStrategy === "rent_roll" && (
-                  <p>
-                    <strong>Self-Serve Rent Roll:</strong> Lands directly on the Rent Roll Register. Shows all units with occupied and vacant status, where you can click any space to draft leases or record member deals.
+              {/* 4 Route Comparison Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                <div
+                  onClick={() => setStartingStrategy("rent_roll")}
+                  className={`p-4 rounded-xl border transition cursor-pointer text-left ${
+                    startingStrategy === "rent_roll"
+                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
+                      : "bg-white/70 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-slate-900">1. Self-Serve Rent Roll Register</span>
+                    <span className="text-[10px] font-bold text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded-full">Fastest Entry</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                    Lands directly on the visual Space Register grid. View all units, floor maps, vacant/occupied stats, and click any space to draft leases when ready.
                   </p>
-                )}
-                {startingStrategy === "create_lease" && (
-                  <p>
-                    <strong>Direct Contract Creation:</strong> Opens the 7-step contract wizard to capture contract terms, rent steps, CAM rules, escalation cycles, deposits, and execute your first agreement.
+                  <div className="text-[10px] text-slate-400 font-medium">Best for: Property owners who want to explore inventory before adding leases.</div>
+                </div>
+
+                <div
+                  onClick={() => setStartingStrategy("create_lease")}
+                  className={`p-4 rounded-xl border transition cursor-pointer text-left ${
+                    startingStrategy === "create_lease"
+                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
+                      : "bg-white/70 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-slate-900">2. Create First Contract</span>
+                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-full">Contract Flow</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                    Immediately launches into the 7-step Contract Creation Wizard. Capture tenant KYC, lock-in period, rent step escalations, CAM rules, and security deposits.
                   </p>
-                )}
-                {startingStrategy === "import_excel" && (
-                  <p>
-                    <strong>Bulk Import Center:</strong> Provides standard 10-sheet and quick 1-sheet Excel templates with automatic header profiling, confidence scoring, variance checks, and error correction.
+                  <div className="text-[10px] text-slate-400 font-medium">Best for: Landlords who have an active agreement ready to execute right now.</div>
+                </div>
+
+                <div
+                  onClick={() => setStartingStrategy("import_excel")}
+                  className={`p-4 rounded-xl border transition cursor-pointer text-left ${
+                    startingStrategy === "import_excel"
+                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
+                      : "bg-white/70 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-slate-900">3. Bulk Import Excel</span>
+                    <span className="text-[10px] font-bold text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-full">Portfolio Batch</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                    Upload your existing spreadsheet (.xlsx). Provides automated column matching, Indian number parsing (lakhs/crores), variance audits, and instant batch ingestion.
                   </p>
-                )}
-                {startingStrategy === "assisted_concierge" && (
-                  <p>
-                    <strong>Assisted Concierge:</strong> OfficeX onboarding specialists review your deeds, extract amendment variations, and perform data reconciliation against bank deposits.
+                  <div className="text-[10px] text-slate-400 font-medium">Best for: PM companies and operators migrating 10+ to 500+ existing leases.</div>
+                </div>
+
+                <div
+                  onClick={() => setStartingStrategy("assisted_concierge")}
+                  className={`p-4 rounded-xl border transition cursor-pointer text-left ${
+                    startingStrategy === "assisted_concierge"
+                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
+                      : "bg-white/70 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-slate-900">4. Assisted Concierge</span>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-full">White-Glove</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                    OfficeX onboarding team reads your legal lease deeds, abstracts escalation formulas, and verifies ledger reconciliations on your behalf.
                   </p>
-                )}
+                  <div className="text-[10px] text-slate-400 font-medium">Best for: Institutional owners, REITs, or non-technical landlords.</div>
+                </div>
               </div>
             </div>
 
