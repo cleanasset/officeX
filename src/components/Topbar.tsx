@@ -73,10 +73,8 @@ export default function Topbar() {
   const [isOwnerStatementOpen, setIsOwnerStatementOpen] = useState(false);
   const clientDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Role Selector Dropdown State
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  // Current User Role
   const [currentRoleKey, setCurrentRoleKey] = useState("owner");
-  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   // Generate breadcrumbs from pathname
   const pathParts = pathname.split("/").filter(Boolean);
@@ -148,8 +146,7 @@ export default function Topbar() {
       router.push("/operate/rent-roll/pricing");
       return;
     }
-    // Ask first: open the full-screen Module Chooser Modal
-    setIsModuleChooserOpen(true);
+    router.push(activeRole.route);
   };
 
   const handleProfileKYC = () => {
@@ -201,21 +198,6 @@ export default function Topbar() {
     }
   };
 
-  const handleSelectRole = (r: typeof AVAILABLE_ROLES[0]) => {
-    setCurrentRoleKey(r.key);
-    setIsRoleDropdownOpen(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_user_role", r.label);
-      localStorage.setItem("officex_role_key", r.key);
-      sessionStorage.setItem("officex_user_role", r.label);
-      sessionStorage.setItem("officex_role_key", r.key);
-      document.cookie = `officex_user_role=${encodeURIComponent(r.label)}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `officex_role_key=${encodeURIComponent(r.key)}; path=/; max-age=86400; SameSite=Lax`;
-      window.dispatchEvent(new CustomEvent("officex-role-change", { detail: { roleKey: r.key, role: r } }));
-    }
-    router.push(r.route);
-  };
-
   // Click outside listener for all dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -227,9 +209,6 @@ export default function Topbar() {
       }
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
         setIsClientDropdownOpen(false);
-      }
-      if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
-        setIsRoleDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -268,75 +247,23 @@ export default function Topbar() {
           <Menu size={18} />
         </button>
 
-        {/* Clean Company / Brand Logo & Name Badge */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs shrink-0">
-          {brandLogo ? (
-            <img src={brandLogo} alt="Logo" className="h-5 max-w-[80px] object-contain rounded" />
-          ) : (
-            <Building2 size={15} className="text-[#0F8B7D]" />
-          )}
-          <span className="text-xs font-extrabold text-slate-900 max-w-[130px] lg:max-w-[180px] truncate">
-            {brandName || "OfficeX Commercial"}
-          </span>
-        </div>
-
         {/* Global Property Selector */}
         <div className="min-w-0">
           <PropertySelector />
         </div>
 
-        {/* Persona / Role Selector */}
-        <div className="relative shrink-0" ref={roleDropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-500 bg-white hover:bg-slate-50 transition-all text-xs font-bold text-slate-800 shadow-2xs cursor-pointer"
-            title="Switch Workspace Role"
-          >
-            <activeRole.icon size={15} className="text-[#0F8B7D] shrink-0" />
-            <div className="hidden sm:flex flex-col text-left leading-tight">
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Role</span>
-              <span className="text-xs font-extrabold text-slate-900 truncate max-w-[110px] md:max-w-[140px] lg:max-w-[170px]">{activeRole.label}</span>
-            </div>
-            <ChevronDown size={13} className={`text-slate-400 transition-transform ${isRoleDropdownOpen ? "rotate-180" : ""}`} />
-          </button>
-
-          {isRoleDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
-              <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 block">Workspace Access</span>
-                  <span className="text-xs font-black text-slate-900">Switch Role</span>
-                </div>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Active</span>
-              </div>
-              <div className="flex flex-col gap-1 py-1 max-h-80 overflow-y-auto">
-                {AVAILABLE_ROLES.map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = r.key === currentRoleKey;
-                  return (
-                    <button
-                      key={r.key}
-                      type="button"
-                      onClick={() => handleSelectRole(r)}
-                      className={`w-full p-2 rounded-xl text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                        isSelected ? "bg-teal-50/80 text-teal-900 font-bold border border-teal-200/60" : "hover:bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-                        <Icon size={14} />
-                      </div>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-xs font-bold truncate">{r.label}</span>
-                        <span className="text-[10px] text-slate-400 truncate">{r.sub}</span>
-                      </div>
-                      {isSelected && <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0 mr-1" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        {/* User Assigned Role Badge (Read-Only Institutional Badge) */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-bold text-slate-800 shadow-2xs shrink-0 select-none"
+          title={`Assigned Workspace Role: ${activeRole.label}`}
+        >
+          <activeRole.icon size={15} className="text-[#0F8B7D] shrink-0" />
+          <div className="flex flex-col text-left leading-tight">
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Role</span>
+            <span className="text-xs font-extrabold text-slate-900 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[180px]">
+              {activeRole.label}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -478,15 +405,9 @@ export default function Topbar() {
                 >
                   <Layers size={14} className="text-teal-600" />
                   <div className="flex flex-col">
-                    <span>
-                      {pathname.startsWith("/dashboard") || pathname.startsWith("/properties/rent-roll")
-                        ? "Switch SaaS Module"
-                        : "Go to My Dashboard"}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      {pathname.startsWith("/dashboard") || pathname.startsWith("/properties/rent-roll")
-                        ? `Active: ${activeRole.label} · Switch`
-                        : (isSubscribed ? "Open Module Dashboard" : "Subscription Required")}
+                    <span className="font-bold text-slate-900">Go to My Dashboard</span>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      Role: {activeRole.label}
                     </span>
                   </div>
                 </button>
