@@ -465,10 +465,10 @@ export default function RentRollRegisterPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-[#0F8B7D] border border-teal-200 uppercase tracking-wider">
-                §S-10 Wireframe Spec
+                Active Portfolio
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                Master Commercial Lease Register
+                Master Lease Register
               </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">

@@ -192,11 +192,11 @@ export default function PaymentAllocationPage() {
               className="text-xs text-gray-500 hover:text-gray-900 font-semibold flex items-center gap-1"
             >
               <ArrowLeft size={13} />
-              <span>Payments Register (S-43)</span>
+              <span>Payments Register</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-100 text-[#0F8B7D] uppercase tracking-wider">
-              Screen S-44 • FIFO Allocation
+              FIFO Allocation Engine
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">

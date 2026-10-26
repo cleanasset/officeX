@@ -130,13 +130,13 @@ export default function PropertiesPortfolioPage() {
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <span>OFFICEX</span>
                 <span>/</span>
-                <span className="text-[#0F8B7D] font-bold">Commercial Portfolio</span>
+                <span className="text-[#0F8B7D] font-bold">Portfolio</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
                 Property Portfolio Registry
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Manage commercial assets, leasable square footage, and active tenancy structures.
+                Manage assets, leasable square footage, and active tenancy structures.
               </p>
             </div>
 
@@ -230,7 +230,7 @@ export default function PropertiesPortfolioPage() {
               <div className="text-2xl font-black text-slate-900 mt-1">
                 {properties.length}
               </div>
-              <span className="text-[10px] text-slate-500 font-bold mt-1 inline-block">Commercial Assets</span>
+              <span className="text-[10px] text-slate-500 font-bold mt-1 inline-block">Active Assets</span>
             </div>
           </div>
 
@@ -293,7 +293,7 @@ export default function PropertiesPortfolioPage() {
           <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
             <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Active Commercial Properties</h3>
+                <h3 className="text-sm font-black text-slate-900">Active Properties</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Assets registered under your organization workspace</p>
               </div>
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">

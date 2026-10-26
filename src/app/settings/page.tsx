@@ -101,9 +101,9 @@ export default function SettingsSuitePage() {
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="px-2 py-0.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded">
-                Screens S-60 to S-67
+                Enterprise Settings
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-mono">ERP Administration & Governance</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Administration &amp; Governance</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
               <Settings className="text-[#0D7B6C] w-5 h-5 sm:w-6 sm:h-6" />
@@ -136,7 +136,7 @@ export default function SettingsSuitePage() {
               activeTab === "s60" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Building size={14} /> S-60 Organisation &amp; Branding
+            <Building size={14} /> Organisation &amp; Branding
           </button>
           <button
             onClick={() => setActiveTab("s61")}
@@ -144,7 +144,7 @@ export default function SettingsSuitePage() {
               activeTab === "s61" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <CreditCard size={14} /> S-61 Billing Entities Master
+            <CreditCard size={14} /> Billing Entities &amp; SPVs
           </button>
           <button
             onClick={() => setActiveTab("s62")}
@@ -152,7 +152,7 @@ export default function SettingsSuitePage() {
               activeTab === "s62" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Percent size={14} /> S-62 Charge Types &amp; Taxes
+            <Percent size={14} /> Charge Types &amp; Tax Rates
           </button>
           <button
             onClick={() => setActiveTab("s63")}
@@ -160,7 +160,7 @@ export default function SettingsSuitePage() {
               activeTab === "s63" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Hash size={14} /> S-63 Numbering &amp; Controls
+            <Hash size={14} /> Numbering Sequences &amp; Controls
           </button>
           <button
             onClick={() => setActiveTab("s64")}
@@ -168,7 +168,7 @@ export default function SettingsSuitePage() {
               activeTab === "s64" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Bell size={14} /> S-64 Alert Rules
+            <Bell size={14} /> Notification &amp; Alert Rules
           </button>
           <button
             onClick={() => setActiveTab("s66")}
@@ -176,7 +176,7 @@ export default function SettingsSuitePage() {
               activeTab === "s66" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Users size={14} /> S-66 Users &amp; Approval Matrix
+            <Users size={14} /> Users &amp; Approval Matrix
           </button>
           <button
             onClick={() => setActiveTab("s67")}
@@ -184,7 +184,7 @@ export default function SettingsSuitePage() {
               activeTab === "s67" ? "bg-[#0D7B6C] text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <Clock size={14} /> S-67 Audit Log Timeline
+            <Clock size={14} /> Audit Log Timeline
           </button>
         </div>
 
@@ -200,7 +200,7 @@ export default function SettingsSuitePage() {
             {activeTab === "s60" && orgData && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Organisation &amp; Branding Profile (S-60)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Organisation &amp; Branding Profile</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Corporate legal parameters and document rendering preferences</p>
                 </div>
 
@@ -311,7 +311,7 @@ export default function SettingsSuitePage() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Billing Entities Master (S-61)</h3>
+                    <h3 className="text-base font-bold text-slate-900">Billing Entities &amp; SPV Master</h3>
                     <p className="text-xs text-slate-500 mt-0.5">Separate legal SPVs with unique GSTIN, State code, and bank accounts</p>
                   </div>
                   <button className="px-3.5 py-2 text-xs font-bold text-white bg-[#0D7B6C] hover:bg-[#09574C] rounded-lg shadow-sm flex items-center gap-1.5">
@@ -366,7 +366,7 @@ export default function SettingsSuitePage() {
             {activeTab === "s62" && chargesData && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Charge Types &amp; Tax Profiles Catalogue (S-62)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Charge Types &amp; Tax Profiles Catalogue</h3>
                   <p className="text-xs text-slate-500 mt-0.5">HSN/SAC codes, GST slabs, and TDS section mappings (Section 194I vs 194C)</p>
                 </div>
 
@@ -412,7 +412,7 @@ export default function SettingsSuitePage() {
             {activeTab === "s63" && numberingData && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Numbering Sequences &amp; Financial Controls (S-63)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Numbering Sequences &amp; Financial Controls</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Configurable sequence masks and global financial freeze lock dates</p>
                 </div>
 
@@ -477,7 +477,7 @@ export default function SettingsSuitePage() {
             {activeTab === "s64" && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Alert Rules &amp; Notification Engine (S-64)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Alert Rules &amp; Notification Engine</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Configurable trigger timing offsets (90/60/30 days), roles, and delivery channels</p>
                 </div>
 
@@ -524,7 +524,7 @@ export default function SettingsSuitePage() {
             {activeTab === "s66" && usersData && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Users, Roles &amp; Approval Matrix (S-66)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Users, Roles &amp; Approval Matrix</h3>
                   <p className="text-xs text-slate-500 mt-0.5">12 specification roles with dual-control maker-checker limits</p>
                 </div>
 
@@ -598,7 +598,7 @@ export default function SettingsSuitePage() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Audit Log Timeline (S-67)</h3>
+                    <h3 className="text-base font-bold text-slate-900">Audit Log Timeline</h3>
                     <p className="text-xs text-slate-500 mt-0.5">Immutable record of all financial changes, lease updates, and data exports</p>
                   </div>
                   <div className="flex items-center gap-3">

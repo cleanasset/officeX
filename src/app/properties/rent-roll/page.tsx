@@ -755,8 +755,8 @@ export default function RentRollRegisterPage() {
                 ) : visibleRows.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                     <FileText className="w-8 h-8 text-slate-300 mb-1" />
-                    <span className="font-bold text-slate-800 text-sm">Your Commercial Rent Roll is Empty</span>
-                    <span className="text-xs text-slate-400 max-w-xs">No active leases or pre-seeded data in your portfolio. Get started by onboarding a property or creating your first contract.</span>
+                    <span className="font-bold text-slate-800 text-sm">Your Rent Roll is Empty</span>
+                    <span className="text-xs text-slate-400 max-w-xs">No active leases or data in your portfolio. Get started by onboarding a property or creating your first contract.</span>
                     <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                       <Link
                         href="/onboarding"
@@ -949,9 +949,9 @@ export default function RentRollRegisterPage() {
                             <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0F8B7D] mb-1 shadow-2xs">
                               <Building2 className="w-6 h-6" />
                             </div>
-                            <span className="font-extrabold text-slate-900 text-base">Your Commercial Rent Roll is Empty</span>
+                            <span className="font-extrabold text-slate-900 text-base">Your Rent Roll is Empty</span>
                             <span className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                              No active contracts or pre-seeded spaces in this workspace. Set up your commercial property hierarchy or create your first lease deed to start tracking collections and escalations.
+                              No active contracts or units in this workspace. Set up your property or create your first lease deed to start tracking collections and escalations.
                             </span>
                             <div className="flex items-center gap-2.5 mt-3">
                               <Link
@@ -959,7 +959,7 @@ export default function RentRollRegisterPage() {
                                 className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5"
                               >
                                 <Building2 size={14} />
-                                <span>Onboard Commercial Suite</span>
+                                <span>Add First Property</span>
                               </Link>
                               <button
                                 type="button"

@@ -253,13 +253,13 @@ export default function MeterReadingsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-[#0F8B7D]/10 text-[#0F8B7D] rounded-full border border-[#0F8B7D]/20">
-              Screen S-31 &middot; Meter Readings
+              Utility &amp; Sub-Meters
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-800 rounded-full border border-amber-200">
-              Formula F-09 Utility Invoicing
+              Meter Consumption Tracking
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-              Feeds INV-UTIL Split Series
+              Utility Invoicing Ready
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">

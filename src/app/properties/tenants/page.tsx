@@ -416,7 +416,7 @@ export default function TenantDirectoryPage() {
                         Corporate Tenant Master
                       </span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Active Commercial Lease
+                        Active Lease
                       </span>
                     </div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
@@ -424,7 +424,7 @@ export default function TenantDirectoryPage() {
                     </h2>
                     <p className="text-xs text-slate-500 flex items-center gap-1">
                       <Building2 size={12} className="text-slate-400" />
-                      {selectedTenantDetails.property_name || "Commercial Centre"} · Unit: {selectedTenantDetails.unit_number || "—"}
+                      {selectedTenantDetails.property_name || "Property"} · Unit: {selectedTenantDetails.unit_number || "—"}
                     </p>
                   </div>
                 </div>
@@ -480,9 +480,9 @@ export default function TenantDirectoryPage() {
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold">Building Name</span>
                     <strong className="text-slate-900 font-bold block mt-0.5">
-                      {selectedTenantDetails.property_name || "Commercial Centre"}
+                      {selectedTenantDetails.property_name || "Main Building"}
                     </strong>
-                    <span className="text-[10px] text-slate-500">Commercial Portfolio</span>
+                    <span className="text-[10px] text-slate-500">Active Portfolio</span>
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">

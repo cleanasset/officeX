@@ -174,10 +174,10 @@ export default function SecurityDepositsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-100 text-[#0F8B7D] uppercase tracking-wider">
-              Screen S-47 &middot; Deposits &amp; Bank Guarantees
+              Deposits &amp; Bank Guarantees
             </span>
             <span className="text-gray-300">/</span>
-            <span className="text-xs text-gray-500 font-semibold">Formulas D-13, AL-11, AL-12</span>
+            <span className="text-xs text-gray-500 font-semibold">Security Vault &amp; BG Expiry Tracking</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1 tracking-tight">
             Security Deposit &amp; BG Ledger
@@ -444,7 +444,7 @@ export default function SecurityDepositsPage() {
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-teal-100 text-[#0F8B7D] rounded">
-                  Screen S-47 &middot; Deposit Ledger Entry
+                  Deposit Ledger Entry
                 </span>
                 <h3 className="text-base font-bold text-gray-900 mt-1">
                   Record Deposit: {selectedContract.contract_code}

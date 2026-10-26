@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -132,6 +132,9 @@ export default function OwnerDashboardPage() {
   const [selectedNewManagerName, setSelectedNewManagerName] = useState("");
   const [selectedNewManagerEmail, setSelectedNewManagerEmail] = useState("");
   const [showManagerActivationBanner, setShowManagerActivationBanner] = useState(true);
+  const [showBankingBanner, setShowBankingBanner] = useState(true);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -154,12 +157,24 @@ export default function OwnerDashboardPage() {
       setDelegatedManagerUserRole(mgrUserRole);
       const isDismissed = localStorage.getItem("officex_dismiss_manager_banner") === "true";
       setShowManagerActivationBanner(!isDismissed);
+      const isBankingDismissed = localStorage.getItem("officex_dismiss_banking_banner") === "true";
+      setShowBankingBanner(!isBankingDismissed);
 
       try {
         const assigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
         setPropertyAssignments(assigns);
       } catch {}
     }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setIsActionsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleCopyManagerActivationLink = () => {
@@ -571,25 +586,17 @@ export default function OwnerDashboardPage() {
             </div>
           )}
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200/80 uppercase tracking-wider">
-                {brandName ? `${brandName} Portfolio` : "Portfolio Workspace"}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                Console · Refreshed {lastRefreshed}
-              </span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               Portfolio Overview
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              {totalPropertiesCount} asset · {totalLeasableArea.toLocaleString("en-IN")} sqft leasable area · {occupancyPercentage.toFixed(0)}% leased
+              {totalPropertiesCount} {totalPropertiesCount === 1 ? "asset" : "assets"} · {totalLeasableArea.toLocaleString("en-IN")} sqft leasable area · {occupancyPercentage.toFixed(0)}% leased
             </p>
           </div>
         </div>
 
         {/* Clean, Structured Action Bar */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Scope Selector */}
           <div className="relative">
             <select
@@ -621,54 +628,70 @@ export default function OwnerDashboardPage() {
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Secondary Action: Upload Excel */}
-          <button
-            onClick={() => setExcelImporterOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Upload Excel</span>
-          </button>
-
-          {/* Action: Banking & ERP Invoicing Module */}
-          <Link
-            href="/dashboard/owner/banking"
-            className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100/80 border border-teal-200 text-teal-800 text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <Landmark className="w-3.5 h-3.5 text-[#0D7B6C]" />
-            <span>Banking &amp; ERP Sync</span>
-          </Link>
-
-          {/* Secondary Action: Owner Statement */}
-          <button
-            onClick={() => setStatementModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <Receipt className="w-3.5 h-3.5 text-slate-500" />
-            <span>Owner Statement</span>
-          </button>
-
-          {/* Action: Property Delegation & 1-Manager Setup (S-66) */}
-          <Link
-            href="/settings/delegation"
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-            title="Manage Assigned Property Managers & Delegation Rights (S-66)"
-          >
-            <Briefcase className="w-3.5 h-3.5 text-teal-700" />
-            <span>Team &amp; Delegation</span>
-          </Link>
-
           {/* Primary Action: Add Property / Unit */}
           <button
             onClick={() => {
               setHierarchyInitialTab("property");
               setHierarchyModalOpen(true);
             }}
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-sm shadow-teal-700/20 transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-sm shadow-teal-700/20 transition flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Asset / Unit</span>
           </button>
+
+          {/* Secondary Action: Upload Excel */}
+          <button
+            onClick={() => setExcelImporterOpen(true)}
+            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Upload Excel</span>
+          </button>
+
+          {/* Operations Dropdown */}
+          <div className="relative" ref={actionsMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+              className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-slate-500" />
+              <span>Operations ▾</span>
+            </button>
+
+            {isActionsMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-40 animate-fadeIn text-slate-800">
+                <Link
+                  href="/dashboard/owner/banking"
+                  onClick={() => setIsActionsMenuOpen(false)}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                >
+                  <Landmark className="w-4 h-4 text-[#0D7B6C]" />
+                  <span>Banking &amp; ERP Sync</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsActionsMenuOpen(false);
+                    setStatementModalOpen(true);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4 text-slate-500" />
+                  <span>Owner Statement</span>
+                </button>
+                <Link
+                  href="/settings/delegation"
+                  onClick={() => setIsActionsMenuOpen(false)}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                >
+                  <Briefcase className="w-4 h-4 text-teal-700" />
+                  <span>Team &amp; Delegation</span>
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Refresh button */}
           <button
@@ -682,37 +705,51 @@ export default function OwnerDashboardPage() {
       </div>
 
       {/* Dedicated Banking Coordinates & Direct ERP Invoicing Status Strip */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
-            <Landmark size={20} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
-                Remittance Bank Active
-              </span>
-              <span className="text-[10px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                Tally Prime &amp; Zoho Books Integration Available
-              </span>
+      {showBankingBanner && (
+        <div className="bg-slate-50/90 rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
+              <Landmark size={18} />
             </div>
-            <h4 className="text-xs font-black text-slate-900 mt-0.5">
-              Commercial Bank Account &amp; Direct Accounting Integration
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Tenants remit rent to your verified account. Invoices can be generated and synced directly to <strong>Tally Prime</strong> or <strong>Zoho Books</strong>.
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Remittance Bank Active
+                </span>
+                <span className="text-[10px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  Tally Prime &amp; Zoho Books Sync
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5 truncate">
+                Direct accounting integration active for tenant rent collections and automated tax invoicing.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <Link
+              href="/dashboard/owner/banking"
+              className="px-3 py-1.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <span>Manage Bank &amp; ERP</span>
+              <ChevronRight size={13} />
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setShowBankingBanner(false);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("officex_dismiss_banking_banner", "true");
+                }
+              }}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition cursor-pointer"
+              title="Dismiss"
+            >
+              <X size={15} />
+            </button>
           </div>
         </div>
-
-        <Link
-          href="/dashboard/owner/banking"
-          className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer self-start sm:self-auto"
-        >
-          <span>Manage Banking &amp; ERP Sync</span>
-          <ChevronRight size={14} />
-        </Link>
-      </div>
+      )}
 
       {/* Executive KPI Cards (5 Cards) — Clean, Spacious, Real Indian Figures */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
@@ -723,8 +760,8 @@ export default function OwnerDashboardPage() {
           </div>
           <p className="text-2xl font-black text-slate-900 mt-1.5">{totalPropertiesCount}</p>
           <div className="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            100% Operational
+            <span className={`w-1.5 h-1.5 rounded-full inline-block ${totalPropertiesCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`} />
+            {totalPropertiesCount > 0 ? `${totalPropertiesCount} Active ${totalPropertiesCount === 1 ? "Asset" : "Assets"}` : "0 Active assets"}
           </div>
         </div>
 
@@ -748,7 +785,7 @@ export default function OwnerDashboardPage() {
           </div>
           <p className="text-2xl font-black text-emerald-700 mt-1.5">{occupancyPercentage.toFixed(1)}%</p>
           <div className="text-[11px] text-emerald-700 font-semibold mt-1">
-            Fully Leased Capacity
+            {totalLeasableArea > 0 ? (occupancyPercentage >= 95 ? "Fully Leased Capacity" : `${occupancyPercentage.toFixed(0)}% Leased`) : "Vacant portfolio"}
           </div>
         </div>
 
@@ -758,10 +795,10 @@ export default function OwnerDashboardPage() {
             <TrendingUp className="w-4 h-4 text-teal-700" />
           </div>
           <p className="text-2xl font-black text-teal-800 mt-1.5">
-            {formatINR(totalMonthlyRevenue || 1250000)}
+            {formatINR(totalMonthlyRevenue)}
           </p>
           <div className="text-[11px] text-slate-500 font-medium mt-1">
-            Contracted monthly lease
+            {totalMonthlyRevenue > 0 ? "Contracted monthly lease" : "₹0 Active lease revenue"}
           </div>
         </div>
 
@@ -771,10 +808,10 @@ export default function OwnerDashboardPage() {
             <Receipt className="w-4 h-4 text-blue-600" />
           </div>
           <p className="text-2xl font-black text-slate-900 mt-1.5">
-            {formatINR(agingBuckets.totalOutstanding || 1516300)}
+            {formatINR(agingBuckets.totalOutstanding)}
           </p>
           <div className="text-[11px] text-slate-500 font-medium mt-1">
-            Oct-2026 Billing (Due Oct 31)
+            {agingBuckets.totalOutstanding > 0 ? `${period} Billing` : "No pending receivables"}
           </div>
         </div>
       </div>

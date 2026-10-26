@@ -206,13 +206,13 @@ export default function SeatCountsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-[#0F8B7D]/10 text-[#0F8B7D] rounded-full border border-[#0F8B7D]/20">
-              Screen S-32 &middot; Flex Seat Counts
+              Flex &amp; Workstation Inventory
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-800 rounded-full border border-amber-200">
-              Alert AL-14 Day-25 Cutoff Lock
+              Day-25 Cutoff Schedule
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-purple-50 text-purple-700 rounded-full border border-purple-200">
-              Formulas F-04, F-05, F-06, F-07
+              Billing Allocation Engine
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">

@@ -107,17 +107,17 @@ export default function ExceptionCentrePage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-rose-50 text-rose-700 rounded-full border border-rose-200">
-              Screen S-50 &middot; Exception Centre
+              Audit &amp; Data Quality
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Phase P5
+              Governance Monitor
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Audit Exception Centre & Data Quality
+            Audit Exception Centre &amp; Data Quality
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Central audit queue tracking all 4 exception categories (Contract, Billing, Collection, Compliance) and calculating the K-23 Data Quality Score.
+            Central audit queue tracking contract, billing, collection, and compliance discrepancies with real-time portfolio data quality scoring.
           </p>
         </div>
 

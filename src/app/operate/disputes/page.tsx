@@ -202,7 +202,7 @@ export default function DisputesRegisterPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 uppercase tracking-widest">
-              Screen S-46 • RR-PAY-04
+              Dispute Resolution &amp; Adjudication
             </span>
             <span className="text-xs text-gray-500 font-medium">Resolution & Claims Register</span>
           </div>

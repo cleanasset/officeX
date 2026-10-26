@@ -220,7 +220,7 @@ export async function GET(
   </div>
 
   <div class="footer">
-    <div>OFFICEX Multi-Client Rent Roll Engine — Screen S-55 Official Statement</div>
+    <div>OFFICEX Asset Management — Official Owner Statement</div>
     <div>Page 1 of 1 • System Generated on ${stmtDate}</div>
   </div>
 </body>

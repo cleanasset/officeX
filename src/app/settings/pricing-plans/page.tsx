@@ -196,13 +196,13 @@ export default function PricingPlansPage() {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-emerald-400 uppercase">
               <Link href="/operations/seat-counts" className="hover:underline flex items-center gap-1">
-                <ArrowLeft className="w-3.5 h-3.5" /> Operations S-32
+                <ArrowLeft className="w-3.5 h-3.5" /> Flex Inventory
               </Link>
               <span>•</span>
-              <span>Screen S-15</span>
+              <span>Pricing Packages</span>
               <span>•</span>
               <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
-                Flex & Seats Add-on
+                Flex &amp; Seats Add-on
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white mt-1">

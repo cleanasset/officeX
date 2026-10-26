@@ -220,7 +220,7 @@ export default function AgeingCollectionsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        alert(json.message || "Write-off request submitted to Maker-Checker Approval Inbox (S-06).");
+        alert(json.message || "Write-off request submitted to Maker-Checker Approval Inbox.");
         setWriteOffModalOpen(false);
         fetchAgingData();
       } else {
@@ -800,7 +800,7 @@ export default function AgeingCollectionsPage() {
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-teal-100 text-[#0F8B7D] rounded">
-                  Screen S-45 &middot; AL-10 PTP Tracking
+                  Promise to Pay (PTP) Follow-Up
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-1">Log Collection Follow-up &amp; PTP</h3>
               </div>

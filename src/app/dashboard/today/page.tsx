@@ -202,10 +202,10 @@ function TodayQueueContent() {
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0F8B7D]/10 text-[#0F8B7D] border border-[#0F8B7D]/20 uppercase tracking-wider">
-                Screen S-03 Spec
+                Priority Operations
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                Unified PM / FM Daily Operational Action Queue
+                Unified Daily Operational Action Queue
               </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">

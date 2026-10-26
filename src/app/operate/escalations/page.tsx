@@ -223,13 +223,13 @@ export default function EscalationsCalendarPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-[#0F8B7D]/10 text-[#0F8B7D] rounded-full border border-[#0F8B7D]/20">
-              Screen S-25 &middot; Escalation Calendar & Apply
+              Escalation Calendar
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-700 rounded-full border border-amber-200">
-              Alerts AL-03 & AL-04 (Checker Approval)
+              Maker-Checker Authorization
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-slate-100 text-slate-600 rounded-full border border-slate-200">
-              Formulas D-08, D-09, D-21
+              Contractual Step-Up Engine
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">

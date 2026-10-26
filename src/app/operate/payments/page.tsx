@@ -257,10 +257,10 @@ export default function PaymentCentrePage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-              Screen S-43 &middot; Payment Centre
+              Payment &amp; Receipts Centre
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Formula F-12 Allocations
+              FIFO Invoice Allocation
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -662,7 +662,7 @@ export default function PaymentCentrePage() {
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-800 rounded">
-                  Screen S-44 &middot; Formula F-12
+                  Payment Allocation Ledger
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-1">
                   Manual Payment Allocation &middot; {activePaymentForAlloc.payment_number}

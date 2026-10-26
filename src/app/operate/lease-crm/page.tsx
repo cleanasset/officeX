@@ -211,14 +211,14 @@ export default function LeaseCrmPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-teal-50 text-teal-700 rounded-full border border-teal-200">
-              Screen S-18 &middot; Deal Register & CRM
+              Deal Pipeline
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Leasing Pipeline (D-22 / F-24)
+              Leasing &amp; Occupancy CRM
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Commercial Leasing Deals & Pipeline CRM
+            Leasing Deals &amp; Pipeline CRM
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Track prospective corporate tenants through leasing stages, probability weighting, and convert approved LOIs into Rent Roll contracts.

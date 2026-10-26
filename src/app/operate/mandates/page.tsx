@@ -122,7 +122,7 @@ export default function MandatesPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded">
-                Screen S-56
+                Portfolio Governance
               </span>
               <span className="text-xs text-slate-500 font-mono">Third-Party Operator Mandates</span>
             </div>

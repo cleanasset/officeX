@@ -31,7 +31,7 @@ export default function StandaloneImportCentrePage() {
             </Link>
             <span className="text-gray-300">/</span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-100 text-teal-800 uppercase tracking-widest">
-              Screen S-30 • §11.2
+              Data Ingestion Suite
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1 tracking-tight">

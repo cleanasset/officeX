@@ -66,7 +66,43 @@ export default function Topbar() {
   const [isModuleChooserOpen, setIsModuleChooserOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Multi-Client Operator State (§2.1, §S-02)
+  // Notification Drawer State
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState([
+    {
+      id: "notif-1",
+      title: "Lease Expiry Notice (Within 90 Days)",
+      message: "Unit 402 contract enters 90-day renewal notice period. Action required.",
+      time: "15m ago",
+      tag: "Lease Renewal",
+      tagColor: "bg-amber-50 text-amber-700 border-amber-200",
+      unread: true,
+      route: "/properties/rent-roll?tab=contracts"
+    },
+    {
+      id: "notif-2",
+      title: "Contractual Step-Up Escalation",
+      message: "Scheduled 5% escalation is queued for next monthly billing cycle.",
+      time: "2h ago",
+      tag: "Escalation",
+      tagColor: "bg-blue-50 text-blue-700 border-blue-200",
+      unread: true,
+      route: "/operate/escalations"
+    },
+    {
+      id: "notif-3",
+      title: "Monthly Rent Roll Invoices Ready",
+      message: "Pro-rata billing run completed. Invoices available for review.",
+      time: "Today",
+      tag: "Billing",
+      tagColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      unread: true,
+      route: "/operate/invoices"
+    }
+  ]);
+
+  // Multi-Client Operator State
   const [clients, setClients] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
@@ -76,18 +112,19 @@ export default function Topbar() {
   // Current User Role
   const [currentRoleKey, setCurrentRoleKey] = useState("owner");
 
-  // Generate breadcrumbs from pathname
-  const pathParts = pathname.split("/").filter(Boolean);
-  const formattedBreadcrumb = pathParts
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("  >  ");
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const isAlreadyOnDashboard = pathname.startsWith("/dashboard");
 
-  const popularDestinations = [
-    { name: "Rent Roll Register", type: "Module", location: "/properties/rent-roll" },
-    { name: "Invoices & Billing", type: "Module", location: "/operate/invoices" },
-    { name: "Utility Meters", type: "Module", location: "/operations/meters" },
-    { name: "CAM Pools & True-Up", type: "Module", location: "/operate/cam-pools" },
-    { name: "Approvals Inbox", type: "Module", location: "/approvals" }
+  const commercialDestinations = [
+    { name: "Rent Roll Register", type: "Register", location: "/properties/rent-roll", description: "All active leases, units & contracts" },
+    { name: "Contracts & Expiry Pipeline", type: "Contracts", location: "/properties/rent-roll?tab=contracts", description: "Active agreements & upcoming renewals" },
+    { name: "Tenants & Occupiers", type: "Tenants", location: "/properties/rent-roll?tab=tenants", description: "Occupant directory & KYC records" },
+    { name: "Invoices & Billing Runs", type: "Billing", location: "/operate/invoices", description: "Monthly rent rolls & tax invoices" },
+    { name: "Collections & Aging Ledger", type: "Finance", location: "/operate/collections", description: "Overdue ageing & PTP follow-ups" },
+    { name: "Escalation Calendar", type: "Lease", location: "/operate/escalations", description: "Annual step-up rate adjustments" },
+    { name: "Utility Sub-Meters", type: "Operations", location: "/settings/meters", description: "Electric & water sub-meter logs" },
+    { name: "CAM Pools & True-Up", type: "Operations", location: "/operate/cam-pools", description: "Common area maintenance reconciliations" },
+    { name: "Approvals & Maker-Checker", type: "Governance", location: "/approvals", description: "Pending sign-offs & thresholds" }
   ];
 
   // Sync session state from localStorage & purge any dummy subscriber email
@@ -140,30 +177,15 @@ export default function Topbar() {
       .catch(() => {});
   }, [pathname]);
 
-  const handleGoToDashboard = () => {
-    setIsProfileMenuOpen(false);
-    if (!isSubscribed) {
-      router.push("/operate/rent-roll/pricing");
-      return;
-    }
-    router.push(activeRole.route);
-  };
-
-  const handleProfileKYC = () => {
-    setIsProfileMenuOpen(false);
-    if (!isSubscribed) {
-      router.push("/operate/rent-roll/pricing");
-    } else {
-      router.push("/settings");
-    }
-  };
-
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase();
-      const filtered = popularDestinations.filter(
+      const filtered = commercialDestinations.filter(
         (d) =>
-          d.name.toLowerCase().includes(q) || (d.location && d.location.toLowerCase().includes(q))
+          d.name.toLowerCase().includes(q) ||
+          d.type.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q) ||
+          (d.location && d.location.toLowerCase().includes(q))
       );
       setSuggestions(filtered);
       setIsDropdownOpen(true);
@@ -173,7 +195,7 @@ export default function Topbar() {
     }
   }, [searchQuery]);
 
-  // Fetch Multi-Client accounts (§2.1)
+  // Fetch Multi-Client accounts
   useEffect(() => {
     fetch("/api/multi-client/clients", { headers: getClientAuthHeaders() })
       .then((res) => res.json())
@@ -207,6 +229,9 @@ export default function Topbar() {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationOpen(false);
+      }
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
         setIsClientDropdownOpen(false);
       }
@@ -219,13 +244,30 @@ export default function Topbar() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setIsDropdownOpen(false);
-    router.push(`/marketplace/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    router.push(`/properties/rent-roll?search=${encodeURIComponent(searchQuery.trim())}`);
   };
 
-  const handleSelectSuggestion = (name: string) => {
-    setSearchQuery(name);
+  const handleSelectSuggestion = (dest: any) => {
     setIsDropdownOpen(false);
-    router.push(`/marketplace/search?q=${encodeURIComponent(name)}`);
+    if (dest.location) {
+      router.push(dest.location);
+    } else {
+      router.push(`/properties/rent-roll?search=${encodeURIComponent(dest.name)}`);
+    }
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
+
+  const handleNotificationClick = (n: any) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, unread: false } : item))
+    );
+    setIsNotificationOpen(false);
+    if (n.route) {
+      router.push(n.route);
+    }
   };
 
   // Sign out handler
@@ -251,72 +293,69 @@ export default function Topbar() {
         <div className="min-w-0">
           <PropertySelector />
         </div>
-
-        {/* User Assigned Role Badge (Read-Only Institutional Badge) */}
-        <div
-          className="hidden sm:flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-bold text-slate-800 shadow-2xs shrink-0 select-none"
-          title={`Assigned Workspace Role: ${activeRole.label}`}
-        >
-          <activeRole.icon size={15} className="text-[#0F8B7D] shrink-0" />
-          <div className="flex flex-col text-left leading-tight">
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Role</span>
-            <span className="text-xs font-extrabold text-slate-900 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[180px]">
-              {activeRole.label}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Right Search, Notification and Profile Avatar */}
-      <div className="flex items-center gap-3 sm:gap-5">
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Search Input Box */}
         <div className="relative hidden md:block" ref={dropdownRef}>
           <form onSubmit={handleSearchSubmit}>
             <input
               type="text"
-              placeholder="Search assets, tickets, properties..."
+              placeholder="Search rent roll, properties, tenants..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => {
                 if (searchQuery.trim().length > 0) setIsDropdownOpen(true);
               }}
-              className="pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-600 text-xs w-56 lg:w-64 bg-slate-50 transition-colors"
+              className="pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-600 text-xs w-60 lg:w-72 bg-slate-50 transition-colors"
             />
             <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />
           </form>
 
           {/* Autocomplete Dropdown */}
-          {isDropdownOpen && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-fadeIn">
-              <div className="p-2.5 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Matching Results
+          {isDropdownOpen && (
+            <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-fadeIn min-w-[280px]">
+              {searchQuery.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSearchSubmit}
+                  className="w-full p-2.5 bg-teal-50/70 border-b border-teal-100 flex items-center gap-2 text-left hover:bg-teal-100/60 transition-colors cursor-pointer"
+                >
+                  <Search size={14} className="text-teal-700 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-teal-900 block truncate">
+                      Search Rent Roll for &quot;{searchQuery}&quot;
+                    </span>
+                    <span className="text-[10px] text-teal-600 font-medium">Filter properties, units, tenants</span>
+                  </div>
+                  <ArrowRight size={12} className="text-teal-700 shrink-0" />
+                </button>
+              )}
+
+              <div className="p-2 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Modules &amp; Registers
               </div>
-              <div className="flex flex-col max-h-60 overflow-y-auto">
-                {suggestions.map((item, idx) => (
+              <div className="flex flex-col max-h-64 overflow-y-auto divide-y divide-slate-50">
+                {(suggestions.length > 0 ? suggestions : commercialDestinations.slice(0, 5)).map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleSelectSuggestion(item.name)}
-                    className="p-3 text-left hover:bg-teal-50/50 flex items-center justify-between border-b border-slate-50 transition-colors cursor-pointer"
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="p-2.5 text-left hover:bg-slate-50 flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2.5">
-                      {item.type === "City" ? (
-                        <MapPin size={14} className="text-teal-600" />
-                      ) : item.type === "Asset" ? (
-                        <Settings size={14} className="text-amber-500" />
-                      ) : item.type === "Ticket" || item.type === "Work Order" ? (
-                        <FileText size={14} className="text-purple-500" />
-                      ) : (
-                        <Building size={14} className="text-teal-600" />
-                      )}
-                      <div>
-                        <span className="font-bold text-slate-900 text-xs block">{item.name}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                          {item.location || item.count}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 shrink-0">
+                        <Building2 size={12} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 text-xs block truncate">{item.name}</span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {item.description || item.type}
                         </span>
                       </div>
                     </div>
-                    <ArrowRight size={12} className="text-slate-400" />
+                    <ArrowRight size={12} className="text-slate-300 shrink-0 ml-2" />
                   </button>
                 ))}
               </div>
@@ -333,11 +372,89 @@ export default function Topbar() {
           <HelpCircle size={18} />
         </Link>
 
-        {/* Notifications Icon with Red Dot */}
-        <button className="relative text-slate-500 hover:text-teal-600 transition-colors p-1 cursor-pointer">
-          <Bell size={18} />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-        </button>
+        {/* Notifications Icon with Interactive Rent Roll Drawer */}
+        <div className="relative" ref={notificationRef}>
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            className="relative text-slate-500 hover:text-teal-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
+            title="Notifications"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown Panel */}
+          {isNotificationOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-fadeIn text-slate-800">
+              <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-slate-900">Rent Roll Notifications</span>
+                  {unreadCount > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                      {unreadCount} new
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+                      All caught up
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllNotificationsRead}
+                    className="text-[11px] font-semibold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${
+                      n.unread ? "bg-teal-50/20" : ""
+                    }`}
+                  >
+                    <div className="pt-0.5 shrink-0">
+                      <span
+                        className={`w-2 h-2 rounded-full inline-block ${
+                          n.unread ? "bg-teal-600 ring-2 ring-teal-200" : "bg-slate-300"
+                        }`}
+                      ></span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider truncate border-slate-200 text-slate-600">
+                          {n.tag}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0 font-medium">{n.time}</span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 leading-snug">{n.title}</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{n.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
+                <Link
+                  href="/properties/rent-roll?tab=contracts"
+                  onClick={() => setIsNotificationOpen(false)}
+                  className="text-xs font-semibold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1"
+                >
+                  View Rent Roll Pipeline <ArrowRight size={12} />
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User Mini Avatar & Profile Dropdown */}
         <div className="relative" ref={profileMenuRef}>
@@ -367,7 +484,7 @@ export default function Topbar() {
                 )}
                 <div className="min-w-0 flex-1">
                   <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
-                    {brandName || userName || userEmail || "Commercial Account"}
+                    {brandName || userName || userEmail || "Account Overview"}
                   </span>
                   {userEmail && (
                     <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>
@@ -380,48 +497,54 @@ export default function Topbar() {
               </div>
 
               <div className="py-1 space-y-1">
-                {/* Global Workspace Hub (Rent Roll · Marketplace · FM) */}
+                {/* Only show Dashboard link if not already on the dashboard */}
+                {!isAlreadyOnDashboard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      router.push("/dashboard/owner");
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 cursor-pointer"
+                  >
+                    <Layers size={15} className="text-teal-600 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900">Portfolio Dashboard</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Return to main overview</span>
+                    </div>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
                     setIsProfileMenuOpen(false);
-                    router.push("/dashboard");
+                    router.push("/settings");
                   }}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
+                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 cursor-pointer"
                 >
-                  <Compass size={14} className="text-blue-600" />
+                  <Settings size={15} className="text-slate-600 shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-bold text-slate-900">Workspace Hub</span>
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      Switch to Marketplace or FM Desk
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleGoToDashboard}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
-                >
-                  <Layers size={14} className="text-teal-600" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-900">Go to My Dashboard</span>
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      Role: {activeRole.label}
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleProfileKYC}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
-                >
-                  <Building2 size={14} className="text-slate-500" />
-                  <div className="flex flex-col">
-                    <span>Profile &amp; KYC</span>
+                    <span className="font-bold text-slate-900">Enterprise Settings</span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      {isSubscribed ? "Organization & Compliance" : "Subscription Required"}
+                      Branding, Billing SPVs &amp; Tax Rules
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    router.push("/operate/rent-roll/pricing");
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 cursor-pointer"
+                >
+                  <ShieldCheck size={15} className="text-emerald-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-900">Subscription &amp; Quota</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      Rent Roll Suite
                     </span>
                   </div>
                 </button>
@@ -429,9 +552,9 @@ export default function Topbar() {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2 cursor-pointer border-t border-slate-100 mt-1"
+                  className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 cursor-pointer border-t border-slate-100 mt-1"
                 >
-                  <LogOut size={14} />
+                  <LogOut size={15} className="shrink-0" />
                   <span>Sign Out</span>
                 </button>
               </div>

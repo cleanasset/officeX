@@ -135,17 +135,17 @@ export default function BillingRunsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Screen S-40 &middot; Billing Engine
+              Billing Engine
             </span>
             <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-              Wave 3 Compliant
+              Automated Pro-Rata Invoicing
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Enhanced Billing Centre &middot; Billing Run
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Indian Commercial Real Estate multi-step billing engine with Split Invoices Mode, pre-run diff validation, and statutory tax invoices.
+            Multi-step billing engine with Split Invoices Mode, pre-run diff validation, and statutory tax invoices.
           </p>
         </div>
 

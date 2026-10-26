@@ -51,17 +51,17 @@ export default function RevenueForecastPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-              Screen S-51 &middot; Revenue Forecast
+              Revenue Forecast &amp; Projections
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Formula F-24 / D-24
+              12-Month Run-Rate
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            12-Month Revenue Forecast & Run-Rate
+            12-Month Revenue Forecast &amp; Run-Rate
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Deterministic timeline factoring in contracted rents, scheduled rent steps (D-21), renewal probability assumptions, and pipeline deals (D-22).
+            Deterministic timeline factoring in contracted rents, scheduled rent steps, renewal probability assumptions, and pipeline deals.
           </p>
         </div>
 

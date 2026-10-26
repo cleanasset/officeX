@@ -53,10 +53,10 @@ export default function PropertyPnlPage() {
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-              Screen S-52 &middot; Property P&L
+              Asset Financial Performance
             </span>
             <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Formula F-19 Compliant
+              Net Operating Income (NOI)
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">

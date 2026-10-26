@@ -187,7 +187,7 @@ export default function SpaceAndBuildingRegistryPage() {
               }`}
             >
               <Building2 size={16} />
-              <span>Registered Commercial Properties ({properties.length})</span>
+              <span>Registered Properties ({properties.length})</span>
             </button>
             <button
               onClick={() => setActiveTab("units")}
@@ -243,7 +243,7 @@ export default function SpaceAndBuildingRegistryPage() {
                   </div>
                   <h4 className="text-base font-black text-slate-900">No properties registered yet</h4>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    Register your commercial asset or business park to manage leases, rent rolls, and tenant allocations.
+                    Register your property or business park to manage leases, rent rolls, and tenant allocations.
                   </p>
                   <div className="mt-6 flex items-center justify-center gap-3">
                     <button
@@ -263,7 +263,7 @@ export default function SpaceAndBuildingRegistryPage() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 px-4">Commercial Property</th>
+                        <th className="py-3 px-4">Property Name</th>
                         <th className="py-3 px-4">Code</th>
                         <th className="py-3 px-4">Location</th>
                         <th className="py-3 px-4">Leasable Area</th>
@@ -373,7 +373,7 @@ export default function SpaceAndBuildingRegistryPage() {
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                         <th className="py-3 px-4">Space # / Unit</th>
-                        <th className="py-3 px-4">Tower / Commercial Property</th>
+                        <th className="py-3 px-4">Tower / Property</th>
                         <th className="py-3 px-4">Floor</th>
                         <th className="py-3 px-4">Chargeable Sq.Ft</th>
                         <th className="py-3 px-4">Standard Rate PSF</th>
