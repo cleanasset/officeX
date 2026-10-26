@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User, Check, Receipt, Zap, ClipboardList, Layers, ChevronRight } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, ArrowLeft, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User, Check, Receipt, Zap, ClipboardList, Layers, ChevronRight } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { isAuthenticated, getCookie } from "@/lib/auth-client";
@@ -284,20 +284,20 @@ export default function SubscriptionGate({
         // Non-blocking
       }
 
-      // If user has completed onboarding or has an active subscription, GRANT IMMEDIATE ACCESS!
-      if (isOnboarded || subGlobal) {
+      // Check verified active subscription: payment, applied coupon, or explicit rent roll subscription flag
+      const hasVerifiedSub =
+        subGlobal &&
+        (typeof window !== "undefined"
+          ? Boolean(localStorage.getItem("officex_payment_id") || localStorage.getItem("officex_applied_coupon") || localStorage.getItem("officex_rentroll_subscribed") === "true")
+          : true);
+
+      if (hasVerifiedSub) {
         if (!email && name) {
           email = `${name.toLowerCase().replace(/\s+/g, ".")}@officex.pro`;
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_user_email", email);
           }
         }
-        if (typeof window !== "undefined") {
-          localStorage.setItem("officex_subscription", "active");
-          sessionStorage.setItem("officex_subscription", "active");
-        }
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-
         setUserEmail(email);
         setUserName(name || "Commercial Owner");
         setUserRole(role);
@@ -539,13 +539,22 @@ export default function SubscriptionGate({
               </div>
             </div>
             {isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <LogOut size={13} />
-                <span>Sign Out</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/dashboard/owner"
+                  className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-teal-200"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Workspace Dashboard</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             ) : (
               <Link
                 href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
@@ -975,13 +984,9 @@ export default function SubscriptionGate({
                   Not ready to activate {portalName}? You will remain signed in to OfficeX.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold text-[#0F8B7D]">
-                  <Link href="/" className="hover:underline flex items-center gap-1">
-                    <span>OfficeX Homepage</span>
-                  </Link>
-                  <span className="text-slate-300">•</span>
-                  <Link href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`} className="hover:underline flex items-center gap-1 font-extrabold">
-                    <Sparkles size={12} />
-                    <span>Explore More in Pricing</span>
+                  <Link href="/dashboard/owner" className="hover:underline flex items-center gap-1.5 font-extrabold text-[#0D7B6C] bg-teal-50 px-3 py-1 rounded-lg border border-teal-200">
+                    <ArrowLeft size={13} />
+                    <span>Return to Workspace Dashboard</span>
                   </Link>
                   <span className="text-slate-300">•</span>
                   <Link href="/fm-marketplace" className="hover:underline flex items-center gap-1">

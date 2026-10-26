@@ -37,6 +37,7 @@ import {
   Database,
   Cloud,
   CreditCard,
+  Lock,
   Menu,
   Plus,
   ExternalLink,
@@ -56,6 +57,7 @@ interface MenuItem {
   icon: React.ComponentType<{ size: number; className?: string }>;
   badge?: string;
   section?: string;
+  requiresSubscription?: boolean;
   subItems?: SubMenuItem[];
 }
 
@@ -64,22 +66,31 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   // PROPERTY OWNER / LANDLORD (§3.1, §S-02)
   owner: [
     { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers, section: "Portfolio Assets" },
-    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
     { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
-    { name: "Contracts & Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
-    { name: "Stacking Plan", href: "/operate/stacking", icon: Layers },
-
-    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck, section: "Operations & FM" },
+    { name: "Contracts & Leases", href: "/contracts", icon: FileText },
     { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
-    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle },
 
-    { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", icon: Landmark, section: "Financials" },
-    { name: "Owner Statements", href: "/operate/owner-statements", icon: FileText },
-    { name: "Revenue Forecast", href: "/operate/forecast", icon: Calendar },
-    { name: "NOI & Property P&L", href: "/operate/pnl", icon: BarChart3 },
-    { name: "Investor Pack (MIS)", href: "/operate/mis", icon: FileText },
-    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle }
+    {
+      name: "Rent Roll & Financials",
+      href: "/properties/rent-roll",
+      icon: DollarSign,
+      badge: "1 SUBSCRIPTION",
+      requiresSubscription: true,
+      section: "Pro Suite (1 Subscription)",
+      subItems: [
+        { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
+        { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
+        { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", tabKey: "banking", icon: Landmark },
+        { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: FileText },
+        { name: "Revenue Forecast", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
+        { name: "NOI & Property P&L", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
+        { name: "Investor Pack (MIS)", href: "/operate/mis", tabKey: "mis", icon: FileText },
+        { name: "Collections & Aging", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
+        { name: "Exceptions Centre", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
+        { name: "Approvals Inbox", href: "/approvals", tabKey: "approvals", icon: ShieldCheck }
+      ]
+    }
   ],
 
   // MARKETPLACE PROPERTY OWNER / OPERATOR (Property Discovery & Listing Partner)
@@ -96,7 +107,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   property_manager: [
     { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList, section: "Operational Overview" },
     { name: "Space & Building Registry", href: "/properties/registry", icon: Building },
-    { name: "Active Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Active Leases", href: "/contracts", icon: FileText },
     { name: "Expiry & Renewals", href: "/operate/renewals", icon: Clock },
     { name: "Rent Escalations", href: "/operate/escalations", icon: TrendingUp },
     { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign, section: "Rent & Collections" },
@@ -388,6 +399,7 @@ function SidebarInner() {
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
   const [isMounted, setIsMounted] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -443,6 +455,13 @@ function SidebarInner() {
       if (storedOrgName) setOrgDisplayName(storedOrgName);
       if (storedOrgCity) setOrgCity(storedOrgCity);
       if (storedOrgLogo) setOrgLogo(storedOrgLogo);
+
+      const hasSub = Boolean(
+        localStorage.getItem("officex_payment_id") ||
+        localStorage.getItem("officex_applied_coupon") ||
+        localStorage.getItem("officex_rentroll_subscribed") === "true"
+      );
+      setIsSubscribed(hasSub);
     }
   }, []);
 
@@ -589,23 +608,27 @@ function SidebarInner() {
                           ...prev,
                           [item.name]: !isExpanded
                         }));
-                        if (!isItemActive) {
-                          router.push(item.href);
-                        }
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
                         isItemActive
                           ? "bg-[#0F8B7D] text-white font-black shadow-xs"
+                          : item.requiresSubscription && !isSubscribed
+                          ? "bg-amber-50/70 border border-amber-200/80 text-slate-800 hover:bg-amber-100/70"
                           : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 bg-transparent"
                       }`}
                     >
-                      <Icon size={16} className={isItemActive ? "text-white shrink-0" : "text-slate-500 shrink-0"} />
+                      <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-amber-700 shrink-0" : "text-slate-500 shrink-0"} />
                       <span className="truncate flex-1 font-bold tracking-tight">{item.name}</span>
-                      {item.badge && !isItemActive && (
+                      {item.requiresSubscription && !isSubscribed ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
+                          <Lock size={9} className="text-amber-700" />
+                          <span>1 SUBSCRIPTION</span>
+                        </span>
+                      ) : item.badge && !isItemActive ? (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0">
                           {item.badge}
                         </span>
-                      )}
+                      ) : null}
                       {isExpanded ? (
                         <ChevronDown size={14} className={isItemActive ? "text-white shrink-0" : "text-slate-400 shrink-0"} />
                       ) : (
@@ -616,6 +639,20 @@ function SidebarInner() {
                     {/* Dropdown Sub-Items List */}
                     {isExpanded && item.subItems && (
                       <div className="ml-3 pl-2.5 border-l-2 border-slate-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
+                        {item.requiresSubscription && !isSubscribed && (
+                          <div className="p-2 mb-1.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[10px] text-amber-950 font-medium">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-extrabold text-amber-900">1 Plan Unlocks All 10:</span>
+                              <Link
+                                href="/properties/rent-roll"
+                                className="px-2 py-0.5 rounded-md bg-[#0D7B6C] text-white font-black text-[9px] hover:bg-[#0A6357]"
+                              >
+                                Unlock
+                              </Link>
+                            </div>
+                            <span className="text-[9px] text-amber-800 block mt-0.5">Rent Roll, Invoicing, Statements, P&amp;L, Forecast &amp; Aging</span>
+                          </div>
+                        )}
                         {item.subItems.map((sub) => {
                           const SubIcon = sub.icon || ChevronRight;
                           const subPath = sub.href.split("?")[0];
@@ -626,15 +663,20 @@ function SidebarInner() {
                           return (
                             <Link
                               key={sub.name}
-                              href={sub.href}
-                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
+                              href={item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(sub.name)}` : sub.href}
+                              className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
                                 isSubActive
                                   ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
                                   : "text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900"
                               }`}
                             >
-                              <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D] shrink-0" : "text-slate-400 shrink-0"} />
-                              <span className="truncate">{sub.name}</span>
+                              <div className="flex items-center gap-2 truncate">
+                                <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D] shrink-0" : "text-slate-400 shrink-0"} />
+                                <span className="truncate">{sub.name}</span>
+                              </div>
+                              {item.requiresSubscription && !isSubscribed && (
+                                <Lock size={10} className="text-slate-400 shrink-0" />
+                              )}
                             </Link>
                           );
                         })}
@@ -643,23 +685,30 @@ function SidebarInner() {
                   </div>
                 ) : (
                   <Link
-                    href={item.href}
+                    href={item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(item.name)}` : item.href}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all relative group ${
                       isItemActive
                         ? "bg-[#0F8B7D] text-white font-bold shadow-xs"
+                        : item.requiresSubscription && !isSubscribed
+                        ? "text-slate-600 hover:bg-amber-50/60 hover:text-slate-900"
                         : "text-slate-700 font-semibold hover:bg-slate-100/80 hover:text-slate-900"
                     }`}
                   >
-                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
+                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
                     <span className="truncate flex-1 tracking-tight">{item.name}</span>
-                    {item.badge && (
+                    {item.requiresSubscription && !isSubscribed ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
+                        <Lock size={9} className="text-amber-600" />
+                        <span>PRO</span>
+                      </span>
+                    ) : item.badge ? (
                       <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
                         isItemActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
                       }`}>
                         {item.badge}
                       </span>
-                    )}
-                    {isItemActive && !item.badge && (
+                    ) : null}
+                    {isItemActive && !item.badge && !item.requiresSubscription && (
                       <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                     )}
                   </Link>

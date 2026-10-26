@@ -22,7 +22,7 @@ import {
   Sparkles,
   ChevronRight,
   ChevronDown,
-  CreditCard,
+  Calendar,
   Tag,
   ArrowDown
 } from "lucide-react";
@@ -30,7 +30,6 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
-import RentRollPricingTable from "@/components/rent-roll/RentRollPricingTable";
 import { setAuthCookie } from "@/lib/auth-storage";
 
 export default function RentRollProductPage() {
@@ -195,26 +194,20 @@ export default function RentRollProductPage() {
               {/* Action Buttons — Clean, Direct & High-Impact */}
               <div className="flex flex-wrap items-center gap-3 mb-4 w-full sm:w-auto">
                 <Link
-                  href={isSubscribed ? "/dashboard/owner" : "/operate/rent-roll/pricing"}
+                  href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 active:scale-98 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                 >
                   <Building2 size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
-                  <span>{isSubscribed ? "Open Rent Roll Dashboard" : "Get Started · View Pricing"}</span>
+                  <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
                   <ArrowRight size={15} />
-                </Link>
-                <Link
-                  href="/operate/rent-roll/pricing"
-                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
-                >
-                  <span>View Editions &amp; Pricing</span>
-                  <ArrowRight size={14} className="text-[#0D7B6C]" />
                 </Link>
                 <button
                   type="button"
                   onClick={() => setEnquiryOpen(true)}
-                  className="px-4 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                 >
-                  <span>Enterprise Inquiries</span>
+                  <Calendar size={15} className="text-[#0D7B6C]" />
+                  <span>Book a Demo with Us</span>
                 </button>
               </div>
 
@@ -476,34 +469,37 @@ export default function RentRollProductPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          6. DEDICATED PRICING HUB CALLOUT SECTION
+          6. DEDICATED DEMO & GET STARTED CALLOUT SECTION
           ═══════════════════════════════════════════════════════════════ */}
       <section className="py-16 bg-gradient-to-b from-white via-slate-50 to-[#F8FAFC] border-b border-slate-200/80 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto rounded-3xl bg-white border border-slate-200/90 shadow-sm p-8 sm:p-10 text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[11px] font-bold text-[#0D7B6C] mb-3">
             <Sparkles size={13} />
-            <span>COMMERCIAL EDITIONS &amp; LICENSING</span>
+            <span>ENTERPRISE WALKTHROUGH &amp; ONBOARDING</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Transparent Pricing Built for Modern Commercial Portfolios
+            Experience Institutional Rent Roll &amp; CAM Automation
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xl mx-auto mt-2 mb-6 leading-relaxed">
-            From single commercial towers to pan-India REIT portfolios. Tiered rates at ₹1, ₹2, and ₹3 / sq.ft with 100% launch waivers and active 14-day grace period protection.
+            From single commercial towers to pan-India REIT portfolios. Manage your properties, units, tenants, and contracts with complete audit confidence.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/operate/rent-roll/pricing"
-              className="px-6 py-3 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+              href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
+              className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center gap-2 group cursor-pointer"
             >
-              <span>View Plans, Rates &amp; Calculator &rarr;</span>
+              <Building2 size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
+              <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
+              <ArrowRight size={15} />
             </Link>
             <button
               type="button"
               onClick={() => setEnquiryOpen(true)}
-              className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition"
+              className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center gap-2 cursor-pointer hover:border-teal-300"
             >
-              <span>Contact Enterprise Sales</span>
+              <Calendar size={15} className="text-[#0D7B6C]" />
+              <span>Book a Demo with Us</span>
             </button>
           </div>
         </div>
@@ -515,32 +511,27 @@ export default function RentRollProductPage() {
       <section className="py-16 bg-gradient-to-r from-[#0D7B6C] to-[#0A6357] text-white px-4 sm:px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-extrabold mb-3 tracking-tight">
-            Ready to Streamline Your Commercial Rent Roll?
+            Ready to Streamline Your Commercial Portfolio?
           </h2>
           <p className="text-sm sm:text-base text-teal-50 mb-8 font-medium max-w-xl mx-auto leading-relaxed">
-            Eliminate revenue leakage, automate stepped lease escalations, and reconcile multi-crore CAM pools with institutional confidence.
+            Eliminate revenue leakage, manage tenants and contracts, and assign third-party property managers effortlessly.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <Link
-              href={isSubscribed ? "/dashboard/owner" : "/operate/rent-roll/pricing"}
+              href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
               className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"
             >
-              <CreditCard size={15} className="text-[#0D7B6C] group-hover:scale-110 transition-transform" />
-              <span>{isSubscribed ? "Open Rent Roll Dashboard" : "Get Started · Select Plan"}</span>
+              <Building2 size={16} className="text-[#0D7B6C] group-hover:scale-110 transition-transform" />
+              <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
               <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/operate/rent-roll/pricing"
-              className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all cursor-pointer flex items-center gap-2"
-            >
-              <span>Compare All Pricing Editions</span>
             </Link>
             <button
               type="button"
               onClick={() => setEnquiryOpen(true)}
-              className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all cursor-pointer flex items-center gap-2"
             >
-              <span>Contact Enterprise Sales</span>
+              <Calendar size={15} className="text-teal-200" />
+              <span>Book a Demo with Us</span>
             </button>
           </div>
         </div>

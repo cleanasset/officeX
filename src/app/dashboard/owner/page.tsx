@@ -8,6 +8,7 @@ import {
   Receipt,
   Users,
   AlertTriangle,
+  ArrowRight,
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
@@ -134,12 +135,19 @@ export default function OwnerDashboardPage() {
   const [showManagerActivationBanner, setShowManagerActivationBanner] = useState(true);
   const [showBankingBanner, setShowBankingBanner] = useState(true);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const [isRentRollSubscribed, setIsRentRollSubscribed] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const onboardedFlag = localStorage.getItem("officex_rentroll_onboarded") === "true";
       setIsOnboarded(onboardedFlag);
+      const hasSub = Boolean(
+        localStorage.getItem("officex_payment_id") ||
+        localStorage.getItem("officex_applied_coupon") ||
+        localStorage.getItem("officex_rentroll_subscribed") === "true"
+      );
+      setIsRentRollSubscribed(hasSub);
       const logo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
       const bName = localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || "";
       if (logo) setBrandLogo(logo);
@@ -574,6 +582,35 @@ export default function OwnerDashboardPage() {
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Free Workspace Tier Capabilities Banner */}
+      {!isRentRollSubscribed && (
+        <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-slate-50 border border-teal-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 className="w-5 h-5 text-teal-200" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs sm:text-sm font-extrabold text-slate-900">Free Operational Workspace Active</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-100 text-[#0D7B6C] border border-teal-200">
+                  Properties · Units · Tenants · Contracts
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed max-w-3xl">
+                You can add and manage commercial properties, configure demarcated units, register tenants, create contracts, and assign third-party property managers freely. Automated Rent Roll calculation &amp; CAM billing requires an active subscription.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/properties/rent-roll"
+            className="px-4 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-extrabold shrink-0 transition-all shadow-xs text-center flex items-center justify-center gap-2 group cursor-pointer"
+          >
+            <span>Unlock Rent Roll</span>
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
       )}
 

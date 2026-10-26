@@ -30,6 +30,7 @@ import {
   Cloud
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import SubscriptionGate from "@/components/SubscriptionGate";
 
 export default function OwnerBankingAndERPPage() {
   const [loading, setLoading] = useState(true);
@@ -374,7 +375,8 @@ export default function OwnerBankingAndERPPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <SubscriptionGate portalName="Banking & ERP Invoicing" fallbackLandingPage="/dashboard/owner">
+      <div className="space-y-6 pb-12 max-w-7xl mx-auto">
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed top-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-in slide-in-from-top">
@@ -1318,5 +1320,6 @@ export default function OwnerBankingAndERPPage() {
         </div>
       )}
     </div>
+    </SubscriptionGate>
   );
 }
