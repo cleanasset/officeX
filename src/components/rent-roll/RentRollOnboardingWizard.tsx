@@ -19,6 +19,9 @@ import {
   ChevronDown,
   Info,
   Sparkles,
+  Upload,
+  Download,
+  X,
 } from "lucide-react";
 import { INDIAN_STATES_CITIES } from "@/lib/india-locations";
 
@@ -275,19 +278,33 @@ export const CANONICAL_CHARGE_TYPES: ChargeTypeConfig[] = [
   },
 ];
 
-// Commercial Property Types
+// Commercial Property Types (Warehouse & Buildings prominent)
 export const PROPERTY_TYPES = [
-  { id: "office", label: "Commercial Office Building" },
-  { id: "it_park", label: "IT / Tech Park" },
-  { id: "warehouse", label: "Commercial Warehouse / Logistics Godown" },
-  { id: "cold_storage", label: "Cold Storage & Supply Chain Unit" },
-  { id: "industrial", label: "Industrial / Factory / Logistics Park" },
-  { id: "retail", label: "Retail / Commercial Mall / High Street" },
+  { id: "warehouse", label: "Warehouse / Logistics Godown / Industrial Shed" },
+  { id: "standalone_building", label: "Standalone Commercial Building" },
+  { id: "office", label: "Commercial Office Building / Tower" },
+  { id: "it_park", label: "IT / Tech Park Campus" },
+  { id: "industrial", label: "Industrial / Factory / Manufacturing Hub" },
+  { id: "retail", label: "Retail / Commercial Mall / Showroom" },
+  { id: "cold_storage", label: "Cold Storage & Supply Chain Logistics Unit" },
+  { id: "flex_centre", label: "Flex / Coworking Centre" },
   { id: "mixed_use", label: "Mixed-Use Commercial Complex" },
   { id: "data_centre", label: "Data Centre / Hyperscale Facility" },
-  { id: "flex_centre", label: "Flex / Coworking Centre" },
   { id: "sez_ifsc", label: "SEZ / IFSC Zone" },
   { id: "other", label: "Other Commercial Property Type (Specify)" },
+];
+
+// Legal Entity Structures
+export const LEGAL_ENTITY_TYPES = [
+  { id: "pvt_ltd", label: "Private Limited Company (Pvt Ltd)" },
+  { id: "public_ltd", label: "Public Limited Company (Ltd)" },
+  { id: "llp", label: "Limited Liability Partnership (LLP)" },
+  { id: "sole_proprietorship", label: "Sole Proprietorship / Individual Landlord" },
+  { id: "partnership", label: "Partnership Firm" },
+  { id: "reit_spv", label: "REIT / Real Estate Special Purpose Vehicle (SPV)" },
+  { id: "trust_society", label: "Trust / Society / AOP" },
+  { id: "huf", label: "Hindu Undivided Family (HUF)" },
+  { id: "other", label: "Other Legal Structure (Specify)" },
 ];
 
 // Building Grades
@@ -323,13 +340,15 @@ export default function RentRollOnboardingWizard({
   const [brandName, setBrandName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>(initialRole || "owner");
 
-  // Step 1: Billing Entity / SPV
+  // Step 1: Legal Structure & Billing Entity / SPV (Empty by default with clean placeholders)
+  const [entityType, setEntityType] = useState<string>("pvt_ltd");
+  const [customEntityType, setCustomEntityType] = useState<string>("");
   const [entityName, setEntityName] = useState<string>("");
   const [gstin, setGstin] = useState<string>("");
   const [pan, setPan] = useState<string>("");
-  const [spvState, setSpvState] = useState<string>("Gujarat");
+  const [spvState, setSpvState] = useState<string>("");
   const [customSpvState, setCustomSpvState] = useState<string>("");
-  const [spvCity, setSpvCity] = useState<string>("Ahmedabad");
+  const [spvCity, setSpvCity] = useState<string>("");
   const [customSpvCity, setCustomSpvCity] = useState<string>("");
   const [taxProfile, setTaxProfile] = useState<
     "gst_18" | "gst_12" | "gst_5" | "exempt_0" | "sez_0" | "composition_1" | "custom"
@@ -338,30 +357,31 @@ export default function RentRollOnboardingWizard({
   const [customSacCode, setCustomSacCode] = useState<string>("SAC 997212");
   const [customTaxDescription, setCustomTaxDescription] = useState<string>("");
 
-  // Step 2: Commercial Property & Space Hierarchy
+  // Step 2: Commercial Property & Space Hierarchy (Empty by default with clean placeholders)
   const [propertyName, setPropertyName] = useState<string>("");
   const [propertyCode, setPropertyCode] = useState<string>("");
-  const [propertyType, setPropertyType] = useState<string>("office");
+  const [propertyType, setPropertyType] = useState<string>("");
   const [customPropertyType, setCustomPropertyType] = useState<string>("");
   const [buildingGrade, setBuildingGrade] = useState<string>("A");
-  const [areaSqft, setAreaSqft] = useState<number>(25000);
-  const [carpetAreaSqft, setCarpetAreaSqft] = useState<number>(18000);
+  const [areaSqft, setAreaSqft] = useState<number | "">("");
+  const [carpetAreaSqft, setCarpetAreaSqft] = useState<number | "">("");
 
-  // Single-building vs Multi-building toggle (fixes Question 4!)
+  // Single-building vs Multi-building toggle
   const [isSingleBuilding, setIsSingleBuilding] = useState<boolean>(true);
-  const [buildingName, setBuildingName] = useState<string>("Main Tower");
+  const [buildingName, setBuildingName] = useState<string>("");
 
-  const [floorsCount, setFloorsCount] = useState<number>(5);
-  const [unitsPerFloor, setUnitsPerFloor] = useState<number>(4);
-  const [askingRatePerSqft, setAskingRatePerSqft] = useState<number>(85);
+  // Floors count supports 0 for Ground Floor Only (warehouses, sheds, single-story retail)
+  const [floorsCount, setFloorsCount] = useState<number | "">("");
+  const [unitsPerFloor, setUnitsPerFloor] = useState<number | "">("");
+  const [askingRatePerSqft, setAskingRatePerSqft] = useState<number | "">("");
   const [fitoutCondition, setFitoutCondition] = useState<string>("warm_shell");
 
-  // Detailed Fit-out parameters (fixes Question 5!)
-  const [baseBareRent, setBaseBareRent] = useState<number>(65);
-  const [fitoutCapexRent, setFitoutCapexRent] = useState<number>(20);
-  const [workstationsCount, setWorkstationsCount] = useState<number>(100);
-  const [cabinsCount, setCabinsCount] = useState<number>(4);
-  const [meetingRoomsCount, setMeetingRoomsCount] = useState<number>(2);
+  // Detailed Fit-out parameters
+  const [baseBareRent, setBaseBareRent] = useState<number | "">("");
+  const [fitoutCapexRent, setFitoutCapexRent] = useState<number | "">("");
+  const [workstationsCount, setWorkstationsCount] = useState<number | "">("");
+  const [cabinsCount, setCabinsCount] = useState<number | "">("");
+  const [meetingRoomsCount, setMeetingRoomsCount] = useState<number | "">("");
   const [fitoutInclusions, setFitoutInclusions] = useState<string[]>([
     "hvac",
     "workstations",
@@ -369,19 +389,22 @@ export default function RentRollOnboardingWizard({
     "biometric",
   ]);
 
-  // Dynamic Location selectors (fixes Question 3!)
-  const [propertyState, setPropertyState] = useState<string>("Gujarat");
+  // Dynamic Location selectors (Empty by default)
+  const [propertyState, setPropertyState] = useState<string>("");
   const [customPropertyState, setCustomPropertyState] = useState<string>("");
-  const [propertyCity, setPropertyCity] = useState<string>("Ahmedabad");
+  const [propertyCity, setPropertyCity] = useState<string>("");
   const [customPropertyCity, setCustomPropertyCity] = useState<string>("");
-  const [microMarket, setMicroMarket] = useState<string>("SG Highway");
-  const [pincode, setPincode] = useState<string>("380015");
+  const [microMarket, setMicroMarket] = useState<string>("");
+  const [pincode, setPincode] = useState<string>("");
   const [propertyAddress, setPropertyAddress] = useState<string>("");
 
   // Step 3: Go-Live Strategy & Delegation
   const [startingStrategy, setStartingStrategy] = useState<
     "rent_roll" | "create_lease" | "import_excel" | "assisted_concierge"
   >("rent_roll");
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelFileName, setExcelFileName] = useState<string>("");
+  const [excelFileSize, setExcelFileSize] = useState<string>("");
   const [managementMode, setManagementMode] = useState<"self" | "delegated">("self");
   const [managerType, setManagerType] = useState<string>("pm_company");
   const [managerName, setManagerName] = useState<string>("");
@@ -390,12 +413,12 @@ export default function RentRollOnboardingWizard({
 
   // Derived available cities
   const availableSpvCities =
-    spvState !== "Other" && INDIAN_STATES_CITIES[spvState]
+    spvState && spvState !== "Other" && INDIAN_STATES_CITIES[spvState]
       ? INDIAN_STATES_CITIES[spvState]
       : [];
 
   const availablePropertyCities =
-    propertyState !== "Other" && INDIAN_STATES_CITIES[propertyState]
+    propertyState && propertyState !== "Other" && INDIAN_STATES_CITIES[propertyState]
       ? INDIAN_STATES_CITIES[propertyState]
       : [];
 
@@ -404,8 +427,7 @@ export default function RentRollOnboardingWizard({
     if (stateVal === "Other") {
       setSpvCity("Other");
     } else {
-      const cities = INDIAN_STATES_CITIES[stateVal] || [];
-      setSpvCity(cities[0] || "Other");
+      setSpvCity("");
     }
   };
 
@@ -414,9 +436,67 @@ export default function RentRollOnboardingWizard({
     if (stateVal === "Other") {
       setPropertyCity("Other");
     } else {
-      const cities = INDIAN_STATES_CITIES[stateVal] || [];
-      setPropertyCity(cities[0] || "Other");
+      setPropertyCity("");
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setExcelFile(file);
+      setExcelFileName(file.name);
+      setExcelFileSize(`${(file.size / 1024).toFixed(1)} KB`);
+    }
+  };
+
+  const handleDownloadSample = () => {
+    const headers = [
+      "Property Name",
+      "Building Name",
+      "Floor Number",
+      "Unit Code",
+      "Tenant Name",
+      "Tenant Email",
+      "Tenant Phone",
+      "Area (Sq Ft)",
+      "Monthly Base Rent (INR)",
+      "CAM Rate (INR/Sq Ft)",
+      "Security Deposit (INR)",
+      "Lease Start Date (YYYY-MM-DD)",
+      "Lease End Date (YYYY-MM-DD)",
+      "Annual Escalation (%)",
+      "GSTIN",
+    ];
+    const row = [
+      propertyName || "Apex Commercial Tower",
+      buildingName || (propertyName ? `${propertyName} - Main Tower` : "Main Tower"),
+      floorsCount === 0 ? "Ground Floor" : "Floor 1",
+      floorsCount === 0 ? "G-01" : "101",
+      "Acme Logistics Enterprises",
+      "billing@acme.in",
+      "+91 9876543210",
+      areaSqft || "25000",
+      askingRatePerSqft ? String(Number(askingRatePerSqft) * (Number(areaSqft) || 1000)) : "85000",
+      "15",
+      "500000",
+      "2026-04-01",
+      "2029-03-31",
+      "5",
+      gstin || "24AAACS1429B1Z1",
+    ];
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), row.join(",")].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `${(propertyName || "property").toLowerCase().replace(/[^a-z0-9]/g, "_")}_rent_roll_template.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Auto-sync property code & single building name when property name changes
@@ -471,7 +551,11 @@ export default function RentRollOnboardingWizard({
         setErrorMessage("Please enter a Property Name (e.g. Apex Business Tower).");
         return false;
       }
-      if (!areaSqft || areaSqft <= 0) {
+      if (!propertyType) {
+        setErrorMessage("Please select a Property Type (e.g. Warehouse, Standalone Building, Office).");
+        return false;
+      }
+      if (!areaSqft || Number(areaSqft) <= 0) {
         setErrorMessage("Total Chargeable Area must be greater than zero.");
         return false;
       }
@@ -514,19 +598,25 @@ export default function RentRollOnboardingWizard({
     const finalPropCity = propertyCity === "Other" && customPropertyCity.trim() ? customPropertyCity.trim() : propertyCity;
     const finalPropType = propertyType === "other" && customPropertyType.trim() ? customPropertyType.trim() : propertyType;
     const finalBuildingName = isSingleBuilding
-      ? (propertyName.trim() ? `${propertyName.trim()} - Main Tower` : "Main Tower")
-      : (buildingName.trim() || "Main Tower");
+      ? (propertyName.trim() ? `${propertyName.trim()} - Main Tower` : "Main Building")
+      : (buildingName.trim() || "Main Building");
+
+    const selectedEntityObj = LEGAL_ENTITY_TYPES.find((et) => et.id === entityType);
+    const finalEntityTypeLabel =
+      entityType === "other" && customEntityType.trim()
+        ? customEntityType.trim()
+        : selectedEntityObj?.label || "Private Limited Company (Pvt Ltd)";
 
     const spvList: SPVData[] = [
       {
         id: "spv-1",
         legalName: (entityName || companyName).trim(),
-        entityType: "Private Limited",
+        entityType: finalEntityTypeLabel,
         gstin: gstin.trim(),
         pan: pan.trim(),
         state: finalSpvState,
         city: finalSpvCity,
-        address: propertyAddress.trim() || `${finalSpvCity}, ${finalSpvState}`,
+        address: propertyAddress.trim() || (finalSpvCity && finalSpvState ? `${finalSpvCity}, ${finalSpvState}` : ""),
         taxProfile: taxProfile,
         customTaxRate: taxProfile === "custom" ? customTaxRate : undefined,
         customSacCode: taxProfile === "custom" ? customSacCode.trim() : undefined,
@@ -549,19 +639,19 @@ export default function RentRollOnboardingWizard({
       buildingGrade,
       buildingName: finalBuildingName,
       isSingleBuilding,
-      areaSqft,
-      carpetAreaSqft,
-      floorsCount,
-      unitsPerFloor,
-      askingRatePerSqft,
+      areaSqft: Number(areaSqft) || 0,
+      carpetAreaSqft: carpetAreaSqft === "" ? undefined : Number(carpetAreaSqft),
+      floorsCount: floorsCount === "" ? 1 : Number(floorsCount),
+      unitsPerFloor: unitsPerFloor === "" ? 1 : Number(unitsPerFloor),
+      askingRatePerSqft: Number(askingRatePerSqft) || 0,
       fitoutCondition,
       fitoutDetails: isFitted
         ? {
-            baseBareRent,
-            fitoutCapexRent,
-            workstationsCount,
-            cabinsCount,
-            meetingRoomsCount,
+            baseBareRent: Number(baseBareRent) || 0,
+            fitoutCapexRent: Number(fitoutCapexRent) || 0,
+            workstationsCount: Number(workstationsCount) || 0,
+            cabinsCount: Number(cabinsCount) || 0,
+            meetingRoomsCount: Number(meetingRoomsCount) || 0,
             inclusions: fitoutInclusions,
           }
         : undefined,
@@ -795,8 +885,35 @@ export default function RentRollOnboardingWizard({
                 />
               </div>
 
-              {/* Brand Name */}
+              {/* Legal Structure / Entity Type (Pvt Ltd, Ltd, LLP, Sole Proprietorship, etc.) */}
               <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  Legal Structure / Entity Type <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={entityType}
+                  onChange={(e) => setEntityType(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-medium cursor-pointer shadow-xs"
+                >
+                  {LEGAL_ENTITY_TYPES.map((et) => (
+                    <option key={et.id} value={et.id}>
+                      {et.label}
+                    </option>
+                  ))}
+                </select>
+                {entityType === "other" && (
+                  <input
+                    type="text"
+                    value={customEntityType}
+                    onChange={(e) => setCustomEntityType(e.target.value)}
+                    placeholder="Specify legal structure (e.g. Foreign Entity Branch, Statutory Body)"
+                    className="mt-2 w-full px-3 py-1.5 text-xs rounded-lg border border-teal-400 bg-teal-50/50 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                )}
+              </div>
+
+              {/* Brand Name */}
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Commercial Brand / Portfolio Name
                 </label>
@@ -874,6 +991,7 @@ export default function RentRollOnboardingWizard({
                     onChange={(e) => handleSpvStateChange(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
+                    <option value="">-- Select State --</option>
                     {ALL_INDIAN_STATES.map((st) => (
                       <option key={st} value={st}>
                         {st}
@@ -899,14 +1017,16 @@ export default function RentRollOnboardingWizard({
                   <select
                     value={spvCity}
                     onChange={(e) => setSpvCity(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    disabled={!spvState}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
                   >
+                    <option value="">{spvState ? "-- Select City --" : "-- Select State First --"}</option>
                     {availableSpvCities.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
                     ))}
-                    <option value="Other">Other (Write Custom City)</option>
+                    {spvState && <option value="Other">Other (Write Custom City)</option>}
                   </select>
                   {spvCity === "Other" && (
                     <input
@@ -1041,13 +1161,14 @@ export default function RentRollOnboardingWizard({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Property Type
+                    Property Type <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={propertyType}
                     onChange={(e) => setPropertyType(e.target.value)}
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
+                    <option value="">-- Select Property Type (e.g. Warehouse, Standalone Building, Office) --</option>
                     {PROPERTY_TYPES.map((pt) => (
                       <option key={pt.id} value={pt.id}>
                         {pt.label}
@@ -1090,7 +1211,18 @@ export default function RentRollOnboardingWizard({
                     type="number"
                     min={100}
                     value={areaSqft}
-                    onChange={(e) => handleAreaChange(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setAreaSqft("");
+                        setCarpetAreaSqft("");
+                      } else {
+                        const n = Number(v);
+                        setAreaSqft(isNaN(n) ? "" : n);
+                        if (!isNaN(n) && n > 0) setCarpetAreaSqft(Math.round(n * 0.72));
+                      }
+                    }}
+                    placeholder="e.g. 25000"
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white font-semibold"
                   />
                 </div>
@@ -1103,12 +1235,18 @@ export default function RentRollOnboardingWizard({
                     type="number"
                     min={50}
                     value={carpetAreaSqft}
-                    onChange={(e) => setCarpetAreaSqft(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCarpetAreaSqft(v === "" ? "" : Number(v));
+                    }}
+                    placeholder="e.g. 18000"
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                   />
-                  <span className="text-[10px] text-slate-500">
-                    Loading: {areaSqft > 0 ? Math.round(((areaSqft - carpetAreaSqft) / areaSqft) * 100) : 0}%
-                  </span>
+                  {typeof areaSqft === "number" && typeof carpetAreaSqft === "number" && areaSqft > 0 && carpetAreaSqft > 0 && (
+                    <span className="text-[10px] text-slate-500">
+                      Loading: {Math.round(((areaSqft - carpetAreaSqft) / areaSqft) * 100)}%
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1123,6 +1261,7 @@ export default function RentRollOnboardingWizard({
                     onChange={(e) => handlePropertyStateChange(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
                   >
+                    <option value="">-- Select State --</option>
                     {ALL_INDIAN_STATES.map((st) => (
                       <option key={st} value={st}>
                         {st}
@@ -1148,14 +1287,16 @@ export default function RentRollOnboardingWizard({
                   <select
                     value={propertyCity}
                     onChange={(e) => setPropertyCity(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer"
+                    disabled={!propertyState}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
                   >
+                    <option value="">{propertyState ? "-- Select City --" : "-- Select State First --"}</option>
                     {availablePropertyCities.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
                     ))}
-                    <option value="Other">Other (Write Custom City)</option>
+                    {propertyState && <option value="Other">Other (Write Custom City)</option>}
                   </select>
                   {propertyCity === "Other" && (
                     <input
@@ -1176,8 +1317,8 @@ export default function RentRollOnboardingWizard({
                     type="text"
                     value={microMarket}
                     onChange={(e) => setMicroMarket(e.target.value)}
-                    placeholder="SG Highway / Prahlad Nagar"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    placeholder="e.g. Whitefield, BKC, SG Highway, OMR"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white placeholder:text-slate-400"
                   />
                 </div>
 
@@ -1190,8 +1331,8 @@ export default function RentRollOnboardingWizard({
                     maxLength={6}
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
-                    placeholder="380015"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
+                    placeholder="e.g. 380015"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -1216,7 +1357,7 @@ export default function RentRollOnboardingWizard({
                       const checked = e.target.checked;
                       setIsSingleBuilding(checked);
                       if (checked) {
-                        setBuildingName(propertyName ? `${propertyName} - Main Tower` : "Main Tower");
+                        setBuildingName(propertyName ? `${propertyName} - Main Tower` : "");
                       }
                     }}
                     className="w-4 h-4 text-[#0F8B7D] rounded focus:ring-0 cursor-pointer"
@@ -1241,7 +1382,7 @@ export default function RentRollOnboardingWizard({
                       type="text"
                       value={buildingName}
                       onChange={(e) => setBuildingName(e.target.value)}
-                      placeholder="e.g. Tower A, North Wing"
+                      placeholder="e.g. Tower A, North Wing, Shed 1"
                       className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                     />
                   </div>
@@ -1249,23 +1390,42 @@ export default function RentRollOnboardingWizard({
                   <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col justify-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Tower / Building</span>
                     <span className="font-semibold text-slate-800 truncate">
-                      {propertyName ? `${propertyName} (Single Asset)` : "Main Tower"}
+                      {propertyName ? `${propertyName} (Single Asset)` : "Main Building / Facility"}
                     </span>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Floors Above Ground
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                      Floors Above Ground
+                    </label>
+                    {floorsCount === 0 && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                        Ground Floor Only (0 Upper)
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     max={150}
                     value={floorsCount}
-                    onChange={(e) => setFloorsCount(Math.max(1, Number(e.target.value)))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setFloorsCount("");
+                      } else {
+                        const num = parseInt(v, 10);
+                        setFloorsCount(isNaN(num) ? "" : Math.max(0, num));
+                      }
+                    }}
+                    placeholder="0 for Ground floor only, or 1, 2, 5..."
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Enter 0 for warehouses, sheds, or ground-floor retail.
+                  </p>
                 </div>
 
                 <div>
@@ -1275,9 +1435,18 @@ export default function RentRollOnboardingWizard({
                   <input
                     type="number"
                     min={1}
-                    max={50}
+                    max={100}
                     value={unitsPerFloor}
-                    onChange={(e) => setUnitsPerFloor(Math.max(1, Number(e.target.value)))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setUnitsPerFloor("");
+                      } else {
+                        const num = parseInt(v, 10);
+                        setUnitsPerFloor(isNaN(num) ? "" : Math.max(1, num));
+                      }
+                    }}
+                    placeholder="e.g. 1 or 4"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                 </div>
@@ -1288,9 +1457,18 @@ export default function RentRollOnboardingWizard({
                   </label>
                   <input
                     type="number"
-                    min={10}
+                    min={0}
                     value={askingRatePerSqft}
-                    onChange={(e) => setAskingRatePerSqft(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setAskingRatePerSqft("");
+                      } else {
+                        const num = parseFloat(v);
+                        setAskingRatePerSqft(isNaN(num) ? "" : num);
+                      }
+                    }}
+                    placeholder="e.g. 85"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] font-semibold"
                   />
                 </div>
@@ -1304,7 +1482,7 @@ export default function RentRollOnboardingWizard({
                     onChange={(e) => {
                       const val = e.target.value;
                       setFitoutCondition(val);
-                      if (val === "fully_fitted" || val === "plug_and_play") {
+                      if ((val === "fully_fitted" || val === "plug_and_play") && typeof askingRatePerSqft === "number") {
                         setBaseBareRent(Math.round(askingRatePerSqft * 0.75));
                         setFitoutCapexRent(Math.round(askingRatePerSqft * 0.25));
                       }
@@ -1319,12 +1497,31 @@ export default function RentRollOnboardingWizard({
                   </select>
                 </div>
 
-                <div className="md:col-span-2 flex items-center gap-2 p-3 rounded-lg bg-teal-50/60 border border-teal-200/60 text-teal-900 text-xs">
-                  <Info size={16} className="text-[#0F8B7D] shrink-0" />
-                  <span>
-                    Generates <strong>{floorsCount * unitsPerFloor} leasable units</strong> (~{Math.round(areaSqft / (floorsCount * unitsPerFloor)).toLocaleString()} sq ft each) ready for contract mapping.
-                  </span>
-                </div>
+                {(() => {
+                  const numFloors = floorsCount === "" ? 1 : Number(floorsCount);
+                  const effectiveLevels = numFloors === 0 ? 1 : numFloors;
+                  const numUnits = unitsPerFloor === "" ? 1 : Math.max(1, Number(unitsPerFloor));
+                  const totalUnits = effectiveLevels * numUnits;
+                  const numericArea = typeof areaSqft === "number" ? areaSqft : 0;
+                  const avgSqft = totalUnits > 0 && numericArea > 0 ? Math.round(numericArea / totalUnits) : 0;
+
+                  return (
+                    <div className="md:col-span-2 flex items-center gap-2 p-3 rounded-lg bg-teal-50/60 border border-teal-200/60 text-teal-900 text-xs">
+                      <Info size={16} className="text-[#0F8B7D] shrink-0" />
+                      <span>
+                        {numFloors === 0 ? (
+                          <>
+                            Generates <strong>{totalUnits} leasable unit{totalUnits > 1 ? "s" : ""}</strong> on <strong>Ground Floor Only</strong> {avgSqft > 0 ? `(~${avgSqft.toLocaleString()} sq ft each)` : ""} ready for contract mapping.
+                          </>
+                        ) : (
+                          <>
+                            Generates <strong>{totalUnits} leasable units</strong> across {numFloors} floor{numFloors > 1 ? "s" : ""} {avgSqft > 0 ? `(~${avgSqft.toLocaleString()} sq ft each)` : ""} ready for contract mapping.
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Detailed Fit-out Specifications when Fully Fitted or Plug and Play */}
                 {(fitoutCondition === "fully_fitted" || fitoutCondition === "plug_and_play") && (
@@ -1479,26 +1676,7 @@ export default function RentRollOnboardingWizard({
                 </p>
               </div>
 
-              <select
-                value={startingStrategy}
-                onChange={(e) => setStartingStrategy(e.target.value as any)}
-                className="w-full px-3.5 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-800 font-semibold cursor-pointer shadow-xs"
-              >
-                <option value="rent_roll">
-                  Option 1: Self-Serve Rent Roll Register — Interactive Space Grid
-                </option>
-                <option value="create_lease">
-                  Option 2: Create First Contract — Step-by-Step Contract Wizard
-                </option>
-                <option value="import_excel">
-                  Option 3: Bulk Import Excel — Spreadsheet Schedule Upload
-                </option>
-                <option value="assisted_concierge">
-                  Option 4: Assisted Concierge Onboarding — Expert Lease Abstraction
-                </option>
-              </select>
-
-              {/* 4 Route Comparison Grid */}
+              {/* 4 Route Comparison Cards (No duplicate dropdown) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
                 <div
                   onClick={() => setStartingStrategy("rent_roll")}
@@ -1540,7 +1718,7 @@ export default function RentRollOnboardingWizard({
                   onClick={() => setStartingStrategy("import_excel")}
                   className={`p-4 rounded-xl border transition cursor-pointer text-left ${
                     startingStrategy === "import_excel"
-                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
+                      ? "bg-white border-purple-600 ring-2 ring-purple-500/20 shadow-xs"
                       : "bg-white/70 border-slate-200 hover:border-slate-300"
                   }`}
                 >
@@ -1549,7 +1727,7 @@ export default function RentRollOnboardingWizard({
                     <span className="text-[10px] font-bold text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-full">Portfolio Batch</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
-                    Upload your existing spreadsheet (.xlsx). Provides automated column matching, Indian number parsing (lakhs/crores), variance audits, and instant batch ingestion.
+                    Upload your existing spreadsheet (.xlsx / .csv). Includes automated column matching, Indian number parsing (lakhs/crores), variance audits, and batch ingestion.
                   </p>
                   <div className="text-[10px] text-slate-400 font-medium">Best for: PM companies and operators migrating 10+ to 500+ existing leases.</div>
                 </div>
@@ -1572,6 +1750,84 @@ export default function RentRollOnboardingWizard({
                   <div className="text-[10px] text-slate-400 font-medium">Best for: Institutional owners, REITs, or non-technical landlords.</div>
                 </div>
               </div>
+
+              {/* Interactive File Upload Area when Bulk Import Excel is selected */}
+              {startingStrategy === "import_excel" && (
+                <div className="p-4 rounded-xl bg-purple-50/80 border border-purple-200 space-y-3 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileSpreadsheet size={15} className="text-purple-700" />
+                        Upload Rent Roll Spreadsheet
+                      </h4>
+                      <p className="text-[11px] text-purple-800">
+                        Upload your lease schedule to map columns and import tenants, areas, and rents.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownloadSample}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-300 bg-white hover:bg-purple-100 text-xs font-bold text-purple-800 transition shadow-2xs cursor-pointer shrink-0"
+                    >
+                      <Download size={13} />
+                      Download Sample Template (.csv)
+                    </button>
+                  </div>
+
+                  <div className="relative border-2 border-dashed border-purple-300 hover:border-purple-500 rounded-xl p-5 bg-white text-center transition cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileSelect}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    {!excelFile ? (
+                      <div className="flex flex-col items-center justify-center gap-1.5">
+                        <Upload size={24} className="text-purple-600 mb-0.5" />
+                        <span className="text-xs font-bold text-slate-800">
+                          Click to browse or drag &amp; drop spreadsheet here
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          Supports Microsoft Excel (.xlsx, .xls) and CSV (.csv)
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-2.5 text-left">
+                          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-700">
+                            <FileSpreadsheet size={18} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900">{excelFileName}</div>
+                            <div className="text-[10px] text-slate-500">{excelFileSize} · Ready for column mapping</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExcelFile(null);
+                            setExcelFileName("");
+                            setExcelFileSize("");
+                          }}
+                          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-white border border-purple-200 text-[11px] text-purple-900 flex items-center gap-2">
+                    <CheckCircle2 size={14} className="text-[#0F8B7D] shrink-0" />
+                    <span>
+                      {excelFile
+                        ? `File loaded! Column mapping and verification will launch automatically upon clicking "Complete Setup & Launch".`
+                        : `You can upload your file now, or proceed directly to the Rent Roll Register and use the "Import Excel" button anytime.`}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Management & Delegation Options */}

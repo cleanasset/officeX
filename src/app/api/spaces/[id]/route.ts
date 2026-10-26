@@ -38,7 +38,10 @@ export async function PATCH(
       .set({
         space_name: body.space_name,
         chargeable_area_sqft: body.chargeable_area_sqft !== undefined ? String(body.chargeable_area_sqft) : undefined,
-        carpet_area_sqft: body.carpet_area_sqft !== undefined ? String(body.carpet_area_sqft) : undefined,
+        carpet_area_sqft:
+          body.carpet_area_sqft !== undefined && String(body.carpet_area_sqft).trim() !== ""
+            ? String(body.carpet_area_sqft)
+            : null,
         occupancy_status: body.occupancy_status,
         updated_by: auth.userId,
         updated_at: new Date(),

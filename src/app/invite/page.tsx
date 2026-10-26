@@ -300,30 +300,39 @@ function InviteContent() {
               </div>
 
               <div className="space-y-1.5">
-                {propertyDetails.tenants.map((t, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between hover:border-slate-300 transition"
-                  >
-                    <div>
-                      <div className="text-xs font-black text-slate-900 flex items-center gap-2">
-                        <span>{t.name}</span>
-                        <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded">
-                          {t.status}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        {t.space} · <span className="text-slate-400">{t.term}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs font-black text-teal-800">
-                        ₹{(t.monthlyRent / 100000).toFixed(2)} L
-                      </div>
-                      <div className="text-[10px] text-slate-400">/ month</div>
-                    </div>
+                {propertyDetails.tenants.length === 0 ? (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-center">
+                    <p className="text-xs font-bold text-amber-900">0 Active Leases · Asset in Setup Mode</p>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      The Landlord has not added tenants or contracts yet. Upon accepting, your console will be ready to help onboard rent roll and leases.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  propertyDetails.tenants.map((t, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between hover:border-slate-300 transition"
+                    >
+                      <div>
+                        <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                          <span>{t.name}</span>
+                          <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded">
+                            {t.status}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {t.space} · <span className="text-slate-400">{t.term}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-black text-teal-800">
+                          ₹{(t.monthlyRent / 100000).toFixed(2)} L
+                        </div>
+                        <div className="text-[10px] text-slate-400">/ month</div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

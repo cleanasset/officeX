@@ -81,8 +81,8 @@ export default function PropertyManagerDashboardPage() {
     year: "numeric",
   });
 
-  // Dynamic Tasks (100% Real Live State - Zero Mock Data)
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [contractsCount, setContractsCount] = useState<number | null>(null);
   const [pmScope, setPmScope] = useState<{
     scope: "whole_property" | "specific_tenants";
     managedTenantNames: string[];
@@ -146,6 +146,7 @@ export default function PropertyManagerDashboardPage() {
       .then((res) => res.json())
       .then((data) => {
         const contracts = Array.isArray(data.data) ? data.data : [];
+        setContractsCount(contracts.length);
         const generatedTasks: TaskItem[] = [];
 
         contracts.forEach((c: any) => {
@@ -561,7 +562,7 @@ export default function PropertyManagerDashboardPage() {
         </div>
       )}
 
-      {/* §2.6 Empty State Banner (Clean Workspace) */}
+      {/* §2.6 Empty State Banner / Pre-Operational Banner */}
       {tasks.length === 0 && (
         <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-emerald-50 border border-amber-200/80 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-center gap-4">
@@ -570,13 +571,17 @@ export default function PropertyManagerDashboardPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                  §2.6 Clean Workspace
+                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${contractsCount === 0 ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"}`}>
+                  {contractsCount === 0 ? "Pre-Operational · Setup Mode" : "§2.6 Clean Workspace"}
                 </span>
-                <h3 className="text-sm font-bold text-slate-900">Zero Pending PM Operational Tasks</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {contractsCount === 0 ? "Property Setup in Progress · Awaiting Tenant Leases" : "Zero Pending PM Operational Tasks"}
+                </h3>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                No contract approvals, rent escalations, or deposit collections pending action for this workspace.
+                {contractsCount === 0
+                  ? "You have been assigned property management access for this asset. Landlord onboarding of tenants & contracts is pending. You can onboard the first commercial tenant or import the rent roll below."
+                  : "No contract approvals, rent escalations, or deposit collections pending action for this workspace."}
               </p>
             </div>
           </div>
@@ -586,7 +591,7 @@ export default function PropertyManagerDashboardPage() {
               className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Create Contract (§S-21)</span>
+              <span>+ Add First Lease (§S-21)</span>
             </button>
             <Link
               href="/properties/rent-roll"

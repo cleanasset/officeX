@@ -72,6 +72,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Validation failed", details: reqVal.errors }, { status: 422 });
     }
 
+    const VALID_SPACE_TYPES = ["entire_building", "floor", "wing", "suite", "cabin", "desk", "parking"];
+    let normalizedSpaceType: any = "suite";
+    if (body.space_type) {
+      const st = String(body.space_type).toLowerCase().trim();
+      if (VALID_SPACE_TYPES.includes(st)) {
+        normalizedSpaceType = st;
+      } else if (st === "office" || st === "unit" || st === "shop" || st === "room" || st === "commercial") {
+        normalizedSpaceType = "suite";
+      } else if (st.includes("floor")) {
+        normalizedSpaceType = "floor";
+      } else if (st.includes("building")) {
+        normalizedSpaceType = "entire_building";
+      }
+    }
+
+    const cleanCarpet =
+      body.carpet_area_sqft !== undefined &&
+      body.carpet_area_sqft !== null &&
+      String(body.carpet_area_sqft).trim() !== "" &&
+      !isNaN(Number(body.carpet_area_sqft))
+        ? String(body.carpet_area_sqft).trim()
+        : null;
+
+    const cleanChargeable =
+      payload.chargeable_area_sqft !== undefined &&
+      payload.chargeable_area_sqft !== null &&
+      String(payload.chargeable_area_sqft).trim() !== "" &&
+      !isNaN(Number(payload.chargeable_area_sqft))
+        ? String(payload.chargeable_area_sqft).trim()
+        : "1000";
+
     const [inserted] = await db
       .insert(space)
       .values({
@@ -81,9 +112,9 @@ export async function POST(req: Request) {
         space_code: payload.space_code,
         space_name: payload.space_name,
         floor_name: body.floor_name || body.floor_label || null,
-        space_type: body.space_type || "suite",
-        chargeable_area_sqft: String(payload.chargeable_area_sqft),
-        carpet_area_sqft: body.carpet_area_sqft ? String(body.carpet_area_sqft) : null,
+        space_type: normalizedSpaceType,
+        chargeable_area_sqft: cleanChargeable,
+        carpet_area_sqft: cleanCarpet,
         area_unit: body.area_unit || "sqft",
         is_leasable: payload.is_leasable,
         occupancy_status: payload.occupancy_status,

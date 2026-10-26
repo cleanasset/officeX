@@ -294,10 +294,12 @@ export async function POST(req: Request) {
 
     // Insert Building
     const buildingId = randomUUID();
-    const buildingName = propData.buildingName || "Tower A";
-    const buildingCode = `${propertyCode}-T1`;
-    const floorsCount = Math.max(1, Math.min(50, Number(propData.floors) || 5));
-    const unitsPerFloor = Math.max(1, Math.min(20, Number(propData.unitsPerFloor) || 4));
+    const buildingName = propData.buildingName || "Main Building";
+    const buildingCode = `${propertyCode}-B1`;
+    const rawFloors = Number(propData.floors);
+    const floorsCount = isNaN(rawFloors) ? 1 : Math.max(0, Math.min(150, rawFloors));
+    const isGroundOnly = floorsCount === 0;
+    const unitsPerFloor = Math.max(1, Math.min(100, Number(propData.unitsPerFloor) || 1));
 
     await db
       .insert(building)
@@ -324,21 +326,27 @@ export async function POST(req: Request) {
     }
 
     // 8. Auto-generate Physical Spaces (Units / Suites)
-    const totalUnits = floorsCount * unitsPerFloor;
+    const totalUnits = (isGroundOnly ? 1 : floorsCount) * unitsPerFloor;
     const areaPerUnit = Math.round(totalAreaSqft / totalUnits);
     const carpetAreaPerUnit = propData.carpetAreaSqft
       ? Math.round(Number(propData.carpetAreaSqft) / totalUnits)
       : Math.round(areaPerUnit * 0.72);
     const askingRate = Number(propData.askingRatePerSqft) || 120.0;
 
+    const floorNumbers = isGroundOnly ? [0] : Array.from({ length: floorsCount }, (_, i) => i + 1);
     const createdSpaces: any[] = [];
-    for (let f = 1; f <= floorsCount; f++) {
+    for (const f of floorNumbers) {
       for (let u = 1; u <= unitsPerFloor; u++) {
         const spaceId = randomUUID();
-        const unitFormatted = `${f}${u.toString().padStart(2, "0")}`; // e.g. 101, 102, 201
-        const spaceCode = `${propertyCode}-F${f.toString().padStart(2, "0")}-U${u.toString().padStart(2, "0")}`;
-        const spaceName = `Floor ${f} - Suite ${unitFormatted}`;
-        const floorName = `Floor ${f}`;
+        const isG = f === 0;
+        const floorName = isG ? "Ground Floor" : `Floor ${f}`;
+        const unitFormatted = isG ? `G-${u.toString().padStart(2, "0")}` : `${f}${u.toString().padStart(2, "0")}`;
+        const spaceCode = isG
+          ? `${propertyCode}-G-U${u.toString().padStart(2, "0")}`
+          : `${propertyCode}-F${f.toString().padStart(2, "0")}-U${u.toString().padStart(2, "0")}`;
+        const spaceName = isG
+          ? `Ground Floor - Unit ${unitFormatted}`
+          : `Floor ${f} - Suite ${unitFormatted}`;
 
         try {
           await db

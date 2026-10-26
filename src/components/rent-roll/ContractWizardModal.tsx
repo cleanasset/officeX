@@ -169,43 +169,23 @@ export default function ContractWizardModal({
       ]);
       const [occData, spData] = await Promise.all([occRes.json(), spRes.json()]);
 
-      // Seed fallback tenants so new onboarding is NEVER blank/stuck
-      const defaultSeedTenants = [
-        {
-          id: "occ-seed-1",
-          occupant_name: "Zomato Media Pvt Ltd",
-          occupant_code: "ZOMATO-01",
-          gst_number: "24AAACZ1234B1Z2",
-        },
-        {
-          id: "occ-seed-2",
-          occupant_name: "Persistent Systems Ltd",
-          occupant_code: "PERSISTENT-01",
-          gst_number: "27AAACP5678C1Z8",
-        },
-        {
-          id: "occ-seed-3",
-          occupant_name: "Innovate Tech Labs",
-          occupant_code: "INNOVATE-01",
-          gst_number: "29AAACI9012D1Z4",
-        },
-      ];
-
       const loadedOccs =
         occData.success && occData.data && occData.data.length > 0
           ? occData.data
-          : defaultSeedTenants;
+          : [];
       setOccupants(loadedOccs);
 
       const loadedSpaces = spData.success && spData.data ? spData.data : [];
       setSpaces(loadedSpaces);
 
-      // Auto-preselect first occupant and space if currently empty
-      setForm((prev) => ({
-        ...prev,
-        occupant_id: prev.occupant_id || (loadedOccs[0]?.id || ""),
-        space_id: prev.space_id || (loadedSpaces.length > 0 ? loadedSpaces[0].id : "entire_property"),
-      }));
+      // Only apply prefill if explicitly provided; do NOT auto-select fake data
+      if (prefill) {
+        setForm((prev) => ({
+          ...prev,
+          occupant_id: prefill.occupant_id || prev.occupant_id,
+          space_id: prefill.space_id || prev.space_id,
+        }));
+      }
     } catch (e) {
       console.warn("Failed to load options", e);
     }

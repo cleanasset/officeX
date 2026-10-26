@@ -106,17 +106,8 @@ function OnboardingContent() {
         }
       }
 
-      // 3. Smooth Transition Directly to Active Rent Roll (§S-10)
-      let destination = "/properties/rent-roll?tab=register";
-      if (data.startingStrategy === "create_lease") {
-        destination = "/properties/rent-roll?tab=register&openContract=1";
-      } else if (data.startingStrategy === "import_excel") {
-        destination = "/properties/rent-roll?tab=register&openImport=1";
-      } else if (data.startingStrategy === "assisted_concierge") {
-        destination = "/properties/rent-roll?tab=register&concierge=1";
-      }
-
-      router.push(destination);
+      // 3. Clean Transition Directly to Active Rent Roll Register
+      router.push("/properties/rent-roll?tab=register");
     } catch (err: any) {
       console.error("Onboarding completion error:", err);
       throw err;

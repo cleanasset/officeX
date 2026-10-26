@@ -782,7 +782,7 @@ export default function PropertyHierarchyModal({
           building_id: bldgId,
           chargeable_area_sqft: Number(spaceForm.areaSqft) || 1000,
           floor_name: `Floor ${spaceForm.floorNumber || "1"}`,
-          space_type: spaceForm.unitType.toLowerCase(),
+          space_type: spaceForm.unitType.toLowerCase() === "office" ? "suite" : spaceForm.unitType.toLowerCase(),
           occupancy_status: "vacant",
         }),
       });
@@ -2284,29 +2284,34 @@ export default function PropertyHierarchyModal({
 
                       {/* Live Generated Activation / Invite Link */}
                       {propForm.managerName.trim() && (
-                        <div className="p-3 bg-white/90 rounded-xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs animate-in fade-in">
-                          <div className="min-w-0">
-                            <span className="text-[11px] font-bold text-slate-700 block">
-                              Manager Activation &amp; Portal Invitation Link:
-                            </span>
-                            <span className="font-mono text-[11px] text-teal-800 truncate select-all block mt-0.5">
-                              {getManagerActivationLink()}
-                            </span>
+                        <div className="space-y-2">
+                          <div className="p-3 bg-white/90 rounded-xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs animate-in fade-in">
+                            <div className="min-w-0">
+                              <span className="text-[11px] font-bold text-slate-700 block">
+                                Manager Activation &amp; Portal Invitation Link:
+                              </span>
+                              <span className="font-mono text-[11px] text-teal-800 truncate select-all block mt-0.5">
+                                {getManagerActivationLink()}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const link = getManagerActivationLink();
+                                navigator.clipboard.writeText(link);
+                                setCopiedManagerLink(true);
+                                showToast("✓ Manager activation link copied to clipboard!");
+                                setTimeout(() => setCopiedManagerLink(false), 2500);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-[11px] font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs self-start sm:self-auto"
+                            >
+                              {copiedManagerLink ? <Check size={12} /> : <Copy size={12} />}
+                              <span>{copiedManagerLink ? "Copied!" : "Copy Manager Invite"}</span>
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const link = getManagerActivationLink();
-                              navigator.clipboard.writeText(link);
-                              setCopiedManagerLink(true);
-                              showToast("✓ Manager activation link copied to clipboard!");
-                              setTimeout(() => setCopiedManagerLink(false), 2500);
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-[11px] font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs self-start sm:self-auto"
-                          >
-                            {copiedManagerLink ? <Check size={12} /> : <Copy size={12} />}
-                            <span>{copiedManagerLink ? "Copied!" : "Copy Manager Invite"}</span>
-                          </button>
+                          <p className="text-[10px] text-amber-700 font-medium bg-amber-50/80 border border-amber-200/80 px-2.5 py-1.5 rounded-lg">
+                            ℹ Asset Setup Mode: If no tenants or contracts are added yet, the Manager dashboard will open in <strong>Setup Mode</strong>. Operations and billing runs will activate automatically once tenant leases are enrolled.
+                          </p>
                         </div>
                       )}
                     </div>
