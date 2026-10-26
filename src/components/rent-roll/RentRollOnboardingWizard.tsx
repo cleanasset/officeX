@@ -1534,7 +1534,7 @@ export default function RentRollOnboardingWizard({
                         </h4>
                       </div>
                       <span className="text-[11px] font-semibold text-teal-800 bg-teal-100/80 px-2.5 py-0.5 rounded-full">
-                        Total Rent: ₹{baseBareRent + fitoutCapexRent} / sq ft / mo
+                        Total Rent: ₹{(Number(baseBareRent) || 0) + (Number(fitoutCapexRent) || 0)} / sq ft / mo
                       </span>
                     </div>
 
@@ -1548,9 +1548,9 @@ export default function RentRollOnboardingWizard({
                           min={0}
                           value={baseBareRent}
                           onChange={(e) => {
-                            const b = Number(e.target.value);
-                            setBaseBareRent(b);
-                            setAskingRatePerSqft(b + fitoutCapexRent);
+                            const b = Number(e.target.value) || 0;
+                            setBaseBareRent(e.target.value === "" ? "" : b);
+                            setAskingRatePerSqft(b + (Number(fitoutCapexRent) || 0));
                           }}
                           className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                         />
@@ -1565,9 +1565,9 @@ export default function RentRollOnboardingWizard({
                           min={0}
                           value={fitoutCapexRent}
                           onChange={(e) => {
-                            const f = Number(e.target.value);
-                            setFitoutCapexRent(f);
-                            setAskingRatePerSqft(baseBareRent + f);
+                            const f = Number(e.target.value) || 0;
+                            setFitoutCapexRent(e.target.value === "" ? "" : f);
+                            setAskingRatePerSqft((Number(baseBareRent) || 0) + f);
                           }}
                           className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                         />
