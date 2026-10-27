@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Shield,
   HelpCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
@@ -42,6 +43,7 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 import AgreementVarianceModal, {
   AgreementDiffItem,
 } from "./AgreementVarianceModal";
+import RentRollExcelImporterModal from "./RentRollExcelImporterModal";
 import {
   INDIAN_STATES_CITIES,
   ALL_INDIAN_STATES,
@@ -75,6 +77,7 @@ export default function PropertyHierarchyModal({
   const [activeTab, setActiveTabState] = useState<HierarchyTab>(initialTab);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [excelImporterOpen, setExcelImporterOpen] = useState(false);
 
   // Subscribed Capacity (Sq.Ft ceiling from active plan)
   const [subscribedCapacity, setSubscribedCapacity] = useState<number>(50000);
@@ -519,7 +522,12 @@ export default function PropertyHierarchyModal({
       (typeof window !== "undefined" &&
         (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
       "Commercial Property Owner";
-    return `${origin}/invite?role=${encodeURIComponent(propForm.managerType || "pm_company")}&mgr=${encodeURIComponent(propForm.managerName.trim())}&prop=${encodeURIComponent(propName)}&owner=${encodeURIComponent(ownerName)}&invite=act_${Date.now()}`;
+    const isOwnerSubscribed = typeof window !== "undefined" && Boolean(
+      localStorage.getItem("officex_payment_id") ||
+      localStorage.getItem("officex_applied_coupon") ||
+      localStorage.getItem("officex_rentroll_subscribed") === "true"
+    );
+    return `${origin}/invite?role=${encodeURIComponent(propForm.managerType || "pm_company")}&mgr=${encodeURIComponent(propForm.managerName.trim())}&prop=${encodeURIComponent(propName)}&owner=${encodeURIComponent(ownerName)}&owner_sub=${isOwnerSubscribed ? "1" : "0"}&invite=act_${Date.now()}`;
   };
 
   // ──── SUBMIT 1: PROPERTY MASTER ────
@@ -878,8 +886,13 @@ export default function PropertyHierarchyModal({
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";
+        const isOwnerSubscribed = typeof window !== "undefined" && Boolean(
+          localStorage.getItem("officex_payment_id") ||
+          localStorage.getItem("officex_applied_coupon") ||
+          localStorage.getItem("officex_rentroll_subscribed") === "true"
+        );
         const inviteToken = `ten_${Date.now()}`;
-        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(tenantForm.occupantName.trim())}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&invite=${inviteToken}`;
+        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(tenantForm.occupantName.trim())}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${isOwnerSubscribed ? "1" : "0"}&invite=${inviteToken}`;
 
         setLatestTenantInvite({
           name: tenantForm.occupantName.trim(),
@@ -1422,12 +1435,24 @@ export default function PropertyHierarchyModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setExcelImporterOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Bulk import properties, units, and tenants via spreadsheet"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Bulk Upload via Sheet</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Feedback Alert Toast */}
@@ -1539,7 +1564,7 @@ export default function PropertyHierarchyModal({
           {/* ════════════════ TAB 1: PROPERTY MASTER & LEGAL ENTITY ════════════════ */}
           {activeTab === "property" && (
             <form onSubmit={handleSaveProperty} className="space-y-5">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
                 <div>
                   <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">
                     Step 1: Property Master &amp; Legal Entity Details
@@ -1548,9 +1573,19 @@ export default function PropertyHierarchyModal({
                     Comprehensive commercial asset specifications, statutory compliance, and operational delegation.
                   </span>
                 </div>
-                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0">
-                  Auto-populated from onboarding
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setExcelImporterOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Upload Bulk via Excel</span>
+                  </button>
+                  <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0">
+                    Auto-populated from onboarding
+                  </span>
+                </div>
               </div>
 
               {/* ──── SECTION 1: PRIMARY BUILDING & COMMERCIAL ASSET SPECS ──── */}
@@ -4025,6 +4060,17 @@ export default function PropertyHierarchyModal({
             if (pendingAgreementData) {
               applyAgreementTerms(pendingAgreementData, agreementDifferences);
             }
+          }}
+        />
+
+        {/* ──── BULK EXCEL IMPORTER MODAL ──── */}
+        <RentRollExcelImporterModal
+          isOpen={excelImporterOpen}
+          onClose={() => setExcelImporterOpen(false)}
+          onSuccess={() => {
+            setExcelImporterOpen(false);
+            showToast("✓ Excel portfolio data imported successfully!");
+            onSuccess?.();
           }}
         />
       </div>

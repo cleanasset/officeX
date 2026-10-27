@@ -33,6 +33,8 @@ function InviteContent() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [managerName, setManagerName] = useState(mgrParam);
   const [managerEmail, setManagerEmail] = useState(emailParam);
+  const [ownerSubscribed, setOwnerSubscribed] = useState<boolean | null>(null);
+  const isTenant = roleParam === "tenant" || roleParam === "occupant";
 
   // Commercial Property & Tenant Portfolio Details
   const [propertyDetails, setPropertyDetails] = useState<{
@@ -54,6 +56,25 @@ function InviteContent() {
   useEffect(() => {
     if (mgrParam) setManagerName(mgrParam);
     if (emailParam) setManagerEmail(emailParam);
+
+    // Verify if property owner has subscribed to Rent Roll
+    const subParam = searchParams.get("owner_sub") ?? searchParams.get("sub");
+    if (subParam === "0") {
+      setOwnerSubscribed(false);
+    } else if (subParam === "1") {
+      setOwnerSubscribed(true);
+    } else {
+      fetch(`/api/subscription/owner-check?owner=${encodeURIComponent(ownerParam)}&prop=${encodeURIComponent(propParam)}`)
+        .then((r) => r.json())
+        .then((res) => {
+          if (res && res.owner_subscribed) {
+            setOwnerSubscribed(true);
+          } else {
+            setOwnerSubscribed(false);
+          }
+        })
+        .catch(() => setOwnerSubscribed(false));
+    }
 
     // Fetch live portfolio data from DB
     Promise.all([
@@ -102,6 +123,11 @@ function InviteContent() {
   };
 
   const handleAcceptInvite = () => {
+    if (isTenant && ownerSubscribed === false) {
+      alert("Rent roll is not yet subscribed by the property owner. Tenant portal access will be unlocked once your landlord activates their Rent Roll subscription.");
+      return;
+    }
+
     setIsAccepting(true);
 
     const displayName = managerName.trim() || mgrParam || "Designated Property Manager";
@@ -414,24 +440,47 @@ function InviteContent() {
             </div>
           </div>
 
+          {/* Owner Subscription Inactive Warning Banner */}
+          {isTenant && ownerSubscribed === false && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 space-y-2 animate-in fade-in">
+              <div className="flex items-center gap-2 font-black text-xs text-amber-900 uppercase tracking-wider">
+                <Lock size={15} className="text-amber-700" />
+                <span>Rent Roll Not Yet Subscribed by Property Owner</span>
+              </div>
+              <p className="text-xs text-amber-900 leading-relaxed">
+                Your property owner / landlord (<strong className="text-amber-950">{ownerParam || propertyDetails.name}</strong>) has registered this commercial asset, but has not yet activated their OfficeX Rent Roll subscription.
+              </p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                Tenant portal access, automated GST invoicing, and online rent settlements remain inactive until the property owner activates their Rent Roll subscription.
+              </p>
+            </div>
+          )}
+
           {/* Accept CTA Button */}
-          <button
-            onClick={handleAcceptInvite}
-            disabled={isAccepting}
-            className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-          >
-            {isAccepting ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                <span>Activating Your Management Portal...</span>
-              </>
-            ) : (
-              <>
-                <span>Accept Invitation &amp; Enter Property Portal</span>
-                <ArrowRight size={14} />
-              </>
-            )}
-          </button>
+          {isTenant && ownerSubscribed === false ? (
+            <div className="w-full py-3.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-500 font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 cursor-not-allowed select-none">
+              <Lock size={14} className="text-slate-400" />
+              <span>Rent Roll Not Yet Subscribed by Property Owner</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleAcceptInvite}
+              disabled={isAccepting}
+              className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              {isAccepting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Activating Your Management Portal...</span>
+                </>
+              ) : (
+                <>
+                  <span>Accept Invitation &amp; Enter Property Portal</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
+            </button>
+          )}
 
           <p className="text-[11px] text-center text-slate-400 font-medium">
             This workspace invitation is backed by 256-bit encrypted access controls. No credit card required.

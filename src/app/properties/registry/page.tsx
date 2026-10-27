@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Edit2,
   Eye,
+  FileSpreadsheet,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -27,6 +28,7 @@ import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
 import PropertyDetailModal from "@/components/rent-roll/PropertyDetailModal";
+import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
@@ -40,6 +42,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
   const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
   const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
+  const [excelImporterOpen, setExcelImporterOpen] = useState(false);
 
   useEffect(() => {
     fetchRegistryData();
@@ -159,6 +162,13 @@ export default function SpaceAndBuildingRegistryPage() {
                 <RefreshCw size={15} className={loading ? "animate-spin text-teal-600" : ""} />
               </button>
               <button
+                onClick={() => setExcelImporterOpen(true)}
+                className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Upload Excel</span>
+              </button>
+              <button
                 onClick={() => {
                   setHierarchyTab("property");
                   setHierarchyModalOpen(true);
@@ -250,7 +260,14 @@ export default function SpaceAndBuildingRegistryPage() {
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                     Register your property or business park to manage leases, rent rolls, and tenant allocations.
                   </p>
-                  <div className="mt-6 flex items-center justify-center gap-3">
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => setExcelImporterOpen(true)}
+                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2 shadow-2xs cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                      <span>Upload via Excel Sheet</span>
+                    </button>
                     <button
                       onClick={() => {
                         setHierarchyTab("property");
@@ -477,6 +494,16 @@ export default function SpaceAndBuildingRegistryPage() {
           onClose={() => setSelectedPropertyForDetail(null)}
           onPropertyUpdated={fetchRegistryData}
           initialMode={propertyDetailMode}
+        />
+
+        {/* Bulk Excel Importer Modal */}
+        <RentRollExcelImporterModal
+          isOpen={excelImporterOpen}
+          onClose={() => setExcelImporterOpen(false)}
+          onSuccess={() => {
+            setExcelImporterOpen(false);
+            fetchRegistryData();
+          }}
         />
 
         <MobileBottomNav />

@@ -11,6 +11,7 @@ import {
 } from "@/db/rent-roll-schema";
 import { billingEntities } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { supabase } from "@/lib/supabase";
 import { eq, and, sql, desc, or } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
@@ -277,8 +278,24 @@ export async function GET(req: NextRequest) {
       // Non-blocking fallback
     }
 
+    let isOwnerSubscribed = false;
+    try {
+      const { data: subData } = await supabase
+        .from("user_subscriptions")
+        .select("id, status")
+        .eq("status", "active")
+        .limit(1);
+      if (subData && subData.length > 0) {
+        isOwnerSubscribed = true;
+      }
+    } catch {}
+
     return NextResponse.json({
       success: true,
+      owner_subscribed: isOwnerSubscribed,
+      owner_subscription_message: isOwnerSubscribed
+        ? ""
+        : "Rent roll is not yet subscribed by the property owner",
       occupant: currentOccupant,
       occupants_list: allOccupants,
       contracts: contracts,

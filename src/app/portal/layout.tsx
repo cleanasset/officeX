@@ -42,6 +42,8 @@ export default function TenantPortalLayout({
   const [currentOccupant, setCurrentOccupant] = useState<any>(null);
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
   const [primaryContract, setPrimaryContract] = useState<any>(null);
+  const [ownerSubscribed, setOwnerSubscribed] = useState<boolean | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
 
   useEffect(() => {
     const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
@@ -62,6 +64,18 @@ export default function TenantPortalLayout({
       const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
+        if (json.owner_subscribed === false) {
+          setOwnerSubscribed(false);
+          setCheckingSubscription(false);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("officex_subscription");
+            sessionStorage.removeItem("officex_subscription");
+          }
+          return;
+        } else {
+          setOwnerSubscribed(true);
+        }
+
         setOccupantsList(json.occupants_list || []);
         setCurrentOccupant(json.occupant);
         if (json.contracts && json.contracts.length > 0) {
@@ -80,6 +94,8 @@ export default function TenantPortalLayout({
       }
     } catch (e) {
       console.error("Failed to load portal summary", e);
+    } finally {
+      setCheckingSubscription(false);
     }
   }
 
@@ -116,6 +132,77 @@ export default function TenantPortalLayout({
   const assignedSpaceName = primaryContract
     ? `${primaryContract.property_name} · ${primaryContract.space_name}`
     : (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property") : "") || "Demised Commercial Property";
+
+  if (ownerSubscribed === false) {
+    const ownerName =
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
+      "Property Owner";
+    const propertyName =
+      (typeof window !== "undefined" && localStorage.getItem("officex_active_property")) ||
+      "Commercial Property";
+
+    return (
+      <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4 sm:p-6 font-sans">
+        <div className="w-full max-w-lg bg-white rounded-3xl p-7 sm:p-9 shadow-2xl border border-slate-200 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
+            <Lock size={30} />
+          </div>
+
+          <div className="space-y-2">
+            <span className="inline-block text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 border border-amber-200 px-3 py-1 rounded-full">
+              Subscription Inactive
+            </span>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Rent Roll is Not Yet Subscribed by Property Owner
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pt-1">
+              This tenant portal for <strong className="text-slate-900">{propertyName}</strong> cannot be opened because the property owner (<strong className="text-slate-900">{ownerName}</strong>) has not yet activated their OfficeX Rent Roll subscription.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
+            <div className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+              Pending Activation Features:
+            </div>
+            <ul className="text-xs text-slate-600 space-y-1.5">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>Commercial lease contracts &amp; demarcated space documents</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>Monthly GST tax invoices &amp; automated rent demand notes</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>Online payment settlement (NEFT, RTGS, Razorpay, UPI)</span>
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Please contact your landlord or property management team and request them to activate their OfficeX Rent Roll subscription.
+          </p>
+
+          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition shadow-md shadow-teal-700/20 cursor-pointer"
+            >
+              Refresh Status
+            </button>
+            <Link
+              href="/"
+              className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition text-center"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex">
