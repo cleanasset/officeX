@@ -277,6 +277,13 @@ export default function SubscriptionGate({
         // Non-blocking
       }
 
+      const sessionActive =
+        getCookie("officex_session_active") === "1" ||
+        (typeof window !== "undefined" && (
+          localStorage.getItem("officex_session_active") === "1" ||
+          sessionStorage.getItem("officex_session_active") === "1"
+        ));
+
       setUserEmail(email);
       setUserName(name || "Commercial Owner");
       setUserRole(role);
