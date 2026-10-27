@@ -924,7 +924,7 @@ export default function SignInForm({
     } else if (!isAlreadyOnboarded) {
       destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/dashboard/owner")}`;
     } else {
-      destination = (membership.workspaceUrl || determinedRoleDashboard || "/dashboard/owner");
+      destination = membership.workspaceUrl || "/dashboard/owner";
     }
 
     setStep("signed_in_success");
