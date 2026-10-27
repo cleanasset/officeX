@@ -3,12 +3,8 @@ import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-// In-memory persistent fallback cache for subscribed emails
-const memorySubscribedEmails = new Set<string>([
-  "medistationlifecare@gmail.com",
-  "pooja@singhaniagroup.in",
-  "vikram.test@singhaniarealty.in"
-]);
+// In-memory persistent cache for subscribed emails during current process
+const memorySubscribedEmails = new Set<string>();
 
 export async function GET(request: Request) {
   try {

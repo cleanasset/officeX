@@ -29,7 +29,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { performClientLogout } from "@/lib/auth-client";
+import { performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 
 export default function WorkspaceHubPage() {
   const router = useRouter();
@@ -91,36 +91,44 @@ export default function WorkspaceHubPage() {
         }
 
         // 2. Evaluate Pillar 1: Rent Roll Subscription & Properties
+        // 2. Evaluate Pillar 1: Rent Roll Subscription (Strict Verification)
+        // Free tier: access to Properties, Demarcated Spaces, Tenants, Leases & Third-Party Managers.
+        // Paid tier: Institutional Rent Roll calculation & CAM engine requires an active subscription.
         let subActive = false;
+
         if (typeof window !== "undefined") {
-          const globalSub =
-            localStorage.getItem("officex_subscription") === "active" ||
-            sessionStorage.getItem("officex_subscription") === "active" ||
-            document.cookie.includes("officex_subscription=active");
-
-          const userSub = email
-            ? localStorage.getItem(`officex_sub_${email}`) === "active" ||
-              sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
-              document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
-            : false;
-
-          subActive = globalSub || userSub;
-
           const propName =
             localStorage.getItem("officex_active_property") ||
             localStorage.getItem("officex_property_name") ||
             "";
           if (propName) setRentRollPropertyName(propName);
+
+          const explicitSub =
+            localStorage.getItem("officex_rentroll_subscribed") === "true" &&
+            Boolean(localStorage.getItem("officex_payment_id"));
+
+          subActive = explicitSub;
         }
 
-        // Cross-check with subscription status API
+        // Cross-check with server-side verified subscription database
         if (email) {
           try {
             const subRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
             if (subRes.ok) {
               const subData = await subRes.json();
-              if (subData?.subscribed) {
+              if (subData?.subscribed && subData.plan !== "free") {
                 subActive = true;
+              } else {
+                subActive = false;
+                // Clean up stale client flags from old sessions
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("officex_subscription");
+                  localStorage.removeItem("officex_rentroll_subscribed");
+                  localStorage.removeItem("officex_payment_id");
+                  localStorage.removeItem("officex_applied_coupon");
+                  sessionStorage.removeItem("officex_subscription");
+                  document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+                }
               }
             }
           } catch {
@@ -192,7 +200,7 @@ export default function WorkspaceHubPage() {
   }, []);
 
   const handleSignOut = async () => {
-    await performClientLogout("/");
+    await performClientLogout(getLogoutRedirect("/dashboard"));
   };
 
   return (
@@ -302,8 +310,8 @@ export default function WorkspaceHubPage() {
                     Active Subscription
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-[11px] font-bold">
-                    <Lock size={12} className="text-amber-700" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-950 text-[11px] font-black uppercase tracking-wider">
+                    <Lock size={12} className="text-amber-800" />
                     Subscription Required
                   </span>
                 )}
@@ -325,8 +333,8 @@ export default function WorkspaceHubPage() {
               <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 space-y-1.5 text-xs">
                 <div className="flex items-center justify-between text-slate-600 font-semibold text-[11px]">
                   <span>Operational Status:</span>
-                  <span className="font-bold text-slate-900">
-                    {isRentRollSubscribed ? "Sovereign License Active" : "Unlicensed Account"}
+                  <span className={`font-bold ${isRentRollSubscribed ? "text-slate-900" : "text-amber-800"}`}>
+                    {isRentRollSubscribed ? "Sovereign License Active" : "Free Workspace Active · Rent Roll Locked"}
                   </span>
                 </div>
                 {isRentRollSubscribed ? (
@@ -337,8 +345,8 @@ export default function WorkspaceHubPage() {
                     </span>
                   </div>
                 ) : (
-                  <div className="text-[11px] text-slate-600 font-medium">
-                    Plans start from ₹1/sq.ft · Instant coupon activation supported
+                  <div className="text-[11px] text-amber-900 font-medium bg-amber-50/80 p-2 rounded-xl border border-amber-200">
+                    Rent Roll &amp; CAM billing engine is locked. Free workspace allows adding properties, spaces, tenants &amp; contracts.
                   </div>
                 )}
               </div>
@@ -372,16 +380,22 @@ export default function WorkspaceHubPage() {
                 </Link>
               ) : (
                 <Link
-                  href="/operate/rent-roll/pricing"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm hover:shadow flex items-center justify-center gap-2 group/btn text-center"
+                  href="/properties/rent-roll"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-sm hover:shadow flex items-center justify-center gap-2 group/btn text-center cursor-pointer"
                 >
-                  <span>Subscribe to Rent Roll</span>
-                  <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform text-amber-400" />
+                  <Lock size={14} className="text-slate-950" />
+                  <span>Subscribe to Access Rent Roll</span>
+                  <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                 </Link>
               )}
-              <span className="block text-center text-[10px] text-slate-600 font-semibold">
-                {isRentRollSubscribed ? "Access lease registers, invoices & NOI" : "Activate plan or redeem coupon (e.g. OFFICEX100)"}
-              </span>
+              <div className="text-center pt-1">
+                <Link
+                  href="/properties/registry"
+                  className="text-[11px] font-bold text-teal-700 hover:text-teal-900 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Manage Properties, Tenants &amp; Contracts (Free) →</span>
+                </Link>
+              </div>
             </div>
           </div>
 

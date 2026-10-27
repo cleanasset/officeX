@@ -401,7 +401,7 @@ export default function MarketingHeader({
 
         {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
-          <HeaderAuthButton loginContext={loginContext} onSignInClick={onSignInClick} />
+          <HeaderAuthButton loginContext={loginContext} redirectUrl={activePath || pathname || "/"} onSignInClick={onSignInClick} />
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
@@ -548,6 +548,7 @@ export default function MarketingHeader({
           <div className="py-1">
             <HeaderAuthButton
               loginContext={loginContext}
+              redirectUrl={activePath || pathname || "/"}
               onSignInClick={() => {
                 setMobileMenuOpen(false);
                 if (onSignInClick) onSignInClick();

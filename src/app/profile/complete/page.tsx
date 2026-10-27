@@ -1935,10 +1935,6 @@ function CompleteProfileContent() {
     markStepDone("delegation");
     markStepDone("banking");
     if (typeof window !== "undefined") {
-      localStorage.setItem("officex_subscription", "active");
-      sessionStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-
       localStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_session_active", "1");
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";

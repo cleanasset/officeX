@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { User, CheckCircle, ArrowRight, Shield, LogOut } from "lucide-react";
 
-import { performClientLogout } from "@/lib/auth-client";
+import { performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 
 interface UserLandingBannerProps {
   roleName: string;
@@ -21,6 +21,7 @@ export default function UserLandingBanner({
   isFreePortal = false,
 }: UserLandingBannerProps) {
   const router = useRouter();
+  const pathname = usePathname() || "/";
   const [isClient, setIsClient] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("Member");
@@ -42,7 +43,7 @@ export default function UserLandingBanner({
   }, []);
 
   const handleLogout = async () => {
-    await performClientLogout("/");
+    await performClientLogout(getLogoutRedirect(pathname));
   };
 
   if (!isClient) return null;

@@ -436,7 +436,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       setSuccessMsg("Account verified! Launching your workspace...");
       setTimeout(() => {
         setSuccessMsg(null);
-        const destination = (initialRedirect && initialRedirect !== "/" && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
+        const destination = (initialRedirect && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
           ? initialRedirect
           : `/onboarding?role=${encodeURIComponent(selectedRole)}`;
         window.location.replace(destination);
@@ -679,11 +679,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.setItem("officex_active_leases", "[]");
       localStorage.removeItem("officex_property_name");
 
-      if (isRentRoll) {
-        localStorage.setItem("officex_subscription", "active");
-        sessionStorage.setItem("officex_subscription", "active");
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-      }
+      // Free workspace on signup - subscription is purchased separately for Rent Roll
       document.cookie = `officex_user_role=${encodeURIComponent(roleTitle)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }

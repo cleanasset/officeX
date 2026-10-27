@@ -7,6 +7,10 @@ import {
 } from '@/lib/auth-utils';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { validateCsrf } from '@/lib/csrf';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export const revalidate = 0;
 
@@ -60,7 +64,8 @@ export async function POST(request: Request) {
 
     // 1. If Email: check if domain has enterprise SSO enabled
     if (type === 'email') {
-      const domain = normalized.split('@')[1]?.toLowerCase() || '';
+      const cleanEmail = normalized.toLowerCase().trim();
+      const domain = cleanEmail.split('@')[1]?.toLowerCase() || '';
       const ssoConfig = ENTERPRISE_SSO_CONFIG[domain];
 
       if (ssoConfig) {
@@ -77,13 +82,63 @@ export async function POST(request: Request) {
         });
       }
 
-      // Default real behavior: offer password sign in with one-time email code fallback
+      // Check if user exists in database or Supabase Auth
+      let userFound = false;
+      let userName = '';
+
+      // Check PostgreSQL users table
+      try {
+        const dbUsers = await db
+          .select({ id: users.id, email: users.email, fullName: users.fullName })
+          .from(users)
+          .where(eq(users.email, cleanEmail))
+          .limit(1);
+
+        if (dbUsers.length > 0) {
+          userFound = true;
+          userName = dbUsers[0].fullName || '';
+        }
+      } catch (dbErr) {
+        console.warn('[AUTH_DISCOVER] DB check notice:', dbErr);
+      }
+
+      // Check Supabase Auth if supabaseAdmin is available
+      if (!userFound && supabaseAdmin) {
+        try {
+          const { data: usersData, error: supaErr } = await supabaseAdmin.auth.admin.listUsers();
+          if (!supaErr && usersData?.users) {
+            const match = usersData.users.find(
+              (u) => u.email?.toLowerCase().trim() === cleanEmail
+            );
+            if (match) {
+              userFound = true;
+              userName = match.user_metadata?.full_name || '';
+            }
+          }
+        } catch (supaEx) {
+          console.warn('[AUTH_DISCOVER] Supabase Auth check notice:', supaEx);
+        }
+      }
+
+      if (!userFound) {
+        return NextResponse.json(
+          {
+            error: 'No account found with this email. You must have a registered email ID to log in. Please sign up first.',
+            user_exists: false,
+            not_registered: true
+          },
+          { status: 404 }
+        );
+      }
+
+      // User exists in database -> proceed to password
       return NextResponse.json({
         success: true,
         type: 'email',
         next: 'password',
         channel: 'email',
         masked: masked,
+        user_name: userName,
         has_password: true,
         mfa_required: false,
         allow_code_fallback: true

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   User,
   LogOut,
@@ -13,18 +13,21 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { getAuthCookie, clearAuthCookie } from "@/lib/auth-storage";
-import { performClientLogout } from "@/lib/auth-client";
+import { performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 import ModuleChooserModal from "@/components/dashboard/ModuleChooserModal";
 
 interface HeaderAuthButtonProps {
   className?: string;
   /** Context key passed to /login?context=... for contextual portal filtering */
   loginContext?: "marketplace" | "fm" | "operate" | "properties" | "rent-roll" | "";
+  /** Explicit redirect target; if omitted, automatically derives from current page URL */
+  redirectUrl?: string;
   onSignInClick?: () => void;
 }
 
-export default function HeaderAuthButton({ className = "", loginContext = "", onSignInClick }: HeaderAuthButtonProps) {
+export default function HeaderAuthButton({ className = "", loginContext = "", redirectUrl, onSignInClick }: HeaderAuthButtonProps) {
   const router = useRouter();
+  const pathname = usePathname() || "/";
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
@@ -139,20 +142,27 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
   const handleSignOut = async () => {
     setIsLoggedIn(false);
     setMenuOpen(false);
-    await performClientLogout("/");
+    await performClientLogout(getLogoutRedirect(targetRedirect));
   };
 
-  const loginHref = loginContext === "rent-roll"
-    ? "/login?context=rent-roll&redirect=/properties/rent-roll"
-    : loginContext === "marketplace"
-    ? "/login?context=marketplace&redirect=/marketplace"
-    : loginContext === "fm"
-    ? "/login?context=fm&redirect=/fm-marketplace"
-    : loginContext === "operate"
-    ? "/login?context=operate&redirect=/operate"
-    : loginContext === "properties"
-    ? "/login?context=properties&redirect=/properties"
-    : "/login?context=marketplace&redirect=/marketplace";
+  // Determine exact destination page where user currently is
+  const targetRedirect = redirectUrl || (typeof window !== "undefined" && window.location.pathname ? `${window.location.pathname}${window.location.search || ""}` : pathname) || "/";
+
+  const effectiveContext = loginContext || (
+    targetRedirect.includes("rent-roll") ? "rent-roll" :
+    targetRedirect.includes("fm-marketplace") ? "fm" :
+    targetRedirect.includes("operate") ? "operate" :
+    targetRedirect.includes("properties") ? "properties" :
+    targetRedirect.includes("marketplace") ? "marketplace" : ""
+  );
+
+  const queryParams = new URLSearchParams();
+  if (effectiveContext) {
+    queryParams.set("context", effectiveContext);
+  }
+  queryParams.set("redirect", targetRedirect);
+
+  const loginHref = `/login?${queryParams.toString()}`;
 
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();

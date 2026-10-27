@@ -115,8 +115,10 @@ export default function OAuthCallbackHandler() {
           sessionStorage.removeItem("officex_oauth_redirect");
         } catch {}
 
-        if (savedRedirect && savedRedirect !== "/" && savedRedirect !== pathname) {
-          window.location.replace(savedRedirect);
+        if (savedRedirect && !savedRedirect.startsWith("/login") && !savedRedirect.startsWith("/signup")) {
+          if (savedRedirect !== pathname) {
+            window.location.replace(savedRedirect);
+          }
           return;
         }
 
@@ -128,7 +130,7 @@ export default function OAuthCallbackHandler() {
             sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
           } catch {}
 
-          const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/properties/rent-roll?tab=dashboard";
+          const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/operate/rent-roll";
           window.location.replace(targetUrl);
           return;
         }

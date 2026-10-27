@@ -6,6 +6,7 @@
 
 // Allowed internal paths that can be redirected to after sign-in (Anti-Open-Redirect)
 export const ALLOWED_REDIRECT_PREFIXES = [
+  '/',
   '/dashboard',
   '/properties',
   '/property',
@@ -52,8 +53,13 @@ export function validateRedirect(
   // Parse path without query strings or hashes for prefix checking
   const pathOnly = trimmed.split('?')[0].split('#')[0];
 
+  // Root homepage is valid and explicitly permitted
+  if (pathOnly === '/' || pathOnly === '') {
+    return trimmed;
+  }
+
   const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(
-    (prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`)
+    (prefix) => prefix !== '/' && (pathOnly === prefix || pathOnly.startsWith(`${prefix}/`))
   );
 
   if (!isAllowed) {

@@ -84,12 +84,12 @@ export default function SignInForm({
   const isMarketplaceContext = !isRentRollContext && !isOperateContext && !isFmContext;
 
   const defaultRedirect = isRentRollContext
-    ? "/properties/rent-roll"
+    ? "/operate/rent-roll"
     : isOperateContext
       ? "/operate"
       : isFmContext
         ? "/fm-marketplace"
-        : "/dashboard";
+        : "/";
 
   const safeRedirect = validateRedirect(initialRedirect, defaultRedirect);
 
@@ -163,8 +163,27 @@ export default function SignInForm({
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
 
+  // Unregistered user check state
+  const [userNotFound, setUserNotFound] = useState(false);
+  const [notFoundEmail, setNotFoundEmail] = useState("");
+  const [signupRedirectUrl, setSignupRedirectUrl] = useState("");
+  const [signupCountdown, setSignupCountdown] = useState(3);
+
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Timer countdown for redirecting unregistered user to signup
+  useEffect(() => {
+    if (!userNotFound || !signupRedirectUrl) return;
+    if (signupCountdown <= 0) {
+      window.location.replace(signupRedirectUrl);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setSignupCountdown((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [userNotFound, signupRedirectUrl, signupCountdown]);
 
   // Timer countdown for OTP resend
   useEffect(() => {
@@ -320,12 +339,33 @@ export default function SignInForm({
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 404 || data.not_registered || data.user_exists === false) {
+          setUserNotFound(true);
+          setNotFoundEmail(clean);
+          setSignupCountdown(3);
+          const signupTarget = isRentRollContext
+            ? `/signup?context=rent-roll&email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`
+            : `/signup?email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`;
+          setSignupRedirectUrl(signupTarget);
+          setError(
+            lang === "hi"
+              ? `"${clean}" के लिए कोई पंजीकृत खाता नहीं मिला। लॉगिन करने के लिए आपका ईमेल पंजीकृत होना आवश्यक है।`
+              : `No registered account found for "${clean}". You must have a registered email ID to log in.`
+          );
+          setIsLoading(false);
+          return;
+        }
+
         setError(data.error || "Please enter a valid work or personal email address.");
         setIsLoading(false);
         return;
       }
 
+      setUserNotFound(false);
       setAuthType("email");
+      if (data.user_name) {
+        setSuccessUserName(data.user_name);
+      }
       setMaskedId(data.masked || maskIdentifier(clean));
 
       // 1. Enterprise SSO
@@ -739,7 +779,7 @@ export default function SignInForm({
       : "/dashboard/owner";
 
     let destination = "";
-    if (safeRedirect && safeRedirect !== "/dashboard" && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
+    if (safeRedirect && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
       destination = safeRedirect;
     } else {
       destination = determinedRoleDashboard;
@@ -879,12 +919,12 @@ export default function SignInForm({
     );
 
     let destination = "";
-    if (!isAlreadyOnboarded) {
-      destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+    if (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/onboarding")) {
+      destination = safeRedirect;
+    } else if (!isAlreadyOnboarded) {
+      destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/dashboard/owner")}`;
     } else {
-      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup")) 
-        ? safeRedirect 
-        : (membership.workspaceUrl || "/properties/rent-roll");
+      destination = (membership.workspaceUrl || determinedRoleDashboard || "/dashboard/owner");
     }
 
     setStep("signed_in_success");
@@ -903,25 +943,28 @@ export default function SignInForm({
 
     try {
       const activeCtx = isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace";
+      const targetDestination = (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup"))
+        ? safeRedirect
+        : "/";
+
       if (typeof window !== "undefined") {
         setAuthCookie("officex_oauth_context", activeCtx, 7200);
+        setAuthCookie("officex_oauth_redirect", targetDestination, 7200);
         localStorage.setItem("officex_oauth_context", activeCtx);
+        localStorage.setItem("officex_oauth_redirect", targetDestination);
         sessionStorage.setItem("officex_oauth_context", activeCtx);
+        sessionStorage.setItem("officex_oauth_redirect", targetDestination);
         if (isRentRollContext) {
           setAuthCookie("officex_last_rent_roll", "1", 7200);
           setAuthCookie("officex_oauth_role", "owner", 7200);
-          setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
           localStorage.setItem("officex_oauth_role", "owner");
           sessionStorage.setItem("officex_oauth_role", "owner");
-          localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
-          sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
         }
       }
 
-      const targetDestination = safeRedirect || "/properties/rent-roll?tab=dashboard";
       const redirectUrl = typeof window !== "undefined"
         ? `${window.location.origin}${targetDestination.startsWith("/") ? targetDestination : `/${targetDestination}`}`
-        : "https://www.officex.pro/properties/rent-roll";
+        : "https://www.officex.pro";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -1203,12 +1246,7 @@ export default function SignInForm({
                 =============================================================== */}
           {step === "identifier" && (
             <div>
-              {isRentRollContext ? (
-                <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">
-                  <Building2 size={14} className="text-[#0D7B6C]" />
-                  <span>Commercial Asset &amp; Rent Roll Desk</span>
-                </div>
-              ) : isOperateContext ? (
+              {isRentRollContext ? null : isOperateContext ? (
                 <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">
                   <Layers size={14} className="text-[#0D7B6C]" />
                   <span>OfficeX Operate · Institutional CRE &amp; FM Suite</span>
@@ -1245,6 +1283,48 @@ export default function SignInForm({
                 </p>
               </div>
 
+              {userNotFound && (
+                <div className="mb-5 p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 shadow-sm animate-fadeIn">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300/60 flex items-center justify-center shrink-0 text-amber-700 mt-0.5">
+                      <AlertCircle size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
+                          Account Not Registered
+                        </span>
+                        <span className="text-[11px] text-amber-700 font-bold">
+                          Redirecting in {signupCountdown}s
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900 mt-1.5 leading-relaxed font-medium">
+                        No registered account found with email <strong className="font-bold text-slate-900 underline">{notFoundEmail}</strong>. You must have a registered email address to log in to OfficeX.
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link
+                          href={signupRedirectUrl || "/signup"}
+                          className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                        >
+                          <span>Sign Up / Create Account</span>
+                          <ArrowRight size={13} />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserNotFound(false);
+                            setError("");
+                          }}
+                          className="px-3 py-2 rounded-xl bg-white hover:bg-amber-100/50 border border-amber-300 text-amber-900 text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          Change Email
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleIdentifierSubmit} className="space-y-4">
                 <div className="flex flex-col gap-1.5">
                   <label
@@ -1259,7 +1339,13 @@ export default function SignInForm({
                       id="identifier-input"
                       type="email"
                       value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
+                      onChange={(e) => {
+                        setIdentifier(e.target.value);
+                        if (userNotFound) {
+                          setUserNotFound(false);
+                          setError("");
+                        }
+                      }}
                       placeholder={t.identifierPlaceholder}
                       autoComplete="username"
                       autoFocus

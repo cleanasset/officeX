@@ -28,7 +28,7 @@ import {
   Compass,
   Landmark
 } from "lucide-react";
-import { performClientLogout } from "@/lib/auth-client";
+import { performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import PropertySelector from "@/components/PropertySelector";
 import ModuleChooserModal from "@/components/dashboard/ModuleChooserModal";
@@ -272,7 +272,7 @@ export default function Topbar() {
 
   // Sign out handler
   const handleSignOut = async () => {
-    await performClientLogout("/login");
+    await performClientLogout(getLogoutRedirect(pathname));
   };
 
   const activeRole = AVAILABLE_ROLES.find((r) => r.key === currentRoleKey) || AVAILABLE_ROLES[0];

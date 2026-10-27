@@ -68,8 +68,79 @@ function isAuthKey(key: string): boolean {
   return false;
 }
 
-export async function performClientLogout(redirectTo: string = '/login') {
+/**
+ * Computes the exact post-logout destination based on current route context.
+ * Rule:
+ * 1. Rent Roll Dashboard or Rent Roll subpages -> Rent Roll landing page (/operate/rent-roll)
+ * 2. Facilities Management / PM Dashboards -> FM Marketplace (/fm-marketplace)
+ * 3. Commercial Operate routes -> Operate (/operate)
+ * 4. Marketplace routes -> Marketplace (/marketplace)
+ * 5. Properties registry or spaces -> Rent Roll landing page (/operate/rent-roll)
+ * 6. Protected dashboard routes (/dashboard/owner, etc.) -> Rent Roll landing page (/operate/rent-roll)
+ * 7. If currently on a public page (e.g. '/', '/operate/rent-roll', '/marketplace', etc.) -> Stay on that exact page!
+ */
+export function getLogoutRedirect(currentPath?: string): string {
+  if (typeof window === "undefined" && !currentPath) return "/operate/rent-roll";
+  const path = currentPath || (typeof window !== "undefined" ? window.location.pathname : "") || "/";
+
+  // 1. Rent Roll Dashboard (/properties/rent-roll, /dashboard/rent-roll, /operate/rent-roll, etc.)
+  if (
+    path.includes("rent-roll") ||
+    path.startsWith("/properties/rent-roll") ||
+    path.startsWith("/operate/rent-roll")
+  ) {
+    return "/operate/rent-roll";
+  }
+
+  // 2. Facilities Management / PM Dashboards & FM Marketplace
+  if (path.includes("fm-marketplace") || path.includes("/dashboard/pm")) {
+    return "/fm-marketplace";
+  }
+
+  // 3. Commercial Space Marketplace
+  if (path.includes("marketplace")) {
+    return "/marketplace";
+  }
+
+  // 4. Commercial Operate Hub
+  if (path.includes("operate")) {
+    return "/operate";
+  }
+
+  // 5. Properties registry or spaces
+  if (path.startsWith("/properties")) {
+    return "/operate/rent-roll";
+  }
+
+  // 6. Generic authenticated app routes (e.g. /dashboard/owner, /dashboard, /onboarding, /admin, /settings)
+  const isPrivateAppRoute =
+    path.startsWith("/dashboard") ||
+    path.startsWith("/onboarding") ||
+    path.startsWith("/admin") ||
+    path.startsWith("/settings");
+
+  if (isPrivateAppRoute) {
+    if (typeof window !== "undefined") {
+      const savedContext = localStorage.getItem("officex_oauth_context") || sessionStorage.getItem("officex_oauth_context");
+      if (savedContext === "fm") return "/fm-marketplace";
+      if (savedContext === "marketplace") return "/marketplace";
+      if (savedContext === "operate") return "/operate";
+    }
+    // Default dashboard logout lands on the institutional Rent Roll landing page
+    return "/operate/rent-roll";
+  }
+
+  // 7. If currently on a public page, stay on that exact page!
+  return path || "/";
+}
+
+export async function performClientLogout(redirectTo?: string) {
   if (typeof window !== 'undefined') {
+    // If redirectTo is omitted, or is a generic default like "/login" or "/", calculate the smart contextual logout destination
+    const finalRedirect = (!redirectTo || redirectTo === '/login' || redirectTo === '/')
+      ? getLogoutRedirect(window.location.pathname)
+      : redirectTo;
+
     try {
       // 1. Invalidate server-side session cookies
       await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -138,8 +209,8 @@ export async function performClientLogout(redirectTo: string = '/login') {
     window.dispatchEvent(new CustomEvent('officex_auth_change', { detail: { user: null } }));
     window.dispatchEvent(new Event('storage'));
 
-    // 8. Navigate to login or target
-    window.location.href = redirectTo;
+    // 8. Navigate to calculated contextual target
+    window.location.href = finalRedirect;
   }
 }
 

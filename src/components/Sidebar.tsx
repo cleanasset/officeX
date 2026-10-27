@@ -456,12 +456,25 @@ function SidebarInner() {
       if (storedOrgCity) setOrgCity(storedOrgCity);
       if (storedOrgLogo) setOrgLogo(storedOrgLogo);
 
-      const hasSub = Boolean(
-        localStorage.getItem("officex_payment_id") ||
-        localStorage.getItem("officex_applied_coupon") ||
-        localStorage.getItem("officex_rentroll_subscribed") === "true"
-      );
-      setIsSubscribed(hasSub);
+      const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const hasExplicitSub =
+        localStorage.getItem("officex_rentroll_subscribed") === "true" &&
+        Boolean(localStorage.getItem("officex_payment_id"));
+
+      setIsSubscribed(hasExplicitSub);
+
+      if (userEmail) {
+        fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d?.subscribed && d.plan !== "free") {
+              setIsSubscribed(true);
+            } else {
+              setIsSubscribed(false);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, []);
 

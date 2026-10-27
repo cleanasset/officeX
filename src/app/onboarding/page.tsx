@@ -85,9 +85,6 @@ function OnboardingContent() {
 
         localStorage.setItem("officex_company_name", data.companyName);
         localStorage.setItem("officex_brand_name", data.brandName);
-        localStorage.setItem("officex_subscription", "active");
-        sessionStorage.setItem("officex_subscription", "active");
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
 
         localStorage.setItem("officex_active_property", data.propertyName);
         if (resData.propertyId) {

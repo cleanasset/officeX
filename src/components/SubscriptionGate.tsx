@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, ArrowLeft, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User, Check, Receipt, Zap, ClipboardList, Layers, ChevronRight } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
-import { isAuthenticated, getCookie } from "@/lib/auth-client";
+import { isAuthenticated, getCookie, performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 import { getClientUserEmail } from "@/lib/auth-storage";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
@@ -243,13 +243,6 @@ export default function SubscriptionGate({
           sessionStorage.getItem("officex_onboarding_completed") === "1"
         )) || getCookie("officex_onboarding_completed") === "1";
 
-      const subGlobal =
-        getCookie("officex_subscription") === "active" ||
-        (typeof window !== "undefined" && (
-          localStorage.getItem("officex_subscription") === "active" ||
-          sessionStorage.getItem("officex_subscription") === "active"
-        ));
-
       let email = (
         getClientUserEmail() ||
         getCookie("officex_user_email") ||
@@ -284,84 +277,52 @@ export default function SubscriptionGate({
         // Non-blocking
       }
 
-      // Check verified active subscription: payment, applied coupon, or explicit rent roll subscription flag
-      const hasVerifiedSub =
-        subGlobal &&
-        (typeof window !== "undefined"
-          ? Boolean(localStorage.getItem("officex_payment_id") || localStorage.getItem("officex_applied_coupon") || localStorage.getItem("officex_rentroll_subscribed") === "true")
-          : true);
-
-      if (hasVerifiedSub) {
-        if (!email && name) {
-          email = `${name.toLowerCase().replace(/\s+/g, ".")}@officex.pro`;
-          if (typeof window !== "undefined") {
-            localStorage.setItem("officex_user_email", email);
-          }
-        }
-        setUserEmail(email);
-        setUserName(name || "Commercial Owner");
-        setUserRole(role);
-        setIsLoggedIn(true);
-        setIsSubscribed(true);
-        setIsRoleDecided(true);
-        setIsChecking(false);
-        return;
-      }
-
       setUserEmail(email);
-      setUserName(name || "Member");
+      setUserName(name || "Commercial Owner");
       setUserRole(role);
+      setIsLoggedIn(Boolean(email || sessionActive));
 
-      if (!email) {
-        setIsLoggedIn(false);
-        setIsSubscribed(false);
-        setIsChecking(false);
-        return;
-      }
+      // Strict Rent Roll subscription validation:
+      // Only users who have a verified paid subscription are granted access.
+      let verifiedSub = false;
 
-      setIsLoggedIn(true);
-
-      const hasDecidedRole = Boolean(
-        role ||
-        (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || localStorage.getItem("officex_rentroll_onboarded")))
-      );
-
-      const subEmailLocal = (typeof window !== "undefined" && localStorage.getItem(`officex_sub_${email}`) === "active") ||
-        getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
-
-      const storedCoupon =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_applied_coupon") || sessionStorage.getItem("officex_applied_coupon")
-          : null;
-      if (storedCoupon) {
-        setAppliedCoupon(storedCoupon);
-      }
-
-      if (subEmailLocal || storedCoupon) {
-        setIsSubscribed(true);
-        setIsRoleDecided(hasDecidedRole);
-        setIsChecking(false);
-        return;
-      }
-
-      // Query server-side subscription database for this email
-      try {
-        const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.subscribed) {
-            persistSubscription(email, "verified_server", "SERVER_SAVED");
-            setIsSubscribed(true);
-            setIsRoleDecided(hasDecidedRole);
-            setIsChecking(false);
-            return;
-          }
+      // 1. Client-side explicit payment verification
+      if (typeof window !== "undefined") {
+        const rentRollSub = localStorage.getItem("officex_rentroll_subscribed") === "true";
+        const paymentId = localStorage.getItem("officex_payment_id");
+        if (rentRollSub && paymentId && !paymentId.includes("FREE_UNVERIFIED")) {
+          verifiedSub = true;
         }
-      } catch {
-        // Fallback
       }
 
-      setIsSubscribed(false);
+      // 2. Query server-side subscription database
+      if (email) {
+        try {
+          const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.subscribed && data.plan !== "free") {
+              verifiedSub = true;
+            } else {
+              verifiedSub = false;
+              // Clean up stale client flags from old sessions
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_rentroll_subscribed");
+                localStorage.removeItem("officex_payment_id");
+                localStorage.removeItem("officex_applied_coupon");
+                sessionStorage.removeItem("officex_subscription");
+                document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+              }
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
+      setIsSubscribed(verifiedSub);
+      setIsRoleDecided(true);
       setIsChecking(false);
     };
 
@@ -486,22 +447,8 @@ export default function SubscriptionGate({
     }
   };
 
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.clear();
-      localStorage.removeItem("officex_user_email");
-      localStorage.removeItem("officex_user_name");
-      localStorage.removeItem("officex_user_role");
-      localStorage.removeItem("officex_subscription");
-      localStorage.removeItem("officex_dashboard");
-      localStorage.removeItem("officex_active_portal");
-      localStorage.removeItem("officex_payment_id");
-      localStorage.removeItem("officex_order_id");
-      document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      router.push("/login");
-    }
+  const handleLogout = async () => {
+    await performClientLogout(getLogoutRedirect(pathname));
   };
 
   if (isChecking) {
@@ -718,14 +665,14 @@ export default function SubscriptionGate({
 
           {/* Clean Executive Header */}
           <div className="text-center py-2 mb-4">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mb-2 shadow-2xs">
-              <Lock size={18} />
+            <div className="w-10 h-10 mx-auto rounded-xl bg-amber-50 border border-amber-300 text-amber-700 flex items-center justify-center mb-2 shadow-2xs">
+              <Lock size={20} />
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Activate Workspace Subscription
+              Rent Roll &amp; CAM Billing Suite Locked
             </h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto font-medium">
-              Choose your managed square footage and tier to unlock the live Rent Roll workspace.
+            <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto font-medium">
+              Your free workspace is active! You can manage properties, demarcated units, tenants, and contracts. Subscribe below to unlock automated rent rolls, step escalations, and GST/CAM billing.
             </p>
           </div>
 
