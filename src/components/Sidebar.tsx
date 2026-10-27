@@ -61,37 +61,40 @@ interface MenuItem {
   subItems?: SubMenuItem[];
 }
 
-// 1. Role-Specific Menus (Strict namespace isolation per UX Spec §2.2 & §7.1)
+// 1. Reusable Owner & Landlord Menu Items
+const ownerMenuItems: MenuItem[] = [
+  { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers, section: "Portfolio Assets" },
+  { name: "Property Registry", href: "/properties/registry", icon: Building },
+  { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
+  { name: "Contracts & Leases", href: "/contracts", icon: FileText },
+  { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
+
+  {
+    name: "Rent Roll & Financials",
+    href: "/properties/rent-roll",
+    icon: DollarSign,
+    badge: "1 SUBSCRIPTION",
+    requiresSubscription: true,
+    section: "Pro Suite (1 Subscription)",
+    subItems: [
+      { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
+      { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
+      { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", tabKey: "banking", icon: Landmark },
+      { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: FileText },
+      { name: "Revenue Forecast", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
+      { name: "NOI & Property P&L", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
+      { name: "Investor Pack (MIS)", href: "/operate/mis", tabKey: "mis", icon: FileText },
+      { name: "Collections & Aging", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
+      { name: "Exceptions Centre", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
+      { name: "Approvals Inbox", href: "/approvals", tabKey: "approvals", icon: ShieldCheck }
+    ]
+  }
+];
+
+// 2. Role-Specific Menus (Strict namespace isolation per UX Spec §2.2 & §7.1)
 const roleSpecificMenus: Record<string, MenuItem[]> = {
   // PROPERTY OWNER / LANDLORD (§3.1, §S-02)
-  owner: [
-    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers, section: "Portfolio Assets" },
-    { name: "Property Registry", href: "/properties/registry", icon: Building },
-    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
-    { name: "Contracts & Leases", href: "/contracts", icon: FileText },
-    { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
-
-    {
-      name: "Rent Roll & Financials",
-      href: "/properties/rent-roll",
-      icon: DollarSign,
-      badge: "1 SUBSCRIPTION",
-      requiresSubscription: true,
-      section: "Pro Suite (1 Subscription)",
-      subItems: [
-        { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
-        { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
-        { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", tabKey: "banking", icon: Landmark },
-        { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: FileText },
-        { name: "Revenue Forecast", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
-        { name: "NOI & Property P&L", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
-        { name: "Investor Pack (MIS)", href: "/operate/mis", tabKey: "mis", icon: FileText },
-        { name: "Collections & Aging", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
-        { name: "Exceptions Centre", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
-        { name: "Approvals Inbox", href: "/approvals", tabKey: "approvals", icon: ShieldCheck }
-      ]
-    }
-  ],
+  owner: ownerMenuItems,
 
   // MARKETPLACE PROPERTY OWNER / OPERATOR (Property Discovery & Listing Partner)
   marketplace_owner: [
@@ -246,46 +249,8 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Immutable Audit Log", href: "/admin/audit", icon: ShieldCheck }
   ],
 
-  // COMMERCIAL PORTFOLIO (DEFAULT COMPATIBILITY)
-  properties: [
-    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers },
-    { name: "Property Registry", href: "/properties/registry", icon: Building },
-    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
-    { 
-      name: "Rent Roll Master", 
-      href: "/properties/rent-roll?tab=dashboard", 
-      icon: DollarSign,
-      subItems: [
-        { name: "Dashboard", href: "/dashboard/owner", tabKey: "dashboard", icon: Building },
-        { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
-        { name: "Leasing CRM (S-18)", href: "/operate/lease-crm", tabKey: "lease-crm", icon: Sparkles },
-        { name: "Billing & Invoices", href: "/operate/invoices", tabKey: "invoices", icon: DollarSign },
-        { name: "Payments & Allocations", href: "/operate/payments", tabKey: "payments", icon: CreditCard },
-        { name: "Collections & Ageing", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
-        { name: "Credit Notes", href: "/operate/credit-notes", tabKey: "credit-notes", icon: FileText },
-        { name: "Tenant Disputes", href: "/operate/disputes", tabKey: "disputes", icon: ShieldCheck },
-        { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
-        { name: "Escalation Calendar", href: "/operate/escalations", tabKey: "escalations", icon: TrendingUp },
-        { name: "Renewals Pipeline", href: "/operate/renewals", tabKey: "renewals", icon: Clock },
-        { name: "Bulk Import Centre", href: "/operate/imports", tabKey: "imports", icon: FolderOpen },
-        { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
-        { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: Landmark },
-        { name: "Client Mandates / Delegation", href: "/settings/delegation", tabKey: "mandates", icon: Briefcase },
-        { name: "Head Leases & Flex", href: "/operate/head-leases", tabKey: "head-leases", icon: TrendingUp },
-        { name: "12-Mo Forecast", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
-        { name: "NOI & P&L", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
-        { name: "Exceptions", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
-        { name: "Month-End Lock", href: "/operate/snapshots", tabKey: "snapshots", icon: ShieldCheck },
-        { name: "MIS Investor Pack", href: "/operate/mis", tabKey: "mis", icon: FileText },
-        { name: "CAM Pools & True-Up", href: "/operate/cam-pools", tabKey: "cam-pools", icon: Sparkles },
-        { name: "Settings Master", href: "/settings", tabKey: "settings", icon: Settings },
-        { name: "Tally ERP Sync", href: "/operate/sync/tally", tabKey: "tally-sync", icon: Database },
-        { name: "Bank Reconciler", href: "/operate/sync/bank-reconcile", tabKey: "bank-reconcile", icon: Landmark }
-      ]
-    },
-    { name: "Banking & Accounting", href: "/properties/banking", icon: Landmark },
-    { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
-  ],
+  // COMMERCIAL PORTFOLIO (ALIASES TO OWNER MENU)
+  properties: ownerMenuItems,
 
   // FACILITY MANAGER (FM OPS)
   ops: [
@@ -370,7 +335,7 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
   occupant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/portal" },
   auditor: { label: "Auditor & Compliance", roleName: "Auditor", route: "/reporting/mis" },
   admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin" },
-  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/dashboard/owner" },
+  properties: { label: "Owner & Principal", roleName: "Owner / Landlord", route: "/dashboard/owner" },
   ops: { label: "Facility Management", roleName: "Facility Management", route: "/dashboard/fm" },
   vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor" },
   leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/dashboard/leasing" },
@@ -382,14 +347,15 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
 // Mapping alias paths to corresponding portal keys
 const pathPortalAliases: Record<string, string> = {
   "fm-marketplace": "marketplace",
-  "portfolio": "properties",
-  "property": "properties",
-  "compliance": "properties",
+  "portfolio": "owner",
+  "property": "owner",
+  "properties": "owner",
+  "compliance": "owner",
   "operations": "facility_manager",
   "reports": "reporting",
   "discover": "public",
   "calq": "leasing_manager",
-  "operate": "properties"
+  "operate": "owner"
 };
 
 function SidebarInner() {
@@ -412,6 +378,7 @@ function SidebarInner() {
   // Synchronously compute active portal from URL first
   const findPortalKey = (path: string): string | undefined => {
     if (path === "/dashboard/owner" || path.startsWith("/dashboard/owner/")) return "owner";
+    if (path.startsWith("/properties") || path.startsWith("/contracts") || path.startsWith("/settings/delegation")) return "owner";
     if (path === "/dashboard/pm" || path.startsWith("/dashboard/pm/")) return "property_manager";
     if (path === "/dashboard/fm" || path.startsWith("/dashboard/fm/")) return "facility_manager";
     if (path === "/dashboard/leasing" || path.startsWith("/dashboard/leasing/")) return "leasing_manager";
@@ -427,7 +394,7 @@ function SidebarInner() {
   };
 
   const matchedFromPath = findPortalKey(pathname);
-  const currentPortalKey = matchedFromPath || selectedRole || "owner";
+  const currentPortalKey = matchedFromPath || (selectedRole === "properties" ? "owner" : selectedRole) || "owner";
 
   useEffect(() => {
     setIsMounted(true);
@@ -439,12 +406,14 @@ function SidebarInner() {
       if (storedEmail) setUserEmail(storedEmail);
 
       const storedRoleKey = localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key");
-      if (storedRoleKey && (roleHomes[storedRoleKey] || roleSpecificMenus[storedRoleKey])) {
-        setSelectedRole(storedRoleKey);
+      const normalizedRole = (storedRoleKey === "properties" || !storedRoleKey) ? "owner" : storedRoleKey;
+      if (normalizedRole && (roleHomes[normalizedRole] || roleSpecificMenus[normalizedRole])) {
+        setSelectedRole(normalizedRole);
       } else {
         const saved = localStorage.getItem("officex_active_portal");
-        if (saved && (roleHomes[saved] || roleSpecificMenus[saved])) {
-          setSelectedRole(saved);
+        const normalizedSaved = (saved === "properties" || !saved) ? "owner" : saved;
+        if (normalizedSaved && (roleHomes[normalizedSaved] || roleSpecificMenus[normalizedSaved])) {
+          setSelectedRole(normalizedSaved);
         }
       }
 
@@ -570,28 +539,15 @@ function SidebarInner() {
           </button>
         </div>
 
-        {/* Active Workspace Persona Card (§5.14 Table 5.14a) */}
-        <div className="mx-3 mt-2.5 mb-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-between shrink-0 shadow-2xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
-              <ShieldCheck size={13} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</span>
-              <span className="text-[11px] font-black text-slate-900 truncate max-w-[130px]">{activeRole.roleName || activeRole.label}</span>
-            </div>
+        {/* Active Workspace Persona Card */}
+        <div className="mx-3 mt-2.5 mb-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center gap-2.5 shrink-0 shadow-2xs">
+          <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
+            <ShieldCheck size={13} />
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              const nextRoleKey = currentPortalKey === "owner" ? "org_admin" : currentPortalKey === "org_admin" ? "property_manager" : "owner";
-              handleRoleChange(nextRoleKey);
-            }}
-            className="text-[9px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2 py-1 rounded-md border border-teal-200/70 hover:bg-teal-100 transition-colors cursor-pointer shrink-0"
-            title="Toggle between Owner & Manager personas"
-          >
-            Switch
-          </button>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</span>
+            <span className="text-[11px] font-black text-slate-900 truncate">{activeRole.roleName || activeRole.label}</span>
+          </div>
         </div>
 
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
