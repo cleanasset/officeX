@@ -126,30 +126,39 @@ export async function GET(request: NextRequest) {
             or(
               ilike(marketplaceListings.city, "%Delhi%"),
               ilike(marketplaceListings.city, "%Gurgaon%"),
+              ilike(marketplaceListings.city, "%Gurugram%"),
               ilike(marketplaceListings.city, "%Noida%"),
               ilike(marketplaceListings.city, "%Faridabad%"),
               ilike(marketplaceListings.city, "%Ghaziabad%")
             )
           );
-        } else if (c === "bengaluru" || c === "bangalore") {
+        } else if (c === "gurgaon" || c === "gurugram") {
           conditions.push(
             or(
-              ilike(marketplaceListings.city, "%Bangalore%"),
-              ilike(marketplaceListings.city, "%Bengaluru%")
+              ilike(marketplaceListings.city, "%Gurgaon%"),
+              ilike(marketplaceListings.city, "%Gurugram%")
             )
           );
-        } else if (c === "gandhinagar" || c.includes("gift")) {
-          conditions.push(
-            or(
-              ilike(marketplaceListings.city, "%Gandhinagar%"),
-              ilike(marketplaceListings.city, "%Ahmedabad%"),
-              ilike(marketplaceListings.locality, "%GIFT%"),
-              ilike(marketplaceListings.microMarket, "%GIFT%")
-            )
-          );
+        } else if (c === "noida" || c === "greater noida") {
+          conditions.push(ilike(marketplaceListings.city, "%Noida%"));
+        } else if (c === "faridabad") {
+          conditions.push(ilike(marketplaceListings.city, "%Faridabad%"));
         } else {
-          conditions.push(ilike(marketplaceListings.city, `%${city.trim()}%`));
+          // Other cities are Coming Soon - strictly return 0 properties
+          conditions.push(eq(marketplaceListings.id, "00000000-0000-0000-0000-000000000000"));
         }
+      } else {
+        // If all or unspecified, properties are strictly confined to the 4 live markets
+        conditions.push(
+          or(
+            ilike(marketplaceListings.city, "%Delhi%"),
+            ilike(marketplaceListings.city, "%Gurgaon%"),
+            ilike(marketplaceListings.city, "%Gurugram%"),
+            ilike(marketplaceListings.city, "%Noida%"),
+            ilike(marketplaceListings.city, "%Faridabad%"),
+            ilike(marketplaceListings.city, "%Ghaziabad%")
+          )
+        );
       }
 
       if (vertical && vertical.toLowerCase() !== "all") {
@@ -278,28 +287,39 @@ export async function GET(request: NextRequest) {
     const all = getMasterListings();
     let filtered = all;
 
-    // City Filter
+    // City Filter: Properties ONLY for the 4 live markets (Delhi NCR, Noida, Gurgaon, Faridabad)
     if (city && city.toLowerCase() !== "all") {
       const c = city.trim().toLowerCase();
-      if (c === "delhi ncr" || c === "ncr") {
+      if (c === "delhi ncr" || c === "ncr" || c === "delhi") {
         filtered = filtered.filter((p) => {
           const pc = (p.city || "").toLowerCase();
-          return pc.includes("delhi") || pc.includes("gurgaon") || pc.includes("noida") || pc.includes("faridabad") || pc.includes("ghaziabad");
+          return pc.includes("delhi") || pc.includes("gurgaon") || pc.includes("gurugram") || pc.includes("noida") || pc.includes("faridabad") || pc.includes("ghaziabad");
         });
-      } else if (c === "bengaluru" || c === "bangalore") {
+      } else if (c === "gurgaon" || c === "gurugram") {
         filtered = filtered.filter((p) => {
           const pc = (p.city || "").toLowerCase();
-          return pc.includes("bangalore") || pc.includes("bengaluru");
+          return pc.includes("gurgaon") || pc.includes("gurugram");
         });
-      } else if (c === "gandhinagar" || c.includes("gift")) {
+      } else if (c === "noida" || c === "greater noida") {
         filtered = filtered.filter((p) => {
           const pc = (p.city || "").toLowerCase();
-          const pl = (p.locality || "").toLowerCase();
-          return pc.includes("gandhinagar") || pc.includes("ahmedabad") || pl.includes("gift");
+          return pc.includes("noida");
+        });
+      } else if (c === "faridabad") {
+        filtered = filtered.filter((p) => {
+          const pc = (p.city || "").toLowerCase();
+          return pc.includes("faridabad");
         });
       } else {
-        filtered = filtered.filter((p) => (p.city || "").toLowerCase().includes(c));
+        // Any other city is Coming Soon: return 0 properties
+        filtered = [];
       }
+    } else {
+      // If unspecified or 'all', strictly return only properties from the 4 live markets
+      filtered = filtered.filter((p) => {
+        const pc = (p.city || "").toLowerCase();
+        return pc.includes("delhi") || pc.includes("gurgaon") || pc.includes("gurugram") || pc.includes("noida") || pc.includes("faridabad") || pc.includes("ghaziabad");
+      });
     }
 
     // Vertical Filter

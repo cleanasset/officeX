@@ -74,7 +74,12 @@ import AudienceTile from "@/components/marketing/AudienceTile";
 import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 import MarketplaceDualShowcase from "@/components/marketing/MarketplaceDualShowcase";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
-import { ALL_MARKETPLACE_CITIES } from "@/data/marketplace-cities";
+import {
+  LIVE_MARKETPLACE_CITIES,
+  COMING_SOON_METROS,
+  COMING_SOON_CITIES,
+  ALL_MARKETPLACE_CITIES,
+} from "@/data/marketplace-cities";
 
 // Single Full-Width Panoramic Hero Scenes (Rotating: Luxury Office -> FM Technicians -> Campus Atrium -> Security -> Hospitality)
 const HERO_SCENES = [
@@ -1070,20 +1075,24 @@ export default function LandingPage() {
                         onChange={(e) => setSpaceCity(e.target.value)}
                         className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <optgroup label="Top Commercial Metros">
-                          <option value="Delhi NCR">Delhi NCR (Gurgaon, Noida, Delhi)</option>
-                          <option value="Pune">Pune (Hinjewadi, Baner, Kharadi)</option>
-                          <option value="Mumbai">Mumbai (BKC, Lower Parel, Andheri)</option>
-                          <option value="Bengaluru">Bengaluru (ORR, Whitefield, HSR)</option>
-                          <option value="Hyderabad">Hyderabad (HITEC City, Madhapur)</option>
-                          <option value="Ahmedabad">Ahmedabad (GIFT City, SG Highway)</option>
-                          <option value="Chennai">Chennai (OMR, Guindy)</option>
-                          <option value="Kolkata">Kolkata (Salt Lake, New Town)</option>
-                        </optgroup>
-                        <optgroup label="All Cities (80+ Commercial Hubs)">
-                          {ALL_MARKETPLACE_CITIES.map((c) => (
+                        <optgroup label="🟢 Active Locations (Live Now)">
+                          {LIVE_MARKETPLACE_CITIES.map((c) => (
                             <option key={c.name} value={c.name}>
                               {c.name} ({c.count} spaces)
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🚀 Other Metros (Coming Soon)">
+                          {COMING_SOON_METROS.map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name} (Coming Soon)
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="📍 All Other Cities (Coming Soon)">
+                          {COMING_SOON_CITIES.map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name} (Coming Soon)
                             </option>
                           ))}
                         </optgroup>

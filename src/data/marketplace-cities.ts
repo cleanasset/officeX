@@ -3,14 +3,38 @@ import cityData from "./marketplace-cities.json";
 export interface CityOption {
   name: string;
   count: number;
+  isLive?: boolean;
 }
 
-// Top Tier-1 Metros (Representing ~85% of listings)
-export const TOP_METROS: CityOption[] = [
-  { name: "Delhi NCR", count: 1504 },
-  { name: "Gurgaon", count: 659 },
-  { name: "Delhi", count: 476 },
-  { name: "Noida", count: 369 },
+// 4 Active Commercial Office Marketplace Locations (Live Now)
+export const LIVE_MARKETPLACE_CITIES: CityOption[] = [
+  { name: "Delhi NCR", count: 1711, isLive: true },
+  { name: "Noida", count: 491, isLive: true },
+  { name: "Gurgaon", count: 724, isLive: true },
+  { name: "Faridabad", count: 13, isLive: true },
+];
+
+export const LIVE_CITY_NAMES = ["Delhi NCR", "Noida", "Gurgaon", "Faridabad"] as const;
+
+// Helper to determine if a city is currently live
+export function isCityLive(cityName: string | null | undefined): boolean {
+  if (!cityName) return false;
+  const c = cityName.trim().toLowerCase();
+  return (
+    c === "delhi ncr" ||
+    c === "ncr" ||
+    c === "delhi" ||
+    c === "new delhi" ||
+    c === "noida" ||
+    c === "greater noida" ||
+    c === "gurgaon" ||
+    c === "gurugram" ||
+    c === "faridabad"
+  );
+}
+
+// Major Metros Expanding Soon to OfficeX
+export const COMING_SOON_METROS: CityOption[] = [
   { name: "Bangalore", count: 1543 },
   { name: "Mumbai", count: 483 },
   { name: "Pune", count: 490 },
@@ -18,6 +42,27 @@ export const TOP_METROS: CityOption[] = [
   { name: "Ahmedabad", count: 115 },
   { name: "Chennai", count: 346 },
   { name: "Kolkata", count: 230 },
+  { name: "Jaipur", count: 122 },
+  { name: "Indore", count: 95 },
+  { name: "Kochi", count: 70 },
+  { name: "Chandigarh", count: 60 },
+  { name: "Goa", count: 20 },
+];
+
+// All 89 Cities sorted alphabetically
+export const ALL_MARKETPLACE_CITIES: CityOption[] = [...cityData.cities].sort((a, b) =>
+  a.name.localeCompare(b.name)
+);
+
+// All other cities marked Coming Soon
+export const COMING_SOON_CITIES: CityOption[] = ALL_MARKETPLACE_CITIES.filter(
+  (c) => !isCityLive(c.name)
+);
+
+// Backward-compatible exports
+export const TOP_METROS: CityOption[] = [
+  ...LIVE_MARKETPLACE_CITIES,
+  ...COMING_SOON_METROS,
 ];
 
 // Major Emerging Business Hubs
@@ -41,18 +86,12 @@ export const EMERGING_HUBS: CityOption[] = [
   { name: "Mysore", count: 18 },
   { name: "Vadodara", count: 14 },
   { name: "Nashik", count: 14 },
-  { name: "Faridabad", count: 13 },
   { name: "Thiruvananthapuram", count: 13 },
   { name: "Raipur", count: 12 },
   { name: "Rajkot", count: 11 },
   { name: "Vijayawada", count: 11 },
   { name: "Ranchi", count: 10 },
 ];
-
-// All 89 Cities sorted alphabetically
-export const ALL_MARKETPLACE_CITIES: CityOption[] = [...cityData.cities].sort((a, b) =>
-  a.name.localeCompare(b.name)
-);
 
 // Real Top Localities per city directly mapped from database listings
 export const CITY_LOCALITIES: Record<string, string[]> = {
@@ -63,7 +102,9 @@ export const CITY_LOCALITIES: Record<string, string[]> = {
     ...((cityData.localities as Record<string, string[]>)["Delhi"] || []),
     ...((cityData.localities as Record<string, string[]>)["Gurgaon"] || []),
     ...((cityData.localities as Record<string, string[]>)["Noida"] || []),
-  ].slice(0, 15),
+    ...((cityData.localities as Record<string, string[]>)["Faridabad"] || []),
+  ].slice(0, 20),
+  Gurugram: (cityData.localities as Record<string, string[]>)["Gurgaon"] || [],
   Gandhinagar: (cityData.localities as Record<string, string[]>)["Ahmedabad"] || [],
 };
 
@@ -79,14 +120,31 @@ export function getLocalitiesForCity(cityName: string): string[] {
     if (key.toLowerCase() === lower) return locs;
   }
 
-  if (lower.includes("bangalore") || lower.includes("bengaluru")) {
-    return CITY_LOCALITIES["Bangalore"] || [];
+  if (lower.includes("faridabad")) {
+    return (
+      (cityData.localities as Record<string, string[]>)["Faridabad"] || [
+        "Mathura Road",
+        "Sector 28",
+        "Sector 16",
+        "New Industrial Town",
+        "Sector 15A",
+      ]
+    );
   }
-  if (lower.includes("delhi") || lower.includes("gurgaon") || lower.includes("noida")) {
-    return CITY_LOCALITIES["Delhi"] || [];
+  if (lower.includes("gurgaon") || lower.includes("gurugram")) {
+    return (cityData.localities as Record<string, string[]>)["Gurgaon"] || [];
+  }
+  if (lower.includes("noida")) {
+    return (cityData.localities as Record<string, string[]>)["Noida"] || [];
+  }
+  if (lower.includes("delhi")) {
+    return (cityData.localities as Record<string, string[]>)["Delhi"] || [];
+  }
+  if (lower.includes("bangalore") || lower.includes("bengaluru")) {
+    return (cityData.localities as Record<string, string[]>)["Bangalore"] || [];
   }
   if (lower.includes("ahmedabad") || lower.includes("gandhinagar")) {
-    return CITY_LOCALITIES["Ahmedabad"] || [];
+    return (cityData.localities as Record<string, string[]>)["Ahmedabad"] || [];
   }
 
   return [

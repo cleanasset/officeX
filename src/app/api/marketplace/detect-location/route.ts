@@ -26,18 +26,31 @@ function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
     return "Pune";
   }
 
-  // 2. Delhi NCR (Gurgaon, Noida, Delhi, Faridabad, Ghaziabad)
+  // 2. Faridabad
+  if (c.includes("faridabad")) {
+    return "Faridabad";
+  }
+
+  // 3. Noida & Greater Noida
+  if (c.includes("noida") || c.includes("greater noida")) {
+    return "Noida";
+  }
+
+  // 4. Gurgaon & Gurugram
   if (
-    c.includes("delhi") ||
     c.includes("gurgaon") ||
     c.includes("gurugram") ||
-    c.includes("noida") ||
-    c.includes("faridabad") ||
-    c.includes("ghaziabad") ||
     c.includes("manesar") ||
+    c.includes("sohna")
+  ) {
+    return "Gurgaon";
+  }
+
+  // 5. Delhi NCR (Delhi, Ghaziabad, etc.)
+  if (
+    c.includes("delhi") ||
+    c.includes("ghaziabad") ||
     c.includes("kundli") ||
-    c.includes("greater noida") ||
-    c.includes("sohna") ||
     r === "dl" ||
     r.includes("delhi")
   ) {

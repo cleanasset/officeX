@@ -17,8 +17,11 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
 import OfficeSpaceCalculator from "@/components/marketplace/OfficeSpaceCalculator";
 import {
+  LIVE_MARKETPLACE_CITIES,
+  COMING_SOON_METROS,
+  COMING_SOON_CITIES,
+  isCityLive,
   TOP_METROS,
-  EMERGING_HUBS,
   ALL_MARKETPLACE_CITIES,
 } from "@/data/marketplace-cities";
 
@@ -40,18 +43,12 @@ export default function PropertyMarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTeamSize, setSelectedTeamSize] = useState("all");
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
-  const [districtFilter, setDistrictFilter] = useState("delhi-ncr");
+  const [districtFilter, setDistrictFilter] = useState("all");
 
   // Synchronize city selection across all sections and persist
   const handleCityChange = (newCity: string, isManual: boolean = true) => {
     setSelectedCity(newCity);
-    const featuredMapped =
-      newCity === "Delhi" || newCity === "Gurgaon" || newCity === "Noida"
-        ? "Delhi NCR"
-        : newCity === "Bangalore"
-        ? "Bengaluru"
-        : newCity;
-    setFeaturedCity(featuredMapped);
+    setFeaturedCity(newCity);
 
     if (isManual && typeof window !== "undefined") {
       try {
@@ -61,18 +58,16 @@ export default function PropertyMarketplacePage() {
     }
 
     const lower = newCity.toLowerCase();
-    if (lower.includes("delhi") || lower.includes("gurgaon") || lower.includes("noida")) {
+    if (lower.includes("faridabad")) {
+      setDistrictFilter("faridabad");
+    } else if (lower.includes("gurgaon") || lower.includes("gurugram")) {
+      setDistrictFilter("gurgaon");
+    } else if (lower.includes("noida")) {
+      setDistrictFilter("noida");
+    } else if (lower.includes("delhi")) {
       setDistrictFilter("delhi-ncr");
-    } else if (lower.includes("pune")) {
-      setDistrictFilter("pune");
-    } else if (lower.includes("mumbai")) {
-      setDistrictFilter("mumbai");
-    } else if (lower.includes("bengaluru") || lower.includes("bangalore")) {
-      setDistrictFilter("bengaluru");
-    } else if (lower.includes("hyderabad")) {
-      setDistrictFilter("hyderabad");
-    } else if (lower.includes("ahmedabad") || lower.includes("gandhinagar")) {
-      setDistrictFilter("ahmedabad");
+    } else {
+      setDistrictFilter("coming-soon");
     }
   };
 
@@ -320,7 +315,7 @@ export default function PropertyMarketplacePage() {
 
   // Top Workspace Hubs across India (Coworking, Managed Suites & Enterprise Floors)
   const topWorkspaceHubs = [
-    // Delhi NCR Hubs (Lead Market)
+    // 1. Gurgaon Hubs
     {
       id: "cyber-city-gurgaon",
       name: "DLF Cyber City & Golf Course Rd, Gurgaon",
@@ -328,13 +323,57 @@ export default function PropertyMarketplacePage() {
       city: "Gurgaon, Haryana",
       searchCity: "Gurgaon",
       searchQuery: "DLF Cyber City",
-      region: "delhi-ncr",
+      region: "gurgaon",
       tag: "Fortune 500 Hub",
-      spaces: "46+ Verified Spaces",
+      spaces: "720+ Verified Spaces",
       desc: "Futuristic integrated business district featuring direct Rapid Metro connectivity and world-class CyberHub.",
       image: "/images/district_cybercity.jpg",
       highlights: ["Rapid Metro Access", "CyberHub Dining", "Fortune 500 Campuses"],
     },
+    {
+      id: "golf-course-ext-gurgaon",
+      name: "Golf Course Ext & Sohna Rd, Gurgaon",
+      shortName: "GCR Extension & Sohna",
+      city: "Gurgaon, Haryana",
+      searchCity: "Gurgaon",
+      searchQuery: "Golf Course Extension",
+      region: "gurgaon",
+      tag: "High-Growth IT Corridor",
+      spaces: "180+ Verified Spaces",
+      desc: "Gurgaon's fastest-growing enterprise artery featuring grade-A managed towers, tech parks, and luxury connectivity.",
+      image: "/images/district_bangaloreorr.jpg",
+      highlights: ["Sohna Road Access", "Worldmark Gurgaon", "Enterprise Managed Floors"],
+    },
+    // 2. Noida Hubs
+    {
+      id: "sector-62-noida",
+      name: "Sector 62 & Noida Expressway, Noida",
+      shortName: "Noida Tech Corridor",
+      city: "Noida, Uttar Pradesh",
+      searchCity: "Noida",
+      searchQuery: "Sector 62",
+      region: "noida",
+      tag: "Noida Tech Cluster",
+      spaces: "490+ Verified Spaces",
+      desc: "Noida's premier IT corridor directly connected by the Blue Line metro and Delhi-Meerut Expressway.",
+      image: "/images/showcase_office_techhorizon_hd.jpg",
+      highlights: ["Blue Line Metro", "Tech Park Campuses", "Value Enterprise Desks"],
+    },
+    {
+      id: "sector-16-noida",
+      name: "Sector 16 & Film City, Noida",
+      shortName: "Sector 16 & Film City",
+      city: "Noida, Uttar Pradesh",
+      searchCity: "Noida",
+      searchQuery: "Sector 16",
+      region: "noida",
+      tag: "Media & Commercial Hub",
+      spaces: "65+ Verified Spaces",
+      desc: "Premier commercial precinct right at the DND Flyway exit connecting Central and South Delhi with flexible workspaces.",
+      image: "/images/workspace_dedicated_desks.jpg",
+      highlights: ["DND Flyway Exit", "Sector 16 Metro", "Boutique Coworking"],
+    },
+    // 3. Delhi NCR Hubs
     {
       id: "connaught-place-delhi",
       name: "Connaught Place & Barakhamba, Central Delhi",
@@ -344,24 +383,53 @@ export default function PropertyMarketplacePage() {
       searchQuery: "Connaught Place",
       region: "delhi-ncr",
       tag: "Heritage Central CBD",
-      spaces: "59+ Verified Spaces",
+      spaces: "120+ Verified Spaces",
       desc: "India's most prestigious central address with Rajiv Chowk metro junction and colonial corporate arcades.",
       image: "/images/workspace_managed_suite.jpg",
       highlights: ["Rajiv Chowk Metro Interchange", "Inner & Outer Circles", "Grade-A Managed Workspaces"],
     },
     {
-      id: "sector-62-noida",
-      name: "Sector 62 & 126, Noida Expressway",
-      shortName: "Noida Tech Corridor",
-      city: "Noida, Uttar Pradesh",
-      searchCity: "Noida",
-      searchQuery: "Sector 62",
+      id: "nehru-place-delhi",
+      name: "Nehru Place & Okhla Phase 3, South Delhi",
+      shortName: "Nehru Place CBD",
+      city: "New Delhi, Delhi",
+      searchCity: "Delhi",
+      searchQuery: "Nehru Place",
       region: "delhi-ncr",
-      tag: "Noida Tech Cluster",
-      spaces: "100+ Verified Spaces",
-      desc: "Noida's premier IT corridor directly connected by the Blue Line metro and Delhi-Meerut Expressway.",
-      image: "/images/showcase_office_techhorizon_hd.jpg",
-      highlights: ["Blue Line Metro", "Tech Park Campuses", "Value Enterprise Desks"],
+      tag: "South Delhi Financial Core",
+      spaces: "85+ Verified Spaces",
+      desc: "Major South Delhi business hub offering grade-A coworking and corporate towers with Violet & Magenta line connectivity.",
+      image: "/images/space_gift_one_tower.jpg",
+      highlights: ["Magenta Line Metro", "South Delhi Proximity", "Enterprise Cabins"],
+    },
+    // 4. Faridabad Hubs
+    {
+      id: "mathura-road-faridabad",
+      name: "Mathura Road & Sector 28 Corridor, Faridabad",
+      shortName: "Mathura Rd Tech Belt",
+      city: "Faridabad, Haryana",
+      searchCity: "Faridabad",
+      searchQuery: "Mathura Road",
+      region: "faridabad",
+      tag: "Violet Line Metro Link",
+      spaces: "13+ Verified Spaces",
+      desc: "Faridabad's fastest-growing enterprise belt along the Violet Line Metro with direct South Delhi and Noida connectivity.",
+      image: "/images/card_office_marketplace.jpg",
+      highlights: ["Violet Line Metro", "Mathura Road Highway", "Grade-A Workspaces"],
+    },
+    {
+      id: "sector-15a-faridabad",
+      name: "Sector 15A & New Industrial Town, Faridabad",
+      shortName: "NIT Commercial Core",
+      city: "Faridabad, Haryana",
+      searchCity: "Faridabad",
+      searchQuery: "Sector 15A",
+      region: "faridabad",
+      tag: "Central Commercial Core",
+      spaces: "10+ Verified Spaces",
+      desc: "Core corporate and banking district in Faridabad featuring executive team cabins and modern flex facilities.",
+      image: "/images/space_prahlad_capital.jpg",
+      highlights: ["Neelam Chowk Proximity", "Corporate Suites", "Ample Parking"],
     },
     // Ahmedabad Hubs
     {
@@ -615,26 +683,32 @@ export default function PropertyMarketplacePage() {
   const [featuredCity, setFeaturedCity] = useState("Delhi NCR");
   const [featuredTotal, setFeaturedTotal] = useState(1525);
 
-  const cityTabs = [
-    { id: "Delhi NCR", label: "Delhi NCR", count: 1525 },
-    { id: "Pune", label: "Pune", count: 490 },
-    { id: "Mumbai", label: "Mumbai", count: 483 },
-    { id: "Bangalore", label: "Bengaluru", count: 1543 },
-    { id: "Hyderabad", label: "Hyderabad", count: 388 },
-    { id: "Ahmedabad", label: "Ahmedabad", count: 115 },
-    { id: "Chennai", label: "Chennai", count: 346 },
-    { id: "Kolkata", label: "Kolkata", count: 230 },
-    { id: "Jaipur", label: "Jaipur", count: 122 },
-    { id: "Indore", label: "Indore", count: 95 },
-    { id: "Kochi", label: "Kochi", count: 70 },
-    { id: "Chandigarh", label: "Chandigarh", count: 60 },
-    { id: "Goa", label: "Goa", count: 20 },
+  const liveCityTabs = [
+    { id: "Delhi NCR", label: "Delhi NCR", count: 1711 },
+    { id: "Noida", label: "Noida", count: 491 },
+    { id: "Gurgaon", label: "Gurgaon", count: 724 },
+    { id: "Faridabad", label: "Faridabad", count: 13 },
   ];
+
+  const comingSoonTabs = [
+    { id: "Bangalore", label: "Bengaluru", count: 1543 },
+    { id: "Mumbai", label: "Mumbai", count: 483 },
+    { id: "Pune", label: "Pune", count: 490 },
+    { id: "Hyderabad", label: "Hyderabad", count: 388 },
+  ];
+
+  const cityTabs = [...liveCityTabs, ...comingSoonTabs];
 
   useEffect(() => {
     let isCancelled = false;
     async function loadFeatured() {
       setIsLoadingFeatured(true);
+      if (!isCityLive(featuredCity)) {
+        setIsLoadingFeatured(false);
+        setFeaturedListings([]);
+        setFeaturedTotal(0);
+        return;
+      }
       try {
         const res = await fetch(`/api/marketplace/listings?city=${encodeURIComponent(featuredCity)}&limit=8`);
         if (res.ok) {
@@ -661,18 +735,23 @@ export default function PropertyMarketplacePage() {
     currentConfig.descriptions[selectedPillId] ||
     currentConfig.descriptions[currentConfig.pills[0].id];
 
+  const activeHubs = topWorkspaceHubs.filter(d => d.region === "delhi-ncr" || d.region === "gurgaon" || d.region === "noida" || d.region === "faridabad");
+
   const districtFilters = [
-    { id: "all", label: "All Hubs", count: topWorkspaceHubs.length },
+    { id: "all", label: "All Active Hubs", count: activeHubs.length },
     { id: "delhi-ncr", label: "Delhi NCR", count: topWorkspaceHubs.filter(d => d.region === "delhi-ncr").length },
-    { id: "pune", label: "Pune", count: topWorkspaceHubs.filter(d => d.region === "pune").length },
-    { id: "mumbai", label: "Mumbai", count: topWorkspaceHubs.filter(d => d.region === "mumbai").length },
-    { id: "bengaluru", label: "Bengaluru", count: topWorkspaceHubs.filter(d => d.region === "bengaluru").length },
-    { id: "hyderabad", label: "Hyderabad", count: topWorkspaceHubs.filter(d => d.region === "hyderabad").length },
-    { id: "ahmedabad", label: "Ahmedabad", count: topWorkspaceHubs.filter(d => d.region === "ahmedabad").length },
+    { id: "noida", label: "Noida", count: topWorkspaceHubs.filter(d => d.region === "noida").length },
+    { id: "gurgaon", label: "Gurgaon", count: topWorkspaceHubs.filter(d => d.region === "gurgaon").length },
+    { id: "faridabad", label: "Faridabad", count: topWorkspaceHubs.filter(d => d.region === "faridabad").length },
+    { id: "coming-soon", label: "Other Cities (Coming Soon)", count: 0 },
   ];
 
   const filteredDistricts = districtFilter === "all"
-    ? commercialDistricts
+    ? activeHubs
+    : districtFilter === "delhi-ncr"
+    ? commercialDistricts.filter(d => d.region === "delhi-ncr" || d.region === "gurgaon" || d.region === "noida" || d.region === "faridabad")
+    : districtFilter === "coming-soon"
+    ? []
     : commercialDistricts.filter(d => d.region === districtFilter);
 
   return (
@@ -838,24 +917,24 @@ export default function PropertyMarketplacePage() {
                     onChange={(e) => handleCityChange(e.target.value)}
                     className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
                   >
-                    <optgroup label="⭐ Top Metros">
-                      {TOP_METROS.map((c) => (
+                    <optgroup label="🟢 Active Locations (Live Now)">
+                      {LIVE_MARKETPLACE_CITIES.map((c) => (
                         <option key={c.name} value={c.name}>
                           {c.name} ({c.count} spaces)
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="🚀 Popular Business Hubs">
-                      {EMERGING_HUBS.map((c) => (
+                    <optgroup label="🚀 Other Metros (Coming Soon)">
+                      {COMING_SOON_METROS.map((c) => (
                         <option key={c.name} value={c.name}>
-                          {c.name} ({c.count} spaces)
+                          {c.name} (Coming Soon)
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="📍 All 89 Cities (A-Z)">
-                      {ALL_MARKETPLACE_CITIES.map((c) => (
+                    <optgroup label="📍 All Other Cities (Coming Soon)">
+                      {COMING_SOON_CITIES.map((c) => (
                         <option key={c.name} value={c.name}>
-                          {c.name} ({c.count} spaces)
+                          {c.name} (Coming Soon)
                         </option>
                       ))}
                     </optgroup>
@@ -1046,36 +1125,39 @@ export default function PropertyMarketplacePage() {
                 <CheckCircle2 size={13} /> 100% Physically Audited Commercial Assets
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Verified Spaces in {featuredCity}
+                {isCityLive(featuredCity) ? `Verified Spaces in ${featuredCity}` : `Coming Soon to ${featuredCity}`}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl mt-1">
                 Explore actual commercial office towers, managed enterprise suites, and coworking hubs with live pricing.
               </p>
             </div>
 
-            <Link
-              href={`/marketplace/search?city=${encodeURIComponent(featuredCity)}`}
-              className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1 mt-2 sm:mt-0 shrink-0"
-            >
-              View All {featuredTotal} Spaces in {featuredCity} <ArrowUpRight size={14} />
-            </Link>
+            {isCityLive(featuredCity) ? (
+              <Link
+                href={`/marketplace/search?city=${encodeURIComponent(featuredCity)}`}
+                className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1 mt-2 sm:mt-0 shrink-0"
+              >
+                View All {featuredTotal} Spaces in {featuredCity} <ArrowUpRight size={14} />
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                <Clock size={12} /> Launching in Next Phase
+              </span>
+            )}
           </div>
 
           {/* City Selection Pills */}
           <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-slate-200 pb-4">
-            {cityTabs.map((tab) => {
-              const isActive =
-                featuredCity === tab.id ||
-                (tab.id === "Delhi NCR" && (featuredCity === "Delhi" || featuredCity === "Delhi NCR")) ||
-                (tab.id === "Bangalore" && (featuredCity === "Bengaluru" || featuredCity === "Bangalore"));
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 mr-1 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live Markets:
+            </span>
+            {liveCityTabs.map((tab) => {
+              const isActive = featuredCity.toLowerCase() === tab.id.toLowerCase();
               return (
                 <button
                   key={tab.id}
-                  onClick={() =>
-                    handleCityChange(
-                      tab.id === "Delhi NCR" ? "Delhi" : tab.id === "Bangalore" ? "Bengaluru" : tab.id
-                    )
-                  }
+                  onClick={() => handleCityChange(tab.id)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     isActive
                       ? "bg-[#0F8B7D] text-white shadow-sm font-extrabold"
@@ -1093,10 +1175,103 @@ export default function PropertyMarketplacePage() {
                 </button>
               );
             })}
+
+            <span className="text-slate-300 mx-1 hidden sm:inline">|</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 ml-1 flex items-center gap-1">
+              <Clock size={11} /> Coming Soon:
+            </span>
+            {comingSoonTabs.map((tab) => {
+              const isActive = featuredCity.toLowerCase() === tab.id.toLowerCase();
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleCityChange(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? "bg-slate-800 text-white shadow-sm font-extrabold"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 border border-dashed border-slate-200"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold uppercase">
+                    Soon
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Cards Grid */}
-          {isLoadingFeatured ? (
+          {/* Cards Grid or Coming Soon View */}
+          {!isCityLive(featuredCity) ? (
+            <div className="py-16 px-6 sm:px-12 text-center bg-gradient-to-b from-teal-50/60 to-white rounded-3xl border border-teal-200 shadow-sm max-w-3xl mx-auto space-y-5 animate-in fade-in duration-300">
+              <div className="w-16 h-16 rounded-2xl bg-[#0F8B7D] text-white flex items-center justify-center mx-auto shadow-md">
+                <Sparkles size={30} />
+              </div>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100 text-[#0F8B7D] text-xs font-black uppercase tracking-wider">
+                  Expansion Pipeline
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  OfficeX Marketplace is Coming Soon to {featuredCity}!
+                </h3>
+                <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                  We are actively surveying and auditing Grade-A commercial office buildings, managed enterprise suites, and premium coworking hubs in <span className="font-bold text-slate-900">{featuredCity}</span>.
+                </p>
+              </div>
+
+              <div className="p-4 sm:p-6 bg-white rounded-2xl border border-teal-100 shadow-xs max-w-lg mx-auto">
+                <p className="text-xs font-bold text-slate-700 mb-3">
+                  🚀 Pre-register to receive launch alerts & exclusive founding tenant discounts:
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter your work email or phone"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSlideInOpen(true)}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black shrink-0 transition-colors cursor-pointer shadow-xs"
+                  >
+                    Get Early Access
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  Or explore our 4 currently active markets with 1,700+ live verified spaces:
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={() => handleCityChange("Delhi NCR")}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition cursor-pointer shadow-2xs"
+                  >
+                    🏢 Delhi NCR (1,711 spaces)
+                  </button>
+                  <button
+                    onClick={() => handleCityChange("Noida")}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition cursor-pointer shadow-2xs"
+                  >
+                    🏢 Noida (491 spaces)
+                  </button>
+                  <button
+                    onClick={() => handleCityChange("Gurgaon")}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition cursor-pointer shadow-2xs"
+                  >
+                    🏙️ Gurgaon (724 spaces)
+                  </button>
+                  <button
+                    onClick={() => handleCityChange("Faridabad")}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition cursor-pointer shadow-2xs"
+                  >
+                    🏭 Faridabad (13 spaces)
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : isLoadingFeatured ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-8 h-8 text-[#0F8B7D] animate-spin" />
               <p className="text-xs font-bold text-slate-500">Loading verified properties in {featuredCity}...</p>
@@ -1247,9 +1422,34 @@ export default function PropertyMarketplacePage() {
           </div>
         </div>
 
-        {/* 6 Rich Photo Cards Grid - identical 4-column size & h-52 image */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-          {filteredDistricts.map((district) => (
+        {/* District Cards or Coming Soon State */}
+        {districtFilter === "coming-soon" ? (
+          <div className="py-16 px-6 sm:px-12 text-center bg-gradient-to-b from-teal-50/50 to-white rounded-3xl border border-teal-200 max-w-2xl mx-auto shadow-xs space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
+              <Clock size={28} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900">Expanding Beyond Delhi NCR Soon</h3>
+            <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+              We are currently onboarding institutional landlords and Grade-A workspaces across <strong>Bangalore, Mumbai, Pune, and Hyderabad</strong>. We are currently 100% operational in <strong>Delhi NCR, Noida, Gurgaon, and Faridabad</strong>.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setDistrictFilter("all")}
+                className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                View Active Delhi NCR Hubs
+              </button>
+              <button
+                onClick={() => setSlideInOpen(true)}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                Pre-Register Requirement
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+            {filteredDistricts.map((district) => (
             <div
               key={district.id}
               className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
@@ -1332,7 +1532,8 @@ export default function PropertyMarketplacePage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* 4.5 OFFICEX CALQ: OFFICE SPACE FOOTPRINT & RENT CALCULATOR */}

@@ -30,8 +30,11 @@ const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
 });
 
 import {
+  LIVE_MARKETPLACE_CITIES,
+  COMING_SOON_METROS,
+  COMING_SOON_CITIES,
+  isCityLive,
   TOP_METROS,
-  EMERGING_HUBS,
   ALL_MARKETPLACE_CITIES,
   CITY_COORDS,
   getLocalitiesForCity,
@@ -173,6 +176,12 @@ function MarketplaceSearchContent() {
   useEffect(() => {
     let isCancelled = false;
     async function fetchResults() {
+      if (!isCityLive(city)) {
+        setIsLoading(false);
+        setListings([]);
+        setTotalCount(0);
+        return;
+      }
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
@@ -532,11 +541,18 @@ function MarketplaceSearchContent() {
               </select>
             </div>
 
-            {/* 2. City Filter Card (Grouped with all 89 Cities) */}
-            <div className="relative border border-slate-300 hover:border-slate-400 bg-white rounded-lg px-3 py-1.5 min-w-[140px] max-w-[200px] flex items-center justify-between shadow-2xs group focus-within:border-slate-800 transition-colors cursor-pointer">
+            {/* 2. City Filter Card (Grouped with 4 Live Cities + Coming Soon) */}
+            <div className="relative border border-slate-300 hover:border-slate-400 bg-white rounded-lg px-3 py-1.5 min-w-[140px] max-w-[220px] flex items-center justify-between shadow-2xs group focus-within:border-slate-800 transition-colors cursor-pointer">
               <div className="flex flex-col text-left min-w-0 pr-2">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">City</span>
-                <span className="text-xs font-bold text-slate-900 truncate mt-0.5">{city}</span>
+                <span className="text-xs font-bold text-slate-900 truncate mt-0.5 flex items-center gap-1.5">
+                  {city}
+                  {!isCityLive(city) && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 shrink-0">
+                      Soon
+                    </span>
+                  )}
+                </span>
               </div>
               <ChevronDown size={14} className="text-slate-400 shrink-0 group-hover:text-slate-700 transition-colors" />
               <select
@@ -553,24 +569,24 @@ function MarketplaceSearchContent() {
                 }}
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
               >
-                <optgroup label="⭐ Top Metros">
-                  {TOP_METROS.map((c) => (
+                <optgroup label="🟢 Active Locations (Live Now)">
+                  {LIVE_MARKETPLACE_CITIES.map((c) => (
                     <option key={c.name} value={c.name}>
-                      {c.name} ({c.count})
+                      {c.name} ({c.count} spaces)
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="🚀 Popular Business Hubs">
-                  {EMERGING_HUBS.map((c) => (
+                <optgroup label="🚀 Other Metros (Coming Soon)">
+                  {COMING_SOON_METROS.map((c) => (
                     <option key={c.name} value={c.name}>
-                      {c.name} ({c.count})
+                      {c.name} (Coming Soon)
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="📍 All 89 Cities (A-Z)">
-                  {ALL_MARKETPLACE_CITIES.map((c) => (
+                <optgroup label="📍 All Other Cities (Coming Soon)">
+                  {COMING_SOON_CITIES.map((c) => (
                     <option key={c.name} value={c.name}>
-                      {c.name} ({c.count})
+                      {c.name} (Coming Soon)
                     </option>
                   ))}
                 </optgroup>
@@ -728,7 +744,12 @@ function MarketplaceSearchContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 pb-3 w-full flex items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
           <p className="text-xs sm:text-sm font-semibold text-slate-700">
-            {isLoading ? (
+            {!isCityLive(city) ? (
+              <span className="flex items-center gap-1.5 text-amber-800 font-bold">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                OfficeX Expansion Pipeline — Launching Soon in {city}
+              </span>
+            ) : isLoading ? (
               <span className="flex items-center gap-1.5 text-teal-700">
                 <Loader2 size={13} className="animate-spin" /> Fetching live verified spaces in {city}...
               </span>
@@ -791,7 +812,174 @@ function MarketplaceSearchContent() {
 
       {/* 7. Main Body Layout */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 flex-1 w-full">
-        {isLoading ? (
+        {!isCityLive(city) ? (
+          <div className="py-14 px-6 sm:px-12 text-center bg-white rounded-3xl border border-slate-200 max-w-3xl mx-auto shadow-sm space-y-6">
+            <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200 shadow-xs">
+              <Sparkles size={32} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider">
+                <Clock size={12} /> Expansion Pipeline
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                OfficeX Marketplace is Coming Soon to {city}!
+              </h2>
+              <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                We are actively surveying and auditing Grade-A commercial office buildings, managed enterprise suites, and premium coworking hubs in <span className="font-bold text-slate-900">{city}</span>.
+              </p>
+            </div>
+
+            {/* Pre-Registration Card */}
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-2xs max-w-lg mx-auto text-left">
+              <h3 className="text-sm font-black text-slate-900 mb-1 flex items-center gap-1.5">
+                <span>🚀 Priority Access Pre-Registration</span>
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">
+                Be the first to access live inventory and locked-in pre-launch corporate discounts in {city}.
+              </p>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsSubmittingEnquiry(true);
+                  try {
+                    const formEl = e.currentTarget;
+                    const name = (formEl.elements.namedItem("name") as HTMLInputElement)?.value;
+                    const contact = (formEl.elements.namedItem("contact") as HTMLInputElement)?.value;
+                    const seats = (formEl.elements.namedItem("seats") as HTMLSelectElement)?.value;
+                    await fetch("/api/marketplace/enquiries", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        fullName: name || "Waitlist Prospect",
+                        phone: contact && !contact.includes("@") ? contact : "",
+                        email: contact && contact.includes("@") ? contact : "prospect@scalezix.com",
+                        teamSize: seats || "10-25 seats",
+                        notes: `Priority Waitlist Pre-Registration for ${city}`,
+                        moveInTimeline: "Expansion Launch",
+                      }),
+                    });
+                    setEnquirySuccess(true);
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setIsSubmittingEnquiry(false);
+                  }
+                }}
+                className="space-y-3"
+              >
+                {enquirySuccess ? (
+                  <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-xs font-bold text-center space-y-1">
+                    <p className="font-black text-sm text-[#0F8B7D]">🎉 You&apos;re on the priority waitlist!</p>
+                    <p className="text-teal-700">We&apos;ll notify you with exclusive early-bird rates as soon as {city} opens.</p>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      name="name"
+                      type="text"
+                      required
+                      placeholder="Your Full Name"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-900"
+                    />
+                    <input
+                      name="contact"
+                      type="text"
+                      required
+                      placeholder="Work Email or Phone Number"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-900"
+                    />
+                    <select
+                      name="seats"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white text-slate-900 cursor-pointer"
+                    >
+                      <option value="1-5 seats">1 - 5 seats (Coworking / Desks)</option>
+                      <option value="5-15 seats">5 - 15 seats (Private Cabin)</option>
+                      <option value="15-50 seats">15 - 50 seats (Managed Team Suite)</option>
+                      <option value="50+ seats">50+ seats (Enterprise Floor)</option>
+                      <option value="Virtual Office">Virtual Office / GST Registration</option>
+                    </select>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingEnquiry}
+                      className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {isSubmittingEnquiry ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" /> Submitting...
+                        </>
+                      ) : (
+                        "Notify Me When Available"
+                      )}
+                    </button>
+                  </>
+                )}
+              </form>
+            </div>
+
+            {/* Quick-Switch to 4 Live Markets */}
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                Need space immediately? Explore our 4 active markets with 1,700+ live verified spaces:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCity("Delhi NCR");
+                    setSelectedLocality("");
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 hover:border-[#0F8B7D] hover:bg-teal-50/50 bg-white text-left transition cursor-pointer shadow-2xs group"
+                >
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400 group-hover:text-[#0F8B7D]">Metro Hub</div>
+                  <div className="text-xs font-black text-slate-900 mt-0.5">Delhi NCR</div>
+                  <div className="text-[11px] font-bold text-teal-700 mt-1">1,711 Spaces</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCity("Noida");
+                    setSelectedLocality("");
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 hover:border-[#0F8B7D] hover:bg-teal-50/50 bg-white text-left transition cursor-pointer shadow-2xs group"
+                >
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400 group-hover:text-[#0F8B7D]">Tech Hub</div>
+                  <div className="text-xs font-black text-slate-900 mt-0.5">Noida</div>
+                  <div className="text-[11px] font-bold text-teal-700 mt-1">491 Spaces</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCity("Gurgaon");
+                    setSelectedLocality("");
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 hover:border-[#0F8B7D] hover:bg-teal-50/50 bg-white text-left transition cursor-pointer shadow-2xs group"
+                >
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400 group-hover:text-[#0F8B7D]">Fortune 500</div>
+                  <div className="text-xs font-black text-slate-900 mt-0.5">Gurgaon</div>
+                  <div className="text-[11px] font-bold text-teal-700 mt-1">724 Spaces</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCity("Faridabad");
+                    setSelectedLocality("");
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 hover:border-[#0F8B7D] hover:bg-teal-50/50 bg-white text-left transition cursor-pointer shadow-2xs group"
+                >
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400 group-hover:text-[#0F8B7D]">Industrial Belt</div>
+                  <div className="text-xs font-black text-slate-900 mt-0.5">Faridabad</div>
+                  <div className="text-[11px] font-bold text-teal-700 mt-1">13 Spaces</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : isLoading ? (
           <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-slate-200">
             <Loader2 className="w-9 h-9 text-[#0F8B7D] animate-spin" />
             <p className="text-sm font-bold text-slate-700">Loading verified commercial spaces in {city}...</p>
