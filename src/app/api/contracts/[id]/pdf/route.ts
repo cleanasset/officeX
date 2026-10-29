@@ -102,7 +102,7 @@ export async function GET(
             .from(organization)
             .where(eq(organization.id, auth.orgId))
             .limit(1);
-          if (orgRec && (orgRec.status === "active" || orgRec.status === "trialing")) {
+          if (orgRec && orgRec.status === "active") {
             isSubscribed = true;
           }
         } else {
