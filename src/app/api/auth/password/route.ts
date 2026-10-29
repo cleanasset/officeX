@@ -93,27 +93,30 @@ export async function POST(request: Request) {
       userId = dbUser.id;
       userName = dbUser.fullName || userName;
       userRole =
-        dbUser.role === 'tenant_admin'
+        dbUser.role === 'super_admin' || norm === 'admin@gmail.com'
+          ? 'Super Administrator'
+          : dbUser.role === 'tenant_admin'
           ? 'Tenant Occupant'
           : dbUser.role === 'property_manager'
             ? 'Property Manager'
             : 'Property Owner & Asset Manager';
     }
 
+    const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com';
     const effectiveUserId = String(supaUser?.id || userId || `usr_${Date.now()}`);
 
     const memberships = [
       {
         id: `mem_${effectiveUserId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'active'}`,
-        orgId: 'org_officex',
-        orgName: 'Commercial Asset Management',
+        orgId: isSuperAdmin ? 'org_admin' : 'org_officex',
+        orgName: isSuperAdmin ? 'OfficeX Platform Governance' : 'Commercial Asset Management',
         role: userRole,
-        roleCode: (supaUser?.user_metadata?.roleCode as any) || 'OWNER',
-        workspaceTitle: 'Commercial Rent Roll Desk',
-        workspaceUrl: '/properties/rent-roll',
-        propertyScope: 'Active Commercial Portfolio',
-        badge: 'Owner',
-        badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
+        roleCode: isSuperAdmin ? 'SUPER_ADMIN' : ((supaUser?.user_metadata?.roleCode as any) || 'OWNER'),
+        workspaceTitle: isSuperAdmin ? 'Master Control Center' : 'Commercial Rent Roll Desk',
+        workspaceUrl: isSuperAdmin ? '/admin' : '/properties/rent-roll',
+        propertyScope: isSuperAdmin ? 'All Global Portfolios' : 'Active Commercial Portfolio',
+        badge: isSuperAdmin ? 'Super Admin' : 'Owner',
+        badgeColor: isSuperAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' : 'bg-blue-500/20 text-blue-300 border-blue-400/30',
         isLastUsed: true
       }
     ];
@@ -128,7 +131,7 @@ export async function POST(request: Request) {
       },
       memberships,
       needs_context_choice: false,
-      redirect_url: '/properties/rent-roll'
+      redirect_url: isSuperAdmin ? '/admin' : '/properties/rent-roll'
     });
 
     // Secure HttpOnly session cookie
@@ -139,6 +142,23 @@ export async function POST(request: Request) {
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
+
+    if (isSuperAdmin) {
+      response.cookies.set('officex_admin', '1', {
+        path: '/',
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 86400 * 7
+      });
+      response.cookies.set('officex_role', 'super_admin', {
+        path: '/',
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 86400 * 7
+      });
+    }
 
     response.cookies.set('officex_session_active', '1', {
       path: '/',

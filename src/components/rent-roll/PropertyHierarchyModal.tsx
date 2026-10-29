@@ -84,10 +84,28 @@ export const checkIsOwnerSubscribed = (): boolean => {
 };
 
 export const generateUniquePropertyCode = (propertyName = "", existingCodes: string[] = []): string => {
-  const prefix = (propertyName.replace(/[^a-zA-Z]/g, '').slice(0, 3) || "PRP").toUpperCase();
+  const clean = (propertyName || "").trim();
+  if (!clean) return "";
+
+  const words = clean.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  let prefix = "";
+  if (words.length >= 2) {
+    const initials = words.map((w) => w[0].toUpperCase()).join("");
+    if (initials.length >= 2 && initials.length <= 4) {
+      prefix = initials;
+    }
+  }
+  if (!prefix) {
+    const firstWord = words[0] || "";
+    prefix = firstWord.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
+  }
+  if (!prefix || prefix.length < 2) {
+    prefix = (clean.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3) || "PROP").toUpperCase();
+  }
+
   let code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
   let attempts = 0;
-  while (existingCodes.includes(code) && attempts < 20) {
+  while (existingCodes.includes(code) && attempts < 30) {
     code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
     attempts++;
   }
@@ -449,11 +467,10 @@ export default function PropertyHierarchyModal({
 
   // Helper to reset property form completely to a blank state for registering a new property
   const resetPropertyForm = () => {
-    const freshCode = generateUniquePropertyCode("PRP", propertiesList.map((p) => p.name));
     setPropForm({
       existingPropId: "",
       propertyName: "",
-      propertyCode: freshCode,
+      propertyCode: "",
       address: "",
       city: "Bengaluru",
       state: "Karnataka",
@@ -2501,11 +2518,16 @@ export default function PropertyHierarchyModal({
     let targetPropertyId = contractForm.propertyId || propForm.existingPropId;
     if (d.propertyName || d.lessorName) {
       const docPropName = d.propertyName || d.lessorName;
-      setPropForm((prev) => ({
-        ...prev,
-        propertyName: prev.propertyName || docPropName,
-        address: prev.address || d.tenantAddress || prev.address,
-      }));
+      setPropForm((prev) => {
+        const finalPropName = prev.propertyName || docPropName;
+        const codeForDoc = prev.propertyCode || (finalPropName.trim() ? generateUniquePropertyCode(finalPropName.trim(), propertiesList.map((p) => p.name)) : "");
+        return {
+          ...prev,
+          propertyName: finalPropName,
+          propertyCode: codeForDoc,
+          address: prev.address || d.tenantAddress || prev.address,
+        };
+      });
       const normDoc = docPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
       const matchedProp = propertiesList.find((p) => {
         const normP = p.name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -2928,29 +2950,68 @@ export default function PropertyHierarchyModal({
                       required
                       placeholder="e.g. Divi Towers / Prestige Tech Park"
                       value={propForm.propertyName}
-                      onChange={(e) => setPropForm({ ...propForm, propertyName: e.target.value })}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        if (!name.trim()) {
+                          setPropForm((prev) => ({ ...prev, propertyName: name, propertyCode: "" }));
+                          return;
+                        }
+                        const immediateCode = generateUniquePropertyCode(name.trim(), propertiesList.map((p) => p.name));
+                        setPropForm((prev) => ({ ...prev, propertyName: name, propertyCode: immediateCode }));
+
+                        // Query backend for guaranteed global uniqueness across all properties & users
+                        fetch(`/api/rent-roll/properties/generate-code?name=${encodeURIComponent(name.trim())}`)
+                          .then((r) => r.json())
+                          .then((data) => {
+                            if (data && data.success && data.code) {
+                              setPropForm((prev) => {
+                                if (prev.propertyName.trim() === name.trim()) {
+                                  return { ...prev, propertyCode: data.code };
+                                }
+                                return prev;
+                              });
+                            }
+                          })
+                          .catch(() => {});
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
                     />
                   </div>
 
                   {/* Property Code */}
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Property Code</label>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Property Code
+                      <span className="text-[10px] font-normal text-slate-400 ml-1.5">(Globally unique · built from name)</span>
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
                         readOnly
                         required
-                        placeholder="e.g. DIV-7293"
+                        placeholder="Auto-generated once name is entered"
                         value={propForm.propertyCode}
-                        className="w-full pl-3 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800 outline-none uppercase select-all"
+                        className="w-full pl-3 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800 outline-none uppercase select-all placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
                       />
                       <button
                         type="button"
                         title="Regenerate property code"
-                        onClick={() => {
+                        onClick={async () => {
+                          if (!propForm.propertyName.trim()) {
+                            showToast("Please enter a property name first", "error");
+                            return;
+                          }
+                          try {
+                            const res = await fetch(`/api/rent-roll/properties/generate-code?name=${encodeURIComponent(propForm.propertyName.trim())}`);
+                            const data = await res.json();
+                            if (data && data.success && data.code) {
+                              setPropForm((prev) => ({ ...prev, propertyCode: data.code }));
+                              showToast(`✓ Generated unique property code: ${data.code}`);
+                              return;
+                            }
+                          } catch {}
                           const newCode = generateUniquePropertyCode(
-                            propForm.propertyName || "PRP",
+                            propForm.propertyName.trim(),
                             propertiesList.map((p) => p.name)
                           );
                           setPropForm((prev) => ({ ...prev, propertyCode: newCode }));

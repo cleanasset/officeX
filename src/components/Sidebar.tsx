@@ -388,7 +388,7 @@ function SidebarInner() {
     if (path.startsWith("/leasing")) return "leasing_manager";
     if (path.startsWith("/marketplace")) return "marketplace";
     if (path.startsWith("/vendor")) return "vendor";
-    if (path.startsWith("/admin")) return "org_admin";
+    if (path.startsWith("/admin")) return "admin";
     if (path.startsWith("/public")) return "public";
     return undefined;
   };

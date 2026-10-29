@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { properties, complianceCertificates, userProperties, leaseUnits, helpdeskTickets, utilityMetrics, rfqs, quotations, workOrders, leases, property as rentRollProperty } from "@/db/schema";
 import { desc, eq, and, sql, or, ilike } from "drizzle-orm";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-code/route";
 
 export async function GET(req: Request) {
   try {
@@ -110,20 +111,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, data: updated, isExisting: true }, { status: 200 });
       }
 
-      let finalCode =
-        providedCode ||
-        `${propertyName.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      const prefix = getCleanPrefixFromName(propertyName);
+      let finalCode = providedCode;
+      if (!finalCode) {
+        finalCode = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
       let codeCandidate = finalCode;
       let collisionCount = 0;
-      while (collisionCount < 10) {
+      while (collisionCount < 25) {
         const collision = await db
           .select({ id: rentRollProperty.id })
           .from(rentRollProperty)
-          .where(and(eq(rentRollProperty.org_id, orgId), eq(rentRollProperty.property_code, codeCandidate)))
+          .where(eq(rentRollProperty.property_code, codeCandidate))
           .limit(1);
         if (collision.length === 0) break;
         collisionCount++;
-        codeCandidate = `${finalCode}-${Math.floor(100 + Math.random() * 900)}`;
+        codeCandidate = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
       }
 
       const [inserted] = await db

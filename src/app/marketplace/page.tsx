@@ -1308,6 +1308,7 @@ export default function PropertyMarketplacePage() {
                         alt={space.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
+                        onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                       />
                       <div className="absolute top-2.5 left-2.5 flex items-center gap-1">
                         <span className="bg-[#0F8B7D] text-white text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs">

@@ -27,6 +27,19 @@ export default function DashboardLayout({
         localStorage.getItem("officex_user_email") ||
         sessionStorage.getItem("officex_user_email");
 
+      // Super Admin bypass: Admin should NEVER stay in the standard user dashboard or workspace hub
+      const isAdmin =
+        (email && (email.toLowerCase().trim() === "admin@gmail.com" || email.toLowerCase().trim() === "medistationlifecare@gmail.com")) ||
+        getAuthCookie("officex_admin") === "1" ||
+        localStorage.getItem("officex_admin") === "1" ||
+        sessionStorage.getItem("officex_admin") === "1" ||
+        localStorage.getItem("officex_role") === "super_admin";
+
+      if (isAdmin && (pathname === "/dashboard" || pathname.startsWith("/dashboard/"))) {
+        router.replace("/admin");
+        return;
+      }
+
       const sessionActive =
         getAuthCookie("officex_session_active") === "1" ||
         localStorage.getItem("officex_session_active") === "1" ||

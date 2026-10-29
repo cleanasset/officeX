@@ -5,6 +5,7 @@ import { validateRequiredFields } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
+import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-code/route";
 
 /**
  * RR-CONT-11, §S-11: Properties CRUD
@@ -130,26 +131,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, data: updated, isExisting: true }, { status: 200 });
     }
 
-    // 2. Generate a unique property code that does not collide with existing properties
+    // 2. Generate a unique property code that does not collide with existing properties across ANY user or org
+    const prefix = getCleanPrefixFromName(propertyName);
     let finalCode = providedCode;
     if (!finalCode) {
-      finalCode = propertyName
-        ? propertyName.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase() + "-" + Math.floor(100 + Math.random() * 900)
-        : `PROP-${Date.now().toString(36).toUpperCase()}`;
+      finalCode = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    // Ensure the candidate code doesn't collide with ANY existing property in this org
+    // Ensure the candidate code doesn't collide with ANY existing property in the entire database (all users & orgs)
     let codeCandidate = finalCode;
     let collisionCount = 0;
-    while (collisionCount < 10) {
+    while (collisionCount < 25) {
       const collision = await db
         .select({ id: property.id })
         .from(property)
-        .where(and(eq(property.org_id, orgId), eq(property.property_code, codeCandidate)))
+        .where(eq(property.property_code, codeCandidate))
         .limit(1);
       if (collision.length === 0) break;
       collisionCount++;
-      codeCandidate = `${finalCode}-${Math.floor(100 + Math.random() * 900)}`;
+      codeCandidate = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
     finalCode = codeCandidate;
 

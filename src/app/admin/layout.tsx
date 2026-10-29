@@ -1,4 +1,7 @@
+"use client";
+
 import React, { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -8,8 +11,15 @@ function PortalLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/admin/login";
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="flex min-h-screen bg-background w-full max-w-full overflow-x-hidden">
+    <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden">
       {/* Navigation Sidebar */}
       <Sidebar />
       

@@ -277,6 +277,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
                     src={activeImg}
                     alt={property.name}
                     className="w-full h-full object-cover transition-opacity duration-300"
+                    onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                   />
 
                   {/* Badges */}
@@ -351,7 +352,12 @@ Generated via OFFICEX Operating Platform · https://officex.in
                           currentImageIdx === idx ? "border-[#0F8B7D] ring-2 ring-teal-200 shadow-md scale-105" : "border-gray-200 opacity-60 hover:opacity-100"
                         }`}
                       >
-                        <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img
+                          src={url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
+                        />
                       </button>
                     ))}
                   </div>
@@ -771,6 +777,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
                     src={sim.imageUrl || "/images/workspace_dedicated_desks.jpg"}
                     alt={sim.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                   />
                   <div className="absolute top-3 left-3 flex gap-1.5">
                     <span className="px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-sm text-[9px] font-black text-emerald-700 shadow-sm flex items-center gap-1">

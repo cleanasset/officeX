@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -38,6 +39,7 @@ export default function WorkspaceHubPage() {
   const [userName, setUserName] = useState<string>("Commercial Member");
   const [userEmail, setUserEmail] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("Commercial Property Owner");
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -88,6 +90,24 @@ export default function WorkspaceHubPage() {
           setUserEmail(email);
           setUserName(name || "Commercial Partner");
           setUserRole(role);
+        }
+
+        // Super Admin bypass: Admin should NEVER be asked to select user workspaces
+        const isAdmin =
+          email.toLowerCase().trim() === "admin@gmail.com" ||
+          email.toLowerCase().trim() === "medistationlifecare@gmail.com" ||
+          role === "super_admin" ||
+          (typeof window !== "undefined" && (
+            localStorage.getItem("officex_admin") === "1" ||
+            sessionStorage.getItem("officex_admin") === "1" ||
+            localStorage.getItem("officex_role") === "super_admin" ||
+            document.cookie.includes("officex_admin=1")
+          ));
+
+        if (isAdmin) {
+          setIsSuperAdmin(true);
+          router.replace("/admin");
+          return;
         }
 
         // 2. Evaluate Pillar 1: Rent Roll Subscription & Properties
@@ -211,20 +231,27 @@ export default function WorkspaceHubPage() {
           {/* Logo & Platform Name */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F8B7D] to-teal-700 flex items-center justify-center text-white font-black text-sm shadow-sm group-hover:scale-105 transition-transform">
-                OX
+              <Image 
+                src="/logo-removebg-preview.png" 
+                alt="OfficeX Logo" 
+                width={38} 
+                height={38} 
+                className="object-contain group-hover:scale-105 transition-transform"
+                style={{ width: "auto", height: "30px" }}
+                priority
+              />
+              <Image 
+                src="/name-removebg-preview.png" 
+                alt="OfficeX" 
+                width={125} 
+                height={30} 
+                className="object-contain"
+                style={{ width: "auto", height: "25px" }}
+                priority
+              />
+              <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 ml-1">
+                Workspace Hub
               </span>
-              <div className="flex flex-col">
-                <span className="font-black text-base tracking-tight text-slate-900 flex items-center gap-1.5">
-                  OFFICEX
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                    Workspace Hub
-                  </span>
-                </span>
-                <span className="text-[10px] text-slate-600 font-semibold -mt-0.5">
-                  Commercial Real Estate Operating System
-                </span>
-              </div>
             </Link>
           </div>
 
@@ -232,6 +259,15 @@ export default function WorkspaceHubPage() {
           <div className="flex items-center gap-3 sm:gap-4">
             {isLoggedIn ? (
               <div className="flex items-center gap-2.5">
+                {(isSuperAdmin || userEmail === "admin@gmail.com") && (
+                  <Link
+                    href="/admin"
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-teal-300 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <ShieldCheck size={14} className="text-teal-400" />
+                    <span>Admin Panel</span>
+                  </Link>
+                )}
                 <div className="hidden sm:flex flex-col text-right">
                   <span className="text-xs font-bold text-slate-800 capitalize truncate max-w-[150px]">
                     {userName}
@@ -292,6 +328,38 @@ export default function WorkspaceHubPage() {
 
       {/* ──────────────── 3 INDEPENDENT WORKSPACE CARDS ──────────────── */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12">
+        {/* Super Admin Notice Banner */}
+        {(isSuperAdmin || userEmail === "admin@gmail.com") && (
+          <div className="mb-8 p-5 rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-fadeIn">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center font-bold shrink-0">
+                <ShieldCheck size={22} className="text-teal-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-300 px-2 py-0.5 rounded-full bg-teal-950/80 border border-teal-700/50">
+                    SUPER ADMIN ACCESS
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">admin@gmail.com</span>
+                </div>
+                <h3 className="text-base font-black text-white mt-1">
+                  Master Platform Governance &amp; Controls
+                </h3>
+                <p className="text-xs text-slate-400">
+                  You are signed in as Super Administrator. You have system-wide authority to manage all 133 database tables, marketplace pricing, users, and portfolios directly.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/admin"
+              className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-600 text-white font-bold text-xs flex items-center gap-2 shrink-0 transition shadow-md"
+            >
+              <span>Go to Super Admin Panel</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
           {/* ══════════════════════════════════════════════════════════════════════════
               CARD 1: RENT ROLL & COMMERCIAL OPERATIONS (SaaS ERP)

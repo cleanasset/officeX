@@ -1046,9 +1046,10 @@ function MarketplaceSearchContent() {
                   }`}
                 >
                   <img
-                    src={item.featuredImage || (item.images && item.images[0]) || "/images/showcase_office_techhorizon_hd.jpg"}
+                    src={item.featuredImage || (item.images && item.images[0]) || "/images/showcase_commercial_warmshell.jpg"}
                     alt={item.name}
                     className="w-24 h-24 rounded-lg object-cover shrink-0"
+                    onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                   />
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
@@ -1116,6 +1117,7 @@ function MarketplaceSearchContent() {
                         alt={space.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
+                        onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                       />
                     </Link>
 
@@ -1340,6 +1342,7 @@ function MarketplaceSearchContent() {
                             alt={space.name}
                             className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                             loading="lazy"
+                            onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                           />
                         </Link>
 

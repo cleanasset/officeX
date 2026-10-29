@@ -1,7 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { marketplaceListings } from "@/db/marketplace-schema";
-import { eq, or, and, ne } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
+
+function cleanImageUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== "string") return "/images/showcase_commercial_warmshell.jpg";
+  let cleaned = url.trim();
+  if (!cleaned) return "/images/showcase_commercial_warmshell.jpg";
+
+  if (cleaned.includes("res.cloudinary.com/myhq/image/upload/")) {
+    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/myhq\/image\/upload\//i, "/assets/spaces/");
+  } else if (cleaned.includes("cloudinary.com") && cleaned.includes("myhq")) {
+    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//i, "/assets/spaces/");
+  }
+
+  if (cleaned.includes("myhq")) {
+    cleaned = cleaned.replace(/myhq/gi, "officex");
+  }
+
+  return cleaned;
+}
+
+function sanitizeText(val: string | null | undefined): string {
+  if (!val || typeof val !== "string") return "";
+  return val.replace(/myhq/gi, "OfficeX");
+}
+
+function sanitizeListing(l: any) {
+  if (!l) return l;
+  return {
+    ...l,
+    name: sanitizeText(l.name),
+    brandName: sanitizeText(l.brandName),
+    description: sanitizeText(l.description),
+    featuredImage: cleanImageUrl(l.featuredImage),
+    images: Array.isArray(l.images) && l.images.length > 0
+      ? l.images.map(cleanImageUrl)
+      : [cleanImageUrl(l.featuredImage)],
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -52,8 +89,8 @@ export async function GET(
       .limit(4);
 
     return NextResponse.json({
-      listing,
-      similar
+      listing: sanitizeListing(listing),
+      similar: similar.map(sanitizeListing)
     });
   } catch (error: any) {
     console.error("Error fetching listing details:", error);

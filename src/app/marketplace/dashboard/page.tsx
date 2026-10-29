@@ -202,6 +202,7 @@ export default function MarketplaceOwnerDashboard() {
                         src={item.featuredImage || "/images/workspace_managed_suite.jpg"}
                         alt={item.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
                       />
                       <div className="absolute top-3 left-3 flex gap-1.5">
                         <span className="px-2.5 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold">

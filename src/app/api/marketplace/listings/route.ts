@@ -6,14 +6,27 @@ import { marketplaceListings } from "@/db/marketplace-schema";
 import { and, eq, ilike, or, gte, lte, desc, asc, sql } from "drizzle-orm";
 
 function cleanImageUrl(url: string | null | undefined): string {
-  if (!url) return "/images/showcase_commercial_warmshell.jpg";
-  if (url.includes("res.cloudinary.com/myhq/image/upload/")) {
-    return url.replace("https://res.cloudinary.com/myhq/image/upload/", "/assets/spaces/");
+  if (!url || typeof url !== "string") return "/images/showcase_commercial_warmshell.jpg";
+  let cleaned = url.trim();
+  if (!cleaned) return "/images/showcase_commercial_warmshell.jpg";
+
+  if (cleaned.includes("res.cloudinary.com/myhq/image/upload/")) {
+    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/myhq\/image\/upload\//i, "/assets/spaces/");
+  } else if (cleaned.includes("cloudinary.com") && cleaned.includes("myhq")) {
+    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//i, "/assets/spaces/");
   }
-  if (url.includes("cloudinary.com") && url.includes("myhq")) {
-    return url.replace(/https?:\/\/res\.cloudinary\.com\/myhq\/image\/upload\//, "/assets/spaces/");
+
+  // Ensure "myhq" is NEVER present in the URL path presented to the client
+  if (cleaned.includes("myhq")) {
+    cleaned = cleaned.replace(/myhq/gi, "officex");
   }
-  return url;
+
+  return cleaned;
+}
+
+function sanitizeText(val: string | null | undefined): string {
+  if (!val || typeof val !== "string") return "";
+  return val.replace(/myhq/gi, "OfficeX");
 }
 
 // In-memory cache for master properties dataset
@@ -50,8 +63,8 @@ function getMasterListings(): any[] {
         return {
           id: p["Property ID"] || `space-${idx}`,
           slug: p["Property ID"] || `space-${idx}`,
-          name: p["Property Name"] || "Commercial Workspace",
-          brandName: p["Brand / Operator"] || "Verified Operator",
+          name: sanitizeText(p["Property Name"] || "Commercial Workspace"),
+          brandName: sanitizeText(p["Brand / Operator"] || "Verified Operator"),
           vertical,
           city: p["City"] || "Delhi",
           locality: p["Locality / Area"] || "",
@@ -76,7 +89,7 @@ function getMasterListings(): any[] {
           },
           startingPrice,
           startingPriceUnit: "per_month",
-          description: p["Description"] || "",
+          description: sanitizeText(p["Description"] || ""),
           avgRating: String(p["Rating (out of 5)"] || "4.5"),
           totalReviews: Number(p["Total Reviews"]) || 15,
           nearestMetro: p["Nearest Metro"] || "",
@@ -262,8 +275,13 @@ export async function GET(request: NextRequest) {
 
       dbListings = listings.map((l: any) => ({
         ...l,
+        name: sanitizeText(l.name),
+        brandName: sanitizeText(l.brandName),
+        description: sanitizeText(l.description),
         featuredImage: cleanImageUrl(l.featuredImage),
-        images: Array.isArray(l.images) ? l.images.map(cleanImageUrl) : [cleanImageUrl(l.featuredImage)],
+        images: Array.isArray(l.images) && l.images.length > 0
+          ? l.images.map(cleanImageUrl)
+          : [cleanImageUrl(l.featuredImage)],
       }));
       dbTotal = Number(countResult[0]?.count || 0);
     } catch {

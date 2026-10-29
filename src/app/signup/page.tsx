@@ -20,6 +20,7 @@ interface SignupPageProps {
     module?: string;
     context?: string;
     redirect?: string;
+    email?: string;
   }>;
 }
 
@@ -40,6 +41,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         initialModule={params?.module}
         initialContext={params?.context}
         initialRedirect={params?.redirect}
+        initialEmail={params?.email}
       />
     </Suspense>
   );

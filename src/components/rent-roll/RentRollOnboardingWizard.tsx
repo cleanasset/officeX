@@ -505,8 +505,11 @@ export default function RentRollOnboardingWizard({
     if (isSingleBuilding) {
       setBuildingName(name ? `${name} - Main Tower` : "Main Tower");
     }
-    if (!propertyCode || propertyCode.startsWith("PROP-") || propertyCode === "") {
-      const slug = name
+    const clean = name.trim();
+    if (!clean) {
+      setPropertyCode("");
+    } else {
+      const slug = clean
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, "")
         .slice(0, 6);

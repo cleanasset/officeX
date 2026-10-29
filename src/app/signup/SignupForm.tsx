@@ -50,9 +50,10 @@ interface SignupFormProps {
   initialModule?: string;
   initialContext?: string;
   initialRedirect?: string;
+  initialEmail?: string;
 }
 
-export default function SignupForm({ initialRole, initialIntent, initialModule, initialContext, initialRedirect }: SignupFormProps) {
+export default function SignupForm({ initialRole, initialIntent, initialModule, initialContext, initialRedirect, initialEmail }: SignupFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawRole = initialRole || initialIntent || searchParams?.get("role") || searchParams?.get("intent") || "";
@@ -64,11 +65,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     searchParams?.get("module") === "rent-roll" ||
     searchParams?.get("context") === "rent-roll" ||
     (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
-    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("rent-roll") : false) ||
-    (typeof window !== "undefined" && (
-      localStorage.getItem("officex_oauth_context") === "rent-roll" ||
-      sessionStorage.getItem("officex_oauth_context") === "rent-roll"
-    ));
+    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("rent-roll") : false);
 
   const isOperate =
     !isRentRoll && (
@@ -89,6 +86,24 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
   const isMarketplace = !isRentRoll && !isOperate && !isFm;
 
+  const loginHref = React.useMemo(() => {
+    const params = new URLSearchParams();
+    const ctx = isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : (searchParams?.get("context") || "marketplace");
+    params.set("context", ctx);
+
+    const emailParam = searchParams?.get("email") || initialEmail;
+    if (emailParam) {
+      params.set("email", emailParam);
+    }
+
+    const redir = initialRedirect || searchParams?.get("redirect") || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace");
+    if (redir) {
+      params.set("redirect", redir);
+    }
+
+    return `/login?${params.toString()}`;
+  }, [isRentRoll, isOperate, isFm, searchParams, initialEmail, initialRedirect]);
+
   const defaultRole = isRentRoll
     ? "owner"
     : isFm
@@ -107,7 +122,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
   // Form Fields - S02 (Account Credentials)
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail || searchParams?.get("email") || "");
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -188,18 +203,26 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       const savedName = queryName || localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || getAuthCookie("officex_user_name");
       const savedEmail = queryEmail || localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
       const savedMobile = localStorage.getItem("officex_user_mobile") || getAuthCookie("officex_user_mobile");
-      const sessionActive =
-        localStorage.getItem("officex_session_active") === "1" ||
-        getAuthCookie("officex_session_active") === "1" ||
-        getAuthCookie("officex_auth") === "1";
       if (savedName && savedName !== "Commercial Account" && !fullName) setFullName(savedName);
       if (savedEmail && !email) setEmail(savedEmail);
       if (savedMobile && !mobileNumber) setMobileNumber(savedMobile);
-      if (sessionActive || savedEmail) setIsGoogleSession(true);
+
+      // Only enable Google session if explicit Google OAuth query parameter is present
+      const isExplicitGoogleQuery = urlParams.get("provider") === "google" || urlParams.get("oauth") === "google";
+      if (isExplicitGoogleQuery) {
+        setIsGoogleSession(true);
+      }
 
       const applySession = (u: any) => {
         if (!u) return;
-        setIsGoogleSession(true);
+        // Verify that the user authenticated specifically through Google OAuth
+        const isGoogleProvider =
+          u.app_metadata?.provider === "google" ||
+          (Array.isArray(u.identities) && u.identities.some((id: any) => id.provider === "google"));
+
+        if (isGoogleProvider) {
+          setIsGoogleSession(true);
+        }
         const uEmail = u.email || "";
         const uName = u.user_metadata?.full_name || u.user_metadata?.name || "";
         if (uEmail && !email) setEmail(uEmail);
@@ -1907,11 +1930,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
           <div className="pt-4 border-t border-slate-200 text-center text-xs text-slate-600 mt-4">
             Already have an account?{" "}
             <Link
-              href={`/login${
-                typeof window !== "undefined" && window.location.search
-                  ? window.location.search
-                  : `?context=${isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace"}&redirect=${encodeURIComponent(initialRedirect || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"))}`
-              }`}
+              href={loginHref}
               className="text-blue-600 font-bold hover:underline"
             >
               Sign In

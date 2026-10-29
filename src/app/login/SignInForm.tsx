@@ -61,25 +61,17 @@ export default function SignInForm({
 }: SignInFormProps) {
   const isRentRollContext =
     initialContext === "rent-roll" ||
-    (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
-    (typeof window !== "undefined" && (
-      window.location.search.includes("rent-roll") ||
-      window.location.hash.includes("rent-roll") ||
-      localStorage.getItem("officex_oauth_context") === "rent-roll" ||
-      sessionStorage.getItem("officex_oauth_context") === "rent-roll"
-    ));
+    (initialRedirect ? initialRedirect.includes("rent-roll") : false);
 
   const isOperateContext =
     !isRentRollContext && (
       initialContext === "operate" ||
-      (initialRedirect ? initialRedirect.includes("operate") : false) ||
-      (typeof window !== "undefined" && window.location.search.includes("operate"))
+      (initialRedirect ? initialRedirect.includes("operate") : false)
     );
 
   const isFmContext =
     initialContext === "fm" ||
-    (initialRedirect ? initialRedirect.includes("fm") : false) ||
-    (typeof window !== "undefined" && window.location.search.includes("fm"));
+    (initialRedirect ? initialRedirect.includes("fm") : false);
 
   const isMarketplaceContext = !isRentRollContext && !isOperateContext && !isFmContext;
 
@@ -450,6 +442,23 @@ export default function SignInForm({
         return;
       }
 
+      const normInput = identifier.trim().toLowerCase();
+      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_admin", "1");
+          localStorage.setItem("officex_role", "super_admin");
+          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          sessionStorage.setItem("officex_admin", "1");
+          document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
+          document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
+        }
+        setStep("signed_in_success");
+        setTimeout(() => {
+          window.location.href = data.redirect_url || "/admin";
+        }, 300);
+        return;
+      }
+
       if (data.memberships && data.memberships.length > 0) {
         setMemberships(data.memberships);
         setSelectedMembershipId(data.memberships[0].id);
@@ -577,6 +586,23 @@ export default function SignInForm({
         return;
       }
 
+      const normInput = identifier.trim().toLowerCase();
+      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_admin", "1");
+          localStorage.setItem("officex_role", "super_admin");
+          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          sessionStorage.setItem("officex_admin", "1");
+          document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
+          document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
+        }
+        setStep("signed_in_success");
+        setTimeout(() => {
+          window.location.href = data.redirect_url || "/admin";
+        }, 300);
+        return;
+      }
+
       if (data.memberships && data.memberships.length > 0) {
         setMemberships(data.memberships);
         setSelectedMembershipId(data.memberships[0].id);
@@ -638,6 +664,23 @@ export default function SignInForm({
       if (!res.ok) {
         setError(data.error || "Invalid authenticator code. Please retry.");
         setIsLoading(false);
+        return;
+      }
+
+      const normInput = identifier.trim().toLowerCase();
+      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_admin", "1");
+          localStorage.setItem("officex_role", "super_admin");
+          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          sessionStorage.setItem("officex_admin", "1");
+          document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
+          document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
+        }
+        setStep("signed_in_success");
+        setTimeout(() => {
+          window.location.href = data.redirect_url || "/admin";
+        }, 300);
         return;
       }
 
@@ -724,6 +767,24 @@ export default function SignInForm({
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
       document.cookie = `officex_user_email=${encodeURIComponent(cleanVal)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_user_role=${encodeURIComponent(roleName)}; path=/; max-age=86400; SameSite=Lax`;
+    }
+
+    const normalizedEmail = (userEmailOrPhone || "").trim().toLowerCase();
+
+    // If the authenticated user is Super Admin, medistationlifecare@gmail.com, or admin@gmail.com, immediately bypass workspace chooser and go directly to /admin
+    if (normalizedEmail === "admin@gmail.com" || normalizedEmail === "medistationlifecare@gmail.com" || roleName.toLowerCase().includes("super_admin")) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_admin", "1");
+        localStorage.setItem("officex_role", "super_admin");
+        sessionStorage.setItem("officex_admin", "1");
+        document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
+        document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
+      }
+      setStep("signed_in_success");
+      setTimeout(() => {
+        window.location.href = "/admin";
+      }, 300);
+      return;
     }
 
     const storedName = (typeof window !== "undefined" && (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name"))) || "";
