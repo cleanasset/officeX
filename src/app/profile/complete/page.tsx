@@ -4681,14 +4681,12 @@ function CompleteProfileContent() {
                   </div>
 
                   {/* Model Selection Pills */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {(
                       [
                         { id: "Area-based", label: "Per Sq.Ft (Area)", desc: "₹ / sq.ft / mo" },
                         { id: "Seat-based", label: "Per Seat (Desk)", desc: "₹ / workstation / mo" },
                         { id: "Fixed", label: "Fixed Lump-Sum", desc: "Flat monthly billing" },
-                        { id: "Hybrid", label: "Hybrid (Turnkey)", desc: "Base + Fitout + CAM" },
-                        { id: "Pure Rent", label: "Pure Rent", desc: "Bare Shell lease" },
                       ] as const
                     ).map((m) => (
                       <button
@@ -4719,7 +4717,7 @@ function CompleteProfileContent() {
                   </div>
 
                   {/* Dynamic Pricing Inputs */}
-                  <div className={`grid gap-4 pt-2 ${contractForm.billing_model === "Hybrid" ? "grid-cols-1 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"}`}>
+                  <div className="grid gap-4 pt-2 grid-cols-1 sm:grid-cols-3">
                     {/* Area (Sq.Ft) */}
                     <div>
                       <div className="flex items-center justify-between mb-1">

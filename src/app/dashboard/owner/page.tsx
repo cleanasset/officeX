@@ -143,9 +143,17 @@ export default function OwnerDashboardPage() {
       const onboardedFlag = localStorage.getItem("officex_rentroll_onboarded") === "true";
       setIsOnboarded(onboardedFlag);
       const hasSub = Boolean(
+        localStorage.getItem("officex_subscription") === "active" ||
+        localStorage.getItem("officex_owner_subscribed") === "true" ||
+        localStorage.getItem("officex_subscription_status") === "active" ||
         localStorage.getItem("officex_payment_id") ||
         localStorage.getItem("officex_applied_coupon") ||
-        localStorage.getItem("officex_rentroll_subscribed") === "true"
+        localStorage.getItem("officex_rentroll_subscribed") === "true" ||
+        (document.cookie && (
+          document.cookie.includes("officex_subscription=active") ||
+          document.cookie.includes("officex_owner_subscribed=true") ||
+          document.cookie.includes("officex_subscription_status=active")
+        ))
       );
       setIsRentRollSubscribed(hasSub);
       const logo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
@@ -677,13 +685,13 @@ export default function OwnerDashboardPage() {
             <span>Add Asset / Unit</span>
           </button>
 
-          {/* Secondary Action: Upload Excel */}
+          {/* Secondary Action: Upload in Bulk */}
           <button
             onClick={() => setExcelImporterOpen(true)}
             className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Upload Excel</span>
+            <span>Upload in Bulk</span>
           </button>
 
           {/* Operations Dropdown */}

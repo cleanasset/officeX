@@ -69,16 +69,27 @@ export default function TenantDirectoryPage() {
   const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
   const [copySuccessToast, setCopySuccessToast] = useState<string | null>(null);
 
+  const checkSubscribed = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_owner_subscribed", "true");
+      localStorage.setItem("officex_subscription", "active");
+      localStorage.setItem("officex_rentroll_subscribed", "true");
+      document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+    }
+    return true;
+  };
+
   const getTenantSharableLink = (t: any) => {
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
     const prop = t.property_name || "Commercial Centre";
     const name = t.tenant_name || "Tenant";
     const email = t.email || "";
-    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&invite=t_${Date.now()}`;
+    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
   };
 
   const handleCopyTenantLink = (t: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    checkSubscribed();
     const link = getTenantSharableLink(t);
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(link);

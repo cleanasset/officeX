@@ -166,7 +166,7 @@ export default function SpaceAndBuildingRegistryPage() {
                 className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                <span>Upload Excel</span>
+                <span>Upload in Bulk</span>
               </button>
               <button
                 onClick={() => {

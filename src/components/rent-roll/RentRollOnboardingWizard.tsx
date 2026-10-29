@@ -1398,17 +1398,17 @@ export default function RentRollOnboardingWizard({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-[11px] font-bold text-slate-700 uppercase">
-                      Floors Above Ground
+                      Total Floors (including Ground Floor)
                     </label>
-                    {floorsCount === 0 && (
+                    {floorsCount === 1 && (
                       <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                        Ground Floor Only (0 Upper)
+                        Ground Floor Only (1 Floor)
                       </span>
                     )}
                   </div>
                   <input
                     type="number"
-                    min={0}
+                    min={1}
                     max={150}
                     value={floorsCount}
                     onChange={(e) => {
@@ -1417,14 +1417,14 @@ export default function RentRollOnboardingWizard({
                         setFloorsCount("");
                       } else {
                         const num = parseInt(v, 10);
-                        setFloorsCount(isNaN(num) ? "" : Math.max(0, num));
+                        setFloorsCount(isNaN(num) ? "" : Math.max(1, num));
                       }
                     }}
-                    placeholder="0 for Ground floor only, or 1, 2, 5..."
+                    placeholder="e.g. 1 (Ground only), 2 (Ground + 1st), 3..."
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Enter 0 for warehouses, sheds, or ground-floor retail.
+                    Enter 1 for single-level warehouses/ground retail, or total count (e.g. 3 = Ground + 1st + 2nd Floor).
                   </p>
                 </div>
 
@@ -1509,13 +1509,13 @@ export default function RentRollOnboardingWizard({
                     <div className="md:col-span-2 flex items-center gap-2 p-3 rounded-lg bg-teal-50/60 border border-teal-200/60 text-teal-900 text-xs">
                       <Info size={16} className="text-[#0F8B7D] shrink-0" />
                       <span>
-                        {numFloors === 0 ? (
+                        {numFloors === 1 ? (
                           <>
                             Generates <strong>{totalUnits} leasable unit{totalUnits > 1 ? "s" : ""}</strong> on <strong>Ground Floor Only</strong> {avgSqft > 0 ? `(~${avgSqft.toLocaleString()} sq ft each)` : ""} ready for contract mapping.
                           </>
                         ) : (
                           <>
-                            Generates <strong>{totalUnits} leasable units</strong> across {numFloors} floor{numFloors > 1 ? "s" : ""} {avgSqft > 0 ? `(~${avgSqft.toLocaleString()} sq ft each)` : ""} ready for contract mapping.
+                            Generates <strong>{totalUnits} leasable units</strong> across {numFloors} floors (<strong>Ground Floor + {numFloors - 1} Upper Floor{numFloors - 1 > 1 ? "s" : ""}</strong>) {avgSqft > 0 ? `(~${avgSqft.toLocaleString()} sq ft each)` : ""} ready for contract mapping.
                           </>
                         )}
                       </span>

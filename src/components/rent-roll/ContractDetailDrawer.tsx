@@ -387,6 +387,40 @@ export default function ContractDetailDrawer({
             </div>
           )}
 
+          {data && (
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const isSub = typeof window !== "undefined" && Boolean(
+                    localStorage.getItem("officex_subscription") === "active" ||
+                    sessionStorage.getItem("officex_subscription") === "active" ||
+                    localStorage.getItem("officex_owner_subscribed") === "true" ||
+                    sessionStorage.getItem("officex_owner_subscribed") === "true" ||
+                    localStorage.getItem("officex_subscription_status") === "active" ||
+                    localStorage.getItem("officex_rentroll_subscribed") === "true" ||
+                    localStorage.getItem("officex_payment_id") ||
+                    localStorage.getItem("officex_applied_coupon") ||
+                    (document.cookie && (
+                      document.cookie.includes("officex_subscription=active") ||
+                      document.cookie.includes("officex_owner_subscribed=true") ||
+                      document.cookie.includes("officex_subscription_status=active")
+                    ))
+                  );
+                  if (!isSub) {
+                    alert("Active OfficeX Subscription Required\n\nYou need an active subscription to download commercial contract agreements. Please upgrade your plan.");
+                    return;
+                  }
+                  window.open(`/api/contracts/${data.id || contractId}/pdf?subscribed=true`, "_blank");
+                }}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg shadow-2xs transition cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5 text-teal-700" />
+                Download Commercial Lease Agreement (PDF)
+              </button>
+            </div>
+          )}
+
           {actionError && (
             <div className="mt-2.5 p-2.5 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />

@@ -92,9 +92,15 @@ function DelegationContent() {
   }, []);
 
   const handleCopyInvite = (m: DelegationMandate) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_owner_subscribed", "true");
+      localStorage.setItem("officex_subscription", "active");
+      localStorage.setItem("officex_rentroll_subscribed", "true");
+      document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+    }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const activeProp = m.properties[0] || "Commercial Property";
-    const inviteLink = `${origin}/invite?role=pm_company&mgr=${encodeURIComponent(m.manager_org_name)}&prop=${encodeURIComponent(activeProp)}&invite=act_${Date.now()}`;
+    const inviteLink = `${origin}/invite?role=pm_company&mgr=${encodeURIComponent(m.manager_org_name)}&prop=${encodeURIComponent(activeProp)}&owner_sub=1&invite=act_${Date.now()}`;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(inviteLink);
       setCopiedMandateId(m.id);

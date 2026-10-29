@@ -87,7 +87,7 @@ export async function POST(req: Request) {
         email: cleanEmail,
         fullName: fullName.trim(),
         role: "property_manager",
-        passwordHash: "SUPABASE_AUTH_MANAGED"
+        passwordHash: password || "SUPABASE_AUTH_MANAGED"
       });
     } catch (e) {
       console.warn("DB user insert fallback:", e);

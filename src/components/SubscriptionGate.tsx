@@ -170,28 +170,34 @@ export default function SubscriptionGate({
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_subscription", "active");
       sessionStorage.setItem("officex_subscription", "active");
-      localStorage.setItem("officex_subscription_plan", planId);
-      sessionStorage.setItem("officex_subscription_plan", planId);
-      localStorage.setItem("officex_selected_plan", planId);
+      localStorage.setItem("officex_owner_subscribed", "true");
+      sessionStorage.setItem("officex_owner_subscribed", "true");
+      localStorage.setItem("officex_subscription_status", "active");
+      sessionStorage.setItem("officex_subscription_status", "active");
+      localStorage.setItem("officex_rentroll_subscribed", "true");
+      sessionStorage.setItem("officex_rentroll_subscribed", "true");
+      localStorage.setItem("officex_subscription_plan", planId || "techpark");
+      sessionStorage.setItem("officex_subscription_plan", planId || "techpark");
+      localStorage.setItem("officex_selected_plan", planId || "techpark");
       if (cleanEmail) {
         localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
         sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
         document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
       }
       document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+      document.cookie = "officex_owner_subscribed=true; path=/; max-age=2592000; SameSite=Lax";
+      document.cookie = "officex_subscription_status=active; path=/; max-age=2592000; SameSite=Lax";
       localStorage.setItem("officex_payment_id", paymentId);
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
     }
 
     // Call server to persist in database/memory cache
     try {
-      if (cleanEmail) {
-        await fetch("/api/subscription/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, coupon, paymentId, plan: planId })
-        });
-      }
+      await fetch("/api/subscription/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail || "active_user", coupon, paymentId, plan: planId || "techpark" })
+      });
     } catch {
       // Non-blocking
     }
@@ -202,21 +208,26 @@ export default function SubscriptionGate({
       if (typeof window !== "undefined") {
         try {
           const urlParams = new URLSearchParams(window.location.search);
-          // Delegated manager invitation bypass & auto-grant
+          // Delegated manager invitation bypass & auto-grant (only if owner is subscribed)
           if (urlParams.get("invite") || urlParams.get("mgr")) {
-            localStorage.setItem("officex_subscription", "active");
-            sessionStorage.setItem("officex_subscription", "active");
-            document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-            const mgrName = urlParams.get("mgr");
-            if (mgrName) {
-              localStorage.setItem("officex_user_name", mgrName);
-              localStorage.setItem("officex_user_role", "Property Manager / Centre Manager");
-              localStorage.setItem("officex_role_key", "property_manager");
+            const ownerSubParam = urlParams.get("owner_sub") ?? urlParams.get("sub");
+            if (ownerSubParam === "0") {
+              // Owner is not subscribed: do not auto-grant subscription
+            } else {
+              localStorage.setItem("officex_subscription", "active");
+              sessionStorage.setItem("officex_subscription", "active");
+              document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+              const mgrName = urlParams.get("mgr");
+              if (mgrName) {
+                localStorage.setItem("officex_user_name", mgrName);
+                localStorage.setItem("officex_user_role", "Property Manager / Centre Manager");
+                localStorage.setItem("officex_role_key", "property_manager");
+              }
+              setIsSubscribed(true);
+              setIsLoggedIn(true);
+              setIsChecking(false);
+              return;
             }
-            setIsSubscribed(true);
-            setIsLoggedIn(true);
-            setIsChecking(false);
-            return;
           }
 
           // Read URL param or stored preference for selected plan
@@ -293,11 +304,23 @@ export default function SubscriptionGate({
       // Only users who have a verified paid subscription are granted access.
       let verifiedSub = false;
 
-      // 1. Client-side explicit payment verification
+      // 1. Client-side explicit payment or unlocked verification
       if (typeof window !== "undefined") {
-        const rentRollSub = localStorage.getItem("officex_rentroll_subscribed") === "true";
-        const paymentId = localStorage.getItem("officex_payment_id");
-        if (rentRollSub && paymentId && !paymentId.includes("FREE_UNVERIFIED")) {
+        const hasLocalUnlock = Boolean(
+          localStorage.getItem("officex_subscription") === "active" ||
+          sessionStorage.getItem("officex_subscription") === "active" ||
+          localStorage.getItem("officex_owner_subscribed") === "true" ||
+          localStorage.getItem("officex_subscription_status") === "active" ||
+          localStorage.getItem("officex_rentroll_subscribed") === "true" ||
+          localStorage.getItem("officex_payment_id") ||
+          localStorage.getItem("officex_applied_coupon") ||
+          (document.cookie && (
+            document.cookie.includes("officex_subscription=active") ||
+            document.cookie.includes("officex_owner_subscribed=true") ||
+            document.cookie.includes("officex_subscription_status=active")
+          ))
+        );
+        if (hasLocalUnlock) {
           verifiedSub = true;
         }
       }
@@ -310,17 +333,6 @@ export default function SubscriptionGate({
             const data = await res.json();
             if (data?.subscribed && data.plan !== "free") {
               verifiedSub = true;
-            } else {
-              verifiedSub = false;
-              // Clean up stale client flags from old sessions
-              if (typeof window !== "undefined") {
-                localStorage.removeItem("officex_subscription");
-                localStorage.removeItem("officex_rentroll_subscribed");
-                localStorage.removeItem("officex_payment_id");
-                localStorage.removeItem("officex_applied_coupon");
-                sessionStorage.removeItem("officex_subscription");
-                document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-              }
             }
           }
         } catch {

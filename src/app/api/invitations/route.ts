@@ -68,7 +68,8 @@ export async function POST(req: Request) {
     } catch {}
 
     const cleanBase = hostOrigin.replace(/\/+$/, "");
-    const inviteLink = `${cleanBase}/invite?token=${token}&role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}`;
+    const ownerSubscribed = Boolean(body.ownerSubscribed);
+    const inviteLink = `${cleanBase}/invite?token=${token}&role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}&owner_sub=${ownerSubscribed ? "1" : "0"}`;
 
     return NextResponse.json({
       success: true,

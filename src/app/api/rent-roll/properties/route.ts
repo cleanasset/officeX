@@ -230,33 +230,8 @@ export async function POST(req: Request) {
             .returning();
           targetBuildingId = newBld.id;
         }
-
-        if (targetBuildingId) {
-          const existingSpaces = await db
-            .select({ id: space.id })
-            .from(space)
-            .where(and(eq(space.building_id, targetBuildingId), sql`${space.deleted_at} IS NULL`))
-            .limit(1);
-
-          if (existingSpaces.length === 0) {
-            await db
-              .insert(space)
-              .values({
-                org_id: orgId,
-                client_account_id: clientAccountId,
-                building_id: targetBuildingId,
-                space_name: "Suite 101",
-                space_code: `SPC-${inserted.property_code}-101`,
-                chargeable_area_sqft: String(payload.total_leasable_area_sqft),
-                occupancy_status: "vacant",
-                is_leasable: true,
-                space_type: "suite",
-              })
-              .returning();
-          }
-        }
       } catch (autoErr) {
-        console.warn("Auto-provision building/space notice:", autoErr);
+        console.warn("Auto-provision building notice:", autoErr);
       }
     }
 

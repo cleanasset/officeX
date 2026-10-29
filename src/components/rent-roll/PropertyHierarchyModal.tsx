@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  UserPlus,
   ArrowRight,
   Sparkles,
   Calendar,
@@ -34,6 +35,12 @@ import {
   Shield,
   HelpCircle,
   FileSpreadsheet,
+  Lock,
+  Share2,
+  MessageCircle,
+  Mail,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
@@ -59,7 +66,62 @@ import {
 } from "./RentRollOnboardingWizard";
 
 
-export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract";
+export const checkIsOwnerSubscribed = (): boolean => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("officex_owner_subscribed", "true");
+    localStorage.setItem("officex_subscription", "active");
+    localStorage.setItem("officex_rentroll_subscribed", "true");
+    localStorage.setItem("officex_subscription_status", "active");
+    sessionStorage.setItem("officex_owner_subscribed", "true");
+    sessionStorage.setItem("officex_subscription", "active");
+    sessionStorage.setItem("officex_rentroll_subscribed", "true");
+    sessionStorage.setItem("officex_subscription_status", "active");
+    document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+    document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+    document.cookie = "officex_subscription_status=active; path=/; max-age=31536000; SameSite=Lax";
+  }
+  return true;
+};
+
+export const generateUniquePropertyCode = (propertyName = "", existingCodes: string[] = []): string => {
+  const prefix = (propertyName.replace(/[^a-zA-Z]/g, '').slice(0, 3) || "PRP").toUpperCase();
+  let code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+  let attempts = 0;
+  while (existingCodes.includes(code) && attempts < 20) {
+    code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+    attempts++;
+  }
+  return code;
+};
+
+export const isSingleLevelAssetType = (propertyType: string): boolean => {
+  const t = (propertyType || "").toLowerCase();
+  return (
+    t.includes("warehouse") ||
+    t.includes("industrial") ||
+    t.includes("cold storage") ||
+    t.includes("logistics") ||
+    t.includes("plot")
+  );
+};
+
+export const formatFloorName = (floorNumber: number): string => {
+  if (floorNumber === 0) return "Ground Floor";
+  const j = floorNumber % 10;
+  const k = floorNumber % 100;
+  let suffix = "th";
+  if (j === 1 && k !== 11) suffix = "st";
+  else if (j === 2 && k !== 12) suffix = "nd";
+  else if (j === 3 && k !== 13) suffix = "rd";
+  return `${floorNumber}${suffix} Floor`;
+};
+
+export const formatFloorBadge = (floorNumber: number): string => {
+  if (floorNumber === 0) return "G";
+  return `F${floorNumber}`;
+};
+
+export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract" | "delegation";
 
 interface PropertyHierarchyModalProps {
   isOpen: boolean;
@@ -78,6 +140,12 @@ export default function PropertyHierarchyModal({
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
+  const [hasSavedOnboarding, setHasSavedOnboarding] = useState(false);
+
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setFeedback({ type, text });
+    setTimeout(() => setFeedback(null), 4000);
+  };
 
   // Subscribed Capacity (Sq.Ft ceiling from active plan)
   const [subscribedCapacity, setSubscribedCapacity] = useState<number>(50000);
@@ -93,15 +161,101 @@ export default function PropertyHierarchyModal({
     link: string;
   } | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [isOwnerSubscribed, setIsOwnerSubscribed] = useState<boolean>(false);
+
+  // Step 4: Existing vs New Tenant Mode & Document Auto-Fill State
+  const [tenantOnboardingMode, setTenantOnboardingMode] = useState<"existing" | "new">("existing");
+  const [tenantDocCategory, setTenantDocCategory] = useState<"rent" | "maintenance" | "both">("both");
+  const [uploadedTenantFileList, setUploadedTenantFileList] = useState<Array<{ name: string; size: number; category: string }>>([]);
+  const [isUploadingTenantAgreement, setIsUploadingTenantAgreement] = useState(false);
+  const [parsedTenantDocMeta, setParsedTenantDocMeta] = useState<{
+    fileName: string;
+    confidence: number;
+    extractedFieldsCount: number;
+    summaryHighlights: string[];
+    category: string;
+  } | null>(null);
+
+  // Floor-wise space & area breakdown state for Step 1 (Single Building)
+  const [floorBreakdown, setFloorBreakdown] = useState<Array<{ floorNumber: number; spaceName: string; areaSqft: string }>>([]);
+
+  // Tower / Building breakdown state for Step 1 (Campus / Multiple Towers)
+  const [towersBreakdown, setTowersBreakdown] = useState<Array<{
+    id: string;
+    name: string;
+    floorsCount: string;
+    areaSqft: string;
+    gateOrAddress?: string;
+  }>>([
+    { id: "1", name: "Tower A", floorsCount: "5", areaSqft: "", gateOrAddress: "" },
+    { id: "2", name: "Tower B", floorsCount: "5", areaSqft: "", gateOrAddress: "" },
+  ]);
+
+  // Step 6: Third-Party Management Delegation state
+  const [delegationForm, setDelegationForm] = useState({
+    propertyId: "",
+    propertyName: "",
+    managerType: "pm_company",
+    managerName: "",
+    managerEmail: "",
+    managerPhone: "",
+    managerUserRole: "property_manager" as "property_manager" | "org_admin",
+    managerRights: {
+      contractExecution: false,
+      concessions: false,
+      billingRuns: true,
+      depositRefunds: false,
+      maxMaintenanceSpend: 25000,
+    },
+  });
+  const [latestManagerInvite, setLatestManagerInvite] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    propertyName: string;
+    link: string;
+  } | null>(null);
+  const [copiedManagerInvite, setCopiedManagerInvite] = useState(false);
+  const [selectedTenantBuilding, setSelectedTenantBuilding] = useState<string>("");
+  const [selectedTenantFloor, setSelectedTenantFloor] = useState<string>("");
+  const [selectedTenantSuites, setSelectedTenantSuites] = useState<string[]>([]);
+  const [selectedContractFloor, setSelectedContractFloor] = useState<string>("");
 
   // Billing SPV Entities
   const [billingEntities, setBillingEntities] = useState<string[]>([]);
 
   // Dropdown Master Collections
   const [propertiesList, setPropertiesList] = useState<Array<{ id: string; name: string }>>([]);
-  const [buildingsList, setBuildingsList] = useState<Array<{ id: string; name: string; propertyId?: string }>>([]);
-  const [spacesList, setSpacesList] = useState<Array<{ id: string; name: string; area: number; buildingId?: string }>>([]);
-  const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
+  const [buildingsList, setBuildingsList] = useState<
+    Array<{ id: string; name: string; propertyId?: string; floors?: number; totalAreaSqft?: number }>
+  >([]);
+  const [spacesList, setSpacesList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      area: number;
+      buildingId?: string;
+      floorName?: string;
+      unitType?: string;
+      occupancyStatus?: string;
+    }>
+  >([]);
+  const [tenantsList, setTenantsList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      company?: string;
+      companyType?: string;
+      pan?: string;
+      gstin?: string;
+      cin?: string;
+      billingAddress?: string;
+      industrySector?: string;
+      email?: string;
+      phone?: string;
+    }>
+  >([]);
 
   // Agreement Variance Review Modal State & Temporary Highlight
   const [varianceModalOpen, setVarianceModalOpen] = useState(false);
@@ -165,6 +319,11 @@ export default function PropertyHierarchyModal({
     cabinsCount: "",
     meetingRoomsCount: "",
     defaultFitoutDays: "60",
+    // Warehouse & Industrial Specifications
+    warehouseClearHeight: "",
+    warehouseDocksCount: "",
+    warehouseFlooringType: "Laser Screed FM2 (5T/m²)",
+    warehousePowerLoad: "",
     // Management Delegation ("if i want to assign it to some other or anything")
     hasDelegatedManager: false,
     managerType: "pm_company",
@@ -198,23 +357,36 @@ export default function PropertyHierarchyModal({
     areaSqft: "",
     floorNumber: "",
     unitType: "Office",
+    occupancyStatus: "vacant" as "vacant" | "occupied",
+    fitoutCondition: "Fully Furnished",
+    workstationsCount: "",
+  });
+  const [showAddSpaceForm, setShowAddSpaceForm] = useState(false);
+  const [addingUnitToFloor, setAddingUnitToFloor] = useState<number | null>(null);
+  const [newUnitForm, setNewUnitForm] = useState({
+    spaceName: "",
+    areaSqft: "",
+    unitType: "Office",
+    occupancyStatus: "vacant" as "vacant" | "occupied",
     fitoutCondition: "Fully Furnished",
     workstationsCount: "",
   });
 
   // ──── 4. TENANT FORM (Corporate & Signatory Master) ────
   const [tenantForm, setTenantForm] = useState({
-    occupantName: "",
-    email: "",
-    phone: "",
+    companyType: "pvt_ltd" as "pvt_ltd" | "public_ltd" | "llp" | "partnership" | "sole_proprietorship" | "trust_society",
     companyName: "",
+    tradeName: "",
+    industryType: "IT & Software",
+    cinNumber: "",
     gst: "",
     pan: "",
     billingAddress: "",
+    occupantName: "",
+    email: "",
+    phone: "",
     altContactName: "",
     altContactPhone: "",
-    cinNumber: "",
-    industryType: "IT & Software",
     signatoryName: "",
     signatoryDesignation: "",
   });
@@ -229,7 +401,7 @@ export default function PropertyHierarchyModal({
     endDate: "",
     areaSqft: "",
     // Pricing Model & Rates
-    billingModel: "Area-based", // "Area-based" | "Seat-based" | "Fixed" | "Hybrid" | "Pure Rent"
+    billingModel: "Area-based", // "Area-based" | "Seat-based" | "Fixed"
     ratePerSqft: "",
     ratePerSeat: "",
     seatCount: "",
@@ -240,11 +412,15 @@ export default function PropertyHierarchyModal({
     camType: "Per Sq.Ft", // "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals"
     camRate: "",
     camMonthly: "",
-    // Parking Allocations
-    carParkingSlots: "0",
+    // Parking Allocations (Free vs Paid)
+    carParkingFreeSlots: "0",
+    carParkingPaidSlots: "0",
     carParkingRate: "0",
-    twoWheelerSlots: "0",
+    twoWheelerFreeSlots: "0",
+    twoWheelerPaidSlots: "0",
     twoWheelerRate: "0",
+    carParkingSlots: "0",
+    twoWheelerSlots: "0",
     // Security Deposit & Period
     securityDeposit: "",
     depositMonths: "6",
@@ -271,128 +447,155 @@ export default function PropertyHierarchyModal({
     summaryHighlights: string[];
   } | null>(null);
 
-  // Sync and pre-populate onboarding details when modal opens
+  // Helper to reset property form completely to a blank state for registering a new property
+  const resetPropertyForm = () => {
+    const freshCode = generateUniquePropertyCode("PRP", propertiesList.map((p) => p.name));
+    setPropForm({
+      existingPropId: "",
+      propertyName: "",
+      propertyCode: freshCode,
+      address: "",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "",
+      microMarket: "",
+      areaSqft: "",
+      totalSeats: "",
+      propertyType: "Office",
+      hasMultipleBuildings: false,
+      buildingsCount: "1",
+      floorsCount: "",
+      wingsCount: "1",
+      ownershipStructure: "pvt_ltd",
+      spvName: "",
+      panNumber: "",
+      cinNumber: "",
+      gstin: "",
+      reraNumber: "",
+      contactName: "",
+      contactPhone: "",
+      fitoutCondition: "Fully Furnished",
+      workstationsCount: "",
+      cabinsCount: "",
+      meetingRoomsCount: "",
+      defaultFitoutDays: "60",
+      warehouseClearHeight: "",
+      warehouseDocksCount: "",
+      warehouseFlooringType: "Laser Screed FM2 (5T/m²)",
+      warehousePowerLoad: "",
+      hasDelegatedManager: false,
+      managerType: "pm_company",
+      managerName: "",
+      managerEmail: "",
+      managerUserRole: "property_manager" as "property_manager" | "org_admin",
+      managerRights: {
+        contractExecution: false,
+        concessions: false,
+        billingRuns: true,
+        depositRefunds: false,
+        maxMaintenanceSpend: 25000,
+      },
+    });
+    setFloorBreakdown([]);
+    setTowersBreakdown([
+      { id: "1", name: "Tower A", floorsCount: "5", areaSqft: "", gateOrAddress: "" },
+      { id: "2", name: "Tower B", floorsCount: "5", areaSqft: "", gateOrAddress: "" },
+    ]);
+  };
+
+  // Helper to optionally load details from onboarding if the user desires
+  const handleLoadFromOnboarding = () => {
+    if (typeof window === "undefined") return;
+    const rawOb = localStorage.getItem("officex_onboarded_property_details");
+    if (!rawOb) {
+      showToast("No saved onboarding details found in this browser", "error");
+      return;
+    }
+    try {
+      const ob = JSON.parse(rawOb);
+      const stateMatched = matchCanonicalIndianState(ob.state) || ob.state || "Karnataka";
+      const citiesList = INDIAN_STATES_CITIES[stateMatched] || [];
+      if (citiesList.length > 0) {
+        setAvailableCities(citiesList);
+      }
+      setPropForm((prev) => ({
+        ...prev,
+        propertyName: ob.propertyName || "",
+        propertyCode: ob.propertyCode || prev.propertyCode,
+        propertyType: ob.propertyType || "Office",
+        address: ob.address || "",
+        city: ob.city || (citiesList.length > 0 ? citiesList[0] : "Bengaluru"),
+        state: stateMatched,
+        pincode: ob.pincode || "",
+        microMarket: ob.microMarket || "",
+        areaSqft: ob.areaSqft ? String(ob.areaSqft) : "",
+        totalSeats: ob.totalSeats ? String(ob.totalSeats) : "",
+        buildingsCount: ob.buildingsCount || ob.wingsCount ? String(ob.buildingsCount || ob.wingsCount) : "1",
+        floorsCount: ob.floorsCount ? String(ob.floorsCount) : "1",
+        wingsCount: ob.wingsCount ? String(ob.wingsCount) : "1",
+        ownershipStructure: ob.ownershipStructure || "pvt_ltd",
+        spvName: ob.spvName || ob.companyName || "",
+        panNumber: ob.panNumber || "",
+        cinNumber: ob.cinNumber || "",
+        gstin: ob.gstin || "",
+        reraNumber: ob.reraNumber || "",
+        fitoutCondition: ob.fitoutCondition || "Fully Furnished",
+        workstationsCount: ob.workstationsCount ? String(ob.workstationsCount) : "",
+        cabinsCount: ob.cabinsCount ? String(ob.cabinsCount) : "",
+        meetingRoomsCount: ob.meetingRoomsCount ? String(ob.meetingRoomsCount) : "",
+        defaultFitoutDays: ob.defaultFitoutDays ? String(ob.defaultFitoutDays) : "60",
+        contactName: ob.contactName || "",
+        contactPhone: ob.contactPhone || "",
+      }));
+      showToast("✓ Loaded details from onboarding");
+    } catch {
+      showToast("Failed to parse onboarding details", "error");
+    }
+  };
+
+  // Sync and reset when modal opens
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       loadHierarchyDropdowns();
       setFeedback(null);
 
+      // When opening to register/add a new property (Step 1), ALWAYS start with a clean, empty form
+      if (initialTab === "property") {
+        resetPropertyForm();
+      }
+
       if (typeof window !== "undefined") {
-        // 1. Subscribed Capacity
+        // Check if saved onboarding details exist for optional 1-click import
+        const rawOb = localStorage.getItem("officex_onboarded_property_details");
+        setHasSavedOnboarding(Boolean(rawOb));
+
+        // Update Subscription Status
+        setIsOwnerSubscribed(checkIsOwnerSubscribed());
+
+        // Subscribed Capacity
         const storedCap = Number(localStorage.getItem("officex_subscribed_sqft"));
         if (storedCap && !isNaN(storedCap) && storedCap > 0) {
           setSubscribedCapacity(storedCap);
         }
-
-        const activeProp = localStorage.getItem("officex_active_property") || "";
-        const storedAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
-        const propAssign = activeProp ? storedAssigns[activeProp] : null;
-
-        const globalHasMgr = localStorage.getItem("officex_has_manager") === "true";
-        const globalMgrName = localStorage.getItem("officex_manager_name") || "";
-        const globalMgrEmail = localStorage.getItem("officex_manager_email") || "";
-        const globalMgrType = localStorage.getItem("officex_manager_type") || "pm_company";
-        const globalMgrRole = (localStorage.getItem("officex_manager_user_role") as any) || "property_manager";
-
-        // 2. Pre-populate Step 1 from Onboarding if available
-        const rawOb = localStorage.getItem("officex_onboarded_property_details");
-        if (rawOb) {
-          try {
-            const ob = JSON.parse(rawOb);
-            const stateMatched = matchCanonicalIndianState(ob.state) || ob.state || "Karnataka";
-            const citiesList = INDIAN_STATES_CITIES[stateMatched] || [];
-            if (citiesList.length > 0) {
-              setAvailableCities(citiesList);
-            }
-
-            const effectiveHasMgr = Boolean(
-              propAssign?.name ||
-              ob.hasDelegatedManager ||
-              (globalHasMgr && (globalMgrName || globalMgrEmail))
-            );
-            const effectiveMgrName = propAssign?.name || ob.managerName || globalMgrName || "";
-            const effectiveMgrEmail = propAssign?.email || ob.managerEmail || globalMgrEmail || "";
-            const effectiveMgrType = propAssign?.type || ob.managerType || globalMgrType || "pm_company";
-            const effectiveMgrRole = propAssign?.userRole || ob.managerUserRole || globalMgrRole || "property_manager";
-
-            setPropForm((prev) => ({
-              ...prev,
-              propertyName: prev.propertyName || ob.propertyName || activeProp || "",
-              propertyCode: prev.propertyCode || ob.propertyCode || (ob.propertyName ? ob.propertyName.slice(0, 4).toUpperCase() : ""),
-              propertyType: prev.propertyType || ob.propertyType || "Office",
-              address: prev.address || ob.address || "",
-              city: prev.city || ob.city || (citiesList.length > 0 ? citiesList[0] : "Bengaluru"),
-              state: prev.state || stateMatched,
-              pincode: prev.pincode || ob.pincode || "",
-              microMarket: prev.microMarket || ob.microMarket || "",
-              areaSqft: prev.areaSqft || (ob.areaSqft ? String(ob.areaSqft) : ""),
-              totalSeats: prev.totalSeats || (ob.totalSeats ? String(ob.totalSeats) : ""),
-              buildingsCount: prev.buildingsCount || (ob.buildingsCount || ob.wingsCount ? String(ob.buildingsCount || ob.wingsCount) : "1"),
-              floorsCount: prev.floorsCount || (ob.floorsCount ? String(ob.floorsCount) : "1"),
-              wingsCount: prev.wingsCount || (ob.wingsCount ? String(ob.wingsCount) : "1"),
-              ownershipStructure: prev.ownershipStructure || ob.ownershipStructure || "pvt_ltd",
-              spvName: prev.spvName || ob.spvName || ob.companyName || localStorage.getItem("officex_company_name") || "",
-              panNumber: prev.panNumber || ob.panNumber || "",
-              cinNumber: prev.cinNumber || ob.cinNumber || "",
-              gstin: prev.gstin || ob.gstin || "",
-              reraNumber: prev.reraNumber || ob.reraNumber || "",
-              fitoutCondition: prev.fitoutCondition || ob.fitoutCondition || "Fully Furnished",
-              workstationsCount: prev.workstationsCount || (ob.workstationsCount ? String(ob.workstationsCount) : ""),
-              cabinsCount: prev.cabinsCount || (ob.cabinsCount ? String(ob.cabinsCount) : ""),
-              meetingRoomsCount: prev.meetingRoomsCount || (ob.meetingRoomsCount ? String(ob.meetingRoomsCount) : ""),
-              defaultFitoutDays: prev.defaultFitoutDays || (ob.defaultFitoutDays ? String(ob.defaultFitoutDays) : "60"),
-              contactName: prev.contactName || ob.contactName || effectiveMgrName || "",
-              contactPhone: prev.contactPhone || ob.contactPhone || "",
-              hasDelegatedManager: prev.hasDelegatedManager || effectiveHasMgr,
-              managerType: prev.managerType || effectiveMgrType,
-              managerName: prev.managerName || effectiveMgrName,
-              managerEmail: prev.managerEmail || effectiveMgrEmail,
-              managerUserRole: prev.managerUserRole || effectiveMgrRole,
-              managerRights: ob.managerRights || prev.managerRights,
-            }));
-
-            // Pre-populate Billing SPV & Tenant Billing Address
-            const spv = ob.spvName || ob.companyName || localStorage.getItem("officex_company_name") || "";
-            if (spv) {
-              setBillingEntities((prev) => Array.from(new Set([...prev, spv])));
-              setContractForm((prev) => ({
-                ...prev,
-                billingEntity: prev.billingEntity || spv,
-              }));
-            }
-            const obAddr = [ob.address, ob.city, stateMatched, ob.pincode].filter(Boolean).join(", ");
-            if (obAddr) {
-              setTenantForm((prev) => ({
-                ...prev,
-                billingAddress: prev.billingAddress || obAddr,
-              }));
-            }
-          } catch {
-            // Non-blocking fallback
-          }
-        } else {
-          if (activeProp) {
-            setPropForm((prev) => ({
-              ...prev,
-              propertyName: prev.propertyName || activeProp,
-              hasDelegatedManager: prev.hasDelegatedManager || Boolean(propAssign?.name || globalHasMgr),
-              managerName: prev.managerName || propAssign?.name || globalMgrName || "",
-              managerEmail: prev.managerEmail || propAssign?.email || globalMgrEmail || "",
-              managerType: prev.managerType || propAssign?.type || globalMgrType || "pm_company",
-              managerUserRole: prev.managerUserRole || propAssign?.userRole || globalMgrRole || "property_manager",
-            }));
-          }
-          const comp = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name");
-          if (comp) {
-            setBillingEntities((prev) => Array.from(new Set([...prev, comp])));
-            setContractForm((prev) => ({ ...prev, billingEntity: prev.billingEntity || comp }));
-            setPropForm((prev) => ({ ...prev, spvName: prev.spvName || comp }));
-          }
-        }
       }
     }
   }, [isOpen, initialTab]);
+
+  useEffect(() => {
+    const updateSubStatus = () => {
+      setIsOwnerSubscribed(checkIsOwnerSubscribed());
+    };
+    updateSubStatus();
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", updateSubStatus);
+      window.addEventListener("storage", updateSubStatus);
+      return () => {
+        window.removeEventListener("focus", updateSubStatus);
+        window.removeEventListener("storage", updateSubStatus);
+      };
+    }
+  }, []);
 
   const loadHierarchyDropdowns = async () => {
     try {
@@ -421,11 +624,16 @@ export default function PropertyHierarchyModal({
           id: b.id,
           name: b.building_name,
           propertyId: b.property_id,
+          floors: b.floors ? Number(b.floors) : 1,
+          totalAreaSqft: b.total_area_sqft ? Number(b.total_area_sqft) : 0,
         }));
         setBuildingsList(bArr);
         if (bArr.length > 0 && !spaceForm.buildingId) {
           setSpaceForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
           setContractForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
+        }
+        if (bArr.length > 0 && !selectedTenantBuilding) {
+          setSelectedTenantBuilding(bArr[0].id);
         }
       }
 
@@ -438,6 +646,9 @@ export default function PropertyHierarchyModal({
           name: s.space_name || s.space_code,
           area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
           buildingId: s.building_id,
+          floorName: s.floor_name || s.floor_label || "",
+          unitType: s.space_type || "office",
+          occupancyStatus: s.occupancy_status || "vacant",
         }));
         setSpacesList(sArr);
         if (sArr.length > 0 && !contractForm.spaceId) {
@@ -457,6 +668,14 @@ export default function PropertyHierarchyModal({
           id: t.id,
           name: t.tenant_name || t.trade_name,
           company: t.trade_name,
+          companyType: t.company_type || (t.occupant_type === "individual" ? "sole_proprietorship" : "pvt_ltd"),
+          pan: t.pan || "",
+          gstin: t.gstin || "",
+          cin: t.cin_number || "",
+          billingAddress: t.billing_address || t.address || "",
+          industrySector: t.industry_sector || "IT & Software",
+          email: t.email || "",
+          phone: t.phone || "",
         }));
         setTenantsList(tArr);
         if (tArr.length > 0 && !contractForm.occupantId) {
@@ -468,9 +687,340 @@ export default function PropertyHierarchyModal({
     }
   };
 
-  const showToast = (text: string, type: "success" | "error" = "success") => {
-    setFeedback({ type, text });
-    setTimeout(() => setFeedback(null), 4000);
+  // Dynamic floor count change handler for Step 1 — asset-type aware!
+  const handleFloorsCountChange = (countStr: string) => {
+    setPropForm((prev) => ({ ...prev, floorsCount: countStr }));
+    const count = parseInt(countStr, 10);
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+
+    // Negative numbers or invalid text
+    if (isNaN(count) || count < 0 || (!isSingle && count === 0)) {
+      setFloorBreakdown([]);
+      return;
+    }
+
+    const totalArea = Number(propForm.areaSqft) || 0;
+
+    // Single-level warehouse / industrial Ground level (0 upper floors or 1 ground level)
+    if (isSingle && (count === 0 || count === 1)) {
+      setFloorBreakdown([
+        {
+          floorNumber: 0,
+          spaceName: propForm.propertyName.trim() ? `${propForm.propertyName.trim()} Main Bay` : "Main Warehouse Bay",
+          areaSqft: totalArea > 0 ? String(totalArea) : "",
+        },
+      ]);
+      return;
+    }
+
+    const maxFloors = Math.min(count, 50);
+    const perFloor = totalArea > 0 ? Math.floor(totalArea / maxFloors) : 0;
+    const remainder = totalArea > 0 ? totalArea - perFloor * maxFloors : 0;
+
+    setFloorBreakdown((prev) => {
+      const next = [];
+      for (let i = 0; i < maxFloors; i++) {
+        const existing = prev.find((f) => f.floorNumber === i);
+        let defaultName = isSingle
+          ? (i === 0 ? "Ground Level - Main Bay" : i === 1 ? "Mezzanine Storage Level" : `Warehouse Level ${i}`)
+          : formatFloorName(i);
+        next.push(
+          existing && existing.areaSqft && Number(existing.areaSqft) > 0
+            ? existing
+            : {
+                floorNumber: i,
+                spaceName: defaultName,
+                areaSqft: totalArea > 0 ? String(i === 0 ? perFloor + remainder : perFloor) : "",
+              }
+        );
+      }
+      return next;
+    });
+  };
+
+  // Helper to handle asset type switch and auto-adjust levels and terminology
+  const handlePropertyTypeChange = (newType: string) => {
+    const isNowSingle = isSingleLevelAssetType(newType);
+    const totalArea = Number(propForm.areaSqft) || 0;
+
+    let updatedFloors = propForm.floorsCount;
+    if (isNowSingle) {
+      if (!updatedFloors || updatedFloors === "1") {
+        updatedFloors = "0";
+      }
+      setPropForm((prev) => ({
+        ...prev,
+        propertyType: newType,
+        floorsCount: updatedFloors,
+        fitoutCondition: prev.fitoutCondition === "Fully Furnished" ? "Bare Shell" : prev.fitoutCondition,
+      }));
+
+      // Immediately allocate the full area to the Ground Warehouse Bay
+      setFloorBreakdown([
+        {
+          floorNumber: 0,
+          spaceName: propForm.propertyName.trim() ? `${propForm.propertyName.trim()} Main Bay` : "Main Warehouse Bay",
+          areaSqft: totalArea > 0 ? String(totalArea) : "",
+        },
+      ]);
+    } else {
+      if (!updatedFloors || updatedFloors === "0") {
+        updatedFloors = "1";
+      }
+      setPropForm((prev) => ({
+        ...prev,
+        propertyType: newType,
+        floorsCount: updatedFloors,
+      }));
+
+      const count = parseInt(updatedFloors, 10) || 1;
+      const perFloor = totalArea > 0 ? Math.floor(totalArea / count) : 0;
+      const remainder = totalArea > 0 ? totalArea - perFloor * count : 0;
+
+      const next = [];
+      for (let i = 0; i < count; i++) {
+        next.push({
+          floorNumber: i,
+          spaceName: formatFloorName(i),
+          areaSqft: totalArea > 0 ? String(i === 0 ? perFloor + remainder : perFloor) : "",
+        });
+      }
+      setFloorBreakdown(next);
+    }
+  };
+
+  // Helper to update total area and automatically sync across floors/levels
+  const handleAreaSqftChange = (newAreaStr: string) => {
+    const val = Number(newAreaStr);
+    const finalAreaStr =
+      subscribedCapacity > 0 && val > subscribedCapacity ? String(subscribedCapacity) : newAreaStr;
+    if (subscribedCapacity > 0 && val > subscribedCapacity) {
+      showToast(
+        `Leasable area cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`,
+        "error"
+      );
+    }
+    setPropForm((prev) => ({ ...prev, areaSqft: finalAreaStr }));
+
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+    const count = parseInt(propForm.floorsCount, 10);
+    const totalArea = Number(finalAreaStr) || 0;
+
+    // Single-level warehouse / industrial Ground level allocation
+    if (isSingle && (count === 0 || count === 1 || isNaN(count)) && totalArea > 0) {
+      setFloorBreakdown([
+        {
+          floorNumber: 0,
+          spaceName: propForm.propertyName.trim() ? `${propForm.propertyName.trim()} Main Bay` : "Main Warehouse Bay",
+          areaSqft: String(totalArea),
+        },
+      ]);
+      return;
+    }
+
+    if (count > 0 && totalArea > 0) {
+      const maxFloors = Math.min(count, 50);
+      const perFloor = Math.floor(totalArea / maxFloors);
+      const remainder = totalArea - perFloor * maxFloors;
+      setFloorBreakdown((prev) => {
+        if (prev.length === 0) {
+          const next = [];
+          for (let i = 0; i < maxFloors; i++) {
+            let defaultName = isSingle
+              ? (i === 0 ? "Ground Level - Main Bay" : i === 1 ? "Mezzanine Storage Level" : `Warehouse Level ${i}`)
+              : formatFloorName(i);
+            next.push({
+              floorNumber: i,
+              spaceName: defaultName,
+              areaSqft: String(i === 0 ? perFloor + remainder : perFloor),
+            });
+          }
+          return next;
+        }
+        return prev.map((f, idx) => ({
+          ...f,
+          areaSqft: String(idx === 0 ? perFloor + remainder : perFloor),
+        }));
+      });
+    }
+  };
+
+  // Helper to auto-distribute total leasable area equally across floors in Step 1
+  const autoDistributeFloorArea = () => {
+    const totalArea = Number(propForm.areaSqft);
+    if (!totalArea || totalArea <= 0 || floorBreakdown.length === 0) {
+      showToast("Please enter Total Leasable Area first", "error");
+      return;
+    }
+    const count = floorBreakdown.length;
+    const perFloor = Math.floor(totalArea / count);
+    const remainder = totalArea - perFloor * count;
+    setFloorBreakdown((prev) =>
+      prev.map((f, idx) => ({
+        ...f,
+        areaSqft: String(idx === 0 ? perFloor + remainder : perFloor),
+      }))
+    );
+    showToast(`✓ Distributed ${totalArea.toLocaleString()} Sq.Ft equally across ${count} floors!`);
+  };
+
+  // Helper to handle change in number of towers for campus
+  const handleBuildingsCountChange = (countStr: string) => {
+    setPropForm((prev) => ({ ...prev, buildingsCount: countStr }));
+    const count = parseInt(countStr, 10);
+    if (isNaN(count) || count <= 0) return;
+    const targetCount = Math.min(Math.max(count, 1), 20);
+    const totalArea = Number(propForm.areaSqft) || 0;
+    const perTower = totalArea > 0 ? Math.floor(totalArea / targetCount) : 0;
+    const remainder = totalArea > 0 ? totalArea - perTower * targetCount : 0;
+    const defaultFloors = propForm.floorsCount || "5";
+
+    setTowersBreakdown((prev) => {
+      const next = [];
+      const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      for (let i = 0; i < targetCount; i++) {
+        const letter = alphabet[i] || `${i + 1}`;
+        const defaultName = `Tower ${letter}`;
+        const existing = prev[i];
+        next.push({
+          id: existing?.id || String(i + 1),
+          name: existing?.name || defaultName,
+          floorsCount: existing?.floorsCount || defaultFloors,
+          areaSqft: totalArea > 0 ? String(i === 0 ? perTower + remainder : perTower) : existing?.areaSqft || "",
+          gateOrAddress: existing?.gateOrAddress || "",
+        });
+      }
+      return next;
+    });
+  };
+
+  // Helper to add a tower to the campus
+  const handleAddTower = () => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const nextIdx = towersBreakdown.length;
+    const letter = alphabet[nextIdx] || `${nextIdx + 1}`;
+    const totalArea = Number(propForm.areaSqft) || 0;
+    const newTower = {
+      id: Date.now().toString(),
+      name: `Tower ${letter}`,
+      floorsCount: propForm.floorsCount || "5",
+      areaSqft: "",
+      gateOrAddress: "",
+    };
+    const nextTowers = [...towersBreakdown, newTower];
+    setTowersBreakdown(nextTowers);
+    setPropForm((prev) => ({ ...prev, buildingsCount: String(nextTowers.length) }));
+    if (totalArea > 0) {
+      const perTower = Math.floor(totalArea / nextTowers.length);
+      const remainder = totalArea - perTower * nextTowers.length;
+      setTowersBreakdown(
+        nextTowers.map((t, i) => ({
+          ...t,
+          areaSqft: String(i === 0 ? perTower + remainder : perTower),
+        }))
+      );
+    }
+  };
+
+  // Helper to remove a tower from the campus
+  const handleRemoveTower = (idxToRemove: number) => {
+    if (towersBreakdown.length <= 1) {
+      showToast("A campus property must have at least 1 tower/building.", "error");
+      return;
+    }
+    const nextTowers = towersBreakdown.filter((_, i) => i !== idxToRemove);
+    setTowersBreakdown(nextTowers);
+    setPropForm((prev) => ({ ...prev, buildingsCount: String(nextTowers.length) }));
+    const totalArea = Number(propForm.areaSqft) || 0;
+    if (totalArea > 0) {
+      const perTower = Math.floor(totalArea / nextTowers.length);
+      const remainder = totalArea - perTower * nextTowers.length;
+      setTowersBreakdown(
+        nextTowers.map((t, i) => ({
+          ...t,
+          areaSqft: String(i === 0 ? perTower + remainder : perTower),
+        }))
+      );
+    }
+  };
+
+  // Helper to auto-distribute total leasable area equally across towers in Step 1
+  const autoDistributeTowerArea = () => {
+    const totalArea = Number(propForm.areaSqft);
+    if (!totalArea || totalArea <= 0 || towersBreakdown.length === 0) {
+      showToast("Please enter Total Leasable Area first", "error");
+      return;
+    }
+    const count = towersBreakdown.length;
+    const perTower = Math.floor(totalArea / count);
+    const remainder = totalArea - perTower * count;
+    setTowersBreakdown((prev) =>
+      prev.map((t, idx) => ({
+        ...t,
+        areaSqft: String(idx === 0 ? perTower + remainder : perTower),
+      }))
+    );
+    showToast(`✓ Distributed ${totalArea.toLocaleString()} Sq.Ft equally across ${count} towers!`);
+  };
+
+  // Handler for Step 6 Third-Party Delegation
+  const handleSaveDelegation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!delegationForm.managerName.trim()) {
+      showToast("Please enter Assignee / Manager Name", "error");
+      return;
+    }
+    if (!delegationForm.managerEmail.trim()) {
+      showToast("Please enter Manager Email Address", "error");
+      return;
+    }
+    const targetPropName = delegationForm.propertyName || propForm.propertyName || lastSavedPropName || "Commercial Property";
+    const targetPropId = delegationForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || "";
+
+    const origin =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
+    const ownerBrand =
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
+      "Commercial Asset Owner";
+    const subActive = checkIsOwnerSubscribed();
+    const link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&mgr=${encodeURIComponent(delegationForm.managerName.trim())}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${subActive ? "1" : "0"}&invite=act_${Date.now()}`;
+
+    // Store in localStorage
+    if (typeof window !== "undefined") {
+      const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+      const assignObj = {
+        name: delegationForm.managerName.trim(),
+        email: delegationForm.managerEmail.trim(),
+        phone: delegationForm.managerPhone.trim(),
+        type: delegationForm.managerType,
+        userRole: delegationForm.managerUserRole,
+        rights: delegationForm.managerRights,
+        assignedAt: new Date().toISOString(),
+      };
+      currentAssigns[targetPropName] = assignObj;
+      if (targetPropId) currentAssigns[targetPropId] = assignObj;
+      localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
+      localStorage.setItem("officex_has_manager", "true");
+      localStorage.setItem("officex_manage_mode", "delegated");
+      localStorage.setItem("officex_manager_name", delegationForm.managerName.trim());
+      localStorage.setItem("officex_manager_email", delegationForm.managerEmail.trim());
+      localStorage.setItem("officex_manager_type", delegationForm.managerType);
+      localStorage.setItem("officex_manager_activation_link", link);
+    }
+
+    setLatestManagerInvite({
+      name: delegationForm.managerName.trim(),
+      email: delegationForm.managerEmail.trim(),
+      phone: delegationForm.managerPhone.trim(),
+      role: delegationForm.managerType,
+      propertyName: targetPropName,
+      link,
+    });
+
+    showToast(`✓ Management assigned to ${delegationForm.managerName}! Portal invite link generated.`);
   };
 
   // Geographic state change handler
@@ -522,12 +1072,8 @@ export default function PropertyHierarchyModal({
       (typeof window !== "undefined" &&
         (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
       "Commercial Property Owner";
-    const isOwnerSubscribed = typeof window !== "undefined" && Boolean(
-      localStorage.getItem("officex_payment_id") ||
-      localStorage.getItem("officex_applied_coupon") ||
-      localStorage.getItem("officex_rentroll_subscribed") === "true"
-    );
-    return `${origin}/invite?role=${encodeURIComponent(propForm.managerType || "pm_company")}&mgr=${encodeURIComponent(propForm.managerName.trim())}&prop=${encodeURIComponent(propName)}&owner=${encodeURIComponent(ownerName)}&owner_sub=${isOwnerSubscribed ? "1" : "0"}&invite=act_${Date.now()}`;
+    const subActive = checkIsOwnerSubscribed();
+    return `${origin}/invite?role=${encodeURIComponent(propForm.managerType || "pm_company")}&mgr=${encodeURIComponent(propForm.managerName.trim())}&prop=${encodeURIComponent(propName)}&owner=${encodeURIComponent(ownerName)}&owner_sub=${subActive ? "1" : "0"}&invite=act_${Date.now()}`;
   };
 
   // ──── SUBMIT 1: PROPERTY MASTER ────
@@ -537,10 +1083,10 @@ export default function PropertyHierarchyModal({
       showToast("Property Name is required", "error");
       return;
     }
-    if (propForm.hasDelegatedManager && !propForm.managerName.trim()) {
-      showToast("Please enter the Manager / Assignee Name or switch to Manage Personally", "error");
-      return;
-    }
+
+    const uniqueCodeToUse =
+      propForm.propertyCode.trim() ||
+      generateUniquePropertyCode(propForm.propertyName.trim(), propertiesList.map((p) => p.name));
 
     const enteredArea = Number(propForm.areaSqft) || 0;
     if (subscribedCapacity > 0 && enteredArea > subscribedCapacity) {
@@ -562,7 +1108,7 @@ export default function PropertyHierarchyModal({
         body: JSON.stringify({
           id: propForm.existingPropId || undefined,
           property_name: propForm.propertyName.trim(),
-          property_code: propForm.propertyCode.trim() || undefined,
+          property_code: uniqueCodeToUse,
           address_line1: propForm.address.trim(),
           city: propForm.city.trim() || "Bengaluru",
           state: propForm.state.trim() || "Karnataka",
@@ -571,7 +1117,6 @@ export default function PropertyHierarchyModal({
           total_leasable_area_sqft: enteredArea || 50000,
           floors_count: Number(propForm.floorsCount) || 1,
           buildings_count: Number(propForm.buildingsCount) || 1,
-          total_seats: Number(propForm.totalSeats) || 0,
           primary_contact_name: propForm.contactName.trim(),
           primary_contact_phone: propForm.contactPhone.trim(),
         }),
@@ -579,7 +1124,8 @@ export default function PropertyHierarchyModal({
       const data = await res.json();
       if (res.ok) {
         setLastSavedPropName(propForm.propertyName.trim());
-        showToast(`✓ Property "${propForm.propertyName}" registered successfully!`);
+        setPropForm((prev) => ({ ...prev, propertyCode: uniqueCodeToUse }));
+        showToast(`✓ Property "${propForm.propertyName}" (${uniqueCodeToUse}) registered successfully!`);
         
         // Sync local storage active property & registered lists
         if (typeof window !== "undefined") {
@@ -601,6 +1147,129 @@ export default function PropertyHierarchyModal({
             setPropForm((prev) => ({ ...prev, existingPropId: effectivePropId }));
             setBldgForm((prev) => ({ ...prev, propertyId: effectivePropId }));
             setContractForm((prev) => ({ ...prev, propertyId: effectivePropId, areaSqft: prev.areaSqft || propForm.areaSqft }));
+            setDelegationForm((prev) => ({ ...prev, propertyId: effectivePropId, propertyName: propForm.propertyName.trim() }));
+          }
+
+          // Auto-provision building(s) & floor spaces based on architecture
+          if (effectivePropId) {
+            try {
+              const bRes = await fetch("/api/buildings", { headers: authHeaders });
+              const bData = bRes.ok ? await bRes.json() : { data: [] };
+              const existingBldgs = Array.isArray(bData.data) ? bData.data.filter((b: any) => b.property_id === effectivePropId) : [];
+
+              if (propForm.hasMultipleBuildings && towersBreakdown.length > 0) {
+                // Provision each tower in campus
+                for (let i = 0; i < towersBreakdown.length; i++) {
+                  const tower = towersBreakdown[i];
+                  const towerName = tower.name.trim() || `Tower ${String.fromCharCode(65 + i)}`;
+                  const towerFloors = Number(tower.floorsCount) || 1;
+                  const towerArea = Number(tower.areaSqft) || 0;
+                  const towerAddress = tower.gateOrAddress?.trim() || propForm.address.trim();
+
+                  let targetBldgId = existingBldgs.find((b: any) => b.building_name?.toLowerCase() === towerName.toLowerCase())?.id;
+                  if (!targetBldgId) {
+                    const newBldRes = await fetch("/api/buildings", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...authHeaders },
+                      body: JSON.stringify({
+                        building_name: towerName,
+                        building_code: `BLD-${uniqueCodeToUse}-${i + 1}`,
+                        property_id: effectivePropId,
+                        floors: towerFloors,
+                        total_area_sqft: towerArea,
+                        building_address: towerAddress,
+                      }),
+                    });
+                    if (newBldRes.ok) {
+                      const nbData = await newBldRes.json();
+                      targetBldgId = nbData.data?.id;
+                      if (targetBldgId) {
+                        setSpaceForm((prev) => ({ ...prev, buildingId: prev.buildingId || targetBldgId }));
+                        setContractForm((prev) => ({ ...prev, buildingId: prev.buildingId || targetBldgId }));
+                      }
+                    }
+                  }
+
+                  // Auto-create leasable floor spaces for this tower
+                  if (targetBldgId && towerFloors > 0) {
+                    const perFloorArea = towerArea > 0 ? Math.floor(towerArea / towerFloors) : 0;
+                    for (let f = 0; f < towerFloors; f++) {
+                      const isG = f === 0;
+                      const flName = isG ? "Ground Floor" : formatFloorName(f);
+                      const codeSuffix = isG ? "G" : `F${f}`;
+                      await fetch("/api/spaces", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...authHeaders },
+                        body: JSON.stringify({
+                          space_name: `${towerName} - ${flName}`,
+                          space_code: `SP-${uniqueCodeToUse}-T${i + 1}-${codeSuffix}`,
+                          building_id: targetBldgId,
+                          chargeable_area_sqft: perFloorArea || 1000,
+                          floor_name: flName,
+                          space_type: "suite",
+                          occupancy_status: "vacant",
+                        }),
+                      }).catch(() => {});
+                    }
+                  }
+                }
+              } else if (floorBreakdown.length > 0) {
+                // Single Standalone Building / Facility auto-provisioning
+                let targetBldgId = existingBldgs[0]?.id;
+                const isSingle = isSingleLevelAssetType(propForm.propertyType);
+                if (!targetBldgId) {
+                  const newBldRes = await fetch("/api/buildings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...authHeaders },
+                    body: JSON.stringify({
+                      building_name: isSingle
+                        ? `${propForm.propertyName.trim()} Main Facility`
+                        : `${propForm.propertyName.trim()} Main Tower`,
+                      building_code: `BLD-${uniqueCodeToUse}-01`,
+                      property_id: effectivePropId,
+                      floors: Math.max(1, Number(propForm.floorsCount) || floorBreakdown.length || 1),
+                      total_area_sqft: Number(propForm.areaSqft) || 0,
+                    }),
+                  });
+                  if (newBldRes.ok) {
+                    const nbData = await newBldRes.json();
+                    targetBldgId = nbData.data?.id;
+                  }
+                }
+
+                if (targetBldgId) {
+                  setSpaceForm((prev) => ({ ...prev, buildingId: targetBldgId }));
+                  setContractForm((prev) => ({ ...prev, buildingId: targetBldgId }));
+                  for (const fl of floorBreakdown) {
+                    const flArea = Number(fl.areaSqft) || 0;
+                    if (flArea > 0) {
+                      const isGround = fl.floorNumber === 0;
+                      const floorName = isGround ? "Ground Floor" : formatFloorName(fl.floorNumber);
+                      const defaultName = isSingle
+                        ? (isGround ? "Main Warehouse Bay" : `Warehouse Level ${fl.floorNumber}`)
+                        : (isGround ? "Ground Floor" : formatFloorName(fl.floorNumber));
+                      const codeSuffix = isGround ? "G" : `F${fl.floorNumber}`;
+
+                      await fetch("/api/spaces", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...authHeaders },
+                        body: JSON.stringify({
+                          space_name: fl.spaceName.trim() || defaultName,
+                          space_code: `SP-${uniqueCodeToUse}-${codeSuffix}`,
+                          building_id: targetBldgId,
+                          chargeable_area_sqft: flArea,
+                          floor_name: floorName,
+                          space_type: isSingle ? "entire_building" : "suite",
+                          occupancy_status: "vacant",
+                        }),
+                      }).catch(() => {});
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Non-blocking auto-provisioning
+            }
           }
 
           // Handle Manager Delegation / Assignment
@@ -666,6 +1335,10 @@ export default function PropertyHierarchyModal({
             cabinsCount: propForm.cabinsCount,
             meetingRoomsCount: propForm.meetingRoomsCount,
             defaultFitoutDays: propForm.defaultFitoutDays,
+            warehouseClearHeight: propForm.warehouseClearHeight.trim(),
+            warehouseDocksCount: propForm.warehouseDocksCount.trim(),
+            warehouseFlooringType: propForm.warehouseFlooringType.trim(),
+            warehousePowerLoad: propForm.warehousePowerLoad.trim(),
             contactName: propForm.contactName.trim(),
             contactPhone: propForm.contactPhone.trim(),
             hasDelegatedManager: propForm.hasDelegatedManager,
@@ -687,17 +1360,16 @@ export default function PropertyHierarchyModal({
           }));
         }
 
-        const propAddr = [propForm.address, propForm.city, propForm.state, propForm.pincode].filter(Boolean).join(", ");
-        if (propAddr) {
-          setTenantForm((prev) => ({
-            ...prev,
-            billingAddress: prev.billingAddress || propAddr,
-          }));
-        }
-
         await loadHierarchyDropdowns();
-        if (propForm.hasMultipleBuildings || Number(propForm.buildingsCount) > 1) {
-          setActiveTab("building");
+        const skipSpace = Boolean(
+          (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+          !propForm.hasMultipleBuildings &&
+          floorBreakdown.length <= 1
+        );
+        if (skipSpace) {
+          setSelectedTenantFloor("0");
+          setSelectedContractFloor("0");
+          setActiveTab("tenant");
         } else {
           setActiveTab("space");
         }
@@ -764,10 +1436,23 @@ export default function PropertyHierarchyModal({
   };
 
   // ──── SUBMIT 3: SPACE / UNIT MASTER ────
-  const handleSaveSpace = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveSpace = async (e?: React.FormEvent, proceedToNext: boolean = true) => {
+    if (e) e.preventDefault();
     if (!spaceForm.spaceName.trim()) {
-      showToast("Space Name is required", "error");
+      showToast("Space / Unit Name is required", "error");
+      return;
+    }
+    const propMaxArea = Number(propForm.areaSqft) || 0;
+    const enteredArea = Number(spaceForm.areaSqft) || 0;
+    if (enteredArea <= 0) {
+      showToast("Please enter a valid area in Sq.Ft", "error");
+      return;
+    }
+    if (propMaxArea > 0 && enteredArea > propMaxArea) {
+      showToast(
+        `Space area (${enteredArea.toLocaleString()} Sq.Ft) cannot exceed property total leasable area (${propMaxArea.toLocaleString()} Sq.Ft).`,
+        "error"
+      );
       return;
     }
     const bldgId = spaceForm.buildingId || buildingsList[0]?.id;
@@ -778,6 +1463,9 @@ export default function PropertyHierarchyModal({
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
+      const rawFloor = spaceForm.floorNumber || (allFloorNumbers[0] ? String(allFloorNumbers[0]) : "1");
+      const floorStr = rawFloor.toLowerCase().startsWith("floor") ? rawFloor : `Floor ${rawFloor}`;
+
       const res = await fetch("/api/spaces", {
         method: "POST",
         headers: {
@@ -788,10 +1476,10 @@ export default function PropertyHierarchyModal({
           space_name: spaceForm.spaceName.trim(),
           space_code: `SP-${Date.now().toString().slice(-4)}`,
           building_id: bldgId,
-          chargeable_area_sqft: Number(spaceForm.areaSqft) || 1000,
-          floor_name: `Floor ${spaceForm.floorNumber || "1"}`,
+          chargeable_area_sqft: enteredArea,
+          floor_name: floorStr,
           space_type: spaceForm.unitType.toLowerCase() === "office" ? "suite" : spaceForm.unitType.toLowerCase(),
-          occupancy_status: "vacant",
+          occupancy_status: spaceForm.occupancyStatus || "vacant",
         }),
       });
       const data = await res.json();
@@ -804,16 +1492,18 @@ export default function PropertyHierarchyModal({
             areaSqft: spaceForm.areaSqft || prev.areaSqft,
           }));
         }
-        setSpaceForm({
-          buildingId: bldgId,
+        await loadHierarchyDropdowns();
+        setSpaceForm((prev) => ({
+          ...prev,
           spaceName: "",
           areaSqft: "",
-          floorNumber: "",
-          unitType: "Office",
+          occupancyStatus: "vacant",
           fitoutCondition: "Fully Furnished",
           workstationsCount: "",
-        });
-        setActiveTab("tenant");
+        }));
+        if (proceedToNext) {
+          setActiveTab("tenant");
+        }
         onSuccess?.();
       } else {
         showToast(data.message || data.error || "Failed to create space", "error");
@@ -822,6 +1512,324 @@ export default function PropertyHierarchyModal({
       showToast(err.message || "Network error", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Active property object currently in the wizard
+  const activePropertyObj = React.useMemo(() => {
+    const targetId = propForm.existingPropId || contractForm.propertyId || bldgForm.propertyId;
+    if (targetId) {
+      const found = propertiesList.find((p) => p.id === targetId);
+      if (found) return found;
+    }
+    if (propForm.propertyName.trim()) {
+      return { id: propForm.existingPropId || "", name: propForm.propertyName.trim() };
+    }
+    return propertiesList[0] || null;
+  }, [propForm.existingPropId, propForm.propertyName, contractForm.propertyId, bldgForm.propertyId, propertiesList]);
+
+  // Buildings filtered for current property
+  const displayBuildings = React.useMemo(() => {
+    const activePropId = propForm.existingPropId || bldgForm.propertyId || contractForm.propertyId;
+    if (activePropId) {
+      const filtered = buildingsList.filter((b) => b.propertyId === activePropId);
+      if (filtered.length > 0) return filtered;
+    }
+    return buildingsList;
+  }, [buildingsList, propForm.existingPropId, bldgForm.propertyId, contractForm.propertyId]);
+
+  // Spaces filtered for current property's buildings
+  const displaySpaces = React.useMemo(() => {
+    if (displayBuildings.length > 0) {
+      const bldgIdSet = new Set(displayBuildings.map((b) => b.id));
+      const filtered = spacesList.filter((s) => s.buildingId && bldgIdSet.has(s.buildingId));
+      if (filtered.length > 0) return filtered;
+    }
+    return spacesList;
+  }, [spacesList, displayBuildings]);
+
+  // Only skip Step 2 (Spaces & Units) if there are NO floors (0 floors) AND NO multiple units/bays
+  const shouldSkipSpaceStep = React.useMemo(() => {
+    const rawFloors = propForm.floorsCount === "0" ? 0 : Number(propForm.floorsCount);
+    const hasNoFloors = rawFloors === 0;
+    const hasNoMultipleUnits = !propForm.hasMultipleBuildings && floorBreakdown.length <= 1 && displaySpaces.length <= 1;
+    return hasNoFloors && hasNoMultipleUnits;
+  }, [propForm.floorsCount, propForm.hasMultipleBuildings, floorBreakdown.length, displaySpaces.length]);
+
+  // Derive all active floors for the property
+  const allFloorNumbers: number[] = React.useMemo(() => {
+    const nums = new Set<number>();
+    floorBreakdown.forEach((f) => nums.add(f.floorNumber));
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+    nums.add(0); // Ground Floor is always available
+    const rawFloors = propForm.floorsCount === "0" ? 0 : Number(propForm.floorsCount);
+    const count = isSingle && rawFloors === 0 ? 0 : (rawFloors || 0);
+    for (let i = 1; i < count; i++) nums.add(i);
+    spacesList.forEach((s) => {
+      const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
+      if (match && match[1]) {
+        nums.add(parseInt(match[1], 10));
+      }
+      if (/ground|bay|shed/i.test(s.floorName || s.name)) {
+        nums.add(0);
+      }
+    });
+    if (nums.size === 0) nums.add(0);
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [floorBreakdown, propForm.floorsCount, propForm.propertyType, spacesList]);
+
+  // Floor numbers available for the selected building in Step 3 (Space Master)
+  const buildingFloorNumbersForSpace: number[] = React.useMemo(() => {
+    const targetBldgId = spaceForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id;
+    const curBldg = buildingsList.find((b) => b.id === targetBldgId);
+    const nums = new Set<number>();
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+    nums.add(0); // Always include Ground Floor
+    const rawFloors = propForm.floorsCount === "0" ? 0 : Number(propForm.floorsCount);
+    const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
+    for (let i = 1; i < count; i++) nums.add(i);
+
+    if (targetBldgId) {
+      spacesList
+        .filter((s) => s.buildingId === targetBldgId)
+        .forEach((s) => {
+          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
+          if (match && match[1]) nums.add(parseInt(match[1], 10));
+          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
+        });
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [spaceForm.buildingId, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
+
+  // Floor numbers available for the selected building/tower in Step 4 (Tenant Demised Premises)
+  const buildingFloorNumbersForTenant: number[] = React.useMemo(() => {
+    const targetBldgId = selectedTenantBuilding || displayBuildings[0]?.id || buildingsList[0]?.id;
+    const curBldg = buildingsList.find((b) => b.id === targetBldgId);
+    const nums = new Set<number>();
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+    nums.add(0); // Always include Ground Floor
+    const rawFloors = propForm.floorsCount === "0" ? 0 : Number(propForm.floorsCount);
+    const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
+    for (let i = 1; i < count; i++) nums.add(i);
+
+    if (targetBldgId) {
+      spacesList
+        .filter((s) => s.buildingId === targetBldgId)
+        .forEach((s) => {
+          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
+          if (match && match[1]) nums.add(parseInt(match[1], 10));
+          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
+        });
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [selectedTenantBuilding, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
+
+  // Floor numbers available for the selected building in Step 5 (Lease Contract)
+  const buildingFloorNumbersForContract: number[] = React.useMemo(() => {
+    const targetBldgId = contractForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id;
+    const curBldg = buildingsList.find((b) => b.id === targetBldgId);
+    const nums = new Set<number>();
+    const isSingle = isSingleLevelAssetType(propForm.propertyType);
+    nums.add(0); // Always include Ground Floor
+    const rawFloors = propForm.floorsCount === "0" ? 0 : Number(propForm.floorsCount);
+    const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
+    for (let i = 1; i < count; i++) nums.add(i);
+
+    if (targetBldgId) {
+      spacesList
+        .filter((s) => s.buildingId === targetBldgId)
+        .forEach((s) => {
+          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
+          if (match && match[1]) nums.add(parseInt(match[1], 10));
+          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
+        });
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [contractForm.buildingId, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
+
+  // Filter spaces that belong to a specific floor or ground bay
+  const getSpacesForFloor = (flNum: number) => {
+    return spacesList.filter((s) => {
+      const flStr = (s.floorName || "").toLowerCase().trim();
+      const nameStr = s.name.toLowerCase().trim();
+      if (flNum === 0) {
+        return (
+          flStr === "0" ||
+          flStr.includes("ground") ||
+          flStr === "g" ||
+          nameStr.includes("ground") ||
+          nameStr.includes("bay") ||
+          nameStr.includes("shed")
+        );
+      }
+      return (
+        flStr === `floor ${flNum}` ||
+        flStr === `f${flNum}` ||
+        flStr === String(flNum) ||
+        (!flStr && (nameStr.startsWith(`floor ${flNum}`) || nameStr.startsWith(`f${flNum}`)))
+      );
+    });
+  };
+
+  // Handler to add a unit to a specific floor
+  const handleSaveUnitForFloor = async (e: React.FormEvent, floorNumber: number) => {
+    e.preventDefault();
+    if (!newUnitForm.spaceName.trim()) {
+      showToast("Unit / Space Name is required", "error");
+      return;
+    }
+    const enteredArea = Number(newUnitForm.areaSqft) || 0;
+    if (enteredArea <= 0) {
+      showToast("Please enter a valid area in Sq.Ft", "error");
+      return;
+    }
+    const bldgId = spaceForm.buildingId || buildingsList[0]?.id;
+    if (!bldgId) {
+      showToast("Please select or add a building first", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const isG = floorNumber === 0;
+      const flName = isG ? "Ground Floor" : formatFloorName(floorNumber);
+      const codeSuffix = isG ? "G" : `F${floorNumber}`;
+      const res = await fetch("/api/spaces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          space_name: newUnitForm.spaceName.trim(),
+          space_code: `SP-${codeSuffix}-${Date.now().toString().slice(-4)}`,
+          building_id: bldgId,
+          chargeable_area_sqft: enteredArea,
+          floor_name: flName,
+          space_type: newUnitForm.unitType.toLowerCase() === "office" ? "suite" : newUnitForm.unitType.toLowerCase(),
+          occupancy_status: newUnitForm.occupancyStatus || "vacant",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`✓ Unit "${newUnitForm.spaceName}" added to ${flName}!`);
+        await loadHierarchyDropdowns();
+        setAddingUnitToFloor(null);
+        setNewUnitForm({
+          spaceName: "",
+          areaSqft: "",
+          unitType: "Office",
+          occupancyStatus: "vacant",
+          fitoutCondition: "Fully Furnished",
+          workstationsCount: "",
+        });
+      } else {
+        showToast(data.message || data.error || "Failed to create unit", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handler to toggle space occupancy status between vacant and occupied
+  const handleToggleOccupancy = async (spaceId: string, currentStatus?: string) => {
+    const nextStatus = currentStatus === "occupied" ? "vacant" : "occupied";
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ occupancy_status: nextStatus }),
+      });
+      if (res.ok) {
+        showToast(
+          `✓ Unit marked as ${nextStatus === "occupied" ? "Occupied (Tenant Present)" : "Vacant (Available)"}!`
+        );
+        await loadHierarchyDropdowns();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showToast(d.message || "Failed to update occupancy status", "error");
+      }
+    } catch {
+      showToast("Network error updating occupancy status", "error");
+    }
+  };
+
+  // Helper memo: Spaces on the selected floor for Step 4 Tenant Demised Premises
+  const floorSpacesForTenant = React.useMemo(() => {
+    if (!selectedTenantFloor) return [];
+    const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id || buildingsList[0]?.id;
+    return spacesList.filter((s) => {
+      if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
+        return false;
+      }
+      const flStr = (s.floorName || "").toLowerCase().trim();
+      const nameStr = s.name.toLowerCase().trim();
+      const targetFl = selectedTenantFloor.toLowerCase().trim();
+      if (targetFl === "0") {
+        return (
+          flStr === "0" ||
+          flStr.includes("ground") ||
+          flStr === "g" ||
+          nameStr.includes("ground") ||
+          nameStr.includes("bay") ||
+          nameStr.includes("shed")
+        );
+      }
+      return (
+        flStr === `floor ${targetFl}` ||
+        flStr === `f${targetFl}` ||
+        flStr === targetFl ||
+        (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
+      );
+    });
+  }, [selectedTenantFloor, selectedTenantBuilding, displayBuildings, buildingsList, spacesList]);
+
+  // Auto-select Ground Level for Tenant when property has no upper floors (0 floors)
+  React.useEffect(() => {
+    const hasZeroFloors = propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0;
+    if (hasZeroFloors && activeTab === "tenant" && !selectedTenantFloor) {
+      setSelectedTenantFloor("0");
+      setSelectedContractFloor("0");
+    }
+  }, [propForm.floorsCount, activeTab, selectedTenantFloor]);
+
+  // Auto-select unit when only 1 unit exists for the floor
+  React.useEffect(() => {
+    if (floorSpacesForTenant.length === 1 && selectedTenantSuites.length === 0) {
+      setSelectedTenantSuites([floorSpacesForTenant[0].id]);
+    }
+  }, [floorSpacesForTenant, selectedTenantSuites]);
+
+  // Helper memo: Total demised area selected across suites for tenant in Step 4
+  const totalTenantSelectedArea = React.useMemo(() => {
+    return floorSpacesForTenant
+      .filter((s) => selectedTenantSuites.includes(s.id))
+      .reduce((acc, s) => acc + (s.area || 0), 0);
+  }, [floorSpacesForTenant, selectedTenantSuites]);
+
+  // Handler to delete a space/unit
+  const handleDeleteSpace = async (spaceId: string, spaceName: string) => {
+    if (!confirm(`Are you sure you want to remove unit "${spaceName}"?`)) return;
+    setSpacesList((prev) => prev.filter((s) => s.id !== spaceId && s.name !== spaceName));
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (res.ok) {
+        showToast(`✓ Removed unit "${spaceName}"`);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showToast(d.message || "Failed to delete space", "error");
+      }
+      await loadHierarchyDropdowns();
+    } catch {
+      showToast("Network error deleting space", "error");
+      await loadHierarchyDropdowns();
     }
   };
 
@@ -852,8 +1860,10 @@ export default function PropertyHierarchyModal({
           ...authHeaders,
         },
         body: JSON.stringify({
-          tenant_name: tenantForm.occupantName.trim(),
-          trade_name: tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
+          tenant_name: tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
+          trade_name: tenantForm.tradeName.trim() || tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
+          company_type: tenantForm.companyType,
+          occupant_type: tenantForm.companyType === "sole_proprietorship" ? "individual" : "company",
           email: tenantForm.email.trim(),
           phone: tenantForm.phone.trim(),
           gstin: tenantForm.gst.trim().toUpperCase(),
@@ -863,16 +1873,18 @@ export default function PropertyHierarchyModal({
           alt_contact_phone: tenantForm.altContactPhone.trim(),
           property_id: targetPropertyId,
           remarks: JSON.stringify({
-            signatory_name: tenantForm.signatoryName.trim(),
+            company_type: tenantForm.companyType,
+            trade_name: tenantForm.tradeName.trim(),
+            signatory_name: tenantForm.signatoryName.trim() || tenantForm.occupantName.trim(),
             signatory_designation: tenantForm.signatoryDesignation.trim(),
             industry_type: tenantForm.industryType,
-            cin_number: tenantForm.cinNumber.trim().toUpperCase(),
+            cin_number: tenantForm.companyType === "sole_proprietorship" ? "" : tenantForm.cinNumber.trim().toUpperCase(),
           }),
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setLastSavedOccupantName(tenantForm.occupantName.trim());
+        setLastSavedOccupantName((tenantForm.companyName || tenantForm.occupantName).trim());
         // Generate Tenant Portal Invite Link
         const origin =
           typeof window !== "undefined" && window.location.origin
@@ -886,37 +1898,51 @@ export default function PropertyHierarchyModal({
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";
-        const isOwnerSubscribed = typeof window !== "undefined" && Boolean(
-          localStorage.getItem("officex_payment_id") ||
-          localStorage.getItem("officex_applied_coupon") ||
-          localStorage.getItem("officex_rentroll_subscribed") === "true"
-        );
         const inviteToken = `ten_${Date.now()}`;
-        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(tenantForm.occupantName.trim())}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${isOwnerSubscribed ? "1" : "0"}&invite=${inviteToken}`;
+        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(tenantForm.occupantName.trim())}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=1&invite=${inviteToken}`;
 
         setLatestTenantInvite({
-          name: tenantForm.occupantName.trim(),
+          name: (tenantForm.companyName || tenantForm.occupantName).trim(),
           email: tenantForm.email.trim(),
           link: inviteUrl,
         });
 
-        showToast(`✓ Tenant "${tenantForm.occupantName}" enrolled! Portal invite generated.`);
+        showToast(`✓ Tenant "${tenantForm.companyName || tenantForm.occupantName}" enrolled! Portal invite link generated.`);
         await loadHierarchyDropdowns();
 
-        // Auto-select newly created tenant in Step 5 (Contract)
+        // Mark all selected suites as occupied in database
+        if (selectedTenantSuites.length > 0) {
+          for (const sId of selectedTenantSuites) {
+            await fetch(`/api/spaces/${sId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", ...authHeaders },
+              body: JSON.stringify({ occupancy_status: "occupied" }),
+            }).catch(() => {});
+          }
+        }
+
+        // Auto-select newly created tenant and demised suites in Step 5 (Contract)
         if (data.data?.id) {
           setContractForm((prev) => ({
             ...prev,
             occupantId: data.data.id,
+            spaceId: selectedTenantSuites[0] || prev.spaceId,
+            areaSqft: totalTenantSelectedArea > 0 ? String(totalTenantSelectedArea) : prev.areaSqft,
           }));
+        }
+
+        if (selectedTenantFloor) {
+          setSelectedContractFloor(selectedTenantFloor);
         }
 
         // Reset tenant form
         setTenantForm({
+          companyType: "pvt_ltd",
+          companyName: "",
+          tradeName: "",
           occupantName: "",
           email: "",
           phone: "",
-          companyName: "",
           gst: "",
           pan: "",
           billingAddress: "",
@@ -938,6 +1964,235 @@ export default function PropertyHierarchyModal({
       showToast(err.message || "Network error", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ──── STEP 4: EXISTING TENANT DOCUMENT UPLOADER & AUTO-FILL ────
+  const handleUploadTenantAgreement = async (filesToParse: FileList | File[] | File) => {
+    if (!filesToParse) return;
+    const fileList: File[] =
+      filesToParse instanceof File
+        ? [filesToParse]
+        : Array.from(filesToParse as FileList);
+    if (fileList.length === 0) return;
+
+    setIsUploadingTenantAgreement(true);
+    setFeedback(null);
+    try {
+      const allHighlights: string[] = [];
+      let totalFields = 0;
+      let maxConfidence = 85;
+      const parsedNames: string[] = [];
+
+      setUploadedTenantFileList(fileList.map((f) => ({ name: f.name, size: f.size, category: tenantDocCategory })));
+
+      for (const file of fileList) {
+        parsedNames.push(file.name);
+        const json = await uploadAndParseAgreement(file);
+        if (json && json.success && json.data) {
+          const d = json.data;
+          totalFields += d.extractedFieldsCount || 8;
+          maxConfidence = Math.max(maxConfidence, d.confidence || 85);
+          if (Array.isArray(d.summaryHighlights)) {
+            allHighlights.push(...d.summaryHighlights);
+          }
+
+          // Compute comprehensive variance differences against currently entered values
+          const currentSelectedTenant = tenantsList.find((t) => t.id === contractForm.occupantId);
+          const currentOccupantName =
+            tenantForm.companyName ||
+            tenantForm.occupantName ||
+            currentSelectedTenant?.name ||
+            lastSavedOccupantName ||
+            (tenantsList.length > 0 ? tenantsList[0].name : "");
+
+          const currentSelectedProp = propertiesList.find((p) => p.id === contractForm.propertyId || p.id === propForm.existingPropId);
+          const currentPropName =
+            propForm.propertyName ||
+            activePropertyObj?.name ||
+            currentSelectedProp?.name ||
+            lastSavedPropName ||
+            (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
+
+          const diffs: AgreementDiffItem[] = [];
+
+          // 1. Commercial Property / Lessor Entity
+          if (d.lessorName || d.propertyName) {
+            const docProp = d.lessorName && d.propertyName && !d.lessorName.includes(d.propertyName)
+              ? `${d.lessorName} (${d.propertyName})`
+              : (d.lessorName || d.propertyName);
+            const normCurrent = currentPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normDoc = docProp.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const hasVariance =
+              !currentPropName ||
+              (normCurrent !== normDoc && !normCurrent.includes(normDoc) && !normDoc.includes(normCurrent));
+            diffs.push({
+              fieldKey: "propertyName",
+              label: "Commercial Property / Lessor",
+              currentValue: currentPropName || "(Not entered)",
+              agreementValue: docProp,
+              hasVariance,
+            });
+          }
+
+          // 2. Tenant / Occupant Legal Name
+          const docTenantName = d.companyName || d.occupantName;
+          if (docTenantName) {
+            const normCurrent = currentOccupantName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normDoc = docTenantName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const hasVariance = !currentOccupantName || (normCurrent !== normDoc && !normCurrent.includes(normDoc));
+            diffs.push({
+              fieldKey: "occupantName",
+              label: "Tenant / Corporate Occupant",
+              currentValue: currentOccupantName || "(Not entered)",
+              agreementValue: docTenantName,
+              hasVariance,
+            });
+          }
+
+          // 3. Tenant PAN Number
+          if (d.tenantPan) {
+            const curPan = (tenantForm.pan || "").toUpperCase().trim();
+            const docPan = d.tenantPan.toUpperCase().trim();
+            diffs.push({
+              fieldKey: "pan",
+              label: "Tenant PAN Number",
+              currentValue: curPan || "(Not entered)",
+              agreementValue: docPan,
+              hasVariance: !curPan || curPan !== docPan,
+            });
+          }
+
+          // 4. Demised Floor
+          if (d.floor !== undefined && d.floor !== null && d.floor !== "") {
+            const curFloorLabel = selectedTenantFloor !== ""
+              ? (selectedTenantFloor === "0" ? "Ground Floor" : formatFloorName(Number(selectedTenantFloor)))
+              : "(Not selected)";
+            const docFloorNum = Number(d.floor);
+            const docFloorLabel = !isNaN(docFloorNum)
+              ? (docFloorNum === 0 ? "Ground Floor" : formatFloorName(docFloorNum))
+              : `Floor ${d.floor}`;
+            const curFloorStr = String(selectedTenantFloor || "");
+            const docFloorStr = String(d.floor);
+            diffs.push({
+              fieldKey: "floor",
+              label: "Demised Floor",
+              currentValue: curFloorLabel,
+              agreementValue: docFloorLabel,
+              hasVariance: curFloorStr === "" || curFloorStr !== docFloorStr,
+            });
+          }
+
+          // 5. Demised / Leasable Area
+          if (d.areaSqft > 0) {
+            const curArea = Number(contractForm.areaSqft) || totalTenantSelectedArea || Number(spaceForm.areaSqft) || Number(propForm.areaSqft) || 0;
+            diffs.push({
+              fieldKey: "areaSqft",
+              label: "Demised / Leasable Area",
+              currentValue: curArea > 0 ? `${curArea.toLocaleString()} Sq.Ft` : "(Not entered)",
+              agreementValue: `${d.areaSqft.toLocaleString()} Sq.Ft`,
+              hasVariance: !curArea || curArea !== d.areaSqft,
+            });
+          }
+
+          // 6. Monthly Base Rent
+          if (d.monthlyRent > 0) {
+            const curRent = Number(contractForm.monthlyRent) || 0;
+            diffs.push({
+              fieldKey: "monthlyRent",
+              label: "Monthly Base Rent",
+              currentValue: curRent > 0 ? `₹${curRent.toLocaleString()}` : "(Not entered)",
+              agreementValue: `₹${d.monthlyRent.toLocaleString()}`,
+              hasVariance: !curRent || curRent !== d.monthlyRent,
+            });
+          }
+
+          // 7. Security Deposit
+          if (d.securityDeposit > 0) {
+            const curDep = Number(contractForm.securityDeposit) || 0;
+            diffs.push({
+              fieldKey: "securityDeposit",
+              label: "Security Deposit",
+              currentValue: curDep > 0 ? `₹${curDep.toLocaleString()}` : "(Not entered)",
+              agreementValue: `₹${d.securityDeposit.toLocaleString()} (${d.depositMonths || 3} months)`,
+              hasVariance: !curDep || curDep !== d.securityDeposit,
+            });
+          }
+
+          // 8. Lease Start Date
+          if (d.startDate) {
+            const curStart = contractForm.startDate;
+            diffs.push({
+              fieldKey: "startDate",
+              label: "Lease Start Date",
+              currentValue: curStart || "(Not entered)",
+              agreementValue: d.startDate,
+              hasVariance: !curStart || curStart !== d.startDate,
+            });
+          }
+
+          // 9. Lease End Date
+          if (d.endDate) {
+            const curEnd = contractForm.endDate;
+            diffs.push({
+              fieldKey: "endDate",
+              label: "Lease End Date",
+              currentValue: curEnd || "(Not entered)",
+              agreementValue: d.endDate,
+              hasVariance: !curEnd || curEnd !== d.endDate,
+            });
+          }
+
+          // 10. Lock-in Period
+          if (d.lockInMonths !== undefined && d.lockInMonths > 0) {
+            const curLock = Number(contractForm.lockInMonths) || 0;
+            diffs.push({
+              fieldKey: "lockInMonths",
+              label: "Lock-in Period",
+              currentValue: curLock > 0 ? `${curLock} Months` : "(Not entered)",
+              agreementValue: `${d.lockInMonths} Months`,
+              hasVariance: !curLock || curLock !== d.lockInMonths,
+            });
+          }
+
+          // 11. Escalation Rate
+          if (d.escalationPct !== undefined && d.escalationPct > 0) {
+            const curEsc = Number(contractForm.escalationPct) || 0;
+            diffs.push({
+              fieldKey: "escalationPct",
+              label: "Escalation Rate",
+              currentValue: curEsc > 0 ? `${curEsc}% (${contractForm.escalationFrequency})` : "(Not entered)",
+              agreementValue: `${d.escalationPct}% (${d.escalationFrequency || "Annual"})`,
+              hasVariance: !curEsc || curEsc !== d.escalationPct || contractForm.escalationFrequency !== d.escalationFrequency,
+            });
+          }
+
+          // Save pending agreement data and variance differences
+          setPendingAgreementData(d);
+          setPendingAgreementFile(file.name);
+          setAgreementDifferences(diffs);
+
+          // Auto-populate all form fields so user can review and edit missing particulars immediately
+          applyAgreementTerms(d, diffs);
+
+          // Open variance modal so user can inspect differences side-by-side
+          setVarianceModalOpen(true);
+        }
+      }
+
+      setParsedTenantDocMeta({
+        fileName: parsedNames.join(", "),
+        confidence: maxConfidence || 92,
+        extractedFieldsCount: totalFields || 8,
+        summaryHighlights: Array.from(new Set(allHighlights)),
+        category: tenantDocCategory,
+      });
+
+      showToast(`✓ Document terms parsed! Review differences and edit any missing fields below.`);
+    } catch (err: any) {
+      showToast(err.message || "Failed to extract terms from agreement file", "error");
+    } finally {
+      setIsUploadingTenantAgreement(false);
     }
   };
 
@@ -1141,11 +2396,13 @@ export default function PropertyHierarchyModal({
 
     // 1. Auto-match or detect occupant
     let targetOccupantId = contractForm.occupantId || (tenantsList.length > 0 ? tenantsList[0].id : "");
-    if (d.occupantName) {
+    const targetTenantName = d.companyName || d.occupantName;
+
+    if (targetTenantName) {
       const matchedTenant = tenantsList.find(
         (t) =>
-          t.name.toLowerCase().includes(d.occupantName.toLowerCase()) ||
-          d.occupantName.toLowerCase().includes(t.name.toLowerCase()) ||
+          t.name.toLowerCase().includes(targetTenantName.toLowerCase()) ||
+          targetTenantName.toLowerCase().includes(t.name.toLowerCase()) ||
           (t.company && d.companyName && t.company.toLowerCase().includes(d.companyName.toLowerCase()))
       );
 
@@ -1154,67 +2411,101 @@ export default function PropertyHierarchyModal({
         setTenantsList((prev) =>
           prev.map((t) =>
             t.id === targetOccupantId
-              ? { ...t, name: d.occupantName, company: d.companyName || d.occupantName }
+              ? { ...t, name: targetTenantName, company: d.companyName || targetTenantName }
               : t
           )
         );
-        fetch("/api/rent-roll/tenants", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeaders,
-          },
-          body: JSON.stringify({
-            tenant_id: targetOccupantId,
-            tenant_name: d.occupantName,
-            trade_name: d.companyName || d.occupantName,
-          }),
-        }).catch(() => {});
       } else if (targetOccupantId) {
-        // Update currently selected tenant in tenantsList to agreement name
         setTenantsList((prev) =>
           prev.map((t) =>
             t.id === targetOccupantId
-              ? { ...t, name: d.occupantName, company: d.companyName || d.occupantName }
+              ? { ...t, name: targetTenantName, company: d.companyName || targetTenantName }
               : t
           )
         );
-        // Persist new tenant name in PostgreSQL database
-        fetch("/api/rent-roll/tenants", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeaders,
-          },
-          body: JSON.stringify({
-            tenant_id: targetOccupantId,
-            tenant_name: d.occupantName,
-            trade_name: d.companyName || d.occupantName,
-          }),
-        }).catch(() => {});
       } else {
-        // Provision local tenant entry in tenantsList
         const newTenantId = `ten_${Date.now()}`;
         setTenantsList((prev) => [
           ...prev,
-          { id: newTenantId, name: d.occupantName, company: d.companyName || d.occupantName },
+          { id: newTenantId, name: targetTenantName, company: d.companyName || targetTenantName },
         ]);
         targetOccupantId = newTenantId;
       }
-
-      // Also sync tenantForm state
-      setTenantForm((prev) => ({
-        ...prev,
-        occupantName: d.occupantName,
-        companyName: d.companyName || d.occupantName,
-      }));
     }
 
-    // 2. Commercial Property / Lessor match or update
+    // 2. Comprehensive Auto-fill of Tenant Form
+    setTenantForm((prev) => {
+      const nextCompanyType = d.companyType || prev.companyType || "pvt_ltd";
+      const nextOccupant = d.occupantName || d.companyName || prev.occupantName;
+      const nextCompany = d.companyName || d.occupantName || prev.companyName;
+      const nextPan = (d.tenantPan || prev.pan).toUpperCase().slice(0, 10);
+      const nextCin = nextCompanyType === "sole_proprietorship" ? "" : (d.tenantCin || prev.cinNumber).toUpperCase().slice(0, 21);
+      const nextGst = (d.tenantGst || prev.gst).toUpperCase().slice(0, 15);
+      const nextPhone = d.tenantPhone || prev.phone;
+      const nextEmail =
+        d.tenantEmail ||
+        prev.email ||
+        (nextOccupant
+          ? `${nextOccupant.toLowerCase().replace(/[^a-z0-9]/g, "")}@corp.com`
+          : prev.email);
+      const nextAddress = d.tenantAddress || prev.billingAddress;
+      const nextSignatory = d.signatoryName || prev.signatoryName;
+
+      return {
+        ...prev,
+        companyType: nextCompanyType,
+        occupantName: nextOccupant,
+        companyName: nextCompany,
+        tradeName: nextCompany,
+        pan: nextPan,
+        cinNumber: nextCin,
+        gst: nextGst,
+        phone: nextPhone,
+        email: nextEmail,
+        billingAddress: nextAddress,
+        signatoryName: nextSignatory,
+      };
+    });
+
+    // 3. Demised Floor & Unit Selection
+    let targetSpaceId = contractForm.spaceId;
+    if (d.floor !== undefined && d.floor !== null && d.floor !== "") {
+      const flStr = String(d.floor);
+      setSelectedTenantFloor(flStr);
+      setSelectedContractFloor(flStr);
+
+      const floorSpaces = spacesList.filter((s) => {
+        const sFl = (s.floorName || "").toLowerCase().trim();
+        return (
+          sFl === `floor ${flStr}` ||
+          sFl === `f${flStr}` ||
+          sFl === flStr ||
+          sFl === formatFloorName(Number(flStr)).toLowerCase() ||
+          (flStr === "0" && (sFl.includes("ground") || sFl === "g"))
+        );
+      });
+      const matchedSpace = floorSpaces.find((s) => Math.abs((s.area || 0) - (d.areaSqft || 0)) < 100);
+      if (matchedSpace) {
+        setSelectedTenantSuites([matchedSpace.id]);
+        targetSpaceId = matchedSpace.id;
+      }
+    } else if (d.areaSqft > 0) {
+      const matchedSpace = spacesList.find((s) => Math.abs((s.area || 0) - d.areaSqft) < 100);
+      if (matchedSpace) {
+        targetSpaceId = matchedSpace.id;
+        setSelectedTenantSuites([matchedSpace.id]);
+      }
+    }
+
+    // 4. Commercial Property / Lessor match or update
     let targetPropertyId = contractForm.propertyId || propForm.existingPropId;
     if (d.propertyName || d.lessorName) {
       const docPropName = d.propertyName || d.lessorName;
-      setPropForm((prev) => ({ ...prev, propertyName: docPropName }));
+      setPropForm((prev) => ({
+        ...prev,
+        propertyName: prev.propertyName || docPropName,
+        address: prev.address || d.tenantAddress || prev.address,
+      }));
       const normDoc = docPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
       const matchedProp = propertiesList.find((p) => {
         const normP = p.name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1222,62 +2513,44 @@ export default function PropertyHierarchyModal({
       });
       if (matchedProp) {
         targetPropertyId = matchedProp.id;
-      } else if (targetPropertyId) {
-        setPropertiesList((prev) =>
-          prev.map((p) => (p.id === targetPropertyId ? { ...p, name: docPropName } : p))
-        );
-        fetch("/api/rent-roll/properties", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeaders,
-          },
-          body: JSON.stringify({
-            id: targetPropertyId,
-            property_name: docPropName,
-          }),
-        }).catch(() => {});
       }
     }
 
-    // 3. Auto-match space if area is close
-    let targetSpaceId = contractForm.spaceId;
-    if (d.areaSqft > 0) {
-      const matchedSpace = spacesList.find(
-        (s) => Math.abs(s.area - d.areaSqft) < 100
-      );
-      if (matchedSpace) {
-        targetSpaceId = matchedSpace.id;
-      }
-    }
-
-    // 4. Billing SPV match or add
+    // 5. Billing SPV match or add
     if (d.billingEntity) {
       setBillingEntities((prev) => Array.from(new Set([...prev, d.billingEntity])));
     }
+
+    // 6. Contract Form Auto-fill
+    const calculatedRatePsf = d.ratePerSqft > 0
+      ? d.ratePerSqft
+      : (d.monthlyRent > 0 && d.areaSqft > 0 ? Math.round((d.monthlyRent / d.areaSqft) * 100) / 100 : 0);
+    const calculatedDepositMonths = d.depositMonths > 0
+      ? d.depositMonths
+      : (d.securityDeposit > 0 && d.monthlyRent > 0 ? Math.round(d.securityDeposit / d.monthlyRent) : 0);
 
     setContractForm((prev) => ({
       ...prev,
       occupantId: targetOccupantId || prev.occupantId,
       propertyId: targetPropertyId || prev.propertyId,
       spaceId: targetSpaceId || prev.spaceId,
-      areaSqft: d.areaSqft ? String(d.areaSqft) : prev.areaSqft,
-      billingModel: d.billingModel || prev.billingModel,
-      ratePerSqft: d.ratePerSqft ? String(d.ratePerSqft) : prev.ratePerSqft,
+      areaSqft: d.areaSqft > 0 ? String(d.areaSqft) : prev.areaSqft,
+      billingModel: d.billingModel || prev.billingModel || "Area-based",
+      ratePerSqft: calculatedRatePsf > 0 ? String(calculatedRatePsf) : prev.ratePerSqft,
       ratePerSeat: d.ratePerSeat ? String(d.ratePerSeat) : prev.ratePerSeat,
       seatCount: d.seatCount ? String(d.seatCount) : prev.seatCount,
       bareShellRate: d.bareShellRate ? String(d.bareShellRate) : prev.bareShellRate,
       fitoutRate: d.fitoutRate ? String(d.fitoutRate) : prev.fitoutRate,
-      monthlyRent: d.monthlyRent ? String(d.monthlyRent) : prev.monthlyRent,
+      monthlyRent: d.monthlyRent > 0 ? String(d.monthlyRent) : prev.monthlyRent,
       camType: d.camType || prev.camType,
-      camRate: d.camRate ? String(d.camRate) : prev.camRate,
-      camMonthly: d.camMonthly ? String(d.camMonthly) : prev.camMonthly,
+      camRate: d.camRate > 0 ? String(d.camRate) : prev.camRate,
+      camMonthly: d.camMonthly > 0 ? String(d.camMonthly) : prev.camMonthly,
       carParkingSlots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.carParkingSlots,
       carParkingRate: d.carParkingRate !== undefined ? String(d.carParkingRate) : prev.carParkingRate,
       twoWheelerSlots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.twoWheelerSlots,
       twoWheelerRate: d.twoWheelerRate !== undefined ? String(d.twoWheelerRate) : prev.twoWheelerRate,
-      securityDeposit: d.securityDeposit ? String(d.securityDeposit) : prev.securityDeposit,
-      depositMonths: d.depositMonths ? String(d.depositMonths) : prev.depositMonths,
+      securityDeposit: d.securityDeposit > 0 ? String(d.securityDeposit) : prev.securityDeposit,
+      depositMonths: calculatedDepositMonths > 0 ? String(calculatedDepositMonths) : prev.depositMonths,
       fitoutDays: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitoutDays,
       lockInMonths: d.lockInMonths !== undefined ? String(d.lockInMonths) : prev.lockInMonths,
       noticeDays: d.noticeDays !== undefined ? String(d.noticeDays) : prev.noticeDays,
@@ -1286,19 +2559,37 @@ export default function PropertyHierarchyModal({
       escalationPct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalationPct,
       escalationFrequency: d.escalationFrequency === "Triennial" ? "Biannual" : (d.escalationFrequency || prev.escalationFrequency),
       escalationStartDate: d.escalationStartDate || prev.escalationStartDate,
-      billingEntity: d.billingEntity || prev.billingEntity,
+      billingEntity: d.billingEntity || d.lessorName || prev.billingEntity,
       paymentTerms: d.paymentTerms || prev.paymentTerms,
       stampDutySharing: d.stampDutySharing || prev.stampDutySharing,
       notes: d.notes || prev.notes,
     }));
 
-    // Record changed keys for temporary yellow highlight
+    // Record changed keys for yellow highlight
     const list = diffsList || agreementDifferences;
-    const changed = new Set(list.filter((x) => x.hasVariance).map((x) => x.fieldKey));
+    const changed = new Set([
+      "occupantName",
+      "companyName",
+      "pan",
+      "cinNumber",
+      "gst",
+      "phone",
+      "email",
+      "billingAddress",
+      "areaSqft",
+      "monthlyRent",
+      "ratePerSqft",
+      "securityDeposit",
+      "startDate",
+      "endDate",
+      "lockInMonths",
+      "escalationPct",
+      ...list.filter((x) => x.hasVariance).map((x) => x.fieldKey),
+    ]);
     setChangedFieldKeys(changed);
 
     showToast(
-      `✓ Form updated according to Rent Agreement! ${changed.size} changed fields highlighted in yellow.`
+      `✓ Agreement terms applied! All tenant particulars & lease parameters filled.`
     );
   };
 
@@ -1330,25 +2621,30 @@ export default function PropertyHierarchyModal({
           ? "seats"
           : contractForm.billingModel === "Fixed"
           ? "fixed"
-          : contractForm.billingModel === "Hybrid"
-          ? "hybrid"
           : "area";
 
       const camAmount =
-        contractForm.camType === "Per Sq.Ft"
+        contractForm.camType === "Included"
+          ? 0
+          : contractForm.camType === "Per Sq.Ft"
           ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
           : Number(contractForm.camMonthly) || 0;
-      const parkingAmount =
-        (Number(contractForm.carParkingSlots) || 0) * (Number(contractForm.carParkingRate) || 0) +
-        (Number(contractForm.twoWheelerSlots) || 0) * (Number(contractForm.twoWheelerRate) || 0);
+
+      const carPaid = Number(contractForm.carParkingPaidSlots) || 0;
+      const carFree = Number(contractForm.carParkingFreeSlots) || 0;
+      const carRate = Number(contractForm.carParkingRate) || 0;
+      const bikePaid = Number(contractForm.twoWheelerPaidSlots) || 0;
+      const bikeFree = Number(contractForm.twoWheelerFreeSlots) || 0;
+      const bikeRate = Number(contractForm.twoWheelerRate) || 0;
+      const parkingAmount = (carPaid * carRate) + (bikePaid * bikeRate);
 
       const notesSummary = [
         contractForm.notes,
         contractForm.billingModel ? `Model: ${contractForm.billingModel}` : null,
         contractForm.ratePerSqft ? `Rate PSF: ₹${contractForm.ratePerSqft}/sqft` : null,
         contractForm.ratePerSeat ? `Rate Seat: ₹${contractForm.ratePerSeat}/seat (${contractForm.seatCount} seats)` : null,
-        camAmount > 0 ? `CAM: ₹${camAmount.toLocaleString()}/mo (${contractForm.camType})` : null,
-        parkingAmount > 0 ? `Parking: ₹${parkingAmount.toLocaleString()}/mo` : null,
+        contractForm.camType === "Included" ? "CAM: Included in Base Rent" : (camAmount > 0 ? `CAM: ₹${camAmount.toLocaleString()}/mo (${contractForm.camType})` : null),
+        parkingAmount > 0 ? `Parking: ₹${parkingAmount.toLocaleString()}/mo (${carFree + carPaid} Cars [${carFree} Free, ${carPaid} Paid], ${bikeFree + bikePaid} Bikes [${bikeFree} Free, ${bikePaid} Paid])` : null,
         contractForm.fitoutDays ? `Fit-out Period: ${contractForm.fitoutDays} days` : null,
         contractForm.stampDutySharing ? `Stamp Duty: ${contractForm.stampDutySharing}` : null,
       ]
@@ -1385,9 +2681,17 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("✓ Commercial Lease Contract registered successfully!");
+        showToast("✓ Commercial Lease Contract registered successfully! Proceeding to Assignment.");
         onSuccess?.();
-        setTimeout(() => onClose(), 1200);
+        setDelegationForm((prev) => ({
+          ...prev,
+          propertyId: contractForm.propertyId || propForm.existingPropId || prev.propertyId,
+          propertyName:
+            propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
+            propForm.propertyName ||
+            prev.propertyName,
+        }));
+        setActiveTab("delegation");
       } else {
         showToast(data.message || data.error || "Failed to create lease contract", "error");
       }
@@ -1443,7 +2747,7 @@ export default function PropertyHierarchyModal({
               title="Bulk import properties, units, and tenants via spreadsheet"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Bulk Upload via Sheet</span>
+              <span>Upload in Bulk</span>
             </button>
 
             <button
@@ -1491,7 +2795,7 @@ export default function PropertyHierarchyModal({
           </div>
         )}
 
-        {/* Navigation Tabs (5 Steps) */}
+        {/* Navigation Tabs (5 Steps or 4 Steps when skipping Space step) */}
         <div className="px-5 sm:px-7 pt-3 border-b border-slate-100 flex items-center gap-1 overflow-x-auto shrink-0 bg-slate-50/70">
           <button
             type="button"
@@ -1503,34 +2807,23 @@ export default function PropertyHierarchyModal({
             }`}
           >
             <Building2 size={14} />
-            <span>1. Property</span>
+            <span>{shouldSkipSpaceStep ? "1. Property & Facility" : "1. Property & Towers"}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("building")}
-            className={`px-3 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === "building"
-                ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <Building size={14} />
-            <span>2. Buildings ({buildingsList.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("space")}
-            className={`px-3 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === "space"
-                ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <Layers size={14} />
-            <span>3. Spaces / Units ({spacesList.length})</span>
-          </button>
+          {!shouldSkipSpaceStep && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("space")}
+              className={`px-3 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === "space"
+                  ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Layers size={14} />
+              <span>2. Spaces &amp; Units ({displaySpaces.length})</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -1542,7 +2835,7 @@ export default function PropertyHierarchyModal({
             }`}
           >
             <User size={14} />
-            <span>4. Tenants ({tenantsList.length})</span>
+            <span>{shouldSkipSpaceStep ? `2. Tenants (${tenantsList.length})` : `3. Tenants (${tenantsList.length})`}</span>
           </button>
 
           <button
@@ -1555,7 +2848,20 @@ export default function PropertyHierarchyModal({
             }`}
           >
             <FileText size={14} />
-            <span>5. Lease Contract</span>
+            <span>{shouldSkipSpaceStep ? "3. Lease Contract" : "4. Lease Contract"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("delegation")}
+            className={`px-3 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === "delegation"
+                ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <UserCheck size={14} />
+            <span>{shouldSkipSpaceStep ? "4. Assign Management" : "5. Assign Management"}</span>
           </button>
         </div>
 
@@ -1564,70 +2870,106 @@ export default function PropertyHierarchyModal({
           {/* ════════════════ TAB 1: PROPERTY MASTER & LEGAL ENTITY ════════════════ */}
           {activeTab === "property" && (
             <form onSubmit={handleSaveProperty} className="space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">
-                    Step 1: Property Master &amp; Legal Entity Details
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Comprehensive commercial asset specifications, statutory compliance, and operational delegation.
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                      Property &amp; Towers Setup
+                    </h3>
+                    <span className="inline-flex items-center text-[10px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/70">
+                      Step 1 of 5
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Basic information, campus architecture, and legal entity details.
+                  </p>
                 </div>
+
                 <div className="flex items-center gap-2 shrink-0">
+                  {hasSavedOnboarding && (
+                    <button
+                      type="button"
+                      onClick={handleLoadFromOnboarding}
+                      title="Auto-fill form with details saved during onboarding"
+                      className="px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50/80 hover:bg-teal-100 text-teal-800 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Sparkles size={13} className="text-teal-700" />
+                      <span>Fill from Onboarding</span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setExcelImporterOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    onClick={() => {
+                      resetPropertyForm();
+                      showToast("✓ Property form cleared");
+                    }}
+                    title="Clear all fields to start a blank property"
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Upload Bulk via Excel</span>
+                    <RefreshCw size={12} />
+                    <span>Clear</span>
                   </button>
-                  <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0">
-                    Auto-populated from onboarding
-                  </span>
                 </div>
               </div>
 
               {/* ──── SECTION 1: PRIMARY BUILDING & COMMERCIAL ASSET SPECS ──── */}
-              <div className="space-y-3">
-                <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-teal-700" />
+              <div className="space-y-3.5">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  <Building2 size={14} className="text-teal-700" />
                   <span>Asset Profile &amp; Dimensions</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   {/* Property Name */}
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700 block mb-1">Property / Tower Name *</label>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Property Name *</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Prestige Tech Park / Cyber Heights Business Park"
+                      placeholder="e.g. Divi Towers / Prestige Tech Park"
                       value={propForm.propertyName}
                       onChange={(e) => setPropForm({ ...propForm, propertyName: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
                     />
                   </div>
 
                   {/* Property Code */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Property Code (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. PTP-T1"
-                      value={propForm.propertyCode}
-                      onChange={(e) => setPropForm({ ...propForm, propertyCode: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
-                    />
+                    <label className="font-semibold text-slate-700 block mb-1">Property Code</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        required
+                        placeholder="e.g. DIV-7293"
+                        value={propForm.propertyCode}
+                        className="w-full pl-3 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800 outline-none uppercase select-all"
+                      />
+                      <button
+                        type="button"
+                        title="Regenerate property code"
+                        onClick={() => {
+                          const newCode = generateUniquePropertyCode(
+                            propForm.propertyName || "PRP",
+                            propertiesList.map((p) => p.name)
+                          );
+                          setPropForm((prev) => ({ ...prev, propertyCode: newCode }));
+                          showToast("✓ Generated new property code");
+                        }}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-[#0F8B7D] rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                      >
+                        <RefreshCw size={13} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Asset Type Selector */}
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700 block mb-1">Commercial Asset Type *</label>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Commercial Asset Type *</label>
                     <select
                       value={propForm.propertyType}
-                      onChange={(e) => setPropForm({ ...propForm, propertyType: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      onChange={(e) => handlePropertyTypeChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
                     >
                       {COMMERCIAL_ASSET_TYPES.map((type) => (
                         <option key={type.id} value={type.label}>
@@ -1637,16 +2979,11 @@ export default function PropertyHierarchyModal({
                     </select>
                   </div>
 
-                  {/* Total Leasable Area with Cap */}
+                  {/* Total Leasable Area */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="font-bold text-slate-700">Total Leasable Area (Sq.Ft) *</label>
-                      {subscribedCapacity > 0 && (
-                        <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                          Cap: {subscribedCapacity.toLocaleString()} Sq.Ft
-                        </span>
-                      )}
-                    </div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Total Leasable Area (Sq.Ft) *
+                    </label>
                     <input
                       type="number"
                       min="100"
@@ -1654,114 +2991,437 @@ export default function PropertyHierarchyModal({
                       required
                       placeholder={`e.g. ${subscribedCapacity || 50000}`}
                       value={propForm.areaSqft}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        if (subscribedCapacity > 0 && val > subscribedCapacity) {
-                          setPropForm({ ...propForm, areaSqft: String(subscribedCapacity) });
-                          showToast(
-                            `Leasable area cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`,
-                            "error"
-                          );
-                        } else {
-                          setPropForm({ ...propForm, areaSqft: e.target.value });
-                        }
-                      }}
+                      onChange={(e) => handleAreaSqftChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
                     />
                   </div>
 
-                  {/* Total Seats */}
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Total Seats (If Flex / Coworking)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 450 (Optional)"
-                      value={propForm.totalSeats}
-                      onChange={(e) => setPropForm({ ...propForm, totalSeats: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none"
-                    />
-                  </div>
-
-                  {/* Tower / Building Architecture */}
-                  <div className="sm:col-span-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200">
-                    <label className="font-bold text-slate-800 text-xs block mb-1">
-                      Does this property have multiple towers / buildings?
+                  {/* Tower / Building Architecture - Asset-type aware Segmented Toggle */}
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className="font-semibold text-slate-700 block text-xs">
+                      {isSingleLevelAssetType(propForm.propertyType) ? "Facility Architecture" : "Property Architecture"}
                     </label>
-                    <div className="flex flex-wrap items-center gap-4 text-xs mt-1.5">
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 select-none">
-                        <input
-                          type="radio"
-                          name="towerStructure"
-                          checked={!propForm.hasMultipleBuildings}
-                          onChange={() => setPropForm({ ...propForm, hasMultipleBuildings: false, buildingsCount: "1" })}
-                          className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                        />
-                        <span>No &mdash; Single Standalone Building (1 Tower)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 select-none">
-                        <input
-                          type="radio"
-                          name="towerStructure"
-                          checked={Boolean(propForm.hasMultipleBuildings)}
-                          onChange={() => setPropForm({ ...propForm, hasMultipleBuildings: true, buildingsCount: "2" })}
-                          className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                        />
-                        <span>Yes &mdash; Campus / Tech Park with Multiple Towers</span>
-                      </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+                      <button
+                        type="button"
+                        onClick={() => setPropForm({ ...propForm, hasMultipleBuildings: false, buildingsCount: "1" })}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
+                          !propForm.hasMultipleBuildings
+                            ? "bg-white text-slate-900 shadow-xs font-bold border border-slate-200/70"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        <Building size={14} className={!propForm.hasMultipleBuildings ? "text-[#0F8B7D]" : "text-slate-400"} />
+                        <span>
+                          {isSingleLevelAssetType(propForm.propertyType)
+                            ? "Single Facility (1 Shed / Warehouse)"
+                            : "Single Building (1 Tower)"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPropForm({
+                            ...propForm,
+                            hasMultipleBuildings: true,
+                            buildingsCount: propForm.buildingsCount && propForm.buildingsCount !== "1" ? propForm.buildingsCount : "2",
+                          })
+                        }
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
+                          propForm.hasMultipleBuildings
+                            ? "bg-white text-slate-900 shadow-xs font-bold border border-slate-200/70"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        <Layers size={14} className={propForm.hasMultipleBuildings ? "text-[#0F8B7D]" : "text-slate-400"} />
+                        <span>
+                          {isSingleLevelAssetType(propForm.propertyType)
+                            ? "Campus (Multiple Sheds / Units)"
+                            : "Campus / Multiple Towers"}
+                        </span>
+                      </button>
                     </div>
 
-                    {propForm.hasMultipleBuildings ? (
-                      <div className="mt-3 flex items-center gap-2 text-xs animate-in fade-in">
-                        <span className="font-bold text-slate-700">Total Towers in Campus:</span>
+                    {propForm.hasMultipleBuildings && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs animate-in fade-in">
+                        <span className="font-semibold text-slate-700">
+                          {isSingleLevelAssetType(propForm.propertyType) ? "Total Sheds in Campus:" : "Total Towers in Campus:"}
+                        </span>
                         <input
                           type="number"
-                          min="2"
-                          max="50"
-                          placeholder="e.g. 2"
+                          min="1"
+                          max="20"
+                          placeholder="2"
                           value={propForm.buildingsCount || "2"}
-                          onChange={(e) => setPropForm({ ...propForm, buildingsCount: e.target.value })}
-                          className="w-20 px-2.5 py-1 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                          onChange={(e) => handleBuildingsCountChange(e.target.value)}
+                          className="w-16 px-2.5 py-1 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
                         />
-                        <span className="text-slate-400 text-[11px]">(Tower A, Tower B, etc.)</span>
                       </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-500 mt-1.5">
-                        This property is treated as a single building. The main tower is automatically provisioned, so you can go straight to leasable spaces or lease contracts without having to re-enter building details.
-                      </p>
                     )}
                   </div>
 
-                  {/* Number of Floors */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="font-bold text-slate-700">Number of Floors</label>
-                      <span className="text-[10px] text-teal-800 bg-teal-50 px-1 py-0.2 rounded font-semibold">
-                        0 for Warehouse
-                      </span>
+                  {/* ──── CONDITIONAL: MULTIPLE TOWERS BREAKDOWN vs SINGLE BUILDING FLOOR BREAKDOWN ──── */}
+                  {propForm.hasMultipleBuildings ? (
+                    /* ──── MULTIPLE TOWERS / CAMPUS CONFIGURATION ──── */
+                    <div className="sm:col-span-2 p-3.5 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-3 animate-in fade-in">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-teal-100 pb-2">
+                        <div>
+                          <span className="text-xs font-black uppercase text-teal-950 block">
+                            Campus Towers &amp; Buildings Configuration ({towersBreakdown.length} Towers)
+                          </span>
+                          <span className="text-[11px] text-teal-700 font-medium">
+                            Configure each tower with its name, floor count, and leasable area.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={autoDistributeTowerArea}
+                            className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+                          >
+                            <Calculator size={13} />
+                            <span>Distribute Area Equally</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAddTower}
+                            className="px-3 py-1.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-100 text-teal-900 text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+                          >
+                            <Plus size={13} />
+                            <span>+ Add Tower</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* List of Towers */}
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {towersBreakdown.map((tower, idx) => (
+                          <div
+                            key={tower.id}
+                            className="p-3 rounded-xl bg-white border border-slate-200 space-y-2 text-xs shadow-2xs"
+                          >
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                              {/* Tower Badge */}
+                              <div className="sm:col-span-1 flex items-center justify-center">
+                                <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-black flex items-center justify-center text-xs shrink-0">
+                                  T{idx + 1}
+                                </span>
+                              </div>
+
+                              {/* Tower Name */}
+                              <div className="sm:col-span-4">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                                  Tower / Building Name *
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder={`e.g. Tower ${String.fromCharCode(65 + idx)}`}
+                                  value={tower.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setTowersBreakdown((prev) =>
+                                      prev.map((t, i) => (i === idx ? { ...t, name: val } : t))
+                                    );
+                                  }}
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-bold text-slate-800 focus:border-[#0F8B7D] outline-none"
+                                />
+                              </div>
+
+                              {/* Floors Count */}
+                              <div className="sm:col-span-3">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                                  Floors in this Tower *
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    required
+                                    placeholder="e.g. 5"
+                                    value={tower.floorsCount}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setTowersBreakdown((prev) =>
+                                        prev.map((t, i) => (i === idx ? { ...t, floorsCount: val } : t))
+                                      );
+                                    }}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-mono font-bold text-slate-800 focus:border-[#0F8B7D] outline-none"
+                                  />
+                                  <span className="text-[11px] font-medium text-slate-400 shrink-0">Floors</span>
+                                </div>
+                              </div>
+
+                              {/* Leasable Area */}
+                              <div className="sm:col-span-3">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                                  Leasable Area (Sq.Ft) *
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="e.g. 15000"
+                                    value={tower.areaSqft}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setTowersBreakdown((prev) =>
+                                        prev.map((t, i) => (i === idx ? { ...t, areaSqft: val } : t))
+                                      );
+                                    }}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-mono font-bold text-slate-800 focus:border-[#0F8B7D] outline-none"
+                                  />
+                                  <span className="text-[11px] font-medium text-slate-400 shrink-0">Sq.Ft</span>
+                                </div>
+                              </div>
+
+                              {/* Remove Tower Button */}
+                              <div className="sm:col-span-1 flex items-center justify-end">
+                                {towersBreakdown.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTower(idx)}
+                                    title="Remove this tower"
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Tower Gate / Wing Landmark or Address */}
+                            <div className="pt-1.5 border-t border-slate-100 flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">
+                                Tower Gate / Wing Location:
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="e.g. North Boulevard Entrance / Wing B Gate"
+                                value={tower.gateOrAddress || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setTowersBreakdown((prev) =>
+                                    prev.map((t, i) => (i === idx ? { ...t, gateOrAddress: val } : t))
+                                  );
+                                }}
+                                className="flex-1 px-2.5 py-1 rounded-md border border-slate-200 text-xs font-medium text-slate-700 focus:border-[#0F8B7D] outline-none bg-slate-50/50"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Towers Area & Floors Summary */}
+                      {(() => {
+                        const totalAllocated = towersBreakdown.reduce((sum, t) => sum + (Number(t.areaSqft) || 0), 0);
+                        const totalFloors = towersBreakdown.reduce((sum, t) => sum + (Number(t.floorsCount) || 0), 0);
+                        const totalPropArea = Number(propForm.areaSqft) || 0;
+                        const diff = totalPropArea - totalAllocated;
+                        return (
+                          <div className="pt-2 border-t border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold">
+                            <div className="flex items-center gap-2.5 text-slate-700">
+                              <span>Total Towers: <strong className="text-teal-900 font-black">{towersBreakdown.length}</strong></span>
+                              <span>•</span>
+                              <span>Total Floors: <strong className="text-slate-900">{totalFloors} Floors</strong></span>
+                              <span>•</span>
+                              <span>Allocated Area: <strong className="font-mono text-slate-900">{totalAllocated.toLocaleString()} Sq.Ft</strong></span>
+                            </div>
+                            {totalPropArea > 0 && (
+                              <span
+                                className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold self-start sm:self-auto ${
+                                  diff === 0
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : diff > 0
+                                    ? "bg-amber-100 text-amber-900"
+                                    : "bg-rose-100 text-rose-900"
+                                }`}
+                              >
+                                {diff === 0
+                                  ? "✓ Matches Total Property Leasable Area"
+                                  : diff > 0
+                                  ? `${diff.toLocaleString()} Sq.Ft Unallocated`
+                                  : `Exceeds Property Area by ${Math.abs(diff).toLocaleString()} Sq.Ft`}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 12"
-                      value={propForm.floorsCount}
-                      onChange={(e) => setPropForm({ ...propForm, floorsCount: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none"
-                    />
-                  </div>
+                  ) : (
+                    /* ──── SINGLE BUILDING / SHED LEVEL CONFIGURATION ──── */
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-semibold text-slate-700 block">
+                            {isSingleLevelAssetType(propForm.propertyType)
+                              ? "Facility Levels / Upper Floors *"
+                              : "Total Floors (including Ground Floor) *"}
+                          </label>
+                          <span className="text-[11px] text-teal-700 font-semibold">
+                            {isSingleLevelAssetType(propForm.propertyType)
+                              ? "0 = Single Ground Shed"
+                              : "e.g. 2 = Ground + 1st Floor"}
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min={isSingleLevelAssetType(propForm.propertyType) ? 0 : 1}
+                          max={50}
+                          placeholder={isSingleLevelAssetType(propForm.propertyType) ? "0 (Ground Level)" : "e.g. 2 (Ground + 1st)"}
+                          value={propForm.floorsCount}
+                          onChange={(e) => handleFloorsCountChange(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                        />
+                      </div>
+
+                      {/* Dynamic Space / Floor / Bay Breakdown Table */}
+                      {floorBreakdown.length > 0 && (
+                        <div className="sm:col-span-2 p-3.5 bg-slate-50/90 rounded-2xl border border-teal-200 space-y-3 animate-in fade-in">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
+                            <div>
+                              <span className="text-xs font-bold text-teal-950 block">
+                                {isSingleLevelAssetType(propForm.propertyType)
+                                  ? `Space & Bay Allocation (${floorBreakdown.length === 1 ? "Single Ground Level" : `${floorBreakdown.length} Levels / Bays`})`
+                                  : `Floor Space & Area Allocation (${floorBreakdown.length} Floor${floorBreakdown.length > 1 ? "s" : ""}: Ground ${floorBreakdown.length > 1 ? `+ ${floorBreakdown.length - 1} Upper Floor${floorBreakdown.length - 1 > 1 ? "s" : ""}` : "Only"})`}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                {isSingleLevelAssetType(propForm.propertyType)
+                                  ? "Warehouse spaces and bays are automatically provisioned upon saving."
+                                  : "Ground and upper floor spaces are automatically created upon saving."}
+                              </span>
+                            </div>
+                            {floorBreakdown.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={autoDistributeFloorArea}
+                                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs self-start sm:self-auto"
+                              >
+                                <Calculator size={13} />
+                                <span>Distribute Area Equally</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            {floorBreakdown.map((floor, idx) => {
+                              const isSingle = isSingleLevelAssetType(propForm.propertyType);
+                              const isGround = floor.floorNumber === 0 || (isSingle && floorBreakdown.length === 1);
+                              const isMezz = isSingle && floor.floorNumber === 1 && floorBreakdown.length > 1;
+                              const badgeText = isGround ? "G" : isMezz ? "M" : `F${floor.floorNumber}`;
+                              const labelText = isGround
+                                ? (isSingle ? "Ground Level" : "Ground Floor")
+                                : isMezz
+                                ? "Mezzanine Level"
+                                : formatFloorName(floor.floorNumber);
+                              const placeholderText = isSingle
+                                ? (isGround ? "e.g. Main Warehouse Bay / Shed A" : "e.g. Mezzanine Storage / Office")
+                                : `e.g. ${formatFloorName(floor.floorNumber)} Suite / Unit`;
+
+                              return (
+                                <div
+                                  key={floor.floorNumber}
+                                  className="p-2.5 rounded-xl bg-white border border-slate-200 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center text-xs"
+                                >
+                                  <div className="sm:col-span-3 flex items-center gap-2">
+                                    <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-[11px] shrink-0">
+                                      {badgeText}
+                                    </span>
+                                    <span className="font-bold text-slate-800">
+                                      {labelText}
+                                    </span>
+                                  </div>
+                                  <div className="sm:col-span-5">
+                                    <input
+                                      type="text"
+                                      placeholder={placeholderText}
+                                      value={floor.spaceName}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFloorBreakdown((prev) =>
+                                          prev.map((f, i) => (i === idx ? { ...f, spaceName: val } : f))
+                                        );
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-800 focus:border-[#0F8B7D] outline-none"
+                                    />
+                                  </div>
+                                  <div className="sm:col-span-4 flex items-center gap-1.5">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="Area (Sq.Ft)"
+                                      value={floor.areaSqft}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFloorBreakdown((prev) =>
+                                          prev.map((f, i) => (i === idx ? { ...f, areaSqft: val } : f))
+                                        );
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-mono font-bold text-slate-800 focus:border-[#0F8B7D] outline-none"
+                                    />
+                                    <span className="text-[11px] font-semibold text-slate-400 shrink-0">
+                                      Sq.Ft
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Summary calculation */}
+                          {(() => {
+                            const totalAllocated = floorBreakdown.reduce(
+                              (sum, f) => sum + (Number(f.areaSqft) || 0),
+                              0
+                            );
+                            const totalPropArea = Number(propForm.areaSqft) || 0;
+                            const diff = totalPropArea - totalAllocated;
+                            return (
+                              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold">
+                                <span className="text-slate-600">
+                                  Total Allocated:{" "}
+                                  <span className="font-mono text-slate-900">
+                                    {totalAllocated.toLocaleString()} Sq.Ft
+                                  </span>
+                                </span>
+                                {totalPropArea > 0 && (
+                                  <span
+                                    className={`text-[11px] px-2 py-0.5 rounded-md font-bold ${
+                                      diff === 0
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : diff > 0
+                                        ? "bg-amber-100 text-amber-900"
+                                        : "bg-rose-100 text-rose-900"
+                                    }`}
+                                  >
+                                    {diff === 0
+                                      ? "✓ Matches Total Leasable Area"
+                                      : diff > 0
+                                      ? `${diff.toLocaleString()} Sq.Ft Unallocated`
+                                      : `Exceeds Total Property Area by ${Math.abs(diff).toLocaleString()} Sq.Ft`}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* ──── SECTION 2: GEOGRAPHIC LOCATION & ADDRESS ──── */}
               <div className="space-y-3 pt-3 border-t border-slate-100">
-                <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Building size={13} className="text-teal-700" />
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  <Building size={14} className="text-teal-700" />
                   <span>Geographic Location &amp; Address</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   {/* Google Maps Autocomplete */}
-                  <div className="sm:col-span-3">
+                  <div className="sm:col-span-2">
                     <GoogleAddressAutocomplete
                       value={propForm.address}
                       onChange={(val) => setPropForm((prev) => ({ ...prev, address: val }))}
@@ -1775,11 +3435,11 @@ export default function PropertyHierarchyModal({
 
                   {/* State Dropdown */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">State / Union Territory *</label>
+                    <label className="font-semibold text-slate-700 block mb-1">State / Union Territory *</label>
                     <select
                       value={propForm.state}
                       onChange={(e) => handleStateChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
                     >
                       {(propForm.state && !ALL_INDIAN_STATES.includes(propForm.state)
                         ? [propForm.state, ...ALL_INDIAN_STATES]
@@ -1794,11 +3454,11 @@ export default function PropertyHierarchyModal({
 
                   {/* City Dropdown */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">City *</label>
+                    <label className="font-semibold text-slate-700 block mb-1">City *</label>
                     <select
                       value={propForm.city}
                       onChange={(e) => setPropForm({ ...propForm, city: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
                     >
                       {(propForm.city && !availableCities.includes(propForm.city)
                         ? [propForm.city, ...availableCities]
@@ -1813,7 +3473,7 @@ export default function PropertyHierarchyModal({
 
                   {/* Postal Pincode */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Postal Pincode</label>
+                    <label className="font-semibold text-slate-700 block mb-1">Postal Pincode</label>
                     <input
                       type="text"
                       placeholder="e.g. 560066"
@@ -1825,11 +3485,11 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   {/* Micro-market */}
-                  <div className="sm:col-span-3">
-                    <label className="font-bold text-slate-700 block mb-1">Micro-Market / Sub-Market Name</label>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Micro-Market / Sub-Market</label>
                     <input
                       type="text"
-                      placeholder="e.g. Whitefield / Outer Ring Road / BKC / Cyber City / Airport Corridor"
+                      placeholder="e.g. Whitefield / Outer Ring Road"
                       value={propForm.microMarket}
                       onChange={(e) => setPropForm({ ...propForm, microMarket: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
@@ -1844,20 +3504,20 @@ export default function PropertyHierarchyModal({
                 return (
                   <div className="space-y-3 pt-3 border-t border-slate-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                        <ShieldCheck size={13} className="text-teal-700" />
-                        <span>Ownership Structure &amp; Statutory Tax Compliance (§S-11)</span>
+                      <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-teal-700" />
+                        <span>Ownership &amp; Statutory Tax Compliance</span>
                       </div>
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-100 text-[#0F8B7D] border border-teal-200 self-start sm:self-auto">
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-teal-100 text-[#0F8B7D] border border-teal-200 self-start sm:self-auto">
                         {structureRule.shortLabel}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                       {/* Legal Structure */}
-                      <div className="sm:col-span-3">
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Property Ownership / Legal Entity Structure *
+                      <div className="sm:col-span-2">
+                        <label className="font-semibold text-slate-700 block mb-1">
+                          Ownership Structure *
                         </label>
                         <select
                           value={propForm.ownershipStructure}
@@ -1870,7 +3530,7 @@ export default function PropertyHierarchyModal({
                               cinNumber: r.cinApplicable ? prev.cinNumber : "",
                             }));
                           }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
                         >
                           {LEGAL_OWNERSHIP_STRUCTURES.map((s) => (
                             <option key={s.id} value={s.id}>
@@ -1882,8 +3542,8 @@ export default function PropertyHierarchyModal({
 
                       {/* Landlord / SPV Entity Legal Name */}
                       <div className="sm:col-span-2">
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Property Ownership / SPV Legal Name (Asset Holding Entity) *
+                        <label className="font-semibold text-slate-700 block mb-1">
+                          Asset Holding Entity / SPV Legal Name *
                         </label>
                         <input
                           type="text"
@@ -1899,14 +3559,14 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* PAN Number */}
+                      {/* PAN Number (Exactly 10 Characters) */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="font-bold text-slate-700">
+                          <label className="font-semibold text-slate-700">
                             PAN Number {structureRule.panRequired ? "*" : ""}
                           </label>
-                          <span className="text-[10px] font-bold text-slate-500">
-                            {structureRule.panRequired ? "Compulsory" : "Optional"}
+                          <span className="text-[10px] font-mono text-slate-400">
+                            ({propForm.panNumber.length}/10)
                           </span>
                         </div>
                         <input
@@ -1920,43 +3580,44 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* CIN Number (if applicable) */}
+                      {/* Corporate Identity (CIN) / LLPIN — Only shown for Pvt Ltd, Public Ltd, LLP */}
                       {structureRule.cinApplicable && (
                         <div>
-                          <label className="font-bold text-slate-700 block mb-1">Corporate Identity (CIN) *</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="font-semibold text-slate-700">
+                              {structureRule.cinLabel || "Corporate Identity (CIN)"} {structureRule.cinRequired ? "*" : ""}
+                            </label>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              ({propForm.cinNumber.length}/{structureRule.id === "llp" ? 7 : 21})
+                            </span>
+                          </div>
                           <input
                             type="text"
-                            required
-                            placeholder="e.g. U70100KA2021PTC123456"
+                            required={Boolean(structureRule.cinRequired)}
+                            placeholder={structureRule.cinPlaceholder || "e.g. U70100KA2021PTC123456"}
+                            maxLength={structureRule.id === "llp" ? 8 : 21}
                             value={propForm.cinNumber}
                             onChange={(e) => setPropForm({ ...propForm, cinNumber: e.target.value.toUpperCase() })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
                           />
                         </div>
                       )}
 
-                      {/* GSTIN */}
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">Lessor GSTIN (15 Digits)</label>
+                      {/* GSTIN (Fixed 15 Characters) */}
+                      <div className={!structureRule.cinApplicable ? "sm:col-span-2" : ""}>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-semibold text-slate-700">Lessor GSTIN</label>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            ({propForm.gstin.length}/15)
+                          </span>
+                        </div>
                         <input
                           type="text"
                           placeholder="29AAAAA0000A1Z5"
                           maxLength={15}
                           value={propForm.gstin}
                           onChange={(e) => setPropForm({ ...propForm, gstin: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
-                        />
-                      </div>
-
-                      {/* RERA Number */}
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">RERA Project Registration</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. PRM/KA/RERA/1251/..."
-                          value={propForm.reraNumber}
-                          onChange={(e) => setPropForm({ ...propForm, reraNumber: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-slate-900 focus:border-[#0F8B7D] outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
                         />
                       </div>
                     </div>
@@ -1966,19 +3627,19 @@ export default function PropertyHierarchyModal({
 
               {/* ──── SECTION 4: HANDOVER & FIT-OUT SPECIFICATIONS ──── */}
               <div className="space-y-3 pt-3 border-t border-slate-100">
-                <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Armchair size={13} className="text-teal-700" />
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  <Armchair size={14} className="text-teal-700" />
                   <span>Handover Condition &amp; Fit-out Specs</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   {/* Fitout Condition */}
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700 block mb-1">Handover / Fit-out Condition *</label>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Fit-out Condition *</label>
                     <select
                       value={propForm.fitoutCondition}
                       onChange={(e) => setPropForm({ ...propForm, fitoutCondition: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
                     >
                       <option value="Fully Furnished">Fully Furnished (Plug &amp; Play / Turnkey)</option>
                       <option value="Warm Shell">Warm Shell (HVAC, Ceilings, Lighting)</option>
@@ -1988,8 +3649,8 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   {/* Fitout Days */}
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700 block mb-1">Default Fit-out Period (Days)</label>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Default Fit-out Period (Days)</label>
                     <input
                       type="number"
                       placeholder="e.g. 60 or 90 Days"
@@ -2034,8 +3695,69 @@ export default function PropertyHierarchyModal({
                     </>
                   )}
 
+                  {/* Warehouse & Industrial Operational Specifications */}
+                  {(isSingleLevelAssetType(propForm.propertyType) || Number(propForm.floorsCount) === 0) && (
+                    <div className="sm:col-span-2 p-3.5 bg-teal-50/70 rounded-2xl border border-teal-200 space-y-3 animate-in fade-in">
+                      <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                        <div>
+                          <span className="text-xs font-bold text-teal-950 block">
+                            Warehouse &amp; Facility Operational Specifications
+                          </span>
+                          <span className="text-[11px] text-teal-700 font-medium">
+                            Configured directly on the facility (Step 2 is bypassed).
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200 shrink-0">
+                          Facility Handover Specs
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Clear Height (ft / meters)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 30 ft (9.1 meters)"
+                            value={propForm.warehouseClearHeight}
+                            onChange={(e) => setPropForm({ ...propForm, warehouseClearHeight: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Loading Docks / Shutters</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 4 Docks with Dock Levelers"
+                            value={propForm.warehouseDocksCount}
+                            onChange={(e) => setPropForm({ ...propForm, warehouseDocksCount: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Flooring Type &amp; Load Capacity</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Laser Screed FM2 (5 Ton/sq.m)"
+                            value={propForm.warehouseFlooringType}
+                            onChange={(e) => setPropForm({ ...propForm, warehouseFlooringType: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Power Load Sanctioned</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 150 kVA / 3-Phase"
+                            value={propForm.warehousePowerLoad}
+                            onChange={(e) => setPropForm({ ...propForm, warehousePowerLoad: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Primary Contact Name */}
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="font-bold text-slate-700 block mb-1">Primary On-site Contact Name</label>
                     <input
                       type="text"
@@ -2047,7 +3769,7 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   {/* Primary Contact Phone */}
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="font-bold text-slate-700 block mb-1">Primary Contact Phone</label>
                     <input
                       type="tel"
@@ -2060,300 +3782,6 @@ export default function PropertyHierarchyModal({
                 </div>
               </div>
 
-              {/* ──── SECTION 5: PROPERTY MANAGEMENT & DELEGATION ("ASSIGN TO SOME OTHER") ──── */}
-              <div className="pt-3 border-t border-slate-100 space-y-3">
-                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3.5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                      <UserCheck size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                        Property Management Mode &amp; Assignment
-                      </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        Choose whether you manage this property personally or assign management directly to a PM company, FM operator, or designated operations manager.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Choice Radio Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label
-                      className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                        !propForm.hasDelegatedManager
-                          ? "bg-white border-teal-600 shadow-xs ring-1 ring-teal-500 text-slate-900"
-                          : "bg-white/60 border-slate-200 hover:bg-white text-slate-700"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="managementChoice"
-                        checked={!propForm.hasDelegatedManager}
-                        onChange={() => setPropForm({ ...propForm, hasDelegatedManager: false })}
-                        className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                      />
-                      <div>
-                        <span className="font-extrabold block">Manage Personally (Self-Managed)</span>
-                        <span className="text-[10px] text-slate-500 leading-tight block mt-0.5">
-                          Asset owner oversees leasing, rent billing, and tenant requests directly.
-                        </span>
-                      </div>
-                    </label>
-
-                    <label
-                      className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                        propForm.hasDelegatedManager
-                          ? "bg-white border-teal-600 shadow-xs ring-1 ring-teal-500 text-slate-900"
-                          : "bg-white/60 border-slate-200 hover:bg-white text-slate-700"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="managementChoice"
-                        checked={propForm.hasDelegatedManager}
-                        onChange={() => setPropForm({ ...propForm, hasDelegatedManager: true })}
-                        className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                      />
-                      <div>
-                        <span className="font-extrabold block">Assign to PM Company or Another User</span>
-                        <span className="text-[10px] text-slate-500 leading-tight block mt-0.5">
-                          Delegate operational center management and activate their dedicated portal.
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* Delegated Form Controls */}
-                  {propForm.hasDelegatedManager && (
-                    <div className="pt-3 border-t border-amber-200/70 space-y-3 animate-in fade-in duration-150">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        {/* Managing Entity Type */}
-                        <div>
-                          <label className="font-bold text-slate-700 block mb-1">Managing Entity Type *</label>
-                          <select
-                            value={propForm.managerType}
-                            onChange={(e) => setPropForm({ ...propForm, managerType: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer"
-                          >
-                            {DELEGATED_ENTITY_TYPES.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.title}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Manager Name */}
-                        <div>
-                          <label className="font-bold text-slate-700 block mb-1">
-                            {propForm.managerType === "user_pm_or_admin" ? "Assignee Full Name *" : "Entity / Company Name *"}
-                          </label>
-                          <input
-                            type="text"
-                            required={propForm.hasDelegatedManager}
-                            placeholder={
-                              propForm.managerType === "user_pm_or_admin"
-                                ? "e.g. Vikram Sharma"
-                                : propForm.managerType === "fm_company"
-                                ? "e.g. CBRE / JLL Facilities"
-                                : propForm.managerType === "msp"
-                                ? "e.g. SmartOps MSP Solutions"
-                                : "e.g. Apex Property Management LLP"
-                            }
-                            value={propForm.managerName}
-                            onChange={(e) => setPropForm({ ...propForm, managerName: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none"
-                          />
-                        </div>
-
-                        {/* Manager Email */}
-                        <div>
-                          <label className="font-bold text-slate-700 block mb-1">
-                            {propForm.managerType === "user_pm_or_admin" ? "User Email Address *" : "Work Email *"}
-                          </label>
-                          <input
-                            type="email"
-                            required={propForm.hasDelegatedManager}
-                            placeholder={
-                              propForm.managerType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
-                            }
-                            value={propForm.managerEmail}
-                            onChange={(e) => setPropForm({ ...propForm, managerEmail: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Designated Role for another user */}
-                      {propForm.managerType === "user_pm_or_admin" && (
-                        <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-                          <div>
-                            <span className="font-black text-slate-900 block">Designated Role for this User</span>
-                            <span className="text-[10px] text-slate-500">
-                              Choose whether this user operates with Property Manager or Org Admin privileges.
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-800">
-                              <input
-                                type="radio"
-                                name="hierarchyManagerRole"
-                                value="property_manager"
-                                checked={propForm.managerUserRole === "property_manager"}
-                                onChange={() => setPropForm({ ...propForm, managerUserRole: "property_manager" })}
-                                className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                              />
-                              <span>Property Manager</span>
-                            </label>
-                            <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-800">
-                              <input
-                                type="radio"
-                                name="hierarchyManagerRole"
-                                value="org_admin"
-                                checked={propForm.managerUserRole === "org_admin"}
-                                onChange={() => setPropForm({ ...propForm, managerUserRole: "org_admin" })}
-                                className="text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                              />
-                              <span>Org Admin</span>
-                            </label>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Granular Rights Checkboxes */}
-                      <div className="pt-2 space-y-2">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
-                          Delegated Permissions &amp; Owner Approval Thresholds:
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
-                            <input
-                              type="checkbox"
-                              checked={propForm.managerRights.contractExecution}
-                              onChange={(e) =>
-                                setPropForm({
-                                  ...propForm,
-                                  managerRights: { ...propForm.managerRights, contractExecution: e.target.checked },
-                                })
-                              }
-                              className="mt-0.5 w-4 h-4 rounded text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                            />
-                            <div>
-                              <span className="font-bold text-slate-800 block">Execute Lease Agreements</span>
-                              <span className="text-[10px] text-slate-500">
-                                {propForm.managerRights.contractExecution
-                                  ? "Direct execution enabled"
-                                  : "Requires Owner Approval before signing"}
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
-                            <input
-                              type="checkbox"
-                              checked={propForm.managerRights.concessions}
-                              onChange={(e) =>
-                                setPropForm({
-                                  ...propForm,
-                                  managerRights: { ...propForm.managerRights, concessions: e.target.checked },
-                                })
-                              }
-                              className="mt-0.5 w-4 h-4 rounded text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                            />
-                            <div>
-                              <span className="font-bold text-slate-800 block">Rent Discounts &amp; Waivers</span>
-                              <span className="text-[10px] text-slate-500">
-                                {propForm.managerRights.concessions
-                                  ? "Discretionary discounts permitted"
-                                  : "Requires Owner Approval in inbox"}
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
-                            <input
-                              type="checkbox"
-                              checked={propForm.managerRights.billingRuns}
-                              onChange={(e) =>
-                                setPropForm({
-                                  ...propForm,
-                                  managerRights: { ...propForm.managerRights, billingRuns: e.target.checked },
-                                })
-                              }
-                              className="mt-0.5 w-4 h-4 rounded text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                            />
-                            <div>
-                              <span className="font-bold text-slate-800 block">Monthly Invoicing Runs</span>
-                              <span className="text-[10px] text-slate-500">
-                                {propForm.managerRights.billingRuns
-                                  ? "Autonomous monthly batch runs"
-                                  : "Requires Owner preview & trigger"}
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
-                            <input
-                              type="checkbox"
-                              checked={propForm.managerRights.depositRefunds}
-                              onChange={(e) =>
-                                setPropForm({
-                                  ...propForm,
-                                  managerRights: { ...propForm.managerRights, depositRefunds: e.target.checked },
-                                })
-                              }
-                              className="mt-0.5 w-4 h-4 rounded text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                            />
-                            <div>
-                              <span className="font-bold text-slate-800 block">Deposit Refund Authorisation</span>
-                              <span className="text-[10px] text-slate-500">
-                                {propForm.managerRights.depositRefunds
-                                  ? "Direct refund authorization"
-                                  : "Requires Owner Approval"}
-                              </span>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Live Generated Activation / Invite Link */}
-                      {propForm.managerName.trim() && (
-                        <div className="space-y-2">
-                          <div className="p-3 bg-white/90 rounded-xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs animate-in fade-in">
-                            <div className="min-w-0">
-                              <span className="text-[11px] font-bold text-slate-700 block">
-                                Manager Activation &amp; Portal Invitation Link:
-                              </span>
-                              <span className="font-mono text-[11px] text-teal-800 truncate select-all block mt-0.5">
-                                {getManagerActivationLink()}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const link = getManagerActivationLink();
-                                navigator.clipboard.writeText(link);
-                                setCopiedManagerLink(true);
-                                showToast("✓ Manager activation link copied to clipboard!");
-                                setTimeout(() => setCopiedManagerLink(false), 2500);
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-[11px] font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs self-start sm:self-auto"
-                            >
-                              {copiedManagerLink ? <Check size={12} /> : <Copy size={12} />}
-                              <span>{copiedManagerLink ? "Copied!" : "Copy Manager Invite"}</span>
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-amber-700 font-medium bg-amber-50/80 border border-amber-200/80 px-2.5 py-1.5 rounded-lg">
-                            ℹ Asset Setup Mode: If no tenants or contracts are added yet, the Manager dashboard will open in <strong>Setup Mode</strong>. Operations and billing runs will activate automatically once tenant leases are enrolled.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Form Submission Button */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
@@ -2363,9 +3791,9 @@ export default function PropertyHierarchyModal({
                 >
                   {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                   <span>
-                    {propForm.hasMultipleBuildings
-                      ? "Save Property & Configure Towers →"
-                      : "Save Property & Next (Add Spaces / Units) →"}
+                    {shouldSkipSpaceStep
+                      ? "Save Property & Next (Add Tenants) →"
+                      : "Save Property & Next (Spaces & Units) →"}
                   </span>
                 </button>
               </div>
@@ -2374,20 +3802,34 @@ export default function PropertyHierarchyModal({
 
           {/* ════════════════ TAB 2: BUILDING MASTER (Towers) ════════════════ */}
           {activeTab === "building" && (
-            <form onSubmit={handleSaveBuilding} className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Step 2: Building / Tower Details
-                </span>
-                <span className="text-[11px] font-medium text-slate-400">Multiple Towers Configuration</span>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div>
+                  <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider block">
+                    Step 2: Campus Towers &amp; Buildings ({displayBuildings.length} Configured)
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-400">
+                    {displayBuildings.length > 1
+                      ? "Campus architecture: Each tower has its own floors and leasable spaces."
+                      : "Single tower property configuration."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("space")}
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <span>Proceed to Spaces &amp; Units (Step 3)</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
 
-              {!propForm.hasMultipleBuildings && (
+              {!propForm.hasMultipleBuildings && displayBuildings.length <= 1 && (
                 <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center justify-between gap-3 text-xs">
                   <div>
                     <span className="font-bold text-teal-900 block">Single Standalone Building</span>
                     <span className="text-teal-700 text-[11px]">
-                      Your property is configured as a single tower. The primary building is automatically set up, so you can skip directly to Units or Contracts.
+                      Your property is configured as a single tower. The primary building is automatically provisioned, so you can configure units or proceed directly to tenants.
                     </span>
                   </div>
                   <button
@@ -2400,229 +3842,510 @@ export default function PropertyHierarchyModal({
                 </div>
               )}
 
-              <div className="space-y-3.5 text-xs">
-                {/* Associated Property */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Associated Property *</label>
-                  <select
-                    value={bldgForm.propertyId}
-                    onChange={(e) => setBldgForm({ ...bldgForm, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {propertiesList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                    {propertiesList.length === 0 && <option value="">No properties registered yet</option>}
-                  </select>
+              {/* Configured Towers List */}
+              {displayBuildings.length > 0 && (
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      Configured Towers in Campus ({displayBuildings.length})
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Select a tower to configure leasable units or spaces
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {displayBuildings.map((bldg, idx) => {
+                      const bldgSpaces = spacesList.filter((s) => s.buildingId === bldg.id);
+                      const vacantCount = bldgSpaces.filter((s) => s.occupancyStatus !== "occupied").length;
+                      const occupiedCount = bldgSpaces.filter((s) => s.occupancyStatus === "occupied").length;
+
+                      return (
+                        <div
+                          key={bldg.id}
+                          className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-teal-400 shadow-2xs transition space-y-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 font-black flex items-center justify-center text-xs shrink-0">
+                                T{idx + 1}
+                              </span>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900 text-xs">{bldg.name}</h4>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {bldg.floors || 1} Floors • {bldg.totalAreaSqft ? `${bldg.totalAreaSqft.toLocaleString()} Sq.Ft` : "Standard"}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                              Active Tower
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-center text-[11px] pt-1 border-t border-slate-100">
+                            <div className="p-1.5 rounded-lg bg-slate-50">
+                              <span className="text-[10px] font-bold text-slate-400 block">Floors</span>
+                              <span className="font-black text-slate-800">{bldg.floors || 1} Floors</span>
+                            </div>
+                            <div className="p-1.5 rounded-lg bg-slate-50">
+                              <span className="text-[10px] font-bold text-slate-400 block">Units Configured</span>
+                              <span className="font-black text-teal-700">{bldgSpaces.length} Units</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-1 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-medium text-slate-500">
+                              {vacantCount} Vacant • {occupiedCount} Occupied
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSpaceForm((prev) => ({ ...prev, buildingId: bldg.id, floorNumber: "0" }));
+                                setSelectedTenantBuilding(bldg.id);
+                                setActiveTab("space");
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Configure Units</span>
+                              <ArrowRight size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Add Additional Tower Form */}
+              <form onSubmit={handleSaveBuilding} className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center">
+                      +
+                    </span>
+                    <span className="font-extrabold text-slate-800 text-xs">
+                      {displayBuildings.length > 0 ? "Add Another Tower / Wing to Campus" : "Add Building / Tower"}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">Step 2 Form</span>
                 </div>
 
-                {/* 1. Building Name */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Building Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Tower Alpha / Wing B"
-                    value={bldgForm.buildingName}
-                    onChange={(e) => setBldgForm({ ...bldgForm, buildingName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Associated Property */}
+                  {/* Associated Property (Locked to active wizard property) */}
+                  <div className="sm:col-span-2 p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-700 uppercase block">Property in Wizard</span>
+                      <span className="font-extrabold text-teal-950 text-xs">{activePropertyObj?.name || propForm.propertyName || "Commercial Property"}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                      Auto-Linked
+                    </span>
+                  </div>
 
-                {/* 2. Floor Count */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Floor Count *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    placeholder="e.g. 10"
-                    value={bldgForm.floorCount}
-                    onChange={(e) => setBldgForm({ ...bldgForm, floorCount: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 3. Building Address (optional) - Google Maps Autocomplete */}
-                <div>
-                  <GoogleAddressAutocomplete
-                    value={bldgForm.buildingAddress}
-                    onChange={(val) => setBldgForm((prev) => ({ ...prev, buildingAddress: val }))}
-                    onAddressSelect={(res: AddressAutofillResult) => {
-                      setBldgForm((prev) => ({
-                        ...prev,
-                        buildingAddress: res.streetAddress || res.fullAddress,
-                      }));
-                    }}
-                    label="Building Address (Optional)"
-                    placeholder="Search building landmark or campus gate on Google Maps..."
-                    required={false}
-                    hint="Optional: Pinpoint specific wing or campus gate."
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("space")}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Skip to Spaces →
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>Save Building &amp; Next (Add Spaces) →</span>
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* ════════════════ TAB 3: SPACES / UNITS (5 Fields) ════════════════ */}
-          {activeTab === "space" && (
-            <form onSubmit={handleSaveSpace} className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Step 3: Space / Unit Master (5 Fields)
-                </span>
-                <span className="text-[11px] font-medium text-slate-400">Zero pre-fed values</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                {/* 5. Building (dropdown, selects from added buildings) */}
-                <div className="sm:col-span-2">
-                  <label className="font-bold text-slate-700 block mb-1">Building *</label>
-                  <select
-                    value={spaceForm.buildingId}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, buildingId: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {buildingsList.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                    {buildingsList.length === 0 && <option value="">No buildings created yet</option>}
-                  </select>
-                </div>
-
-                {/* 1. Space Name (e.g. Suite 402, Floor 4 East Wing) */}
-                <div className="sm:col-span-2">
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Space Name (e.g. Suite 402, Floor 4 East Wing) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Suite 402, Floor 4 East Wing"
-                    value={spaceForm.spaceName}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, spaceName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 2. Area (sqft) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Area (Sq.Ft) *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    placeholder="e.g. 4200"
-                    value={spaceForm.areaSqft}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 3. Floor Number */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Floor Number *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 4"
-                    value={spaceForm.floorNumber}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, floorNumber: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 4. Unit Type (dropdown: Office, Desk, Retail) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Unit Type *</label>
-                  <select
-                    value={spaceForm.unitType}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, unitType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="Office">Office</option>
-                    <option value="Desk">Desk</option>
-                    <option value="Retail">Retail</option>
-                  </select>
-                </div>
-
-                {/* Handover & Fit-out Condition */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Space Furnishing Condition *</label>
-                  <select
-                    value={spaceForm.fitoutCondition}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, fitoutCondition: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="Fully Furnished">Fully Furnished (Plug &amp; Play)</option>
-                    <option value="Warm Shell">Warm Shell (HVAC, Ceilings)</option>
-                    <option value="Bare Shell">Bare Shell (Raw Slab)</option>
-                    <option value="Semi-Furnished">Semi-Furnished (Fitted)</option>
-                  </select>
-                </div>
-
-                {(spaceForm.fitoutCondition === "Fully Furnished" || spaceForm.fitoutCondition === "Semi-Furnished") && (
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700 block mb-1">Workstations / Desks in Unit</label>
+                  {/* 1. Building Name */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Tower / Building Name *</label>
                     <input
-                      type="number"
-                      placeholder="e.g. 24 Desks"
-                      value={spaceForm.workstationsCount}
-                      onChange={(e) => setSpaceForm({ ...spaceForm, workstationsCount: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      type="text"
+                      required
+                      placeholder="e.g. Tower C / Wing North"
+                      value={bldgForm.buildingName}
+                      onChange={(e) => setBldgForm({ ...bldgForm, buildingName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
                     />
                   </div>
-                )}
-              </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  {/* 2. Floor Count */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Floor Count in this Tower *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      placeholder="e.g. 10"
+                      value={bldgForm.floorCount}
+                      onChange={(e) => setBldgForm({ ...bldgForm, floorCount: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+
+                  {/* 3. Building Address (optional) */}
+                  <div className="sm:col-span-2">
+                    <GoogleAddressAutocomplete
+                      value={bldgForm.buildingAddress}
+                      onChange={(val) => setBldgForm((prev) => ({ ...prev, buildingAddress: val }))}
+                      onAddressSelect={(res: AddressAutofillResult) => {
+                        setBldgForm((prev) => ({
+                          ...prev,
+                          buildingAddress: res.streetAddress || res.fullAddress,
+                        }));
+                      }}
+                      label="Tower / Gate Address"
+                      placeholder="Search building landmark or campus gate on Google Maps..."
+                      required={false}
+                      hint="Pinpoint specific wing or campus gate."
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("space")}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Skip to Spaces (Step 3) →
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    <span>Save Tower &amp; Next (Add Spaces) →</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ════════════════ TAB 2: SPACES / UNITS (Full Master Form & Space Registry) ════════════════ */}
+          {activeTab === "space" && (
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div>
+                  <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider block">
+                    Step 2: Space &amp; Unit Master
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Configure leasable units (offices, suites, retail, or entire floors) and occupancy status.
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveTab("tenant")}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs shrink-0 transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
                 >
-                  Skip to Tenants →
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>Save Space &amp; Next (Add Tenants) →</span>
+                  <span>Proceed to Tenants (Step 3)</span>
+                  <ArrowRight size={13} />
                 </button>
               </div>
-            </form>
+
+              {/* Summary KPI Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Floors</span>
+                  <span className="text-sm font-black text-slate-800">{allFloorNumbers.length} Floors</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Active Units / Spaces</span>
+                  <span className="text-sm font-black text-teal-700">{displaySpaces.length} Units</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Area Allocated</span>
+                  <span className="text-sm font-black text-slate-800">
+                    {displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0).toLocaleString()} Sq.Ft
+                  </span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Building Capacity</span>
+                  <span className="text-sm font-black text-slate-600">
+                    {Number(propForm.areaSqft) > 0 ? `${Number(propForm.areaSqft).toLocaleString()} Sq.Ft` : "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Already Configured Spaces Strip (if any exist) */}
+              {displaySpaces.length > 0 && (
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        Registered Spaces ({displaySpaces.length})
+                      </span>
+                      <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
+                        {displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0).toLocaleString()} Sq.Ft Total
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      Click status badge to toggle Vacant / Occupied
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1">
+                    {displaySpaces.map((sp) => {
+                      const spBldg = buildingsList.find((b) => b.id === sp.buildingId);
+                      return (
+                        <div
+                          key={sp.id}
+                          className="px-3 py-2 bg-white border border-slate-200 hover:border-teal-300 rounded-xl flex items-center justify-between gap-2 shadow-2xs transition"
+                        >
+                          <div className="min-w-0 flex items-center gap-2">
+                            {displayBuildings.length > 1 && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 font-black text-[10px] text-slate-700 shrink-0">
+                                {spBldg?.name || "Tower"}
+                              </span>
+                            )}
+                            <span className="px-1.5 py-0.5 rounded-md bg-teal-50 border border-teal-200 font-black text-[10px] text-teal-800 shrink-0">
+                              {sp.floorName || "Floor 1"}
+                            </span>
+                            <div className="truncate">
+                              <span className="font-bold text-slate-800 text-xs block truncate">{sp.name}</span>
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                {sp.area > 0 ? `${sp.area.toLocaleString()} Sq.Ft` : "Full Floor"} • {sp.unitType || "Office"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleOccupancy(sp.id, sp.occupancyStatus)}
+                              title="Click to toggle Vacant / Occupied"
+                              className={`px-2 py-0.5 rounded-md font-bold text-[10px] border transition cursor-pointer flex items-center gap-1.5 ${
+                                sp.occupancyStatus === "occupied"
+                                  ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  sp.occupancyStatus === "occupied" ? "bg-blue-600" : "bg-emerald-600"
+                                }`}
+                              />
+                              <span>{sp.occupancyStatus === "occupied" ? "Occupied (Tenant)" : "Vacant (Available)"}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSpace(sp.id, sp.name)}
+                              title="Delete this unit"
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Full Original Space Creation Form */}
+              <form onSubmit={(e) => handleSaveSpace(e, true)} className="space-y-4">
+                <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center">
+                        +
+                      </span>
+                      <span className="font-extrabold text-slate-800 text-xs">
+                        Add Leasable Unit / Space
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Fill in unit details below
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                    {/* 1. Building */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Building / Tower <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={spaceForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id || ""}
+                        onChange={(e) => {
+                          const newBldgId = e.target.value;
+                          setSpaceForm({ ...spaceForm, buildingId: newBldgId, floorNumber: "0" });
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer bg-white"
+                      >
+                        {displayBuildings.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                          </option>
+                        ))}
+                        {displayBuildings.length === 0 && <option value="">No buildings registered</option>}
+                      </select>
+                    </div>
+
+                    {/* 2. Floor */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Floor in Selected Tower <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={spaceForm.floorNumber || "0"}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, floorNumber: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                      >
+                        {buildingFloorNumbersForSpace.map((flNum) => {
+                          const curB = buildingsList.find((b) => b.id === (spaceForm.buildingId || displayBuildings[0]?.id));
+                          const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                          return (
+                            <option key={flNum} value={String(flNum)}>
+                              {displayBuildings.length > 1 && curB ? `${curB.name} • ` : ""}{flLabel}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* 3. Space / Unit Name */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Space / Unit Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Suite 201, Floor 2 East Wing, Unit A"
+                        value={spaceForm.spaceName}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, spaceName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white"
+                      />
+                    </div>
+
+                    {/* 4. Area (Sq.Ft) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Area (Sq.Ft) *</label>
+                        {Number(propForm.areaSqft) > 0 && (
+                          <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                            Cap: {Number(propForm.areaSqft).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        placeholder="e.g. 5000"
+                        value={spaceForm.areaSqft}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white"
+                      />
+                    </div>
+
+                    {/* 5. Unit Type */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Unit Type *</label>
+                      <select
+                        value={spaceForm.unitType}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, unitType: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                      >
+                        <option value="Office">Office / Suite</option>
+                        <option value="Desk">Dedicated Desks / Coworking</option>
+                        <option value="Retail">Retail Store / Showroom</option>
+                      </select>
+                    </div>
+
+                    {/* 6. Occupancy Status (User requested choice) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Occupancy Status *</label>
+                      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setSpaceForm({ ...spaceForm, occupancyStatus: "vacant" })}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                            spaceForm.occupancyStatus !== "occupied"
+                              ? "bg-white text-emerald-800 shadow-2xs border border-emerald-300"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span>Vacant (Available)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSpaceForm({ ...spaceForm, occupancyStatus: "occupied" })}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                            spaceForm.occupancyStatus === "occupied"
+                              ? "bg-white text-blue-800 shadow-2xs border border-blue-300"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span>Occupied (Tenant)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 7. Fitout / Furnishing Condition */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Furnishing Condition</label>
+                      <select
+                        value={spaceForm.fitoutCondition}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, fitoutCondition: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                      >
+                        <option value="Fully Furnished">Fully Furnished (Plug &amp; Play)</option>
+                        <option value="Warm Shell">Warm Shell</option>
+                        <option value="Bare Shell">Bare Shell</option>
+                        <option value="Semi-Furnished">Semi-Furnished</option>
+                      </select>
+                    </div>
+
+                    {/* 8. Workstations / Desks */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Workstations / Desks</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 25"
+                        value={spaceForm.workstationsCount}
+                        onChange={(e) => setSpaceForm({ ...spaceForm, workstationsCount: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Navigation / Submit Actions */}
+                <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("tenant")}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer order-2 sm:order-1"
+                  >
+                    Skip to Tenants (Step 3) →
+                  </button>
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2">
+                    <button
+                      type="button"
+                      onClick={(e) => handleSaveSpace(e, false)}
+                      disabled={loading}
+                      className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    >
+                      <Plus size={13} />
+                      <span>+ Add Unit &amp; Keep Adding</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    >
+                      {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+                      <span>Save Space &amp; Next (Add Tenants) →</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
           )}
 
-          {/* ════════════════ TAB 4: TENANT / OCCUPANT (9 Fields) ════════════════ */}
+          {/* ════════════════ TAB 3: TENANT / OCCUPANT (9 Fields) ════════════════ */}
           {activeTab === "tenant" && (
             <form onSubmit={handleSaveTenant} className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Step 4: Tenant / Occupant Master (9 Fields)
+                  {shouldSkipSpaceStep
+                    ? "Step 2: Tenant / Occupant Master (9 Fields)"
+                    : "Step 3: Tenant / Occupant Master (9 Fields)"}
                 </span>
                 <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                   Enrolls Tenant &amp; Generates Portal Invite Link
@@ -2632,274 +4355,926 @@ export default function PropertyHierarchyModal({
               {/* Latest Generated Tenant Invite Banner (if available) */}
               {latestTenantInvite && (
                 <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-[#0F8B7D] shrink-0" />
-                    <div>
-                      <span className="font-bold text-teal-950">Active Portal Invite: {latestTenantInvite.name}</span>
-                      <span className="text-slate-500 ml-1.5 font-medium">({latestTenantInvite.email})</span>
-                      <p className="text-[11px] text-teal-700 mt-0.5">Corporate tenant self-service portal link is active.</p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0F8B7D] shrink-0" />
+                      <div>
+                        <span className="font-bold text-teal-950">Active Portal Invite: {latestTenantInvite.name}</span>
+                        <span className="text-slate-500 ml-1.5 font-medium">({latestTenantInvite.email})</span>
+                        <p className="text-[11px] text-teal-700 mt-0.5">Corporate tenant self-service portal link is active.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(latestTenantInvite.link);
+                          setCopiedInvite(true);
+                          showToast("✓ Tenant invitation link copied to clipboard!");
+                          setTimeout(() => setCopiedInvite(false), 2500);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-[11px] shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        {copiedInvite ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
+                      </button>
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                          `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
+                      >
+                        <MessageCircle size={12} />
+                        <span>WhatsApp</span>
+                      </a>
+                      <a
+                        href={`mailto:${latestTenantInvite.email}?subject=${encodeURIComponent(
+                          "Corporate Tenant Portal Access - OfficeX"
+                        )}&body=${encodeURIComponent(
+                          `Hi ${latestTenantInvite.name},\n\nPlease access your tenant portal using the secure link below:\n\n${latestTenantInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                        )}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
+                      >
+                        <Mail size={12} />
+                        <span>Email</span>
+                      </a>
                     </div>
                   </div>
+              )}
+
+              {/* ──── TENANT ONBOARDING MODE SELECTOR (2 OPTIONS) ──── */}
+              <div className="space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
+                  Select Onboarding Method
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80">
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(latestTenantInvite.link);
-                      setCopiedInvite(true);
-                      showToast("✓ Tenant invitation link copied to clipboard!");
-                      setTimeout(() => setCopiedInvite(false), 2500);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-[11px] shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                    onClick={() => setTenantOnboardingMode("existing")}
+                    className={`p-3 rounded-xl text-left transition flex items-start gap-3 cursor-pointer ${
+                      tenantOnboardingMode === "existing"
+                        ? "bg-white shadow-xs border border-teal-600 text-teal-950 font-bold"
+                        : "hover:bg-slate-200/60 text-slate-600 font-medium"
+                    }`}
                   >
-                    {copiedInvite ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copiedInvite ? "Copied!" : "Copy Tenant Invite"}</span>
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        tenantOnboardingMode === "existing"
+                          ? "bg-[#0F8B7D] text-white shadow-2xs"
+                          : "bg-slate-200/80 text-slate-600"
+                      }`}
+                    >
+                      <FileUp size={17} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold">1. Add Existing Tenant</span>
+                        <span className="text-[10px] bg-teal-50 text-teal-800 border border-teal-200 px-1.5 py-0.2 rounded font-semibold uppercase">
+                          Upload Doc
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-normal mt-0.5 leading-snug">
+                        Upload Rent Agreement or Maintenance Deed for instant auto-fill
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTenantOnboardingMode("new")}
+                    className={`p-3 rounded-xl text-left transition flex items-start gap-3 cursor-pointer ${
+                      tenantOnboardingMode === "new"
+                        ? "bg-white shadow-xs border border-teal-600 text-teal-950 font-bold"
+                        : "hover:bg-slate-200/60 text-slate-600 font-medium"
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        tenantOnboardingMode === "new"
+                          ? "bg-[#0F8B7D] text-white shadow-2xs"
+                          : "bg-slate-200/80 text-slate-600"
+                      }`}
+                    >
+                      <UserPlus size={17} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold">2. Add New Tenant</span>
+                        <span className="text-[10px] bg-slate-200/70 text-slate-600 px-1.5 py-0.2 rounded font-semibold uppercase">
+                          Manual Form
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-normal mt-0.5 leading-snug">
+                        Register prospective corporate occupant via manual entry fields
+                      </p>
+                    </div>
                   </button>
                 </div>
-              )}
+
+                {/* EXISTING TENANT: DOCUMENT UPLOAD & AUTO-FILL ZONE */}
+                {tenantOnboardingMode === "existing" && (
+                  <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-teal-400 transition-all space-y-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
+                          <UploadCloud size={20} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-slate-900">
+                              Upload Agreement &amp; Auto-Fill Tenant Details
+                            </h4>
+                            <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                              Rent Roll AI Extractor
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Upload your signed <strong>Rent Agreement</strong>, <strong>Maintenance Deed</strong>, or <strong>Both Mixed Documents</strong>. Auto-fills name, area, floor, rent, CAM, and covenants.
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="cursor-pointer shrink-0">
+                        <input
+                          type="file"
+                          accept=".pdf,.docx,.doc,.txt,.rtf"
+                          multiple
+                          disabled={isUploadingTenantAgreement}
+                          className="hidden"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              handleUploadTenantAgreement(files);
+                            }
+                            e.target.value = "";
+                          }}
+                        />
+                        <div
+                          className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 shadow-xs ${
+                            isUploadingTenantAgreement
+                              ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                              : "bg-[#0F8B7D] hover:bg-[#0c7367] text-white cursor-pointer"
+                          }`}
+                        >
+                          {isUploadingTenantAgreement ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              <span>Auto-Extracting Terms...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileUp size={15} />
+                              <span>Browse Agreement File(s)</span>
+                            </>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Document Category Filters / Indicators */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200/70 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-600 uppercase">Select Uploaded Document Type:</span>
+                      {(
+                        [
+                          { id: "rent", label: "Rent Agreement" },
+                          { id: "maintenance", label: "Maintenance Agreement" },
+                          { id: "both", label: "Both into One Document" },
+                        ] as const
+                      ).map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setTenantDocCategory(cat.id)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                            tenantDocCategory === cat.id
+                              ? "bg-[#0F8B7D] text-white shadow-xs ring-1 ring-[#0F8B7D]"
+                              : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              tenantDocCategory === cat.id ? "bg-white" : "bg-slate-300"
+                            }`}
+                          />
+                          <span>{cat.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Uploaded File List Badges (Multi-upload display) */}
+                    {uploadedTenantFileList.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                          Uploaded Agreement Documents ({uploadedTenantFileList.length}):
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {uploadedTenantFileList.map((f, i) => (
+                            <div
+                              key={i}
+                              className="px-2.5 py-1 rounded-lg bg-white border border-teal-200 flex items-center gap-2 text-xs text-slate-800 shadow-2xs"
+                            >
+                              <FileText size={13} className="text-teal-700 shrink-0" />
+                              <span className="font-semibold truncate max-w-[200px]">{f.name}</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
+                                {f.category === "rent" ? "Rent Agreement" : f.category === "maintenance" ? "Maintenance Agreement" : "Both in One"}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {(f.size / 1024).toFixed(0)} KB
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Parsed Highlights Banner */}
+                    {parsedTenantDocMeta && (
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <FileCheck2 size={15} className="text-emerald-700 shrink-0" />
+                            <span>Auto-Filled from: {parsedTenantDocMeta.fileName}</span>
+                          </div>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                            {parsedTenantDocMeta.confidence}% Confidence • {parsedTenantDocMeta.extractedFieldsCount} Terms Extracted
+                          </span>
+                        </div>
+
+                        {parsedTenantDocMeta.summaryHighlights.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {parsedTenantDocMeta.summaryHighlights.map((hl, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-md border border-emerald-300 text-emerald-900 shadow-xs"
+                              >
+                                ✓ {hl}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-emerald-800 italic pt-0.5">
+                          ✓ Tenant details, demised area, floor, and rent/maintenance terms were auto-populated into the form fields below and the lease contract. Review and modify any value if required.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 {/* Associated Commercial Property */}
-                <div className="sm:col-span-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">
-                      Associated Property <span className="text-rose-500">*</span>
-                    </label>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Links tenant directly to this commercial asset
+                {/* Associated Commercial Property (Locked to active wizard property) */}
+                <div className="sm:col-span-2 p-2.5 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-teal-700 uppercase block">Property Being Leased</span>
+                    <span className="font-extrabold text-teal-950 text-xs">{activePropertyObj?.name || propForm.propertyName || "Commercial Property"}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                    Auto-Linked
+                  </span>
+                </div>
+
+                {/* ──── DEMISED PREMISES (FLOOR & SUITE SELECTION) ──── */}
+                <div className="sm:col-span-2 p-4 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-teal-100 pb-2">
+                    <div>
+                      <span className="font-extrabold text-teal-950 text-xs block">
+                        Demised Premises Allocation (Floor &amp; Suites) *
+                      </span>
+                      <span className="text-[11px] text-teal-700">
+                        Choose which floor and which specific office suites / units this tenant occupies.
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200 self-start sm:self-auto">
+                      Auto-Binds to Lease Contract
                     </span>
                   </div>
-                  <select
-                    value={contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || ""}
-                    onChange={(e) => {
-                      const selPropId = e.target.value;
-                      setContractForm((prev) => ({ ...prev, propertyId: selPropId }));
-                      setPropForm((prev) => ({ ...prev, existingPropId: selPropId }));
-                    }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {propertiesList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                    {propertiesList.length === 0 && <option value="">No properties registered</option>}
-                  </select>
-                </div>
 
-                {/* 1. Occupant Name (required) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">Occupant Name *</label>
-                    {changedFieldKeys.has("occupantName") && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                        Updated from Agreement
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Vikas Nair"
-                    value={tenantForm.occupantName}
-                    onClick={() => clearFieldHighlight("occupantName")}
-                    onFocus={() => clearFieldHighlight("occupantName")}
-                    onChange={(e) => {
-                      clearFieldHighlight("occupantName");
-                      setTenantForm({ ...tenantForm, occupantName: e.target.value });
-                    }}
-                    className={getHighlightClass(
-                      "occupantName",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                    )}
-                  />
-                </div>
+                  {/* 1. Which Tower / Building Dropdown (if campus / multiple towers) */}
+                  {displayBuildings.length > 1 && (
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-xs">
+                        1. Which Tower / Building is this tenant leasing? <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={selectedTenantBuilding || displayBuildings[0]?.id || ""}
+                        onChange={(e) => {
+                          const bId = e.target.value;
+                          setSelectedTenantBuilding(bId);
+                          setSelectedTenantFloor("");
+                          setSelectedTenantSuites([]);
+                          setContractForm((prev) => ({ ...prev, buildingId: bId }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
+                      >
+                        {displayBuildings.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                {/* 2. Email (required) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="vikas@acmetech.com"
-                    value={tenantForm.email}
-                    onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 3. Phone (required) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+91 98450 12345"
-                    value={tenantForm.phone}
-                    onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 4. Company Name (optional) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Company Name <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Acme Tech Solutions Pvt Ltd"
-                    value={tenantForm.companyName}
-                    onChange={(e) => setTenantForm({ ...tenantForm, companyName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 5. GST Number (if company, optional) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    GST Number <span className="text-[11px] font-normal text-slate-400">(If company, optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="29AAAAA0000A1Z5"
-                    value={tenantForm.gst}
-                    onChange={(e) => setTenantForm({ ...tenantForm, gst: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase"
-                  />
-                </div>
-
-                {/* 6. PAN (if individual, optional) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    PAN Number <span className="text-[11px] font-normal text-slate-400">(If individual, optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="ABCDE1234F"
-                    value={tenantForm.pan}
-                    onChange={(e) => setTenantForm({ ...tenantForm, pan: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase"
-                  />
-                </div>
-
-                {/* 7. Billing Address - Google Maps Autocomplete */}
-                <div className="sm:col-span-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">
-                      Billing Address <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">Auto-filled from Property</span>
+                  {/* Which Floor Dropdown */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1 text-xs">
+                      {displayBuildings.length > 1
+                        ? `2. Which Floor in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}?`
+                        : "1. Which Floor is this tenant leasing?"} <span className="text-rose-500">*</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const propAddr = [propForm.address, propForm.city, propForm.state].filter(Boolean).join(", ");
-                        if (propAddr) {
-                          setTenantForm((prev) => ({ ...prev, billingAddress: propAddr }));
-                          showToast("✓ Billing address restored to property address!");
+                    <select
+                      value={selectedTenantFloor}
+                      onChange={(e) => {
+                        const fl = e.target.value;
+                        setSelectedTenantFloor(fl);
+                        setSelectedContractFloor(fl);
+                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                        // Auto-select suites on this floor belonging to this specific tower
+                        const matchingSpaces = spacesList.filter((s) => {
+                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
+                            return false;
+                          }
+                          const flStr = (s.floorName || "").toLowerCase().trim();
+                          const nameStr = s.name.toLowerCase().trim();
+                          const targetFl = fl.toLowerCase().trim();
+                          if (targetFl === "0") {
+                            return (
+                              flStr === "0" ||
+                              flStr.includes("ground") ||
+                              flStr === "g" ||
+                              nameStr.includes("ground") ||
+                              nameStr.includes("bay") ||
+                              nameStr.includes("shed")
+                            );
+                          }
+                          return (
+                            flStr === `floor ${targetFl}` ||
+                            flStr === `f${targetFl}` ||
+                            flStr === targetFl ||
+                            (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
+                          );
+                        });
+                        if (matchingSpaces.length > 0) {
+                          setSelectedTenantSuites(matchingSpaces.map((s) => s.id));
+                        } else {
+                          setSelectedTenantSuites([]);
                         }
                       }}
-                      className="text-[11px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
                     >
-                      ↺ Reset to Property Address
-                    </button>
+                      <option value="">
+                        -- Select Demised Floor {displayBuildings.length > 1 ? `in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}` : ""} --
+                      </option>
+                      {buildingFloorNumbersForTenant.map((flNum) => {
+                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                        const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
+                        const spacesOnThisFloor = spacesList.filter((s) => {
+                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
+                          const flStr = (s.floorName || "").toLowerCase();
+                          return (
+                            flStr === `floor ${flNum}` ||
+                            flStr === `f${flNum}` ||
+                            flStr === String(flNum) ||
+                            flStr === formatFloorName(flNum).toLowerCase() ||
+                            (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
+                          );
+                        });
+                        const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
+                        const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                        return (
+                          <option key={flNum} value={String(flNum)}>
+                            {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel} {flArea > 0 ? `(${flArea.toLocaleString()} Sq.Ft)` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
-                  <GoogleAddressAutocomplete
-                    value={tenantForm.billingAddress}
-                    onChange={(val) => setTenantForm((prev) => ({ ...prev, billingAddress: val }))}
-                    onAddressSelect={(res: AddressAutofillResult) => {
-                      setTenantForm((prev) => ({
-                        ...prev,
-                        billingAddress: res.fullAddress || res.streetAddress,
-                      }));
-                    }}
-                    label=""
-                    placeholder="Search registered corporate office or billing address..."
-                    required={false}
-                    hint="Auto-filled with the property address for monthly rent GST invoicing. Edit if the tenant's registered corporate headquarters differs."
-                  />
+
+                  {/* 2. Which Suites / Units Selection */}
+                  {selectedTenantFloor && (
+                    <div className="space-y-2 pt-1 animate-in fade-in">
+                      <div className="flex items-center justify-between text-xs">
+                        <label className="font-bold text-slate-700">
+                          {displayBuildings.length > 1 ? "3. Which Suite(s) / Unit(s)" : "2. Which Suite(s) / Unit(s)"} does the tenant occupy on Floor {selectedTenantFloor}? *
+                        </label>
+                        {floorSpacesForTenant.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedTenantSuites.length === floorSpacesForTenant.length) {
+                                setSelectedTenantSuites([]);
+                              } else {
+                                setSelectedTenantSuites(floorSpacesForTenant.map((s) => s.id));
+                              }
+                            }}
+                            className="text-[11px] font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer"
+                          >
+                            {selectedTenantSuites.length === floorSpacesForTenant.length
+                              ? "Deselect All"
+                              : "Select Entire Floor (All Units)"}
+                          </button>
+                        )}
+                      </div>
+
+                      {floorSpacesForTenant.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                          {floorSpacesForTenant.map((sp) => {
+                            const isSelected = selectedTenantSuites.includes(sp.id);
+                            return (
+                              <button
+                                key={sp.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTenantSuites((prev) =>
+                                    isSelected ? prev.filter((id) => id !== sp.id) : [...prev, sp.id]
+                                  );
+                                }}
+                                className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer ${
+                                  isSelected
+                                    ? "bg-teal-700 text-white border-teal-800 shadow-2xs font-bold"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-teal-300"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <div
+                                    className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                                      isSelected
+                                        ? "bg-white text-teal-800"
+                                        : "border border-slate-300 bg-slate-50 text-transparent"
+                                    }`}
+                                  >
+                                    ✓
+                                  </div>
+                                  <div className="truncate">
+                                    <span className="block truncate text-xs">{sp.name}</span>
+                                    <span
+                                      className={`text-[10px] block font-normal ${
+                                        isSelected ? "text-teal-100" : "text-slate-400"
+                                      }`}
+                                    >
+                                      {sp.unitType || "Office"} • {sp.occupancyStatus === "occupied" ? "Currently Occupied" : "Vacant"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-xs shrink-0 font-mono font-bold ${
+                                    isSelected ? "text-white" : "text-slate-700"
+                                  }`}
+                                >
+                                  {sp.area > 0 ? `${sp.area.toLocaleString()} Sq.Ft` : "Whole Floor"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-white/90 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
+                          No individual units subdivided on Floor {selectedTenantFloor} yet.
+                          The tenant will be assigned to <strong>Floor {selectedTenantFloor} (Full Floor)</strong>.
+                        </div>
+                      )}
+
+                      {/* Total Demised Area Calculation Banner */}
+                      <div className="p-2.5 bg-white rounded-xl border border-teal-200 flex items-center justify-between text-xs shadow-2xs">
+                        <span className="font-bold text-slate-700">
+                          Total Demised Area for this Tenant:
+                        </span>
+                        <span className="font-black text-[#0F8B7D] font-mono text-sm">
+                          {totalTenantSelectedArea > 0
+                            ? `${totalTenantSelectedArea.toLocaleString()} Sq.Ft`
+                            : (floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft
+                              ? `${Number(floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft).toLocaleString()} Sq.Ft`
+                              : "Whole Floor")}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* 8. Alternate Contact Name */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Alternate Contact Name <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Priya Sharma (Finance Lead)"
-                    value={tenantForm.altContactName}
-                    onChange={(e) => setTenantForm({ ...tenantForm, altContactName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
+                {/* ──── UPPER SIDE: CORPORATE ENTITY & STATUTORY PARTICULARS ──── */}
+                <div className="sm:col-span-2 p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={16} className="text-[#0F8B7D]" />
+                      <span className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">
+                        Corporate Entity &amp; Statutory Particulars
+                      </span>
+                    </div>
+
+                    {/* Requirement 4: Existing Tenant Auto-Fill */}
+                    {tenantsList.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-[11px] font-semibold text-slate-600">Existing Tenant:</span>
+                        <select
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            if (!selectedId) return;
+                            const t = tenantsList.find((item) => item.id === selectedId);
+                            if (t) {
+                              setTenantForm((prev) => ({
+                                ...prev,
+                                companyType: (t.companyType as any) || prev.companyType,
+                                companyName: t.name || "",
+                                tradeName: t.company || t.name || "",
+                                pan: t.pan || prev.pan,
+                                gst: t.gstin || prev.gst,
+                                cinNumber: t.cin || (t.companyType === "sole_proprietorship" ? "" : prev.cinNumber),
+                                billingAddress: t.billingAddress || prev.billingAddress,
+                                industryType: t.industrySector || prev.industryType,
+                                email: t.email || prev.email,
+                                phone: t.phone || prev.phone,
+                              }));
+                              setContractForm((prev) => ({
+                                ...prev,
+                                occupantId: t.id,
+                              }));
+                              showToast(`✓ Auto-filled details for ${t.name}`);
+                            }
+                          }}
+                          className="px-2 py-1 rounded-lg border border-teal-300 bg-white font-medium text-slate-800 text-xs outline-none cursor-pointer focus:ring-1 focus:ring-teal-500"
+                          defaultValue=""
+                        >
+                          <option value="">-- Auto-Fill from Registered Tenant --</option>
+                          {tenantsList.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} {t.company ? `(${t.company})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {/* 1. Legal Entity Structure / Company Type */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Company Legal Structure <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={tenantForm.companyType}
+                        onChange={(e) => {
+                          const ct = e.target.value as any;
+                          setTenantForm((prev) => ({
+                            ...prev,
+                            companyType: ct,
+                            // If sole proprietorship, clear CIN as CIN does not exist for proprietorships
+                            cinNumber: ct === "sole_proprietorship" ? "" : prev.cinNumber,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      >
+                        <option value="pvt_ltd">Private Limited Company (Pvt Ltd)</option>
+                        <option value="public_ltd">Public Limited Company (Ltd)</option>
+                        <option value="llp">Limited Liability Partnership (LLP)</option>
+                        <option value="partnership">Partnership Firm</option>
+                        <option value="sole_proprietorship">Sole Proprietorship (Proprietor / Individual)</option>
+                        <option value="trust_society">Trust / Society / Association</option>
+                      </select>
+                    </div>
+
+                    {/* 2. Industry Type / Vertical */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Industry / Sector Vertical <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={tenantForm.industryType}
+                        onChange={(e) => setTenantForm({ ...tenantForm, industryType: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      >
+                        <option value="IT & Software">IT / SaaS / Tech</option>
+                        <option value="BFSI">BFSI / FinTech / Investment</option>
+                        <option value="Consulting & Legal">Consulting &amp; Legal</option>
+                        <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
+                        <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
+                        <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
+                        <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
+                        <option value="Education">Education &amp; EdTech</option>
+                        <option value="Hospitality">Hospitality &amp; F&amp;B</option>
+                        <option value="Media & Entertainment">Media &amp; Entertainment</option>
+                        <option value="Other">Other Commercial Enterprise</option>
+                      </select>
+                    </div>
+
+                    {/* 3. Company Legal Registered Name */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          Company Legal Name <span className="text-rose-500">*</span>
+                        </label>
+                        {changedFieldKeys.has("companyName") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder={
+                          tenantForm.companyType === "sole_proprietorship"
+                            ? "e.g. JEE Engineers"
+                            : tenantForm.companyType === "llp"
+                            ? "e.g. Vriksha Estates LLP"
+                            : "e.g. Acme Tech Solutions Pvt Ltd"
+                        }
+                        value={tenantForm.companyName}
+                        onClick={() => clearFieldHighlight("companyName")}
+                        onFocus={() => clearFieldHighlight("companyName")}
+                        onChange={(e) => {
+                          clearFieldHighlight("companyName");
+                          setTenantForm({
+                            ...tenantForm,
+                            companyName: e.target.value,
+                            tradeName: tenantForm.tradeName || e.target.value,
+                          });
+                        }}
+                        className={getHighlightClass(
+                          "companyName",
+                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white"
+                        )}
+                      />
+                    </div>
+
+                    {/* 4. Trade / Brand Name */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Trade / Brand Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Acme Cloud"
+                        value={tenantForm.tradeName}
+                        onChange={(e) => setTenantForm({ ...tenantForm, tradeName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white"
+                      />
+                    </div>
+
+                    {/* 5. CIN / LLPIN / Registration Number (Dynamic by Entity) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          {tenantForm.companyType === "pvt_ltd" || tenantForm.companyType === "public_ltd"
+                            ? "Corporate Identification Number (CIN) *"
+                            : tenantForm.companyType === "llp"
+                            ? "LLP Identification Number (LLPIN) *"
+                            : tenantForm.companyType === "partnership"
+                            ? "Partnership Reg / Deed Number"
+                            : tenantForm.companyType === "sole_proprietorship"
+                            ? "CIN (Not Applicable)"
+                            : "Registration / Trust Number"}
+                        </label>
+                        {tenantForm.companyType !== "sole_proprietorship" && (
+                          <span className="text-[10px] font-mono font-bold text-slate-500">
+                            ({tenantForm.cinNumber.length}/
+                            {tenantForm.companyType === "llp" ? "8" : "21"})
+                          </span>
+                        )}
+                      </div>
+
+                      {tenantForm.companyType === "sole_proprietorship" ? (
+                        <div className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 font-medium text-[11px] flex items-center justify-between">
+                          <span>Not Applicable for Sole Proprietorship</span>
+                          <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">
+                            MCA CIN N/A
+                          </span>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          required={tenantForm.companyType === "pvt_ltd" || tenantForm.companyType === "public_ltd" || tenantForm.companyType === "llp"}
+                          placeholder={
+                            tenantForm.companyType === "llp"
+                              ? "e.g. AAA-1234 or AAB-5678"
+                              : tenantForm.companyType === "partnership"
+                              ? "e.g. REG/2021/4582"
+                              : "e.g. U72200KA2021PTC145678 (21 chars)"
+                          }
+                          maxLength={tenantForm.companyType === "llp" ? 12 : 21}
+                          value={tenantForm.cinNumber}
+                          onChange={(e) => setTenantForm({ ...tenantForm, cinNumber: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
+                        />
+                      )}
+                    </div>
+
+                    {/* 6. PAN Number (Entity-Check) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          PAN Number <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[10px] font-mono font-bold text-slate-500">
+                          ({tenantForm.pan.length}/10)
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder={
+                          tenantForm.companyType === "sole_proprietorship"
+                            ? "ABCDE1234P (4th letter 'P' for Individual)"
+                            : tenantForm.companyType === "llp" || tenantForm.companyType === "partnership"
+                            ? "AABCF1234F (4th letter 'F' for Firm)"
+                            : "AABCS1234C (4th letter 'C' for Company)"
+                        }
+                        maxLength={10}
+                        value={tenantForm.pan}
+                        onChange={(e) => setTenantForm({ ...tenantForm, pan: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
+                      />
+                      {tenantForm.pan.length === 10 && tenantForm.companyType === "sole_proprietorship" && tenantForm.pan[3] !== "P" && (
+                        <p className="text-[10px] text-amber-700 mt-0.5">
+                          Note: Sole Proprietorships typically use the proprietor's individual PAN (4th letter 'P').
+                        </p>
+                      )}
+                      {tenantForm.pan.length === 10 && (tenantForm.companyType === "pvt_ltd" || tenantForm.companyType === "public_ltd") && tenantForm.pan[3] !== "C" && (
+                        <p className="text-[10px] text-amber-700 mt-0.5">
+                          Note: Company PANs typically have 'C' as the 4th letter.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 7. GSTIN Number */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">GSTIN Number</label>
+                        <span className="text-[10px] font-mono font-bold text-slate-500">
+                          ({tenantForm.gst.length}/15)
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="29AAAAA0000A1Z5 (15 chars)"
+                        maxLength={15}
+                        value={tenantForm.gst}
+                        onChange={(e) => setTenantForm({ ...tenantForm, gst: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
+                      />
+                      {tenantForm.gst.length === 15 && tenantForm.pan.length === 10 && tenantForm.gst.slice(2, 12) !== tenantForm.pan && (
+                        <p className="text-[10px] text-amber-700 mt-0.5">
+                          Warning: Characters 3–12 of GSTIN do not match entered PAN ({tenantForm.pan}).
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 8. Registered Billing Address - User Fills It (Empty by Default) */}
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          Registered Office / Billing Address <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-slate-400 font-normal text-[11px]">
+                          (Enter tenant's official registered office)
+                        </span>
+                      </div>
+                      <GoogleAddressAutocomplete
+                        value={tenantForm.billingAddress}
+                        onChange={(val) => setTenantForm((prev) => ({ ...prev, billingAddress: val }))}
+                        onAddressSelect={(res: AddressAutofillResult) => {
+                          setTenantForm((prev) => ({
+                            ...prev,
+                            billingAddress: res.fullAddress || res.streetAddress,
+                          }));
+                        }}
+                        label=""
+                        placeholder="Enter tenant's registered corporate office address for invoices..."
+                        required={false}
+                        hint="Official registered address where monthly rent invoices will be billed."
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* 9. Alternate Contact Phone */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Alternate Contact Phone <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+91 99000 88776"
-                    value={tenantForm.altContactPhone}
-                    onChange={(e) => setTenantForm({ ...tenantForm, altContactPhone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
+                {/* ──── LOWER SIDE: AUTHORIZED SIGNATORY & CONTACT DETAILS ──── */}
+                <div className="sm:col-span-2 p-4 bg-white border border-slate-200 rounded-2xl space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <UserCheck size={16} className="text-teal-700" />
+                      <span className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">
+                        Authorized Signatory &amp; Primary Contacts
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      Step 2 of 2: Signatory &amp; Contacts
+                    </span>
+                  </div>
 
-                {/* 10. Corporate CIN / LLPIN Number */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Corporate Identity (CIN / LLPIN) <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. U72200KA2021PTC145678"
-                    value={tenantForm.cinNumber}
-                    onChange={(e) => setTenantForm({ ...tenantForm, cinNumber: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {/* Authorized Signatory Name */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Authorized Signatory Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Rahul Sharma"
+                        value={tenantForm.signatoryName}
+                        onChange={(e) => setTenantForm({ ...tenantForm, signatoryName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
 
-                {/* 11. Industry Vertical */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Industry / Sector</label>
-                  <select
-                    value={tenantForm.industryType}
-                    onChange={(e) => setTenantForm({ ...tenantForm, industryType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="IT & Software">IT / SaaS / Tech</option>
-                    <option value="BFSI">BFSI / FinTech / Investment</option>
-                    <option value="Consulting & Legal">Consulting &amp; Legal</option>
-                    <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
-                    <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
-                    <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
-                    <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
-                    <option value="Other">Other Commercial Enterprise</option>
-                  </select>
-                </div>
+                    {/* Authorized Signatory Designation */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Signatory Designation <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Director / Managing Partner / Proprietor"
+                        value={tenantForm.signatoryDesignation}
+                        onChange={(e) => setTenantForm({ ...tenantForm, signatoryDesignation: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
 
-                {/* 12. Authorized Signatory Name */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Authorized Signatory Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rahul Sharma"
-                    value={tenantForm.signatoryName}
-                    onChange={(e) => setTenantForm({ ...tenantForm, signatoryName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
+                    {/* Primary Contact Person Name */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Primary Contact Person *</label>
+                        {changedFieldKeys.has("occupantName") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Vikas Nair"
+                        value={tenantForm.occupantName}
+                        onClick={() => clearFieldHighlight("occupantName")}
+                        onFocus={() => clearFieldHighlight("occupantName")}
+                        onChange={(e) => {
+                          clearFieldHighlight("occupantName");
+                          setTenantForm({ ...tenantForm, occupantName: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "occupantName",
+                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
+                        )}
+                      />
+                    </div>
 
-                {/* 13. Authorized Signatory Designation */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Signatory Designation</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Managing Director / VP Real Estate"
-                    value={tenantForm.signatoryDesignation}
-                    onChange={(e) => setTenantForm({ ...tenantForm, signatoryDesignation: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
+                    {/* Primary Email */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Primary Email *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="vikas@acmetech.com"
+                        value={tenantForm.email}
+                        onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+
+                    {/* Primary Phone */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Primary Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+91 98450 12345"
+                        value={tenantForm.phone}
+                        onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+
+                    {/* Alternate Contact Name */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Alternate Contact Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Priya Sharma (Finance Lead)"
+                        value={tenantForm.altContactName}
+                        onChange={(e) => setTenantForm({ ...tenantForm, altContactName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+
+                    {/* Alternate Contact Phone */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Alternate Contact Phone
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+91 99000 88776"
+                        value={tenantForm.altContactPhone}
+                        onChange={(e) => setTenantForm({ ...tenantForm, altContactPhone: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2916,21 +5291,33 @@ export default function PropertyHierarchyModal({
                   disabled={loading}
                   className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
-                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>Save Tenant &amp; Next (Create Contract) →</span>
+                  {loading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : tenantOnboardingMode === "existing" ? (
+                    <CheckCircle2 size={13} />
+                  ) : (
+                    <Plus size={13} />
+                  )}
+                  <span>
+                    {tenantOnboardingMode === "existing"
+                      ? "Save Existing Tenant & Proceed to Contract →"
+                      : "Save New Tenant & Proceed to Contract →"}
+                  </span>
                 </button>
               </div>
             </form>
           )}
 
-          {/* ════════════════ TAB 5: LEASE CONTRACT (COMPULSORY LINKING) ════════════════ */}
+          {/* ════════════════ TAB 4: LEASE CONTRACT (COMPULSORY LINKING) ════════════════ */}
           {activeTab === "contract" && (
             <form onSubmit={handleSaveContract} className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                      Step 5: Commercial Lease Contract
+                      {shouldSkipSpaceStep
+                        ? "Step 3: Commercial Lease Contract"
+                        : "Step 4: Commercial Lease Contract"}
                     </span>
                     <span className="text-[10px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-wider">
                       Compulsory *
@@ -2948,36 +5335,60 @@ export default function PropertyHierarchyModal({
               {/* Tenant Portal Invite Link Banner (if available) */}
               {latestTenantInvite && (
                 <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
-                      <User size={16} />
-                    </div>
-                    <div>
-                      <div className="font-bold text-teal-950 flex items-center gap-1.5">
-                        <span>Tenant Enrolled: {latestTenantInvite.name}</span>
-                        <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
-                          {latestTenantInvite.email}
-                        </span>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
+                        <User size={16} />
                       </div>
-                      <p className="text-[11px] text-teal-800 mt-0.5">
-                        Copy and dispatch this verified invitation link so your tenant can log directly into their institutional tenant portal (<span className="font-mono font-bold">/portal</span>).
-                      </p>
+                      <div>
+                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
+                          <span>Tenant Enrolled: {latestTenantInvite.name}</span>
+                          <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
+                            {latestTenantInvite.email}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-teal-800 mt-0.5">
+                          Copy and dispatch this verified invitation link so your tenant can log directly into their institutional tenant portal (<span className="font-mono font-bold">/portal</span>).
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(latestTenantInvite.link);
+                          setCopiedInvite(true);
+                          showToast("✓ Tenant Portal invitation link copied to clipboard!");
+                          setTimeout(() => setCopiedInvite(false), 2500);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        {copiedInvite ? <Check size={13} /> : <Copy size={13} />}
+                        <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
+                      </button>
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                          `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        <MessageCircle size={13} />
+                        <span>WhatsApp</span>
+                      </a>
+                      <a
+                        href={`mailto:${latestTenantInvite.email}?subject=${encodeURIComponent(
+                          "Corporate Tenant Portal Access - OfficeX"
+                        )}&body=${encodeURIComponent(
+                          `Hi ${latestTenantInvite.name},\n\nPlease access your tenant portal using the secure link below:\n\n${latestTenantInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                        )}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        <Mail size={13} />
+                        <span>Email</span>
+                      </a>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(latestTenantInvite.link);
-                      setCopiedInvite(true);
-                      showToast("✓ Tenant Portal invitation link copied to clipboard!");
-                      setTimeout(() => setCopiedInvite(false), 2500);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                  >
-                    {copiedInvite ? <Check size={13} /> : <Copy size={13} />}
-                    <span>{copiedInvite ? "Copied Link!" : "Copy Tenant Invite Link"}</span>
-                  </button>
-                </div>
               )}
 
               {/* ──── UPLOAD RENT AGREEMENT BOX (AUTO-EXTRACT TERMS) ──── */}
@@ -3068,8 +5479,8 @@ export default function PropertyHierarchyModal({
                 )}
               </div>
 
-              {/* ──── SECTION 1: HIERARCHY MAPPING ──── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              {/* ──── SECTION 1: HIERARCHY MAPPING (FLOOR-FIRST SPACE BINDING) ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
                 {/* 1. Occupant */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -3104,76 +5515,139 @@ export default function PropertyHierarchyModal({
                   </select>
                 </div>
 
-                {/* 2. Property */}
+                {/* 2. Property (Auto-bound to active property) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">
-                      Property <span className="text-rose-500">*</span>
-                    </label>
-                    {changedFieldKeys.has("propertyName") && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                        Updated
-                      </span>
-                    )}
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Property <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-900 truncate">
+                    {activePropertyObj?.name || propForm.propertyName || "Commercial Property"}
                   </div>
-                  <select
-                    value={contractForm.propertyId}
-                    onClick={() => clearFieldHighlight("propertyName")}
-                    onFocus={() => clearFieldHighlight("propertyName")}
-                    onChange={(e) => {
-                      clearFieldHighlight("propertyName");
-                      setContractForm({ ...contractForm, propertyId: e.target.value });
-                    }}
-                    className={getHighlightClass(
-                      "propertyName",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                    )}
-                  >
-                    {propertiesList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                    {propertiesList.length === 0 && <option value="">No properties registered</option>}
-                  </select>
                 </div>
 
                 {/* 3. Building */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
-                    Building <span className="text-rose-500">*</span>
+                    Building / Tower <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={contractForm.buildingId}
-                    onChange={(e) => setContractForm({ ...contractForm, buildingId: e.target.value })}
+                    onChange={(e) => {
+                      const newBldgId = e.target.value;
+                      setContractForm({ ...contractForm, buildingId: newBldgId });
+                      setSelectedContractFloor("");
+                    }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
                   >
-                    {buildingsList.map((b) => (
+                    {displayBuildings.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name}
+                        {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
                       </option>
                     ))}
-                    {buildingsList.length === 0 && <option value="">No buildings created</option>}
+                    {displayBuildings.length === 0 && <option value="">No buildings created</option>}
                   </select>
                 </div>
 
-                {/* 4. Space / Unit */}
+                {/* 4. Floor Selection (Floor-First Filter) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Floor Filter *</label>
+                    <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-1 rounded border border-teal-200">
+                      Filters Units
+                    </span>
+                  </div>
+                  <select
+                    value={selectedContractFloor}
+                    onChange={(e) => {
+                      const fl = e.target.value;
+                      setSelectedContractFloor(fl);
+                      if (fl) {
+                        const curBId = contractForm.buildingId || displayBuildings[0]?.id;
+                        const isG = fl === "0";
+                        const match = spacesList.find(
+                          (s) =>
+                            (!curBId || s.buildingId === curBId) &&
+                            ((isG && ((s.floorName || "").toLowerCase().includes("ground") || (s.floorName || "").toLowerCase() === "g" || s.name.toLowerCase().includes("ground") || s.name.toLowerCase().includes("bay"))) ||
+                              s.name.toLowerCase().includes(`floor ${fl}`) ||
+                              s.name.toLowerCase().includes(`fl-${fl}`) ||
+                              s.name.toLowerCase().includes(`f${fl}`) ||
+                              s.floorName?.toLowerCase() === `floor ${fl}` ||
+                              s.floorName?.toLowerCase() === `f${fl}` ||
+                              s.floorName === fl ||
+                              s.floorName?.toLowerCase() === formatFloorName(Number(fl)).toLowerCase())
+                        );
+                        if (match) {
+                          handleSpaceSelect(match.id);
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="">All Floors</option>
+                    {buildingFloorNumbersForContract.map((flNum) => {
+                      const curBName = displayBuildings.find((b) => b.id === (contractForm.buildingId || displayBuildings[0]?.id))?.name;
+                      const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                      return (
+                        <option key={flNum} value={String(flNum)}>
+                          {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* 5. Space / Unit (Filtered by Floor) */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
                     Space / Unit <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    value={contractForm.spaceId}
-                    onChange={(e) => handleSpaceSelect(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {spacesList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.area} sqft)
-                      </option>
-                    ))}
-                    {spacesList.length === 0 && <option value="">No spaces created</option>}
-                  </select>
+                  {(() => {
+                    const curBldgId = contractForm.buildingId || displayBuildings[0]?.id;
+                    const filteredSpaces = spacesList.filter((s) => {
+                      if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
+                        return false;
+                      }
+                      if (!selectedContractFloor) return true;
+                      const flStr = (s.floorName || "").toLowerCase().trim();
+                      const nameStr = s.name.toLowerCase().trim();
+                      const targetFl = selectedContractFloor.toLowerCase().trim();
+                      if (targetFl === "0") {
+                        return (
+                          flStr === "0" ||
+                          flStr.includes("ground") ||
+                          flStr === "g" ||
+                          nameStr.includes("ground") ||
+                          nameStr.includes("bay") ||
+                          nameStr.includes("shed")
+                        );
+                      }
+                      return (
+                        flStr === `floor ${targetFl}` ||
+                        flStr === `f${targetFl}` ||
+                        flStr === targetFl ||
+                        nameStr.includes(`floor ${targetFl}`) ||
+                        nameStr.includes(`f${targetFl}`)
+                      );
+                    });
+                    const displayList = filteredSpaces.length > 0 ? filteredSpaces : spacesList;
+                    return (
+                      <select
+                        value={contractForm.spaceId}
+                        onChange={(e) => handleSpaceSelect(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      >
+                        {displayList.map((s) => {
+                          const sBldg = buildingsList.find((b) => b.id === s.buildingId);
+                          return (
+                            <option key={s.id} value={s.id}>
+                              {displayBuildings.length > 1 && sBldg ? `[${sBldg.name}] ` : ""}{s.name} ({s.area > 0 ? `${s.area.toLocaleString()} Sq.Ft` : "Standard"}) • {s.occupancyStatus === "occupied" ? "Occupied" : "Vacant"}
+                            </option>
+                          );
+                        })}
+                        {displayList.length === 0 && <option value="">No spaces created</option>}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -3190,14 +5664,12 @@ export default function PropertyHierarchyModal({
                 </div>
 
                 {/* Model Tabs / Radio Pills */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {(
                     [
                       { id: "Area-based", label: "Per Sq.Ft (Area)", desc: "₹/sqft/mo" },
                       { id: "Seat-based", label: "Per Seat (Desk)", desc: "₹/seat/mo" },
                       { id: "Fixed", label: "Fixed Lump-sum", desc: "Flat monthly" },
-                      { id: "Hybrid", label: "Hybrid / Turnkey", desc: "Area + Services" },
-                      { id: "Pure Rent", label: "Pure Rent", desc: "Bare Shell" },
                     ] as const
                   ).map((m) => (
                     <button
@@ -3215,13 +5687,13 @@ export default function PropertyHierarchyModal({
                           return { ...prev, billingModel: newModel, monthlyRent: nextRent };
                         });
                       }}
-                      className={`p-2 rounded-xl text-left border transition cursor-pointer ${
+                      className={`p-2.5 rounded-xl text-left border transition cursor-pointer ${
                         contractForm.billingModel === m.id
                           ? "bg-white border-teal-600 shadow-xs ring-1 ring-teal-500"
                           : "bg-white/60 border-slate-200 hover:bg-white text-slate-600"
                       }`}
                     >
-                      <div className="font-bold text-slate-900 text-[11px]">{m.label}</div>
+                      <div className="font-bold text-slate-900 text-xs">{m.label}</div>
                       <div className="text-[10px] text-slate-500">{m.desc}</div>
                     </button>
                   ))}
@@ -3229,7 +5701,7 @@ export default function PropertyHierarchyModal({
 
                 {/* Dynamic Inputs Based on Selected Model */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                  {contractForm.billingModel === "Area-based" || contractForm.billingModel === "Pure Rent" || contractForm.billingModel === "Hybrid" ? (
+                  {contractForm.billingModel === "Area-based" ? (
                     <>
                       <div>
                         <div className="flex items-center justify-between mb-1">
@@ -3288,7 +5760,7 @@ export default function PropertyHierarchyModal({
                             clearFieldHighlight("areaSqft");
                             const area = e.target.value;
                             const rate = Number(contractForm.ratePerSqft) || 0;
-                            const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthlyRent;
+                            const calcRent = rate && area ? String(Math.round(rate * Number(area))) : contractForm.monthlyRent;
                             setContractForm({
                               ...contractForm,
                               areaSqft: area,
@@ -3438,7 +5910,7 @@ export default function PropertyHierarchyModal({
                     <span className="text-[10px] text-slate-500">Operation &amp; Upkeep</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">CAM Billing Basis</label>
                       <select
@@ -3446,7 +5918,9 @@ export default function PropertyHierarchyModal({
                         onChange={(e) => {
                           const type = e.target.value;
                           let nextMonthly = contractForm.camMonthly;
-                          if (type === "Per Sq.Ft" && contractForm.camRate && contractForm.areaSqft) {
+                          if (type === "Included") {
+                            nextMonthly = "0";
+                          } else if (type === "Per Sq.Ft" && contractForm.camRate && contractForm.areaSqft) {
                             nextMonthly = String(Math.round(Number(contractForm.camRate) * Number(contractForm.areaSqft)));
                           }
                           setContractForm({ ...contractForm, camType: type, camMonthly: nextMonthly });
@@ -3460,7 +5934,12 @@ export default function PropertyHierarchyModal({
                       </select>
                     </div>
 
-                    {contractForm.camType === "Per Sq.Ft" ? (
+                    {/* Requirement 7: When CAM is Included in rent, amount/rate input is hidden */}
+                    {contractForm.camType === "Included" ? (
+                      <div className="flex items-center justify-center p-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-semibold">
+                        ✓ Included in Base Rent (No separate CAM charge)
+                      </div>
+                    ) : contractForm.camType === "Per Sq.Ft" ? (
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="font-bold text-slate-700">CAM Rate (₹/sqft)</label>
@@ -3526,63 +6005,121 @@ export default function PropertyHierarchyModal({
                   )}
                 </div>
 
-                {/* Parking Allocations */}
+                {/* Requirement 8: Granular Parking Allocations (Free vs Paid for 4W & 2W) */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between border-b border-slate-200/70 pb-1.5">
                     <div className="flex items-center gap-1 font-bold text-slate-800">
-                      <Car size={13} />
+                      <Car size={13} className="text-teal-700" />
                       <span>Parking Allocations</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">4-Wheeler &amp; 2-Wheeler</span>
+                    <span className="text-[10px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 font-semibold">
+                      Free &amp; Paid Breakdown
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="font-semibold text-slate-700 block mb-1">Car Slots (4W)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Slots (e.g. 4)"
-                        value={contractForm.carParkingSlots}
-                        onChange={(e) => setContractForm({ ...contractForm, carParkingSlots: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
-                      />
+                  {/* 4-Wheeler Car Parking */}
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-slate-800">🚗 Car Parking (4-Wheeler)</span>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        Total: {(Number(contractForm.carParkingFreeSlots) || 0) + (Number(contractForm.carParkingPaidSlots) || 0)} slots
+                      </span>
                     </div>
-                    <div>
-                      <label className="font-semibold text-slate-700 block mb-1">Rate / Car Slot (₹)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="₹/slot (e.g. 4000)"
-                        value={contractForm.carParkingRate}
-                        onChange={(e) => setContractForm({ ...contractForm, carParkingRate: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
-                      />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Free (₹0)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 2"
+                          value={contractForm.carParkingFreeSlots}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const total = (Number(val) || 0) + (Number(contractForm.carParkingPaidSlots) || 0);
+                            setContractForm({ ...contractForm, carParkingFreeSlots: val, carParkingSlots: String(total) });
+                          }}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Paid Slots</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 3"
+                          value={contractForm.carParkingPaidSlots}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const total = (Number(contractForm.carParkingFreeSlots) || 0) + (Number(val) || 0);
+                            setContractForm({ ...contractForm, carParkingPaidSlots: val, carParkingSlots: String(total) });
+                          }}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Rate / Paid (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 4000"
+                          value={contractForm.carParkingRate}
+                          onChange={(e) => setContractForm({ ...contractForm, carParkingRate: e.target.value })}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="font-semibold text-slate-700 block mb-1">Bike Slots (2W)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Slots (e.g. 10)"
-                        value={contractForm.twoWheelerSlots}
-                        onChange={(e) => setContractForm({ ...contractForm, twoWheelerSlots: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
-                      />
+                  {/* 2-Wheeler Bike Parking */}
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-slate-800">🏍️ Two-Wheeler / Bike</span>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        Total: {(Number(contractForm.twoWheelerFreeSlots) || 0) + (Number(contractForm.twoWheelerPaidSlots) || 0)} slots
+                      </span>
                     </div>
-                    <div>
-                      <label className="font-semibold text-slate-700 block mb-1">Rate / Bike Slot (₹)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="₹/slot (e.g. 500)"
-                        value={contractForm.twoWheelerRate}
-                        onChange={(e) => setContractForm({ ...contractForm, twoWheelerRate: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
-                      />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Free (₹0)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 5"
+                          value={contractForm.twoWheelerFreeSlots}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const total = (Number(val) || 0) + (Number(contractForm.twoWheelerPaidSlots) || 0);
+                            setContractForm({ ...contractForm, twoWheelerFreeSlots: val, twoWheelerSlots: String(total) });
+                          }}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Paid Slots</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 5"
+                          value={contractForm.twoWheelerPaidSlots}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const total = (Number(contractForm.twoWheelerFreeSlots) || 0) + (Number(val) || 0);
+                            setContractForm({ ...contractForm, twoWheelerPaidSlots: val, twoWheelerSlots: String(total) });
+                          }}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Rate / Paid (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 500"
+                          value={contractForm.twoWheelerRate}
+                          onChange={(e) => setContractForm({ ...contractForm, twoWheelerRate: e.target.value })}
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3603,12 +6140,16 @@ export default function PropertyHierarchyModal({
                   {(() => {
                     const baseRent = Number(contractForm.monthlyRent) || 0;
                     const cam =
-                      contractForm.camType === "Per Sq.Ft"
-                        ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
-                        : Number(contractForm.camMonthly) || 0;
+                      contractForm.camType === "Included"
+                        ? 0
+                        : contractForm.camType === "Per Sq.Ft"
+                          ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
+                          : Number(contractForm.camMonthly) || 0;
+                    const carPaidCount = Number(contractForm.carParkingPaidSlots) || 0;
+                    const bikePaidCount = Number(contractForm.twoWheelerPaidSlots) || 0;
                     const parking =
-                      (Number(contractForm.carParkingSlots) || 0) * (Number(contractForm.carParkingRate) || 0) +
-                      (Number(contractForm.twoWheelerSlots) || 0) * (Number(contractForm.twoWheelerRate) || 0);
+                      carPaidCount * (Number(contractForm.carParkingRate) || 0) +
+                      bikePaidCount * (Number(contractForm.twoWheelerRate) || 0);
                     const grossExclGst = baseRent + cam + parking;
                     const gst = Math.round(grossExclGst * 0.18);
                     const totalGross = grossExclGst + gst;
@@ -3939,7 +6480,7 @@ export default function PropertyHierarchyModal({
               {/* Notes */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  Covenants &amp; Special Conditions <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+                  Covenants &amp; Special Conditions
                 </label>
                 <textarea
                   rows={2}
@@ -3955,29 +6496,60 @@ export default function PropertyHierarchyModal({
                 const area = Number(contractForm.areaSqft) || 0;
                 const rent = Number(contractForm.monthlyRent) || 0;
                 const camMonthly =
-                  contractForm.camType === "Per Sq.Ft" && contractForm.camRate && area > 0
-                    ? Math.round(Number(contractForm.camRate) * area)
-                    : Number(contractForm.camMonthly) || 0;
-                const carParkMonthly = (Number(contractForm.carParkingSlots) || 0) * (Number(contractForm.carParkingRate) || 0);
-                const twoWheelParkMonthly = (Number(contractForm.twoWheelerSlots) || 0) * (Number(contractForm.twoWheelerRate) || 0);
+                  contractForm.camType === "Included"
+                    ? 0
+                    : contractForm.camType === "Per Sq.Ft" && contractForm.camRate && area > 0
+                      ? Math.round(Number(contractForm.camRate) * area)
+                      : Number(contractForm.camMonthly) || 0;
+                const carPaidCount = Number(contractForm.carParkingPaidSlots) || 0;
+                const bikePaidCount = Number(contractForm.twoWheelerPaidSlots) || 0;
+                const carParkMonthly = carPaidCount * (Number(contractForm.carParkingRate) || 0);
+                const twoWheelParkMonthly = bikePaidCount * (Number(contractForm.twoWheelerRate) || 0);
                 const totalParking = carParkMonthly + twoWheelParkMonthly;
                 const subtotal = rent + camMonthly + totalParking;
                 const gst18 = Math.round(subtotal * 0.18);
-                const tds10 = Math.round(rent * 0.10); // Section 194-I 10% rent TDS
-                const netMonthly = subtotal + gst18 - tds10;
+
+                // Requirement 10: Sole Proprietorship / Individual Statutory TDS Rules
+                const selectedOccupant = tenantsList.find((t) => t.id === contractForm.occupantId);
+                const currentEntity = (selectedOccupant as any)?.companyType || tenantForm.companyType || "pvt_ltd";
+                const isProprietor = currentEntity === "sole_proprietorship";
+
+                let tdsPct = 10;
+                let tdsSection = "TDS u/s 194-I (10%)";
+                let tdsAmount = Math.round(rent * 0.10);
+
+                if (isProprietor) {
+                  if (rent > 50000) {
+                    tdsPct = 5;
+                    tdsSection = "TDS u/s 194-IB (5% - Rent > ₹50k, Form 26QC)";
+                    tdsAmount = Math.round(rent * 0.05);
+                  } else {
+                    tdsPct = 0;
+                    tdsSection = "Exempt u/s 194-IB (0% - Rent ≤ ₹50k, No TDS)";
+                    tdsAmount = 0;
+                  }
+                }
+
+                const netMonthly = subtotal + gst18 - tdsAmount;
                 const deposit = Number(contractForm.securityDeposit) || (Number(contractForm.depositMonths) || 6) * rent;
 
                 return (
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-700/80 pb-2">
                       <div className="flex items-center gap-2">
                         <Calculator size={15} className="text-teal-400" />
                         <span className="text-xs font-black uppercase tracking-wider text-teal-300">
                           Real-Time Commercial Financial Summary
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded border border-teal-500/30">
-                        Statutory 18% GST &amp; 10% TDS (Sec 194-I)
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                        isProprietor
+                          ? rent > 50000
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                          : "bg-teal-500/20 text-teal-300 border-teal-500/30"
+                      }`}>
+                        Statutory GST 18% • {tdsSection}
                       </span>
                     </div>
 
@@ -3987,11 +6559,13 @@ export default function PropertyHierarchyModal({
                         <span className="text-sm font-mono font-black text-white">₹{rent.toLocaleString()}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Monthly CAM</span>
+                        <span className="text-[10px] text-slate-400 font-semibold block">
+                          Monthly CAM {contractForm.camType === "Included" ? "(Included)" : ""}
+                        </span>
                         <span className="text-sm font-mono font-black text-white">₹{camMonthly.toLocaleString()}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Parking Charges</span>
+                        <span className="text-[10px] text-slate-400 font-semibold block">Parking ({carPaidCount} Car, {bikePaidCount} Bike)</span>
                         <span className="text-sm font-mono font-black text-white">₹{totalParking.toLocaleString()}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
@@ -4006,8 +6580,10 @@ export default function PropertyHierarchyModal({
                         <span className="text-xs font-mono font-bold text-amber-300">+₹{gst18.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block">- TDS u/s 194-I (10%)</span>
-                        <span className="text-xs font-mono font-bold text-rose-300">-₹{tds10.toLocaleString()}</span>
+                        <span className="text-[10px] text-slate-400 block">- {tdsSection}</span>
+                        <span className={`text-xs font-mono font-bold ${tdsAmount === 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                          {tdsAmount === 0 ? "₹0 (Exempt)" : `-₹${tdsAmount.toLocaleString()}`}
+                        </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-teal-400 font-bold block">Net Monthly Receivable</span>
@@ -4032,14 +6608,347 @@ export default function PropertyHierarchyModal({
                   ← Back to Tenants
                 </button>
 
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("delegation")}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold transition cursor-pointer"
+                  >
+                    Skip to Management Assignment →
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
+                    <span>
+                      {shouldSkipSpaceStep
+                        ? "Save Contract & Assign Management (Step 4) →"
+                        : "Save Contract & Assign Management (Step 5) →"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* ════════════════ TAB 5: THIRD-PARTY MANAGEMENT ASSIGNMENT ════════════════ */}
+          {activeTab === "delegation" && (
+            <form onSubmit={handleSaveDelegation} className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      {shouldSkipSpaceStep
+                        ? "Step 4: Assign Property Management to Third Party"
+                        : "Step 5: Assign Property Management to Third Party"}
+                    </span>
+                    <span className="text-[10px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                      Post-Contract Delegation
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Assign daily commercial operations, tenant relations, and billing oversight to an external agency or facility manager with granular controls.
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 self-start sm:self-auto">
+                  Step 5 of 5
+                </span>
+              </div>
+
+              {/* Latest Generated Manager Invite Banner */}
+              {latestManagerInvite && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
+                        <UserCheck size={16} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
+                          <span>Management Delegated: {latestManagerInvite.name}</span>
+                          <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
+                            {latestManagerInvite.email}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-teal-800 mt-0.5">
+                          Assigned for <span className="font-bold">{latestManagerInvite.propertyName}</span>. Share this activation link via WhatsApp or Email:
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(latestManagerInvite.link);
+                          setCopiedManagerInvite(true);
+                          showToast("✓ Management invitation link copied to clipboard!");
+                          setTimeout(() => setCopiedManagerInvite(false), 2500);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        {copiedManagerInvite ? <Check size={13} /> : <Copy size={13} />}
+                        <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
+                      </button>
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                          `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        <MessageCircle size={13} />
+                        <span>WhatsApp</span>
+                      </a>
+                      <a
+                        href={`mailto:${latestManagerInvite.email}?subject=${encodeURIComponent(
+                          `Property Management Access - ${latestManagerInvite.propertyName}`
+                        )}&body=${encodeURIComponent(
+                          `Hi ${latestManagerInvite.name},\n\nYou have been assigned as property manager for ${latestManagerInvite.propertyName}.\n\nPlease activate your access using the link below:\n${latestManagerInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                        )}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                      >
+                        <Mail size={13} />
+                        <span>Email</span>
+                      </a>
+                    </div>
+                  </div>
+              )}
+
+              {/* Form Fields Container */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-xs">
+                {/* 1. Property to Assign */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Select Commercial Asset <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={delegationForm.propertyId || contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || ""}
+                    onChange={(e) => {
+                      const selId = e.target.value;
+                      const selProp = propertiesList.find((p) => p.id === selId);
+                      setDelegationForm((prev) => ({
+                        ...prev,
+                        propertyId: selId,
+                        propertyName: selProp?.name || prev.propertyName,
+                      }));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    {propertiesList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                    {propertiesList.length === 0 && <option value="">No properties registered</option>}
+                  </select>
+                </div>
+
+                {/* 2. Management Model / Entity Type */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Management Model / Entity Type <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={delegationForm.managerType}
+                    onChange={(e) => setDelegationForm({ ...delegationForm, managerType: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="pm_company">Third-Party Property Management Company (Colliers / CBRE / JLL / Cushman / Local PM)</option>
+                    <option value="facility_mgmt">Facilities Management Firm (Sodexo / BVG / ISS / In-house Facility Lead)</option>
+                    <option value="msp">Managed Space Provider / Coworking Operator</option>
+                    <option value="individual_manager">Designated Property Manager / Operations Lead</option>
+                  </select>
+                </div>
+
+                {/* 3. Contact Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Assignee / Manager / Company Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Knight Frank PM Services"
+                      value={delegationForm.managerName}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Manager Work Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="operations@pmcompany.com"
+                      value={delegationForm.managerEmail}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerEmail: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Phone Number <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98450 11223"
+                      value={delegationForm.managerPhone}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerPhone: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Role Authorization Level */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="font-bold text-slate-700 block mb-2">Role Authorization Level</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label
+                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                        delegationForm.managerUserRole === "property_manager"
+                          ? "bg-teal-50 border-[#0F8B7D]"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="managerUserRole"
+                        value="property_manager"
+                        checked={delegationForm.managerUserRole === "property_manager"}
+                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "property_manager" })}
+                        className="mt-0.5 accent-[#0F8B7D]"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">Property Operations Lead</span>
+                        <span className="text-[11px] text-slate-500">Day-to-day operations, maintenance logging, tenant service requests.</span>
+                      </div>
+                    </label>
+                    <label
+                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                        delegationForm.managerUserRole === "org_admin"
+                          ? "bg-teal-50 border-[#0F8B7D]"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="managerUserRole"
+                        value="org_admin"
+                        checked={delegationForm.managerUserRole === "org_admin"}
+                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "org_admin" })}
+                        className="mt-0.5 accent-[#0F8B7D]"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">Asset Executive / Co-Admin</span>
+                        <span className="text-[11px] text-slate-500">Full commercial authority across billing, contracts, and audit runs.</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5. Granular Permissions */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="font-bold text-slate-700 block mb-2">Operational Permissions &amp; Delegation Guardrails</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={delegationForm.managerRights.billingRuns}
+                        onChange={(e) =>
+                          setDelegationForm({
+                            ...delegationForm,
+                            managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
+                          })
+                        }
+                        className="rounded accent-[#0F8B7D]"
+                      />
+                      <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={delegationForm.managerRights.contractExecution}
+                        onChange={(e) =>
+                          setDelegationForm({
+                            ...delegationForm,
+                            managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
+                          })
+                        }
+                        className="rounded accent-[#0F8B7D]"
+                      />
+                      <span className="text-slate-800 font-medium">Execute &amp; Modify Lease Agreements</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={delegationForm.managerRights.concessions}
+                        onChange={(e) =>
+                          setDelegationForm({
+                            ...delegationForm,
+                            managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
+                          })
+                        }
+                        className="rounded accent-[#0F8B7D]"
+                      />
+                      <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={delegationForm.managerRights.depositRefunds}
+                        onChange={(e) =>
+                          setDelegationForm({
+                            ...delegationForm,
+                            managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
+                          })
+                        }
+                        className="rounded accent-[#0F8B7D]"
+                      />
+                      <span className="text-slate-800 font-medium">Approve Security Deposit Refunds</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  type="button"
+                  onClick={() => setActiveTab("contract")}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
-                  {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
-                  <span>Execute Lease Contract &amp; Save</span>
+                  ← Back to Lease Contract
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <UserCheck size={13} />
+                    <span>Assign Management &amp; Generate Link</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onSuccess?.();
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check size={13} />
+                    <span>Finish &amp; Complete Setup ✓</span>
+                  </button>
+                </div>
               </div>
             </form>
           )}

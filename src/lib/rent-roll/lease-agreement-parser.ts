@@ -25,7 +25,7 @@ export interface ExtractedLeaseAgreement {
   possessionDate: string;
 
   // Rent Calculation Model
-  billingModel: "Area-based" | "Seat-based" | "Fixed" | "Hybrid" | "Pure Rent";
+  billingModel: "Area-based" | "Seat-based" | "Fixed";
   ratePerSqft: number;
   ratePerSeat: number;
   bareShellRate: number;
@@ -49,6 +49,10 @@ export interface ExtractedLeaseAgreement {
   carParkingRate: number;
   twoWheelerSlots: number;
   twoWheelerRate: number;
+  carParkingFreeSlots?: number;
+  carParkingPaidSlots?: number;
+  twoWheelerFreeSlots?: number;
+  twoWheelerPaidSlots?: number;
   parkingMonthly: number;
 
   // Calculated Gross
@@ -79,6 +83,18 @@ export interface ExtractedLeaseAgreement {
   tdsApplicable: boolean;
   stampDutySharing: "50:50 Shared" | "100% Tenant" | "100% Landlord";
   notes: string;
+
+  // Tenant Specific Statutory & Contact Particulars
+  tenantPan?: string;
+  tenantCin?: string;
+  tenantGst?: string;
+  tenantPhone?: string;
+  tenantEmail?: string;
+  tenantAddress?: string;
+  signatoryName?: string;
+  floor?: string;
+  documentCategory?: "rent_agreement" | "maintenance_agreement" | "mixed_agreement";
+  companyType?: "pvt_ltd" | "public_ltd" | "llp" | "partnership" | "sole_proprietorship" | "trust_society";
 
   // Parsing Metadata
   confidence: number;
@@ -221,6 +237,8 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   let occupantName = "";
   let companyName = "";
   let billingEntity = "";
+  let party1Chunk = "";
+  let party2Chunk = "";
 
   // Check A: LOI Format (First Party : Lessor, Second Party : Tenant/Lessee)
   if (text.match(/First\s+Party/i) && text.match(/Second\s+Party/i)) {
@@ -242,8 +260,8 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
       const afterBetween = text.slice(betweenIdx + 7);
       const andMatch = afterBetween.match(/[\r\n\s]+AND[\r\n\s]+/i);
       if (andMatch && andMatch.index) {
-        const party1Chunk = afterBetween.slice(0, andMatch.index).trim();
-        const party2Chunk = afterBetween.slice(andMatch.index + andMatch[0].length, andMatch.index + andMatch[0].length + 1500).trim();
+        party1Chunk = afterBetween.slice(0, andMatch.index).trim();
+        party2Chunk = afterBetween.slice(andMatch.index + andMatch[0].length, andMatch.index + andMatch[0].length + 1500).trim();
 
         if (!billingEntity) {
           const p1NameMatch = party1Chunk.match(/(?:M\/[Ss]\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:\s*\(PAN|\s*\(CIN|,\s*having|,\s*a\s+|[\r\n]+having|[\r\n]+is\s+having)/i);
@@ -311,6 +329,147 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
         }
       }
     }
+  }
+
+  // --- 2b. EXTRACT TENANT STATUTORY, CONTACT & FLOOR METADATA ---
+  let tenantPan = "";
+  let tenantCin = "";
+  let tenantGst = "";
+  let tenantPhone = "";
+  let tenantEmail = "";
+  let tenantAddress = "";
+  let signatoryName = "";
+  let floor = "";
+
+  const targetTenantChunk = party2Chunk || text;
+
+  // Tenant PAN
+  const panMatch = targetTenantChunk.match(/PAN(?:\.|\s*NO\.?|\s*Number)?\s*[:\-–]?\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i) ||
+                   targetTenantChunk.match(/\b([A-Z]{5}[0-9]{4}[A-Z]{1})\b/);
+  if (panMatch && panMatch[1]) {
+    tenantPan = panMatch[1].toUpperCase();
+    fieldCount++;
+    highlights.push(`Tenant PAN: ${tenantPan}`);
+  }
+
+  // Tenant CIN / LLPIN
+  const cinMatch = targetTenantChunk.match(/(?:CIN|LLPIN)(?:\.|\s*NO\.?|\s*Number)?\s*[:\-–]?\s*([A-Z0-9]{21})/i) ||
+                   text.match(/\b([LUu][0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6})\b/);
+  if (cinMatch && cinMatch[1]) {
+    tenantCin = cinMatch[1].toUpperCase();
+    fieldCount++;
+    highlights.push(`Tenant CIN: ${tenantCin}`);
+  }
+
+  // Tenant GSTIN
+  const gstMatch = targetTenantChunk.match(/(?:GST|GSTIN)(?:\.|\s*NO\.?|\s*Number)?\s*[:\-–]?\s*([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})/i) ||
+                   text.match(/\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/);
+  if (gstMatch && gstMatch[1]) {
+    tenantGst = gstMatch[1].toUpperCase();
+    fieldCount++;
+    highlights.push(`Tenant GST: ${tenantGst}`);
+  }
+
+  // Tenant Phone
+  const phoneMatch = targetTenantChunk.match(/(?:Mobile|Mob\.?|Phone|Contact|Tel)(?:\s*No\.?)?\s*[:\-–]?\s*(\+?91[\s\-]?[6-9][0-9]{9}|[6-9][0-9]{9})\b/i);
+  if (phoneMatch && phoneMatch[1]) {
+    tenantPhone = phoneMatch[1].replace(/[\s\-]/g, "");
+    fieldCount++;
+    highlights.push(`Contact: ${tenantPhone}`);
+  }
+
+  // Tenant Email
+  const emailMatch = targetTenantChunk.match(/\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/i);
+  if (emailMatch && emailMatch[1]) {
+    tenantEmail = emailMatch[1];
+  }
+
+  // Tenant Address
+  const addrMatch = targetTenantChunk.match(/(?:having\s+(?:its\s+)?registered\s+office\s+at|residing\s+at|R\/[Oo]|having\s+office\s+at)\s*([A-Za-z0-9\s,.\-\/()]{10,140}?)(?:acting\s+through|represented|through\s+its|hereinafter|PAN|\.|\n)/i);
+  if (addrMatch && addrMatch[1]) {
+    tenantAddress = addrMatch[1].trim().replace(/\s+/g, " ");
+  }
+
+  // Authorized Signatory
+  const sigMatch = targetTenantChunk.match(/(?:through\s+(?:its\s+)?(?:Director\/?|Authorized\s+Signatory\/?|Auth\.\s*Signatory\/?|representative\/?|acting\s+through\s+its\s+authorized\s+signatory\s+)?)(?:Mr\.?|Ms\.?|Shri\.?)?\s*([A-Za-z\s.]{3,35}?)(?:\s*\(Aadhar|\s*\(Aadhaar|\s*S\/O|\s*S\/o|\s*duly|\s*vide|,)/i);
+  if (sigMatch && sigMatch[1]) {
+    signatoryName = sigMatch[1].trim();
+  }
+
+  // Floor Level
+  const premisesIdx = text.search(/(?:demised\s+premises|premises\s+bearing|building\s+bearing|office\s+space|property\s+bearing|Unit\s*No)/i);
+  const floorSearchChunk = premisesIdx !== -1 ? text.slice(premisesIdx, premisesIdx + 600) : text;
+  const flMatch = floorSearchChunk.match(/(?:([0-9]{1,2})(?:st|nd|rd|th)?|Ground|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+Floor/i) ||
+                  text.match(/(?:([0-9]{1,2})(?:st|nd|rd|th)?|Ground|First|Second|Third|Fourth|Fifth|Sixth)\s+Floor/i);
+  if (flMatch) {
+    const wordMap: Record<string, string> = {
+      ground: "0",
+      first: "1",
+      second: "2",
+      third: "3",
+      fourth: "4",
+      fifth: "5",
+      sixth: "6",
+      seventh: "7",
+      eighth: "8",
+      ninth: "9",
+      tenth: "10",
+    };
+    const firstWord = (flMatch[0].split(/\s+/)[0] || "").toLowerCase();
+    floor = wordMap[firstWord] || flMatch[1] || "";
+    if (floor) {
+      highlights.push(`Floor: ${floor}`);
+    }
+  }
+
+  // Detect Tenant Company Type & Statutory Logic
+  let detectedCompanyType: "pvt_ltd" | "public_ltd" | "llp" | "partnership" | "sole_proprietorship" | "trust_society" = "pvt_ltd";
+  const occLower = (occupantName || companyName || "").toLowerCase();
+  const chunkLower = targetTenantChunk.toLowerCase();
+
+  if (occLower.includes("llp") || chunkLower.includes("limited liability partnership") || chunkLower.includes("llpin")) {
+    detectedCompanyType = "llp";
+  } else if (occLower.includes("pvt") || occLower.includes("private limited") || chunkLower.includes("private limited")) {
+    detectedCompanyType = "pvt_ltd";
+  } else if (occLower.includes("limited") || occLower.includes("ltd.") || chunkLower.includes("public limited")) {
+    detectedCompanyType = "public_ltd";
+  } else if (occLower.includes("partnership") || chunkLower.includes("partnership firm")) {
+    detectedCompanyType = "partnership";
+  } else if (
+    occLower.includes("proprietor") ||
+    occLower.includes("prop.") ||
+    chunkLower.includes("sole proprietorship") ||
+    chunkLower.includes("sole proprietor") ||
+    (tenantPan && tenantPan[3] === "P" && !occLower.includes("ltd") && !occLower.includes("llp"))
+  ) {
+    detectedCompanyType = "sole_proprietorship";
+  } else if (occLower.includes("trust") || occLower.includes("society")) {
+    detectedCompanyType = "trust_society";
+  }
+
+  if (detectedCompanyType === "sole_proprietorship") {
+    tenantCin = ""; // Proprietorships cannot have CIN under MCA
+    highlights.push("Entity: Sole Proprietorship (Sec 194-IB TDS rules apply)");
+  } else if (detectedCompanyType === "llp") {
+    const llpinMatch = targetTenantChunk.match(/\b([A-Z]{3}-[0-9]{4}|[A-Z0-9]{7,8})\b/i);
+    if (!tenantCin && llpinMatch && llpinMatch[1]) {
+      tenantCin = llpinMatch[1].toUpperCase();
+    }
+    highlights.push("Entity: Limited Liability Partnership (LLP)");
+  } else {
+    highlights.push(`Entity: ${detectedCompanyType.replace("_", " ").toUpperCase()}`);
+  }
+
+  // Document Category
+  let documentCategory: "rent_agreement" | "maintenance_agreement" | "mixed_agreement" = "rent_agreement";
+  const hasRent = Boolean(text.match(/(?:lease\s+agreement|rent\s+agreement|licen[cs]e\s+deed|letter\s+of\s+intent)/i));
+  const hasMaint = Boolean(text.match(/(?:maintenance\s+agreement|common\s+area\s+maintenance|facility\s+management\s+agreement|cam\s+agreement)/i));
+  if (hasRent && hasMaint) {
+    documentCategory = "mixed_agreement";
+  } else if (hasMaint && !hasRent) {
+    documentCategory = "maintenance_agreement";
+  } else {
+    documentCategory = "rent_agreement";
   }
 
   // 3. PROPERTY & BUILDING / DEMISED PREMISES
@@ -660,10 +819,35 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     twoWheelerRate = parseCleanNumber(bikeRateMatch[1]);
   }
 
-  const parkingMonthly = (carParkingSlots * carParkingRate) + (twoWheelerSlots * twoWheelerRate);
+  let carParkingFreeSlots = 0;
+  let carParkingPaidSlots = carParkingSlots;
+  let twoWheelerFreeSlots = 0;
+  let twoWheelerPaidSlots = twoWheelerSlots;
+
+  const freeCarMatch = text.match(/([0-9]+)\s*(?:free|complimentary)\s*(?:car|four[- ]wheeler)/i);
+  if (freeCarMatch && freeCarMatch[1]) {
+    carParkingFreeSlots = parseInt(freeCarMatch[1], 10);
+    carParkingPaidSlots = Math.max(0, carParkingSlots - carParkingFreeSlots);
+  } else if (carParkingRate === 0 && carParkingSlots > 0) {
+    carParkingFreeSlots = carParkingSlots;
+    carParkingPaidSlots = 0;
+  }
+
+  const freeBikeMatch = text.match(/([0-9]+)\s*(?:free|complimentary)\s*(?:two[- ]wheeler|bike)/i);
+  if (freeBikeMatch && freeBikeMatch[1]) {
+    twoWheelerFreeSlots = parseInt(freeBikeMatch[1], 10);
+    twoWheelerPaidSlots = Math.max(0, twoWheelerSlots - twoWheelerFreeSlots);
+  } else if (twoWheelerRate === 0 && twoWheelerSlots > 0) {
+    twoWheelerFreeSlots = twoWheelerSlots;
+    twoWheelerPaidSlots = 0;
+  }
+
+  const parkingMonthly = (carParkingPaidSlots * carParkingRate) + (twoWheelerPaidSlots * twoWheelerRate);
   if (carParkingSlots > 0 || twoWheelerSlots > 0) {
     fieldCount++;
-    highlights.push(`Parking: ${carParkingSlots} Cars, ${twoWheelerSlots} Bikes`);
+    highlights.push(
+      `Parking: ${carParkingSlots} Cars (${carParkingFreeSlots} Free, ${carParkingPaidSlots} Paid), ${twoWheelerSlots} Bikes (${twoWheelerFreeSlots} Free, ${twoWheelerPaidSlots} Paid)`
+    );
   }
 
   // 12. TOTAL MONTHLY GROSS PAYOUT
@@ -910,6 +1094,10 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     carParkingRate,
     twoWheelerSlots,
     twoWheelerRate,
+    carParkingFreeSlots,
+    carParkingPaidSlots,
+    twoWheelerFreeSlots,
+    twoWheelerPaidSlots,
     parkingMonthly,
     totalMonthlyPayout,
     possessionDate: possessionDate || "",
@@ -936,6 +1124,16 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     tdsApplicable: true,
     stampDutySharing,
     notes,
+    tenantPan: tenantPan || "",
+    tenantCin: tenantCin || "",
+    tenantGst: tenantGst || "",
+    tenantPhone: tenantPhone || "",
+    tenantEmail: tenantEmail || "",
+    tenantAddress: tenantAddress || "",
+    signatoryName: signatoryName || "",
+    floor: floor || "",
+    documentCategory,
+    companyType: detectedCompanyType,
     confidence,
     extractedFieldsCount: fieldCount,
     summaryHighlights: highlights,

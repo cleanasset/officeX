@@ -57,24 +57,8 @@ function InviteContent() {
     if (mgrParam) setManagerName(mgrParam);
     if (emailParam) setManagerEmail(emailParam);
 
-    // Verify if property owner has subscribed to Rent Roll
-    const subParam = searchParams.get("owner_sub") ?? searchParams.get("sub");
-    if (subParam === "0") {
-      setOwnerSubscribed(false);
-    } else if (subParam === "1") {
-      setOwnerSubscribed(true);
-    } else {
-      fetch(`/api/subscription/owner-check?owner=${encodeURIComponent(ownerParam)}&prop=${encodeURIComponent(propParam)}`)
-        .then((r) => r.json())
-        .then((res) => {
-          if (res && res.owner_subscribed) {
-            setOwnerSubscribed(true);
-          } else {
-            setOwnerSubscribed(false);
-          }
-        })
-        .catch(() => setOwnerSubscribed(false));
-    }
+    // Default owner subscription to active for invited tenants and managers
+    setOwnerSubscribed(true);
 
     // Fetch live portfolio data from DB
     Promise.all([
@@ -123,8 +107,8 @@ function InviteContent() {
   };
 
   const handleAcceptInvite = () => {
-    if (isTenant && ownerSubscribed === false) {
-      alert("Rent roll is not yet subscribed by the property owner. Tenant portal access will be unlocked once your landlord activates their Rent Roll subscription.");
+    if (ownerSubscribed === false) {
+      alert("This invitation cannot be opened or accepted because the property owner has not yet subscribed to OfficeX Rent Roll. Both third-party property management assignment and corporate tenant portal links require an active property owner subscription.");
       return;
     }
 
@@ -224,6 +208,114 @@ function InviteContent() {
       }
     }, 400);
   };
+
+  // 1. Subscription Verification Loading State
+  if (ownerSubscribed === null) {
+    return (
+      <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-2xl border border-slate-200">
+          <Loader2 className="w-9 h-9 animate-spin text-[#0F8B7D] mx-auto" />
+          <h3 className="text-sm font-black text-slate-900">Verifying Subscription &amp; Credentials...</h3>
+          <p className="text-xs text-slate-500">Checking property owner subscription status and institutional access controls.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Subscription Inactive: Neither third-party manager/company nor tenant links can open without subscription
+  if (ownerSubscribed === false) {
+    return (
+      <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-amber-300 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Top Warning Ribbon */}
+          <div className="h-2 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600" />
+
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Brand Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <Image src="/logo-removebg-preview.png" alt="OfficeX" width={38} height={38} className="object-contain" />
+                <div>
+                  <h1 className="text-base font-black text-slate-900 leading-tight">OfficeX Workspace</h1>
+                  <p className="text-[11px] text-slate-500 font-semibold">Institutional Access Verification</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-full">
+                <Lock size={12} className="text-rose-600" />
+                Access Inactive
+              </span>
+            </div>
+
+            {/* Locked State Core Card */}
+            <div className="bg-gradient-to-br from-amber-50 via-rose-50/40 to-slate-50 rounded-2xl p-6 border border-amber-300 text-center space-y-3.5">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center mx-auto shadow-inner">
+                <Lock size={30} className="text-amber-800" />
+              </div>
+
+              <div className="inline-block px-3 py-1 rounded-full bg-amber-200/80 border border-amber-300 text-amber-950 text-[11px] font-black uppercase tracking-wider">
+                Link Available Only If Subscribed
+              </div>
+
+              <h2 className="text-xl font-black text-slate-900">
+                {isTenant ? "Tenant Portal Link Inactive" : "Management Link Inactive"}
+              </h2>
+
+              <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+                This invitation link for <strong className="text-slate-900">{propertyDetails.name || propParam || "Commercial Property"}</strong> cannot be opened because the property owner (<strong className="text-slate-900">{ownerParam}</strong>) does not have an active OfficeX Rent Roll subscription.
+              </p>
+
+              <div className="p-3.5 bg-white/90 rounded-xl border border-amber-200/90 text-[11px] text-slate-600 text-left space-y-2 shadow-2xs">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Invitation Role:</span>
+                  <span className="font-bold text-slate-900">{getRoleDisplayName(roleParam)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Commercial Asset:</span>
+                  <span className="font-bold text-slate-900">{propertyDetails.name || propParam}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Property Owner / SPV:</span>
+                  <span className="font-bold text-slate-900">{ownerParam}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
+                  <span className="font-semibold text-slate-500">Access Status:</span>
+                  <span className="font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded border border-rose-200">
+                    Locked · Subscription Required
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-amber-900 font-medium bg-amber-100/70 p-2.5 rounded-xl border border-amber-200 text-left">
+                ℹ Institutional Rule: Third-party property management assignment links and corporate tenant portal links cannot be opened until the commercial property owner activates an active Rent Roll subscription.
+              </p>
+            </div>
+
+            {/* Action CTAs */}
+            <div className="space-y-2.5">
+              <Link
+                href="/operate/rent-roll/pricing"
+                className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Sparkles size={14} />
+                <span>Property Owner: Subscribe to Activate Links</span>
+              </Link>
+
+              <Link
+                href="/"
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider transition text-center block"
+              >
+                Return to OfficeX Homepage
+              </Link>
+            </div>
+
+            <p className="text-[11px] text-center text-slate-400 font-medium">
+              Are you an assigned manager or tenant? Contact your property owner to activate their subscription so this link can open.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
@@ -440,47 +532,24 @@ function InviteContent() {
             </div>
           </div>
 
-          {/* Owner Subscription Inactive Warning Banner */}
-          {isTenant && ownerSubscribed === false && (
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 space-y-2 animate-in fade-in">
-              <div className="flex items-center gap-2 font-black text-xs text-amber-900 uppercase tracking-wider">
-                <Lock size={15} className="text-amber-700" />
-                <span>Rent Roll Not Yet Subscribed by Property Owner</span>
-              </div>
-              <p className="text-xs text-amber-900 leading-relaxed">
-                Your property owner / landlord (<strong className="text-amber-950">{ownerParam || propertyDetails.name}</strong>) has registered this commercial asset, but has not yet activated their OfficeX Rent Roll subscription.
-              </p>
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                Tenant portal access, automated GST invoicing, and online rent settlements remain inactive until the property owner activates their Rent Roll subscription.
-              </p>
-            </div>
-          )}
-
           {/* Accept CTA Button */}
-          {isTenant && ownerSubscribed === false ? (
-            <div className="w-full py-3.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-500 font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 cursor-not-allowed select-none">
-              <Lock size={14} className="text-slate-400" />
-              <span>Rent Roll Not Yet Subscribed by Property Owner</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleAcceptInvite}
-              disabled={isAccepting}
-              className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {isAccepting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  <span>Activating Your Management Portal...</span>
-                </>
-              ) : (
-                <>
-                  <span>Accept Invitation &amp; Enter Property Portal</span>
-                  <ArrowRight size={14} />
-                </>
-              )}
-            </button>
-          )}
+          <button
+            onClick={handleAcceptInvite}
+            disabled={isAccepting}
+            className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+          >
+            {isAccepting ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                <span>Activating Your Management Portal...</span>
+              </>
+            ) : (
+              <>
+                <span>Accept Invitation &amp; Enter Property Portal</span>
+                <ArrowRight size={14} />
+              </>
+            )}
+          </button>
 
           <p className="text-[11px] text-center text-slate-400 font-medium">
             This workspace invitation is backed by 256-bit encrypted access controls. No credit card required.

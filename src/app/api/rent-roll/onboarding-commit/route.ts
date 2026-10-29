@@ -333,20 +333,30 @@ export async function POST(req: Request) {
       : Math.round(areaPerUnit * 0.72);
     const askingRate = Number(propData.askingRatePerSqft) || 120.0;
 
-    const floorNumbers = isGroundOnly ? [0] : Array.from({ length: floorsCount }, (_, i) => i + 1);
+    const formatOrdinalFloor = (n: number) => {
+      if (n === 0) return "Ground Floor";
+      const j = n % 10, k = n % 100;
+      let suffix = "th";
+      if (j === 1 && k !== 11) suffix = "st";
+      else if (j === 2 && k !== 12) suffix = "nd";
+      else if (j === 3 && k !== 13) suffix = "rd";
+      return `${n}${suffix} Floor`;
+    };
+
+    const floorNumbers = isGroundOnly ? [0] : Array.from({ length: floorsCount }, (_, i) => i);
     const createdSpaces: any[] = [];
     for (const f of floorNumbers) {
       for (let u = 1; u <= unitsPerFloor; u++) {
         const spaceId = randomUUID();
         const isG = f === 0;
-        const floorName = isG ? "Ground Floor" : `Floor ${f}`;
+        const floorName = isG ? "Ground Floor" : formatOrdinalFloor(f);
         const unitFormatted = isG ? `G-${u.toString().padStart(2, "0")}` : `${f}${u.toString().padStart(2, "0")}`;
         const spaceCode = isG
           ? `${propertyCode}-G-U${u.toString().padStart(2, "0")}`
           : `${propertyCode}-F${f.toString().padStart(2, "0")}-U${u.toString().padStart(2, "0")}`;
         const spaceName = isG
           ? `Ground Floor - Unit ${unitFormatted}`
-          : `Floor ${f} - Suite ${unitFormatted}`;
+          : `${floorName} - Suite ${unitFormatted}`;
 
         try {
           await db

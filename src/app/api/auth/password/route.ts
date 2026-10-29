@@ -100,13 +100,15 @@ export async function POST(request: Request) {
             : 'Property Owner & Asset Manager';
     }
 
+    const effectiveUserId = String(supaUser?.id || userId || `usr_${Date.now()}`);
+
     const memberships = [
       {
-        id: `mem_${supaUser.id.slice(0, 8)}`,
+        id: `mem_${effectiveUserId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'active'}`,
         orgId: 'org_officex',
         orgName: 'Commercial Asset Management',
         role: userRole,
-        roleCode: (supaUser.user_metadata?.roleCode as any) || 'OWNER',
+        roleCode: (supaUser?.user_metadata?.roleCode as any) || 'OWNER',
         workspaceTitle: 'Commercial Rent Roll Desk',
         workspaceUrl: '/properties/rent-roll',
         propertyScope: 'Active Commercial Portfolio',
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       user: {
-        id: supaUser.id,
+        id: effectiveUserId,
         name: userName,
         identifier: norm,
         role: userRole
