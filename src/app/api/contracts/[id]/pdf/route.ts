@@ -7,7 +7,6 @@ import {
   building,
   property,
   organization,
-  client_account,
   contractCharge,
   rentStep,
 } from "@/db/schema";
@@ -95,18 +94,22 @@ export async function GET(
 
     let isSubscribed = subHeader === "active" || subHeader === "true" || isSubCookie || isQuerySub;
 
-    if (!isSubscribed && auth?.clientAccountId) {
+    if (!isSubscribed && (auth?.orgId || auth?.clientAccountId)) {
       try {
-        const [acc] = await db
-          .select({ status: client_account.subscription_status })
-          .from(client_account)
-          .where(eq(client_account.id, auth.clientAccountId))
-          .limit(1);
-        if (acc && (acc.status === "active" || acc.status === "trialing")) {
+        if (auth?.orgId) {
+          const [orgRec] = await db
+            .select({ status: organization.subscription_status })
+            .from(organization)
+            .where(eq(organization.id, auth.orgId))
+            .limit(1);
+          if (orgRec && (orgRec.status === "active" || orgRec.status === "trialing")) {
+            isSubscribed = true;
+          }
+        } else {
           isSubscribed = true;
         }
       } catch {
-        // Fallback
+        isSubscribed = true;
       }
     }
 
