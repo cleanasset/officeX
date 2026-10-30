@@ -106,46 +106,55 @@ function PricingPageContent() {
           </div>
 
           {/* Portfolio Scale Banner (When user has registered properties) */}
-          {minPortfolioSqft > 0 && (
-            <div className="mb-10 max-w-4xl mx-auto p-4 sm:p-5 rounded-3xl bg-teal-50 border border-teal-200 text-teal-950 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-white text-[#0F8B7D] flex items-center justify-center font-bold shrink-0 border border-teal-200 shadow-2xs">
-                  <Building2 size={24} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-black text-sm sm:text-base text-slate-900">
-                      Your Registered Portfolio Area: {minPortfolioSqft.toLocaleString()} Sq.Ft
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-teal-200 text-teal-900 px-2 py-0.5 rounded-full">
-                      Portfolio Floor Active
-                    </span>
-                  </div>
-                  <p className="text-xs text-teal-800 mt-1 font-medium">
-                    When subscribing for Rent Roll, your subscription cannot be below your total added property area ({minPortfolioSqft.toLocaleString()} Sq.Ft).
-                  </p>
-                </div>
-              </div>
+          {minPortfolioSqft > 0 && (() => {
+            const minMonthly = Math.round(minPortfolioSqft * 1.5);
+            const minAnnualMonthly = Math.round(minPortfolioSqft * 1.2);
+            const minAnnualTotal = minAnnualMonthly * 12;
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("officex_subscription", "active");
-                    localStorage.setItem("officex_owner_subscribed", "true");
-                    localStorage.setItem("officex_rentroll_subscribed", "true");
-                    localStorage.setItem("officex_subscription_status", "active");
-                    localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
-                  }
-                  router.push("/properties/rent-roll");
-                }}
-                className="px-5 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
-              >
-                <Sparkles size={14} />
-                <span>Subscribe ({minPortfolioSqft.toLocaleString()} Sq.Ft) →</span>
-              </button>
-            </div>
-          )}
+            return (
+              <div className="mb-10 max-w-4xl mx-auto p-4 sm:p-5 rounded-3xl bg-teal-50 border-2 border-teal-300 text-teal-950 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-white text-[#0F8B7D] flex items-center justify-center font-bold shrink-0 border border-teal-200 shadow-2xs">
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-sm sm:text-base text-slate-900">
+                        Registered Property Area: {minPortfolioSqft.toLocaleString()} Sq.Ft
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-teal-200 text-teal-900 px-2 py-0.5 rounded-full">
+                        Portfolio Scale Floor Active
+                      </span>
+                    </div>
+                    <p className="text-xs text-teal-900 mt-1 font-semibold">
+                      Minimum Payable on Added Sq.Ft: <strong className="text-slate-950 font-black">₹{minAnnualMonthly.toLocaleString("en-IN")} / mo</strong> (₹{minAnnualTotal.toLocaleString("en-IN")} / yr on Annual) or <strong className="text-slate-950 font-black">₹{minMonthly.toLocaleString("en-IN")} / mo</strong> (Monthly).
+                    </p>
+                    <p className="text-[11px] text-teal-700 mt-0.5">
+                      Formula: {minPortfolioSqft.toLocaleString()} Sq.Ft × ₹1.2/sq.ft (Annual) or ₹1.5/sq.ft (Monthly)
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_subscription", "active");
+                      localStorage.setItem("officex_owner_subscribed", "true");
+                      localStorage.setItem("officex_rentroll_subscribed", "true");
+                      localStorage.setItem("officex_subscription_status", "active");
+                      localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
+                    }
+                    router.push("/properties/rent-roll");
+                  }}
+                  className="px-5 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  <Sparkles size={14} />
+                  <span>Pay Minimum ₹{minAnnualTotal.toLocaleString("en-IN")} ({minPortfolioSqft.toLocaleString()} Sq.Ft) →</span>
+                </button>
+              </div>
+            );
+          })()}
 
           {/* 3 Stakeholder Proposal Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">

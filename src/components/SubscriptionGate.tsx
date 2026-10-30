@@ -109,8 +109,26 @@ export default function SubscriptionGate({
 
   // Selected Pricing Plan state (default: "techpark" ₹2, user can pick "starter" ₹1 or "reit-mega" ₹3)
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
+  const [minAllowedSqft, setMinAllowedSqft] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
+      if (portSqft && portSqft > 0) return portSqft;
+      try {
+        const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
+        if (snap?.areaSqft && Number(snap.areaSqft) > 0) return Number(snap.areaSqft);
+      } catch {}
+    }
+    return 10000;
+  });
+
   const [customSqft, setCustomSqft] = useState<number>(() => {
     if (typeof window !== "undefined") {
+      const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
+      if (portSqft && portSqft > 0) return portSqft;
+      try {
+        const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
+        if (snap?.areaSqft && Number(snap.areaSqft) > 0) return Number(snap.areaSqft);
+      } catch {}
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) return stored;
     }
@@ -135,10 +153,13 @@ export default function SubscriptionGate({
     selectedDurationMonths === 6 ? 10 :
     selectedDurationMonths === 3 ? 5 : 0;
 
-  const baseCalculatedPrice = customSqft * selectedPlan.price * selectedDurationMonths;
+  const effectiveSqft = Math.max(customSqft, minAllowedSqft);
+  const baseCalculatedPrice = effectiveSqft * selectedPlan.price * selectedDurationMonths;
   const discountedCalculatedPrice = Math.round(baseCalculatedPrice * (1 - durationDiscountPct / 100));
   const finalPriceInRupees = is100PercentDiscount ? 0 : discountedCalculatedPrice;
   const finalAmountInPaise = is100PercentDiscount ? 0 : discountedCalculatedPrice * 100;
+
+  const minCyclePayable = Math.round(minAllowedSqft * selectedPlan.price * selectedDurationMonths * (1 - durationDiscountPct / 100));
 
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

@@ -70,9 +70,7 @@ export const checkIsOwnerSubscribed = (): boolean => {
   if (typeof window !== "undefined") {
     const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
     const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-    const ownerSub = localStorage.getItem("officex_owner_subscribed") || sessionStorage.getItem("officex_owner_subscribed");
-    const rentrollSub = localStorage.getItem("officex_rentroll_subscribed") || sessionStorage.getItem("officex_rentroll_subscribed");
-    return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
+    return sub === "active" && subStatus === "active";
   }
   return false;
 };
@@ -994,6 +992,11 @@ export default function PropertyHierarchyModal({
   // Handler for Step 6 Third-Party Delegation
   const handleSaveDelegation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkIsOwnerSubscribed()) {
+      setSubscriptionGateReason("Assign Property Management to External Agency");
+      setSubscriptionGateModalOpen(true);
+      return;
+    }
     if (!delegationForm.managerName.trim()) {
       showToast("Please enter Assignee / Manager Name", "error");
       return;
@@ -1580,10 +1583,17 @@ export default function PropertyHierarchyModal({
   const totalPortfolioSqft = React.useMemo(() => {
     const fromList = propertiesList.reduce((acc, p) => acc + (p.area || 0), 0);
     const curFormArea = Number(propForm.areaSqft) || 0;
+    const fromSpaces = spacesList.reduce((acc, s) => acc + (s.area || 0), 0);
+    const fromContracts = Number(contractForm.areaSqft) || 0;
+    let stored = 0;
+    if (typeof window !== "undefined") {
+      stored = Number(localStorage.getItem("officex_total_portfolio_sqft") || localStorage.getItem("officex_property_area") || 0);
+    }
     const isExistingInList = propertiesList.some((p) => p.id === propForm.existingPropId);
-    const total = isExistingInList ? Math.max(fromList, curFormArea) : fromList + curFormArea;
-    return total > 0 ? total : 0;
-  }, [propertiesList, propForm.areaSqft, propForm.existingPropId]);
+    const baseTotal = isExistingInList ? Math.max(fromList, curFormArea) : fromList + curFormArea;
+    const finalTotal = Math.max(baseTotal, fromSpaces, fromContracts, stored);
+    return finalTotal > 0 ? finalTotal : 0;
+  }, [propertiesList, propForm.areaSqft, propForm.existingPropId, spacesList, contractForm.areaSqft]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && totalPortfolioSqft > 0) {
@@ -7520,13 +7530,27 @@ export default function PropertyHierarchyModal({
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <UserCheck size={13} />
-                    <span>Assign Management &amp; Generate Link</span>
-                  </button>
+                  {!isOwnerSubscribed && !checkIsOwnerSubscribed() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubscriptionGateReason("Assign Property Management to External Agency");
+                        setSubscriptionGateModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock size={13} />
+                      <span>Subscribe to Assign Management</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <UserCheck size={13} />
+                      <span>Assign Management &amp; Generate Link</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -7688,10 +7712,13 @@ export default function PropertyHierarchyModal({
         {/* ──── SUBSCRIPTION REQUIRED MODAL (§20 & Portfolio Area Floor Rule) ──── */}
         {subscriptionGateModalOpen && (() => {
           const effectivePortfolioSqft = Math.max(totalPortfolioSqft, 1000);
-          const currentChosenSqft = subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft;
+          const currentChosenSqft = Math.max(subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft, effectivePortfolioSqft);
           const isBelowPortfolio = currentChosenSqft < totalPortfolioSqft;
           const ratePerSqft = subscribeBillingCycle === "annual" ? 1.2 : 1.5;
+          const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
+          const minCyclePayable = minMonthlyPayable * (subscribeBillingCycle === "annual" ? 12 : 1);
           const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
+          const chosenCyclePayable = monthlyEst * (subscribeBillingCycle === "annual" ? 12 : 1);
 
           return (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -7700,34 +7727,57 @@ export default function PropertyHierarchyModal({
                   <Lock size={26} />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-black text-lg text-slate-900">Pro Feature Locked</h3>
+                  <h3 className="font-black text-lg text-slate-900">Commercial Pro Subscription Required</h3>
                   <p className="text-xs text-slate-600 font-medium">
                     {subscriptionGateReason || "This action requires an active Commercial Pro Subscription."}
                   </p>
                 </div>
 
-                {/* Registered Portfolio Area & Floor Rule Banner */}
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Registered Portfolio</span>
-                      <span className="text-sm font-black text-slate-900">
-                        {totalPortfolioSqft > 0 ? `${totalPortfolioSqft.toLocaleString()} Sq.Ft` : "Standard Commercial Unit"}
-                      </span>
+                {/* ──── HIGH-VISIBILITY MINIMUM AMOUNT PAYABLE CARD ──── */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 border-2 border-[#0F8B7D] text-left space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                    <div className="flex items-center gap-1.5 text-[#0F8B7D] font-black text-xs uppercase tracking-wider">
+                      <Building2 size={15} />
+                      <span>Minimum Payable (Based on Added Sq.Ft)</span>
                     </div>
-                    <span className="text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-full">
-                      {propertiesList.length || 1} Registered Asset{propertiesList.length > 1 ? "s" : ""}
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-700 text-white uppercase tracking-wider">
+                      Scale Floor
                     </span>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-                    <ShieldCheck size={15} className="text-amber-700 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold block">Portfolio Scale Rule:</span>
-                      <span>
-                        When subscribing for Rent Roll, your subscription capacity cannot be below your total added property area ({totalPortfolioSqft.toLocaleString()} Sq.Ft).
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Added Property Area</span>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {effectivePortfolioSqft.toLocaleString()} Sq.Ft
                       </span>
                     </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
+                      <span className="text-sm font-black text-teal-800 font-mono">
+                        ₹{ratePerSqft} / sqft / mo
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700">Minimum Monthly Equivalent:</span>
+                      <span className="font-black text-slate-900 font-mono text-sm">
+                        ₹{minMonthlyPayable.toLocaleString("en-IN")} / mo
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                      <span className="font-black text-teal-950">
+                        Minimum Total Payable ({subscribeBillingCycle === "annual" ? "Annual - 12 Months" : "Monthly - 1 Month"}):
+                      </span>
+                      <span className="font-black text-[#0F8B7D] font-mono text-base">
+                        ₹{minCyclePayable.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 pt-0.5">
+                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹{ratePerSqft}/sq.ft {subscribeBillingCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
+                    </p>
                   </div>
                 </div>
 
@@ -7738,14 +7788,14 @@ export default function PropertyHierarchyModal({
                       Choose Subscription Capacity (Sq.Ft) *
                     </label>
                     <span className="text-[10px] font-bold text-teal-700">
-                      Min: {totalPortfolioSqft.toLocaleString()} Sq.Ft
+                      Min: {effectivePortfolioSqft.toLocaleString()} Sq.Ft
                     </span>
                   </div>
 
                   <div className="relative">
                     <input
                       type="number"
-                      min={totalPortfolioSqft}
+                      min={effectivePortfolioSqft}
                       step={1000}
                       value={currentChosenSqft}
                       onChange={(e) => setSubscribeSqftInput(Number(e.target.value) || 0)}
@@ -7754,7 +7804,7 @@ export default function PropertyHierarchyModal({
                           ? "border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600"
                           : "border-slate-300 focus:border-[#0F8B7D] text-slate-900"
                       }`}
-                      placeholder={`Min ${totalPortfolioSqft.toLocaleString()}`}
+                      placeholder={`Min ${effectivePortfolioSqft.toLocaleString()}`}
                     />
                     <span className="absolute right-3 top-2.5 font-bold text-slate-400 text-xs">
                       Sq.Ft
@@ -7763,7 +7813,7 @@ export default function PropertyHierarchyModal({
 
                   {isBelowPortfolio && (
                     <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                      <span>⚠️ You cannot subscribe below your total added property area ({totalPortfolioSqft.toLocaleString()} Sq.Ft).</span>
+                      <span>⚠️ You cannot subscribe below your total added property area ({effectivePortfolioSqft.toLocaleString()} Sq.Ft).</span>
                     </p>
                   )}
 
@@ -7800,9 +7850,9 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600">Estimated Monthly:</span>
+                    <span className="font-semibold text-slate-600">Total for Selected Capacity:</span>
                     <span className="font-black text-slate-900 font-mono text-sm">
-                      ₹{monthlyEst.toLocaleString()} / month
+                      ₹{chosenCyclePayable.toLocaleString("en-IN")} {subscribeBillingCycle === "annual" ? "for 1 Year" : "for 1 Month"}
                     </span>
                   </div>
                 </div>
@@ -7837,7 +7887,7 @@ export default function PropertyHierarchyModal({
                             plan_name: "Rent Roll & Financial Pro Suite",
                             billing_cycle: subscribeBillingCycle,
                             duration_months: subscribeBillingCycle === "annual" ? 12 : 1,
-                            amount: monthlyEst * (subscribeBillingCycle === "annual" ? 12 : 1),
+                            amount: chosenCyclePayable,
                           }),
                         }).catch(() => {});
 
@@ -7851,17 +7901,17 @@ export default function PropertyHierarchyModal({
                         setIsOwnerSubscribed(true);
                         setSubscribedCapacity(currentChosenSqft);
                         setSubscriptionGateModalOpen(false);
-                        showToast(`✓ Subscribed successfully for ${currentChosenSqft.toLocaleString()} Sq.Ft! Pro features unlocked.`);
+                        showToast(`✓ Subscribed successfully! Paid ₹${chosenCyclePayable.toLocaleString("en-IN")} (Min ₹${minCyclePayable.toLocaleString("en-IN")} on ${effectivePortfolioSqft.toLocaleString()} Sq.Ft). Pro features unlocked.`);
                       } catch {
                         showToast("Subscription activation encountered an issue", "error");
                       } finally {
                         setSubscribeLoading(false);
                       }
                     }}
-                    className="w-full sm:flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                    className="w-full sm:flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
                     {subscribeLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={14} />}
-                    <span>Subscribe ({currentChosenSqft.toLocaleString()} Sq.Ft) →</span>
+                    <span>Pay Minimum ₹{chosenCyclePayable.toLocaleString("en-IN")} ({currentChosenSqft.toLocaleString()} Sq.Ft) →</span>
                   </button>
                 </div>
 

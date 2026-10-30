@@ -73,14 +73,22 @@ function DelegationContent() {
     if (typeof window !== "undefined") {
       const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
       const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-      const ownerSub = localStorage.getItem("officex_owner_subscribed") || sessionStorage.getItem("officex_owner_subscribed");
-      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed") || sessionStorage.getItem("officex_rentroll_subscribed");
-      return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
+      return sub === "active" && subStatus === "active";
     }
     return false;
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sub = localStorage.getItem("officex_subscription");
+      const subStatus = localStorage.getItem("officex_subscription_status");
+      if (sub !== "active" || subStatus !== "active") {
+        localStorage.removeItem("officex_owner_subscribed");
+        localStorage.removeItem("officex_rentroll_subscribed");
+        sessionStorage.removeItem("officex_owner_subscribed");
+        sessionStorage.removeItem("officex_rentroll_subscribed");
+      }
+    }
     const updateSub = () => setIsSubscribed(checkIsSubscribed());
     updateSub();
     if (typeof window !== "undefined") {
@@ -121,6 +129,24 @@ function DelegationContent() {
   const [feeRatePct, setFeeRatePct] = useState("5.0");
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Subscription Modal State with Sq.Ft Floor Calculation
+  const [subModalCycle, setSubModalCycle] = useState<"annual" | "monthly">("annual");
+  const [subModalLoading, setSubModalLoading] = useState(false);
+
+  const activeDelegationSqft = useMemo(() => {
+    const selectedProp = properties.find((p) => selectedPropertyIds.includes(p.id));
+    if (selectedProp?.area && Number(selectedProp.area) > 0) return Number(selectedProp.area);
+    if (typeof window !== "undefined") {
+      const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
+      if (portSqft && portSqft > 0) return portSqft;
+      try {
+        const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
+        if (snap?.areaSqft && Number(snap.areaSqft) > 0) return Number(snap.areaSqft);
+      } catch {}
+    }
+    return 10000;
+  }, [properties, selectedPropertyIds]);
 
   useEffect(() => {
     loadData();
@@ -236,17 +262,32 @@ function DelegationContent() {
         }
       }
 
-      // 3. Resilient fallback to active property in localStorage
+      // 3. Resilient fallback to onboarded property in localStorage
       if (pList.length === 0 && typeof window !== "undefined") {
-        const storedProp = localStorage.getItem("officex_active_property");
-        if (storedProp) {
-          pList = [{
-            id: `local-prop-${storedProp.toLowerCase().replace(/\s+/g, "-")}`,
-            name: storedProp,
-            city: "Commercial Portfolio",
-            code: "ACTIVE-01",
-            area: 0,
-          }];
+        try {
+          const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
+          if (snap?.propertyName) {
+            pList.push({
+              id: `local-prop-${snap.propertyName.toLowerCase().replace(/\s+/g, "-")}`,
+              name: snap.propertyName,
+              city: snap.city || "Commercial Portfolio",
+              code: snap.propertyCode || "ACTIVE-01",
+              area: Number(snap.areaSqft) || Number(localStorage.getItem("officex_total_portfolio_sqft")) || 0,
+            });
+          }
+        } catch {}
+
+        if (pList.length === 0) {
+          const storedProp = localStorage.getItem("officex_active_property") || localStorage.getItem("officex_property_name");
+          if (storedProp) {
+            pList.push({
+              id: `local-prop-${storedProp.toLowerCase().replace(/\s+/g, "-")}`,
+              name: storedProp,
+              city: "Commercial Portfolio",
+              code: "ACTIVE-01",
+              area: Number(localStorage.getItem("officex_total_portfolio_sqft")) || 0,
+            });
+          }
         }
       }
 
@@ -1111,19 +1152,166 @@ function DelegationContent() {
             </div>
           )}
 
-      {/* Pro Subscription Checkout / Unlock Modal */}
-      {subscriptionModalOpen && (
-        <SubscriptionGateModal
-          isOpen={subscriptionModalOpen}
-          onClose={() => setSubscriptionModalOpen(false)}
-          onSuccess={() => {
-            setIsSubscribed(true);
-            setSubscriptionModalOpen(false);
-            setSuccessMessage("✓ Pro Subscription activated! Property management delegation and portal link sharing unlocked.");
-          }}
-          moduleName={subscriptionReason || "Property Management Delegation"}
-        />
-      )}
+      {/* Pro Subscription Checkout / Unlock Modal (§Minimum Amount on Added Property Sq.Ft) */}
+      {subscriptionModalOpen && (() => {
+        const ratePerSqft = subModalCycle === "annual" ? 1.2 : 1.5;
+        const minMonthlyPayable = Math.round(activeDelegationSqft * ratePerSqft);
+        const minCyclePayable = minMonthlyPayable * (subModalCycle === "annual" ? 12 : 1);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center my-8">
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
+                <Lock size={26} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-black text-lg text-slate-900">Commercial Pro Subscription Required</h3>
+                <p className="text-xs text-slate-600 font-medium">
+                  {subscriptionReason || "Assigning property management and sharing activation links requires an active subscription."}
+                </p>
+              </div>
+
+              {/* High-Visibility Minimum Amount Payable Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 border-2 border-[#0F8B7D] text-left space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                  <div className="flex items-center gap-1.5 text-[#0F8B7D] font-black text-xs uppercase tracking-wider">
+                    <Building2 size={15} />
+                    <span>Minimum Payable (Based on Added Sq.Ft)</span>
+                  </div>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-700 text-white uppercase tracking-wider">
+                    Scale Floor
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                    <span className="text-[10px] font-bold text-slate-500 block uppercase">Added Property Area</span>
+                    <span className="text-sm font-black text-slate-900 font-mono">
+                      {activeDelegationSqft.toLocaleString()} Sq.Ft
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                    <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
+                    <span className="text-sm font-black text-teal-800 font-mono">
+                      ₹{ratePerSqft} / sqft / mo
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-700">Minimum Monthly Equivalent:</span>
+                    <span className="font-black text-slate-900 font-mono text-sm">
+                      ₹{minMonthlyPayable.toLocaleString("en-IN")} / mo
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                    <span className="font-black text-teal-950">
+                      Minimum Total Payable ({subModalCycle === "annual" ? "Annual - 12 Months" : "Monthly - 1 Month"}):
+                    </span>
+                    <span className="font-black text-[#0F8B7D] font-mono text-base">
+                      ₹{minCyclePayable.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 pt-0.5">
+                    Calculation: {activeDelegationSqft.toLocaleString()} Sq.Ft × ₹{ratePerSqft}/sq.ft {subModalCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Billing Cycle Selector */}
+              <div className="grid grid-cols-2 gap-2 pt-1 text-left">
+                <button
+                  type="button"
+                  onClick={() => setSubModalCycle("annual")}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    subModalCycle === "annual"
+                      ? "border-[#0F8B7D] bg-teal-50/50 ring-1 ring-teal-500"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-slate-900 text-xs flex items-center justify-between">
+                    <span>Annual Plan</span>
+                    <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">Save 20%</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">₹1.2 / sqft / mo</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSubModalCycle("monthly")}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    subModalCycle === "monthly"
+                      ? "border-[#0F8B7D] bg-teal-50/50 ring-1 ring-teal-500"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-slate-900 text-xs">Monthly Plan</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">₹1.5 / sqft / mo</div>
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSubscriptionModalOpen(false)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  disabled={subModalLoading}
+                  onClick={async () => {
+                    setSubModalLoading(true);
+                    try {
+                      const email =
+                        (typeof window !== "undefined" &&
+                          (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) ||
+                        "owner@commercial.com";
+
+                      await fetch("/api/subscription/status", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          email,
+                          plan: "pro",
+                          plan_name: "Rent Roll & Financial Pro Suite",
+                          billing_cycle: subModalCycle,
+                          duration_months: subModalCycle === "annual" ? 12 : 1,
+                          amount: minCyclePayable,
+                        }),
+                      }).catch(() => {});
+
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_subscription", "active");
+                        localStorage.setItem("officex_subscription_status", "active");
+                        localStorage.setItem("officex_owner_subscribed", "true");
+                        localStorage.setItem("officex_rentroll_subscribed", "true");
+                        localStorage.setItem("officex_subscribed_sqft", String(activeDelegationSqft));
+                      }
+                      setIsSubscribed(true);
+                      setSubscriptionModalOpen(false);
+                      setSuccessMessage(`✓ Pro Subscription activated! Paid minimum ₹${minCyclePayable.toLocaleString("en-IN")} on ${activeDelegationSqft.toLocaleString()} Sq.Ft. Management delegation unlocked.`);
+                      setTimeout(() => setSuccessMessage(""), 5000);
+                    } catch {
+                      // Fallback
+                    } finally {
+                      setSubModalLoading(false);
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  {subModalLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={14} />}
+                  <span>Pay Minimum ₹{minCyclePayable.toLocaleString("en-IN")} ({activeDelegationSqft.toLocaleString()} Sq.Ft) →</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

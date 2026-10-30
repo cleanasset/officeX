@@ -74,14 +74,22 @@ export default function TenantDirectoryPage() {
     if (typeof window !== "undefined") {
       const sub = localStorage.getItem("officex_subscription");
       const subStatus = localStorage.getItem("officex_subscription_status");
-      const ownerSub = localStorage.getItem("officex_owner_subscribed");
-      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
-      return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
+      return sub === "active" && subStatus === "active";
     }
     return false;
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sub = localStorage.getItem("officex_subscription");
+      const subStatus = localStorage.getItem("officex_subscription_status");
+      if (sub !== "active" || subStatus !== "active") {
+        localStorage.removeItem("officex_owner_subscribed");
+        localStorage.removeItem("officex_rentroll_subscribed");
+        sessionStorage.removeItem("officex_owner_subscribed");
+        sessionStorage.removeItem("officex_rentroll_subscribed");
+      }
+    }
     const updateSub = () => setIsSubscribed(checkIsSubscribed());
     updateSub();
     if (typeof window !== "undefined") {
@@ -95,12 +103,12 @@ export default function TenantDirectoryPage() {
   }, []);
 
   const getTenantSharableLink = (t: any) => {
+    if (!checkIsSubscribed()) return "";
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
     const prop = t.property_name || "Commercial Centre";
     const name = t.tenant_name || "Tenant";
     const email = t.email || "";
-    const subActive = checkIsSubscribed();
-    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=${subActive ? "1" : "0"}&invite=t_${Date.now()}`;
+    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
   };
 
   const handleCopyTenantLink = (t: any, e?: React.MouseEvent) => {
@@ -108,9 +116,12 @@ export default function TenantDirectoryPage() {
     if (!checkIsSubscribed()) {
       setCopySuccessToast("🔒 Pro Subscription required to copy & share tenant portal links.");
       setTimeout(() => setCopySuccessToast(null), 3500);
+      setHierarchyTab("property");
+      setHierarchyModalOpen(true);
       return;
     }
     const link = getTenantSharableLink(t);
+    if (!link) return;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(link);
       setCopiedTenantId(t.id);
