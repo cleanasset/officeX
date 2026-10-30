@@ -1472,17 +1472,6 @@ export default function PropertyHierarchyModal({
       showToast("Please enter a valid area in Sq.Ft", "error");
       return;
     }
-    if (propTotalArea > 0) {
-      const alreadyAllocated = displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0);
-      const remainingSpace = Math.max(0, propTotalArea - alreadyAllocated);
-      if (enteredArea > remainingSpace) {
-        showToast(
-          `Cannot add unit: ${enteredArea.toLocaleString()} Sq.Ft exceeds remaining building space (${remainingSpace.toLocaleString()} Sq.Ft available out of ${propTotalArea.toLocaleString()} Sq.Ft total).`,
-          "error"
-        );
-        return;
-      }
-    }
     const bldgId = spaceForm.buildingId || buildingsList[0]?.id;
     if (!bldgId) {
       showToast("Please select or add a building first", "error");
@@ -4350,34 +4339,6 @@ export default function PropertyHierarchyModal({
                   </span>
                 </div>
 
-                {/* 100% Demarcated Banner */}
-                {buildingTotalArea > 0 && remainingBuildingArea === 0 && (
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs animate-in fade-in">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
-                        ✓
-                      </div>
-                      <div>
-                        <span className="font-extrabold text-emerald-950 block">
-                          100% of Building Area ({buildingTotalArea.toLocaleString()} Sq.Ft) is Already Demarcated!
-                        </span>
-                        <span className="text-[11px] text-emerald-800 leading-relaxed block mt-0.5">
-                          All square footage is currently allocated to the registered unit(s) listed above ({displaySpaces.map((s) => `${s.name} • ${s.area.toLocaleString()} Sq.Ft`).join(", ")}). You do not need to add more units if you intend to lease this space as a whole floor.
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("tenant")}
-                        className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <span>Proceed to Tenants (Step 3) →</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Full Original Space Creation Form */}
                 <form onSubmit={(e) => handleSaveSpace(e, true)} className="space-y-4">
                   <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3.5">
@@ -4457,84 +4418,23 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* 4. Area (Sq.Ft) with Live Capacity Cap & Enforcement */}
+                      {/* 4. Area (Sq.Ft) */}
                       <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="font-bold text-slate-700">
-                            Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
-                          </label>
-                          {buildingTotalArea > 0 && (
-                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200 font-mono">
-                              Building Avail: {remainingBuildingArea.toLocaleString()} Sq.Ft
-                            </span>
-                          )}
-                        </div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="number"
                           min="1"
-                          max={buildingTotalArea > 0 ? remainingBuildingArea : undefined}
                           required
-                          placeholder={buildingTotalArea > 0 ? `Max: ${remainingBuildingArea.toLocaleString()}` : "e.g. 5000"}
+                          placeholder="e.g. 5000"
                           value={spaceForm.areaSqft}
                           onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
-                          className={`w-full px-3 py-2 rounded-xl border font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900 ${
-                            buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea
-                              ? "border-rose-400 bg-rose-50/40 text-rose-900"
-                              : "border-slate-300"
-                          }`}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900"
                         />
-                        {buildingTotalArea > 0 ? (
-                          Number(spaceForm.areaSqft) > remainingBuildingArea ? (
-                            <div className="p-2.5 mt-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5 animate-in fade-in">
-                              <span className="font-bold flex items-center gap-1 text-rose-900">
-                                ⛔ Exceeds Building Limit: {remainingBuildingArea.toLocaleString()} Sq.Ft Available out of {buildingTotalArea.toLocaleString()} Sq.Ft Total
-                              </span>
-                              <p className="text-[11px] leading-relaxed text-rose-700">
-                                {remainingBuildingArea === 0 ? (
-                                  <>
-                                    Your entire <strong>{buildingTotalArea.toLocaleString()} Sq.Ft</strong> is currently assigned to registered unit(s) above (e.g. <strong>{displaySpaces[0]?.name || "Ground Floor"}: {displaySpaces[0]?.area?.toLocaleString()} Sq.Ft</strong>).
-                                  </>
-                                ) : (
-                                  <>
-                                    Only <strong>{remainingBuildingArea.toLocaleString()} Sq.Ft</strong> remains unallocated.
-                                  </>
-                                )}
-                              </p>
-                              {displaySpaces.length > 0 && remainingBuildingArea === 0 && (
-                                <div className="pt-1 flex flex-wrap items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const defaultSpace = displaySpaces.find((s) => getFloorNum(s) === selectedFloorNum) || displaySpaces[0];
-                                      if (defaultSpace) {
-                                        handleDeleteSpace(defaultSpace.id, defaultSpace.name);
-                                      }
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  >
-                                    <Trash2 size={11} />
-                                    <span>Delete Full-Floor Unit to Subdivide into Smaller Suites</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveTab("tenant")}
-                                    className="px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-800 font-bold text-[11px] hover:bg-rose-100 transition cursor-pointer"
-                                  >
-                                    Proceed to Step 3 (Tenants) Instead →
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                              Available to assign in building: <strong className="font-mono text-slate-800">{remainingBuildingArea.toLocaleString()} Sq.Ft</strong> (Building Total: {buildingTotalArea.toLocaleString()} Sq.Ft)
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                            Size of this unit/suite in Sq.Ft (e.g. 5,000)
-                          </span>
-                        )}
+                        <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                          Size of this unit/suite in Sq.Ft (e.g. 5,000)
+                        </span>
                       </div>
 
                       {/* 5. Unit Type */}
@@ -4625,7 +4525,7 @@ export default function PropertyHierarchyModal({
                       <button
                         type="button"
                         onClick={(e) => handleSaveSpace(e, false)}
-                        disabled={loading || (buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea)}
+                        disabled={loading}
                         className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
@@ -4633,7 +4533,7 @@ export default function PropertyHierarchyModal({
                       </button>
                       <button
                         type="submit"
-                        disabled={loading || (buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea)}
+                        disabled={loading}
                         className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
