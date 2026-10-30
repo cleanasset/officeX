@@ -7149,7 +7149,7 @@ export default function PropertyHierarchyModal({
                         noticePeriodDays: Number(contractForm.noticeDays) || 90,
                         escalationPct: Number(contractForm.escalationPct) || 5,
                         escalationFrequency: contractForm.escalationFrequency,
-                      });
+                      }, isOwnerSubscribed && checkIsOwnerSubscribed());
                       showToast("✓ Commercial Lease Deed generated & opened for printing/PDF!");
                     }}
                     className="px-4 py-2.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
