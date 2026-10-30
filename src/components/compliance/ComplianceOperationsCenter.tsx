@@ -1073,7 +1073,7 @@ Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
                         onClick={() => openUploadForTemplate(doc)}
                         className="w-full py-2.5 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black rounded-xl cursor-pointer shadow-xs flex items-center justify-center gap-1.5 transition-all"
                       >
-                        <Upload size={13} /> + Upload {doc.shortTitle}
+                        <Upload size={13} /> Upload {doc.shortTitle}
                       </button>
                     </div>
                   </div>
@@ -1291,7 +1291,7 @@ Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
               }}
               className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              + Register Risk
+              Register Risk
             </button>
           </div>
 

@@ -230,7 +230,7 @@ interface ExpiryBucket {
             className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shadow-sm shadow-[#0F8B7D]/20 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus size={14} />
-            <span>+ New Deal (§4.7A)</span>
+            <span>New Deal (§4.7A)</span>
           </button>
         </div>
       </div>
@@ -260,7 +260,7 @@ interface ExpiryBucket {
               className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c7367] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <Plus size={14} />
-              <span>+ New Deal Enquiry (§4.7A)</span>
+              <span>New Deal Enquiry (§4.7A)</span>
             </button>
             <Link
               href="/properties/rent-roll"

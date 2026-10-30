@@ -591,7 +591,7 @@ export default function PropertyManagerDashboardPage() {
               className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add First Lease (§S-21)</span>
+              <span>Add First Lease (§S-21)</span>
             </button>
             <Link
               href="/properties/rent-roll"

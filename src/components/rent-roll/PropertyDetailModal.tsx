@@ -69,6 +69,24 @@ export default function PropertyDetailModal({
     managerScope: "whole_property",
   });
 
+  // Floor De-Registration / Sold Floors state
+  const [deRegModalOpen, setDeRegModalOpen] = useState(false);
+  const [deRegFloor, setDeRegFloor] = useState("");
+  const [deRegReason, setDeRegReason] = useState("");
+  const [deRegLoading, setDeRegLoading] = useState(false);
+
+  const distinctFloors = React.useMemo(() => {
+    const list: string[] = [];
+    spaces.forEach((s) => {
+      const fl = s.floor_name || (s.floorNumber !== undefined ? (s.floorNumber === 0 ? "Ground Floor" : `Floor ${s.floorNumber}`) : "");
+      if (fl && !list.includes(fl)) list.push(fl);
+    });
+    if (list.length === 0) {
+      return ["Ground Floor", "Floor 1", "Floor 2", "Floor 3", "Floor 4"];
+    }
+    return list;
+  }, [spaces]);
+
   useEffect(() => {
     if (initialMode === "edit") {
       setIsEditing(true);
@@ -623,18 +641,31 @@ export default function PropertyDetailModal({
           {/* TAB 2: DEMARCATED UNITS & SPACES */}
           {activeTab === "spaces" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Demarcated Spaces</h3>
                   <p className="text-[11px] text-slate-500">Individual office suites, floors, and retail zones</p>
                 </div>
-                <Link
-                  href="/properties/registry"
-                  className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5"
-                >
-                  <Plus size={13} />
-                  <span>Demarcate New Unit</span>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (distinctFloors.length > 0 && !deRegFloor) setDeRegFloor(distinctFloors[0]);
+                      setDeRegModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs shrink-0 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    title="Sold or transferred floors? Request de-registration with Admin Approval"
+                  >
+                    <span>🏢 Sold Floors? Request Removal</span>
+                  </button>
+                  <Link
+                    href="/properties/registry"
+                    className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5"
+                  >
+                    <Plus size={13} />
+                    <span>Demarcate New Unit</span>
+                  </Link>
+                </div>
               </div>
 
               {spaces.length === 0 ? (
@@ -696,7 +727,7 @@ export default function PropertyDetailModal({
                   className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5"
                 >
                   <Plus size={13} />
-                  <span>+ Create Contract</span>
+                  <span>Create Contract</span>
                 </Link>
               </div>
 
@@ -827,6 +858,116 @@ export default function PropertyDetailModal({
             </button>
           </div>
         </div>
+
+        {/* Sold Floors / De-Registration Modal */}
+        {deRegModalOpen && (
+          <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+                    🏢
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Request Floor De-Registration</h3>
+                    <p className="text-[11px] text-slate-500">Sell or remove floors from registered property</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeRegModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-amber-700 shrink-0" />
+                  <span>Institutional Maker-Checker Governance</span>
+                </p>
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  Because commercial leases and financial stacking plans depend on registered floor assets, removing or selling floors requires Administrative Verification. A notification will be dispatched to the Admin Portal for approval.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Select Floor to De-Register / Sell</label>
+                  <select
+                    value={deRegFloor}
+                    onChange={(e) => setDeRegFloor(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                  >
+                    <option value="">-- Choose Floor --</option>
+                    {distinctFloors.map((fl) => (
+                      <option key={fl} value={fl}>
+                        {fl}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Reason for Removal / Transaction Details</label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Sold Floor 3 to third-party investor / Title deed transferred / Change of commercial asset layout..."
+                    value={deRegReason}
+                    onChange={(e) => setDeRegReason(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setDeRegModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!deRegFloor || !deRegReason.trim() || deRegLoading}
+                  onClick={async () => {
+                    setDeRegLoading(true);
+                    try {
+                      const res = await fetch("/api/admin/change-requests", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
+                        body: JSON.stringify({
+                          property_id: property.id,
+                          property_name: property.name,
+                          request_type: "sell_floors",
+                          floors_to_remove: [deRegFloor],
+                          description: deRegReason.trim(),
+                        }),
+                      });
+                      if (res.ok) {
+                        alert("✓ Floor de-registration request submitted to Admin for approval!");
+                        setDeRegModalOpen(false);
+                        setDeRegReason("");
+                        setDeRegFloor("");
+                      } else {
+                        alert("Failed to submit change request. Please try again.");
+                      }
+                    } catch (err) {
+                      alert("Network error submitting change request.");
+                    } finally {
+                      setDeRegLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {deRegLoading ? "Submitting..." : "Submit Removal Request"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

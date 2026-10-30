@@ -982,8 +982,6 @@ export default function SignInForm({
     let destination = "";
     if (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/onboarding")) {
       destination = safeRedirect;
-    } else if (!isAlreadyOnboarded) {
-      destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/dashboard/owner")}`;
     } else {
       destination = membership.workspaceUrl || "/dashboard/owner";
     }

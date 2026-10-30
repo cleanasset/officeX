@@ -830,7 +830,7 @@ export default function ContractWizardModal({
                       className="text-[11px] font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
-                      {showQuickAddTenant ? "Cancel" : "+ Add New Tenant"}
+                      {showQuickAddTenant ? "Cancel" : "Add New Tenant"}
                     </button>
                   </div>
 

@@ -322,11 +322,11 @@ export default function PropertiesPortfolioPage() {
                 </p>
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Link
-                    href="/onboarding"
+                    href="/properties/registry"
                     className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-md shadow-teal-700/20"
                   >
                     <Plus size={15} />
-                    <span>Onboard Property Now</span>
+                    <span>Register Property Now</span>
                   </Link>
                   <Link
                     href="/properties/rent-roll"

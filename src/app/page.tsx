@@ -773,7 +773,7 @@ export default function LandingPage() {
                 </Link>
                 <hr className="border-slate-100 my-1.5" />
                 <Link href="/vendor" className="block p-2 rounded-xl hover:bg-teal-50 transition-colors text-xs font-bold text-[#0F8B7D] flex items-center justify-between">
-                  <span>+ Register as Vendor</span>
+                  <span>Register as Vendor</span>
                   <span className="text-[9.5px] bg-teal-100 text-[#0F8B7D] px-1.5 py-0.5 rounded font-black">Escrow</span>
                 </Link>
               </div>

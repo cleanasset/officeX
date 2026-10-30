@@ -3090,7 +3090,7 @@ function CompleteProfileContent() {
                         className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 active:scale-95"
                       >
                         <Plus size={14} />
-                        <span>+ Add Another Tenant</span>
+                        <span>Add Another Tenant</span>
                       </button>
                     )}
                   </div>
@@ -3230,7 +3230,7 @@ function CompleteProfileContent() {
                     className="px-5 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus size={15} />
-                    <span>+ Add Property First</span>
+                    <span>Add Property First</span>
                   </button>
                 </div>
               ) : (

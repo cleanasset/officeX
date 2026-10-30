@@ -479,7 +479,7 @@ function DelegationContent() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold shadow-md shadow-teal-900/10 transition-all cursor-pointer"
             >
               <Plus size={16} />
-              <span>+ Delegate Management</span>
+              <span>Delegate Management</span>
             </button>
           </div>
 

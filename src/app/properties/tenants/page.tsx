@@ -277,7 +277,7 @@ export default function TenantDirectoryPage() {
                 className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition inline-flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
               >
                 <Plus size={16} />
-                <span>+ Add Property First</span>
+                <span>Add Property First</span>
               </button>
             </div>
           ) : (

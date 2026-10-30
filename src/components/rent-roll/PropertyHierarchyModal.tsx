@@ -181,12 +181,6 @@ export default function PropertyHierarchyModal({
   // Active Floor selected in Step 2 Floor Studio
   const [activeStudioFloor, setActiveStudioFloor] = useState<string>("0");
 
-  // Floor De-Registration / Sold Floors state (§5)
-  const [deRegModalOpen, setDeRegModalOpen] = useState(false);
-  const [deRegFloor, setDeRegFloor] = useState("");
-  const [deRegReason, setDeRegReason] = useState("");
-  const [deRegLoading, setDeRegLoading] = useState(false);
-
   // Subscription Gate Modal state (§20)
   const [subscriptionGateModalOpen, setSubscriptionGateModalOpen] = useState(false);
   const [subscriptionGateReason, setSubscriptionGateReason] = useState("");
@@ -3186,7 +3180,7 @@ export default function PropertyHierarchyModal({
                             className="px-3 py-1.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-100 text-teal-900 text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
                           >
                             <Plus size={13} />
-                            <span>+ Add Tower</span>
+                            <span>Add Tower</span>
                           </button>
                         </div>
                       </div>
@@ -4152,19 +4146,6 @@ export default function PropertyHierarchyModal({
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (allFloorNumbers.length > 0 && !deRegFloor) {
-                          setDeRegFloor(String(allFloorNumbers[0]));
-                        }
-                        setDeRegModalOpen(true);
-                      }}
-                      className="px-3 py-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs shrink-0 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                      title="Sold or transferred floors? Request de-registration with Admin Approval"
-                    >
-                      <span>🏢 Sold Floors? Request Removal</span>
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setActiveTab("tenant")}
                       className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs shrink-0 transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
                     >
@@ -4369,6 +4350,34 @@ export default function PropertyHierarchyModal({
                   </span>
                 </div>
 
+                {/* 100% Demarcated Banner */}
+                {buildingTotalArea > 0 && remainingBuildingArea === 0 && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs animate-in fade-in">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                        ✓
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-emerald-950 block">
+                          100% of Building Area ({buildingTotalArea.toLocaleString()} Sq.Ft) is Already Demarcated!
+                        </span>
+                        <span className="text-[11px] text-emerald-800 leading-relaxed block mt-0.5">
+                          All square footage is currently allocated to the registered unit(s) listed above ({displaySpaces.map((s) => `${s.name} • ${s.area.toLocaleString()} Sq.Ft`).join(", ")}). You do not need to add more units if you intend to lease this space as a whole floor.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("tenant")}
+                        className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Proceed to Tenants (Step 3) →</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Full Original Space Creation Form */}
                 <form onSubmit={(e) => handleSaveSpace(e, true)} className="space-y-4">
                   <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3.5">
@@ -4476,9 +4485,46 @@ export default function PropertyHierarchyModal({
                         />
                         {buildingTotalArea > 0 ? (
                           Number(spaceForm.areaSqft) > remainingBuildingArea ? (
-                            <span className="text-[11px] text-rose-600 font-bold block mt-1">
-                              ⛔ Exceeds building limit! Only {remainingBuildingArea.toLocaleString()} Sq.Ft available out of {buildingTotalArea.toLocaleString()} Sq.Ft total.
-                            </span>
+                            <div className="p-2.5 mt-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5 animate-in fade-in">
+                              <span className="font-bold flex items-center gap-1 text-rose-900">
+                                ⛔ Exceeds Building Limit: {remainingBuildingArea.toLocaleString()} Sq.Ft Available out of {buildingTotalArea.toLocaleString()} Sq.Ft Total
+                              </span>
+                              <p className="text-[11px] leading-relaxed text-rose-700">
+                                {remainingBuildingArea === 0 ? (
+                                  <>
+                                    Your entire <strong>{buildingTotalArea.toLocaleString()} Sq.Ft</strong> is currently assigned to registered unit(s) above (e.g. <strong>{displaySpaces[0]?.name || "Ground Floor"}: {displaySpaces[0]?.area?.toLocaleString()} Sq.Ft</strong>).
+                                  </>
+                                ) : (
+                                  <>
+                                    Only <strong>{remainingBuildingArea.toLocaleString()} Sq.Ft</strong> remains unallocated.
+                                  </>
+                                )}
+                              </p>
+                              {displaySpaces.length > 0 && remainingBuildingArea === 0 && (
+                                <div className="pt-1 flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const defaultSpace = displaySpaces.find((s) => getFloorNum(s) === selectedFloorNum) || displaySpaces[0];
+                                      if (defaultSpace) {
+                                        handleDeleteSpace(defaultSpace.id, defaultSpace.name);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                  >
+                                    <Trash2 size={11} />
+                                    <span>Delete Full-Floor Unit to Subdivide into Smaller Suites</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveTab("tenant")}
+                                    className="px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-800 font-bold text-[11px] hover:bg-rose-100 transition cursor-pointer"
+                                  >
+                                    Proceed to Step 3 (Tenants) Instead →
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-[11px] text-slate-500 font-medium block mt-1">
                               Available to assign in building: <strong className="font-mono text-slate-800">{remainingBuildingArea.toLocaleString()} Sq.Ft</strong> (Building Total: {buildingTotalArea.toLocaleString()} Sq.Ft)
@@ -4583,7 +4629,7 @@ export default function PropertyHierarchyModal({
                         className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
-                        <span>+ Add Unit &amp; Keep Adding</span>
+                        <span>Add Unit &amp; Keep Adding</span>
                       </button>
                       <button
                         type="submit"
@@ -7607,117 +7653,6 @@ export default function PropertyHierarchyModal({
             onSuccess?.();
           }}
         />
-
-        {/* ──── FLOOR DE-REGISTRATION & REMOVAL REQUEST MODAL (§5) ──── */}
-        {deRegModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
-                    🏢
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-900">Request Floor De-Registration</h3>
-                    <p className="text-[11px] text-slate-500">Sell or remove floors from registered property</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDeRegModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-amber-700 shrink-0" />
-                  <span>Institutional Maker-Checker Governance</span>
-                </p>
-                <p className="text-[11px] text-amber-800 leading-snug">
-                  Because commercial leases and financial stacking plans depend on registered floor assets, removing or selling floors requires Administrative Verification. A notification will be dispatched to the Admin Portal for approval.
-                </p>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Select Floor to De-Register / Sell</label>
-                  <select
-                    value={deRegFloor}
-                    onChange={(e) => setDeRegFloor(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
-                  >
-                    <option value="">-- Choose Floor --</option>
-                    {allFloorNumbers.map((fl) => (
-                      <option key={fl} value={String(fl)}>
-                        {fl === 0 ? "Ground Floor" : `Floor ${fl}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Reason for Removal / Transaction Details</label>
-                  <textarea
-                    rows={3}
-                    placeholder="e.g. Sold Floor 3 to third-party investor / Title deed transferred / Change of commercial asset layout..."
-                    value={deRegReason}
-                    onChange={(e) => setDeRegReason(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setDeRegModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={!deRegFloor || !deRegReason.trim() || deRegLoading}
-                  onClick={async () => {
-                    setDeRegLoading(true);
-                    try {
-                      const res = await fetch("/api/admin/change-requests", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          property_id: propForm.existingPropId || activePropertyObj?.id || "OX-PROP",
-                          property_name: propForm.propertyName || activePropertyObj?.name || "Commercial Tower",
-                          request_type: "sell_floors",
-                          floors_to_remove: [deRegFloor],
-                          description: deRegReason.trim(),
-                        }),
-                      });
-                      if (res.ok) {
-                        showToast("✓ Floor de-registration request submitted to Admin for approval!");
-                        setDeRegModalOpen(false);
-                        setDeRegReason("");
-                        setDeRegFloor("");
-                      } else {
-                        showToast("Failed to submit change request. Please try again.", "error");
-                      }
-                    } catch (err) {
-                      showToast("Network error submitting change request.", "error");
-                    } finally {
-                      setDeRegLoading(false);
-                    }
-                  }}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                >
-                  {deRegLoading ? <Loader2 size={13} className="animate-spin" /> : <Shield size={13} />}
-                  <span>Submit for Admin Approval</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ──── SUBSCRIPTION REQUIRED MODAL (§20 & Portfolio Area Floor Rule) ──── */}
         {subscriptionGateModalOpen && (() => {

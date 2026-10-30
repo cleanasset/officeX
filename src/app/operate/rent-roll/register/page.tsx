@@ -489,7 +489,7 @@ export default function RentRollRegisterPage() {
               className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Plus size={15} />
-              <span>+ Create Contract</span>
+              <span>Create Contract</span>
             </button>
 
             <button

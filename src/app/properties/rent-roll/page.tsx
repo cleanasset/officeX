@@ -762,13 +762,17 @@ export default function RentRollRegisterPage() {
                     <span className="font-bold text-slate-800 text-sm">Your Rent Roll is Empty</span>
                     <span className="text-xs text-slate-400 max-w-xs">No active leases or data in your portfolio. Get started by onboarding a property or creating your first contract.</span>
                     <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                      <Link
-                        href="/onboarding"
-                        className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHierarchyTab("property");
+                          setMasterDataOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
                       >
                         <Building2 size={13} />
-                        <span>Onboard Property</span>
-                      </Link>
+                        <span>Register Property</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -777,7 +781,7 @@ export default function RentRollRegisterPage() {
                         }}
                         className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
                       >
-                        + New Contract
+                        New Contract
                       </button>
                     </div>
                   </div>
@@ -958,13 +962,17 @@ export default function RentRollRegisterPage() {
                               No active contracts or units in this workspace. Set up your property or create your first lease deed to start tracking collections and escalations.
                             </span>
                             <div className="flex items-center gap-2.5 mt-3">
-                              <Link
-                                href="/onboarding"
-                                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5"
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHierarchyTab("property");
+                                  setMasterDataOpen(true);
+                                }}
+                                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
                               >
                                 <Building2 size={14} />
-                                <span>Add First Property</span>
-                              </Link>
+                                <span>Register Property</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -974,7 +982,7 @@ export default function RentRollRegisterPage() {
                                 className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
                               >
                                 <Plus size={14} />
-                                <span>+ New Contract</span>
+                                <span>New Contract</span>
                               </button>
                               <button
                                 type="button"

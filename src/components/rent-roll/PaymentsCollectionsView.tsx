@@ -572,7 +572,7 @@ export default function PaymentsCollectionsView({
               <div className="text-center py-16 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-500">
                 <CreditCard className="w-8 h-8 mx-auto text-slate-400 mb-2" />
                 <p className="text-sm font-semibold">No payments recorded yet</p>
-                <p className="text-xs text-slate-400 mt-1">Click "+ Record Payment" above to log a bank transfer, cheque, UPI, or cash receipt.</p>
+                <p className="text-xs text-slate-400 mt-1">Click "Record Payment" above to log a bank transfer, cheque, UPI, or cash receipt.</p>
               </div>
             ) : (
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">

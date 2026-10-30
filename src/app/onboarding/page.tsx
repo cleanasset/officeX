@@ -16,6 +16,8 @@ function OnboardingContent() {
       const hasAddedProperty =
         localStorage.getItem("officex_onboarding_completed") === "1" ||
         localStorage.getItem("officex_rentroll_onboarded") === "true" ||
+        localStorage.getItem("officex_subscription") === "active" ||
+        document.cookie.includes("officex_subscription=active") ||
         Boolean(localStorage.getItem("officex_active_property")) ||
         Boolean(localStorage.getItem("officex_property_name")) ||
         Boolean(localStorage.getItem("officex_onboarded_property_details")) ||

@@ -231,7 +231,7 @@ export default function SpaceAndBuildingRegistryPage() {
                 className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
-                <span>+ Register Property</span>
+                <span>Register Property</span>
               </button>
               <button
                 onClick={() => {
@@ -331,7 +331,7 @@ export default function SpaceAndBuildingRegistryPage() {
                       className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
                     >
                       <Plus size={15} />
-                      <span>+ Register Property Now</span>
+                      <span>Register Property Now</span>
                     </button>
                   </div>
                 </div>

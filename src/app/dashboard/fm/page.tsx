@@ -266,7 +266,7 @@ export default function FacilityManagerDashboardPage() {
               onClick={() => setMeterModalOpen(true)}
               className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <span>+ Log Meter Reading</span>
+              <span>Log Meter Reading</span>
             </button>
             <Link
               href="/properties/rent-roll?tab=cam-pools"

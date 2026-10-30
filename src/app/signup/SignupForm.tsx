@@ -389,10 +389,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
           }
-          setSuccessMsg("Google account verified! Launching your Setup Wizard...");
+          setSuccessMsg("Google account verified! Redirecting to Rent Roll...");
           setTimeout(() => {
             setSuccessMsg(null);
-            router.push("/onboarding?context=rent-roll");
+            router.push(initialRedirect || "/properties/rent-roll");
           }, 400);
           return;
         }
@@ -566,10 +566,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      setSuccessMsg("Contact verified! Launching your Workspace Setup Wizard...");
+      setSuccessMsg("Contact verified! Redirecting to Rent Roll...");
       setTimeout(() => {
         setSuccessMsg(null);
-        router.push(`/onboarding?context=rent-roll&redirect=${encodeURIComponent(initialRedirect || "/properties/rent-roll")}`);
+        router.push(initialRedirect || "/properties/rent-roll");
       }, 500);
     } catch (err: any) {
       console.error("OTP error:", err);
@@ -707,13 +707,12 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    setSuccessMsg(isRentRoll ? "Account created! Launching your Setup Wizard..." : "Account created! Launching Role-Based Onboarding Suite...");
+    setSuccessMsg(isRentRoll ? "Account created! Redirecting to Rent Roll..." : "Account created! Launching your workspace...");
     setTimeout(() => {
       if (isRentRoll) {
-        router.push("/onboarding?context=rent-roll");
+        router.push(initialRedirect || "/properties/rent-roll");
       } else {
-        const roleParam = selectedRole === "owner" ? "owner" : selectedRole === "broker" ? "broker" : selectedRole === "vendor" ? "vendor" : "tenant";
-        router.push(`/onboarding?role=${encodeURIComponent(roleParam)}`);
+        router.push(workspaceUrl || "/dashboard/owner");
       }
     }, 800);
   };
