@@ -247,6 +247,7 @@ export default function PropertyHierarchyModal({
   const [copiedManagerInvite, setCopiedManagerInvite] = useState(false);
   const [selectedTenantBuilding, setSelectedTenantBuilding] = useState<string>("");
   const [selectedTenantFloor, setSelectedTenantFloor] = useState<string>("");
+  const [selectedTenantFloors, setSelectedTenantFloors] = useState<string[]>([]);
   const [selectedTenantSuites, setSelectedTenantSuites] = useState<string[]>([]);
   const [selectedContractFloor, setSelectedContractFloor] = useState<string>("");
 
@@ -1472,6 +1473,41 @@ export default function PropertyHierarchyModal({
       showToast("Please enter a valid area in Sq.Ft", "error");
       return;
     }
+
+    // Floor and Building Area Capacity Check
+    const rawFloorNum = Number(spaceForm.floorNumber || "0");
+    const targetFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === rawFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(propTotalArea / allFloorNumbers.length) : propTotalArea);
+    if (targetFloorPlanned > 0) {
+      const alreadyAllocatedOnFloor = displaySpaces
+        .filter((s) => {
+          const sAny = s as any;
+          if (sAny.floorNumber !== undefined && sAny.floorNumber !== null && sAny.floorNumber !== "") return Number(sAny.floorNumber) === rawFloorNum;
+          const flStr = String(s.floorName || s.name || "");
+          if (/ground|bay|shed/i.test(flStr) || flStr === "Floor 0") return rawFloorNum === 0;
+          const match = flStr.match(/floor\s*(\d+)/i) || flStr.match(/f(\d+)/i);
+          return match && match[1] ? parseInt(match[1], 10) === rawFloorNum : false;
+        })
+        .reduce((acc, s) => acc + (s.area || 0), 0);
+      const remainingOnFloor = Math.max(0, targetFloorPlanned - alreadyAllocatedOnFloor);
+      if (enteredArea > remainingOnFloor) {
+        showToast(
+          `Cannot add unit: ${enteredArea.toLocaleString()} Sq.Ft exceeds remaining floor space (${remainingOnFloor.toLocaleString()} Sq.Ft available on this floor).`,
+          "error"
+        );
+        return;
+      }
+    }
+    if (propTotalArea > 0) {
+      const alreadyAllocatedBuilding = displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+      const remainingBuilding = Math.max(0, propTotalArea - alreadyAllocatedBuilding);
+      if (enteredArea > remainingBuilding) {
+        showToast(
+          `Cannot add unit: ${enteredArea.toLocaleString()} Sq.Ft exceeds remaining building area (${remainingBuilding.toLocaleString()} Sq.Ft available out of ${propTotalArea.toLocaleString()} Sq.Ft total).`,
+          "error"
+        );
+        return;
+      }
+    }
     const bldgId = spaceForm.buildingId || buildingsList[0]?.id;
     if (!bldgId) {
       showToast("Please select or add a building first", "error");
@@ -1797,35 +1833,50 @@ export default function PropertyHierarchyModal({
     }
   };
 
-  // Helper memo: Spaces on the selected floor for Step 4 Tenant Demised Premises
+  // Helper memo: Spaces on the selected floor(s) for Step 3 Tenant Demised Premises
   const floorSpacesForTenant = React.useMemo(() => {
-    if (!selectedTenantFloor) return [];
+    const isAll = selectedTenantFloor === "all" || selectedTenantFloor === "all_floors";
     const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id || buildingsList[0]?.id;
+
+    if (!selectedTenantFloor && selectedTenantFloors.length === 0) return [];
+
+    const activeFloors: string[] = isAll
+      ? buildingFloorNumbersForTenant.map(String)
+      : selectedTenantFloors.length > 0
+      ? selectedTenantFloors
+      : selectedTenantFloor ? [selectedTenantFloor] : [];
+
     return spacesList.filter((s) => {
       if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
         return false;
       }
+      if (isAll) return true;
+
       const flStr = (s.floorName || "").toLowerCase().trim();
       const nameStr = s.name.toLowerCase().trim();
-      const targetFl = selectedTenantFloor.toLowerCase().trim();
-      if (targetFl === "0") {
+
+      return activeFloors.some((targetFl) => {
+        const normFl = targetFl.toLowerCase().trim();
+        if (normFl === "0") {
+          return (
+            flStr === "0" ||
+            flStr.includes("ground") ||
+            flStr === "g" ||
+            nameStr.includes("ground") ||
+            nameStr.includes("bay") ||
+            nameStr.includes("shed")
+          );
+        }
         return (
-          flStr === "0" ||
-          flStr.includes("ground") ||
-          flStr === "g" ||
-          nameStr.includes("ground") ||
-          nameStr.includes("bay") ||
-          nameStr.includes("shed")
+          flStr === `floor ${normFl}` ||
+          flStr === `f${normFl}` ||
+          flStr === normFl ||
+          flStr === formatFloorName(Number(normFl)).toLowerCase() ||
+          (!flStr && (nameStr.startsWith(`floor ${normFl}`) || nameStr.startsWith(`f${normFl}`)))
         );
-      }
-      return (
-        flStr === `floor ${targetFl}` ||
-        flStr === `f${targetFl}` ||
-        flStr === targetFl ||
-        (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
-      );
+      });
     });
-  }, [selectedTenantFloor, selectedTenantBuilding, displayBuildings, buildingsList, spacesList]);
+  }, [selectedTenantFloor, selectedTenantFloors, selectedTenantBuilding, displayBuildings, buildingsList, spacesList, buildingFloorNumbersForTenant]);
 
   // Auto-select Ground Level for Tenant when property has no upper floors (0 floors)
   React.useEffect(() => {
@@ -1949,7 +2000,7 @@ export default function PropertyHierarchyModal({
           link: inviteUrl,
         });
 
-        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled! Portal invite link generated.`);
+        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled! Now complete Step 4 (Lease Contract) below to activate on the Rent Roll table.`);
         await loadHierarchyDropdowns();
 
         // Mark all selected suites as occupied in database
@@ -1965,16 +2016,23 @@ export default function PropertyHierarchyModal({
 
         // Auto-select newly created tenant and demised suites in Step 5 (Contract)
         if (data.data?.id) {
+          const effectiveArea =
+            totalTenantSelectedArea > 0
+              ? totalTenantSelectedArea
+              : selectedTenantFloor === "all"
+              ? (Number(propForm.areaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0))
+              : 0;
+
           setContractForm((prev) => ({
             ...prev,
             occupantId: data.data.id,
             spaceId: selectedTenantSuites[0] || prev.spaceId,
-            areaSqft: totalTenantSelectedArea > 0 ? String(totalTenantSelectedArea) : prev.areaSqft,
+            areaSqft: effectiveArea > 0 ? String(effectiveArea) : prev.areaSqft,
           }));
         }
 
         if (selectedTenantFloor) {
-          setSelectedContractFloor(selectedTenantFloor);
+          setSelectedContractFloor(selectedTenantFloor === "all" || selectedTenantFloor === "multiple" ? "" : selectedTenantFloor);
         }
 
         // Reset tenant form
@@ -2709,6 +2767,7 @@ export default function PropertyHierarchyModal({
         body: JSON.stringify({
           occupant_id: contractForm.occupantId,
           space_id: contractForm.spaceId,
+          space_ids: selectedTenantSuites.length > 0 ? selectedTenantSuites : [contractForm.spaceId].filter(Boolean),
           contract_code: `LEAS-${Date.now().toString().slice(-5)}`,
           start_date: contractForm.startDate,
           end_date: contractForm.endDate,
@@ -4119,6 +4178,10 @@ export default function PropertyHierarchyModal({
             };
 
             const selectedFloorNum = Number(spaceForm.floorNumber || "0");
+            const currentFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === selectedFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : buildingTotalArea);
+            const currentFloorAllocated = displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum).reduce((acc, s) => acc + (s.area || 0), 0);
+            const currentFloorRemaining = Math.max(0, currentFloorPlanned - currentFloorAllocated);
+            const effectiveRemaining = currentFloorPlanned > 0 ? Math.min(currentFloorRemaining, remainingBuildingArea) : remainingBuildingArea;
 
             return (
               <div className="space-y-4">
@@ -4218,6 +4281,7 @@ export default function PropertyHierarchyModal({
                     {allFloorNumbers.map((fl) => {
                       const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
                       const unitsOnFloor = displaySpaces.filter((s) => getFloorNum(s) === fl);
+                      const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : 0);
                       const isSelected = activeStudioFloor === String(fl);
                       return (
                         <button
@@ -4234,6 +4298,11 @@ export default function PropertyHierarchyModal({
                           }`}
                         >
                           <span>{flLabel}</span>
+                          {flPlanned > 0 && (
+                            <span className="text-[10px] font-mono opacity-80 font-normal">
+                              ({flPlanned.toLocaleString()} Sq.Ft)
+                            </span>
+                          )}
                           <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                             isSelected ? "bg-white/20 text-white" : "bg-teal-50 text-teal-800 border border-teal-200"
                           }`}>
@@ -4323,13 +4392,18 @@ export default function PropertyHierarchyModal({
 
                 {/* Selected Floor Context Banner */}
                 <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-black uppercase text-teal-800 tracking-wider">
                       Selected Floor:
                     </span>
                     <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
                       {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
                     </span>
+                    {currentFloorPlanned > 0 && (
+                      <span className="text-xs font-bold text-teal-900 bg-teal-100/70 px-2 py-0.5 rounded-md border border-teal-200 font-mono">
+                        Floor Capacity: {currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft ({currentFloorRemaining.toLocaleString()} Sq.Ft Available)
+                      </span>
+                    )}
                     <span className="text-[11px] text-slate-500 font-medium">
                       ({displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum).length} unit(s) configured)
                     </span>
@@ -4418,23 +4492,69 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* 4. Area (Sq.Ft) */}
+                      {/* 4. Area (Sq.Ft) with Floor-Level Restriction */}
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">
+                            Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                          </label>
+                          {currentFloorPlanned > 0 && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${
+                              effectiveRemaining === 0
+                                ? "bg-amber-50 text-amber-800 border-amber-300"
+                                : "bg-teal-50 text-teal-700 border-teal-200"
+                            }`}>
+                              {effectiveRemaining === 0 ? "Floor Full: 0 Sq.Ft Avail" : `Floor Avail: ${effectiveRemaining.toLocaleString()} Sq.Ft`}
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           min="1"
+                          max={effectiveRemaining > 0 ? effectiveRemaining : undefined}
                           required
-                          placeholder="e.g. 5000"
+                          placeholder={effectiveRemaining > 0 ? `Max: ${effectiveRemaining.toLocaleString()} Sq.Ft` : "Floor capacity full"}
                           value={spaceForm.areaSqft}
                           onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900"
+                          className={`w-full px-3 py-2 rounded-xl border font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900 ${
+                            (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) ||
+                            (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)
+                              ? "border-rose-400 bg-rose-50/40 text-rose-900"
+                              : "border-slate-300"
+                          }`}
                         />
-                        <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                          Size of this unit/suite in Sq.Ft (e.g. 5,000)
-                        </span>
+                        {currentFloorPlanned > 0 ? (
+                          (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) ||
+                          (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0) ? (
+                            <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                              <span className="text-rose-600 font-bold">
+                                ⛔ Exceeds floor limit ({effectiveRemaining.toLocaleString()} Sq.Ft available on this floor).
+                              </span>
+                              {effectiveRemaining === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const defaultSpace = displaySpaces.find((s) => getFloorNum(s) === selectedFloorNum) || displaySpaces[0];
+                                    if (defaultSpace) {
+                                      handleDeleteSpace(defaultSpace.id, defaultSpace.name);
+                                    }
+                                  }}
+                                  className="text-[11px] text-rose-700 underline hover:text-rose-900 font-bold cursor-pointer shrink-0"
+                                >
+                                  Delete unit above to subdivide
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                              Floor capacity: <strong className="font-mono text-slate-800">{currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft</strong> ({effectiveRemaining.toLocaleString()} Sq.Ft available)
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                            Size of this unit/suite in Sq.Ft (e.g. 5,000)
+                          </span>
+                        )}
                       </div>
 
                       {/* 5. Unit Type */}
@@ -4525,7 +4645,7 @@ export default function PropertyHierarchyModal({
                       <button
                         type="button"
                         onClick={(e) => handleSaveSpace(e, false)}
-                        disabled={loading}
+                        disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
                         className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
@@ -4533,7 +4653,7 @@ export default function PropertyHierarchyModal({
                       </button>
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
                         className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
@@ -5448,8 +5568,22 @@ export default function PropertyHierarchyModal({
                       value={selectedTenantFloor}
                       onChange={(e) => {
                         const fl = e.target.value;
+                        if (fl === "all") {
+                          setSelectedTenantFloor("all");
+                          setSelectedContractFloor("all");
+                          setSelectedTenantFloors(buildingFloorNumbersForTenant.map(String));
+                          const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                          const allSpaces = spacesList.filter((s) => {
+                            if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
+                            return true;
+                          });
+                          setSelectedTenantSuites(allSpaces.map((s) => s.id));
+                          return;
+                        }
+
                         setSelectedTenantFloor(fl);
                         setSelectedContractFloor(fl);
+                        setSelectedTenantFloors(fl ? [fl] : []);
                         const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
                         // Auto-select suites on this floor belonging to this specific tower
                         const matchingSpaces = spacesList.filter((s) => {
@@ -5484,40 +5618,197 @@ export default function PropertyHierarchyModal({
                       }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
                     >
-                      <option value="">
-                        -- Select Demised Floor {displayBuildings.length > 1 ? `in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}` : ""} --
-                      </option>
-                      {buildingFloorNumbersForTenant.map((flNum) => {
-                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
-                        const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
-                        const spacesOnThisFloor = spacesList.filter((s) => {
-                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
-                          const flStr = (s.floorName || "").toLowerCase();
-                          return (
-                            flStr === `floor ${flNum}` ||
-                            flStr === `f${flNum}` ||
-                            flStr === String(flNum) ||
-                            flStr === formatFloorName(flNum).toLowerCase() ||
-                            (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
-                          );
-                        });
-                        const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
-                        const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                      {(() => {
+                        const curBldg = buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id));
+                        const totalBuildingTenantArea = Number(curBldg?.totalAreaSqft) || Number(propForm.areaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0);
                         return (
-                          <option key={flNum} value={String(flNum)}>
-                            {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel} {flArea > 0 ? `(${flArea.toLocaleString()} Sq.Ft)` : ""}
-                          </option>
+                          <>
+                            <option value="">
+                              -- Select Demised Floor {displayBuildings.length > 1 ? `in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}` : ""} --
+                            </option>
+                            <option value="all">
+                              🏢 Entire Building / All Floors ({totalBuildingTenantArea.toLocaleString()} Sq.Ft Total)
+                            </option>
+                            {buildingFloorNumbersForTenant.map((flNum) => {
+                              const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                              const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
+                              const spacesOnThisFloor = spacesList.filter((s) => {
+                                if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
+                                const flStr = (s.floorName || "").toLowerCase();
+                                return (
+                                  flStr === `floor ${flNum}` ||
+                                  flStr === `f${flNum}` ||
+                                  flStr === String(flNum) ||
+                                  flStr === formatFloorName(flNum).toLowerCase() ||
+                                  (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
+                                );
+                              });
+                              const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
+                              const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                              return (
+                                <option key={flNum} value={String(flNum)}>
+                                  {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel} {flArea > 0 ? `(${flArea.toLocaleString()} Sq.Ft)` : ""}
+                                </option>
+                              );
+                            })}
+                          </>
                         );
-                      })}
+                      })()}
                     </select>
+
+                    {/* Multi-Floor & Entire Building Quick Selectors */}
+                    <div className="pt-2 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                        <span>Select Demised Premises (Choose Entire Building or Click Multiple Floors):</span>
+                        {(selectedTenantFloors.length > 0 || selectedTenantFloor) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTenantFloor("");
+                              setSelectedTenantFloors([]);
+                              setSelectedTenantSuites([]);
+                            }}
+                            className="text-[10px] text-rose-600 hover:text-rose-800 underline font-bold cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const isAllActive = selectedTenantFloor === "all";
+                            if (isAllActive) {
+                              setSelectedTenantFloor("");
+                              setSelectedTenantFloors([]);
+                              setSelectedTenantSuites([]);
+                            } else {
+                              setSelectedTenantFloor("all");
+                              setSelectedContractFloor("all");
+                              setSelectedTenantFloors(buildingFloorNumbersForTenant.map(String));
+                              const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                              const allSpaces = spacesList.filter((s) => {
+                                if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
+                                return true;
+                              });
+                              setSelectedTenantSuites(allSpaces.map((s) => s.id));
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            selectedTenantFloor === "all"
+                              ? "bg-[#0F8B7D] text-white shadow-xs"
+                              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] font-bold ${
+                              selectedTenantFloor === "all" ? "bg-white text-teal-800" : "border border-slate-300"
+                            }`}
+                          >
+                            {selectedTenantFloor === "all" ? "✓" : ""}
+                          </div>
+                          <span>🏢 Entire Building (All Floors)</span>
+                        </button>
+
+                        {buildingFloorNumbersForTenant.map((flNum) => {
+                          const flStr = String(flNum);
+                          const isChecked = selectedTenantFloor === "all" || selectedTenantFloors.includes(flStr) || selectedTenantFloor === flStr;
+                          const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                          const flSpaces = spacesList.filter((s) => {
+                            const curBId = selectedTenantBuilding || displayBuildings[0]?.id;
+                            if (displayBuildings.length > 1 && curBId && s.buildingId && s.buildingId !== curBId) return false;
+                            const flS = (s.floorName || "").toLowerCase();
+                            return (
+                              flS === `floor ${flNum}` ||
+                              flS === `f${flNum}` ||
+                              flS === String(flNum) ||
+                              flS === formatFloorName(flNum).toLowerCase() ||
+                              (flNum === 0 && (flS.includes("ground") || flS === "g"))
+                            );
+                          });
+                          const flArea = flSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+
+                          return (
+                            <button
+                              key={flNum}
+                              type="button"
+                              onClick={() => {
+                                let nextFloors: string[];
+                                if (selectedTenantFloor === "all") {
+                                  nextFloors = buildingFloorNumbersForTenant.map(String).filter((f) => f !== flStr);
+                                } else if (selectedTenantFloors.includes(flStr) || selectedTenantFloor === flStr) {
+                                  nextFloors = selectedTenantFloors.filter((f) => f !== flStr);
+                                  if (selectedTenantFloor === flStr && nextFloors.length === 0) {
+                                    nextFloors = [];
+                                  }
+                                } else {
+                                  nextFloors = [...selectedTenantFloors.filter((f) => f !== "all"), flStr];
+                                }
+
+                                if (nextFloors.length === buildingFloorNumbersForTenant.length) {
+                                  setSelectedTenantFloor("all");
+                                } else if (nextFloors.length === 1) {
+                                  setSelectedTenantFloor(nextFloors[0]);
+                                } else if (nextFloors.length > 1) {
+                                  setSelectedTenantFloor("multiple");
+                                } else {
+                                  setSelectedTenantFloor("");
+                                }
+                                setSelectedTenantFloors(nextFloors);
+
+                                // Select suites for these floors
+                                const curBId = selectedTenantBuilding || displayBuildings[0]?.id;
+                                const matching = spacesList.filter((s) => {
+                                  if (displayBuildings.length > 1 && curBId && s.buildingId && s.buildingId !== curBId) return false;
+                                  const sFlStr = (s.floorName || "").toLowerCase();
+                                  return nextFloors.some((nf) => {
+                                    const nfNum = Number(nf);
+                                    return (
+                                      sFlStr === `floor ${nf}` ||
+                                      sFlStr === `f${nf}` ||
+                                      sFlStr === nf ||
+                                      sFlStr === formatFloorName(nfNum).toLowerCase() ||
+                                      (nfNum === 0 && (sFlStr.includes("ground") || sFlStr === "g"))
+                                    );
+                                  });
+                                });
+                                setSelectedTenantSuites(matching.map((s) => s.id));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                isChecked
+                                  ? "bg-teal-700 text-white shadow-2xs"
+                                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                              }`}
+                            >
+                              <div
+                                className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] font-bold ${
+                                  isChecked ? "bg-white text-teal-800" : "border border-slate-300"
+                                }`}
+                              >
+                                {isChecked ? "✓" : ""}
+                              </div>
+                              <span>{flLabel}</span>
+                              {flArea > 0 && <span className="text-[10px] font-mono opacity-80">({flArea.toLocaleString()} Sq.Ft)</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
 
                   {/* 2. Which Suites / Units Selection */}
-                  {selectedTenantFloor && (
+                  {(selectedTenantFloor || selectedTenantFloors.length > 0) && (
                     <div className="space-y-2 pt-1 animate-in fade-in">
                       <div className="flex items-center justify-between text-xs">
                         <label className="font-bold text-slate-700">
-                          {displayBuildings.length > 1 ? "3. Which Suite(s) / Unit(s)" : "2. Which Suite(s) / Unit(s)"} does the tenant occupy on Floor {selectedTenantFloor}? *
+                          {displayBuildings.length > 1 ? "3. Which Suite(s) / Unit(s)" : "2. Which Suite(s) / Unit(s)"} does the tenant occupy
+                          {selectedTenantFloor === "all"
+                            ? " (Entire Building - All Floors)"
+                            : selectedTenantFloor === "multiple"
+                            ? " across Selected Floors"
+                            : ` on Floor ${selectedTenantFloor}`}? *
                         </label>
                         {floorSpacesForTenant.length > 1 && (
                           <button
@@ -5533,6 +5824,10 @@ export default function PropertyHierarchyModal({
                           >
                             {selectedTenantSuites.length === floorSpacesForTenant.length
                               ? "Deselect All"
+                              : selectedTenantFloor === "all"
+                              ? "Select Entire Building (All Units)"
+                              : selectedTenantFloor === "multiple"
+                              ? "Select All Units (Selected Floors)"
                               : "Select Entire Floor (All Units)"}
                           </button>
                         )}
@@ -5568,7 +5863,18 @@ export default function PropertyHierarchyModal({
                                     ✓
                                   </div>
                                   <div className="truncate">
-                                    <span className="block truncate text-xs">{sp.name}</span>
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <span className="block truncate text-xs">{sp.name}</span>
+                                      {sp.floorName && (
+                                        <span
+                                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                                            isSelected ? "bg-white/20 text-white" : "bg-teal-50 text-teal-800 border border-teal-200"
+                                          }`}
+                                        >
+                                          {sp.floorName}
+                                        </span>
+                                      )}
+                                    </div>
                                     <span
                                       className={`text-[10px] block font-normal ${
                                         isSelected ? "text-teal-100" : "text-slate-400"
@@ -5591,8 +5897,9 @@ export default function PropertyHierarchyModal({
                         </div>
                       ) : (
                         <div className="p-3 bg-white/90 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
-                          No individual units subdivided on Floor {selectedTenantFloor} yet.
-                          The tenant will be assigned to <strong>Floor {selectedTenantFloor} (Full Floor)</strong>.
+                          {selectedTenantFloor === "all"
+                            ? "All floors in the building will be assigned to this tenant."
+                            : `No individual units subdivided on Floor ${selectedTenantFloor} yet. The tenant will be assigned to Floor ${selectedTenantFloor} (Full Floor).`}
                         </div>
                       )}
 
@@ -5604,6 +5911,8 @@ export default function PropertyHierarchyModal({
                         <span className="font-black text-[#0F8B7D] font-mono text-sm">
                           {totalTenantSelectedArea > 0
                             ? `${totalTenantSelectedArea.toLocaleString()} Sq.Ft`
+                            : selectedTenantFloor === "all"
+                            ? `${(Number(propForm.areaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0)).toLocaleString()} Sq.Ft (Entire Building)`
                             : (floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft
                               ? `${Number(floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft).toLocaleString()} Sq.Ft`
                               : "Whole Floor")}
@@ -5658,11 +5967,11 @@ export default function PropertyHierarchyModal({
                         : "Step 4: Commercial Lease Contract"}
                     </span>
                     <span className="text-[10px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-wider">
-                      Compulsory *
+                      Compulsory to Activate on Rent Roll *
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Link tenant to demised commercial space, configure rent calculation basis, CAM, parking, and legal covenants.
+                    Save the lease contract terms (start date, end date, and monthly rent) to link this tenant to the space and replace &quot;(Vacant Space)&quot; on the Rent Roll table.
                   </p>
                 </div>
               </div>
@@ -6011,7 +6320,7 @@ export default function PropertyHierarchyModal({
                         <label className="font-bold text-slate-700">
                           Demised Space / Unit <span className="text-rose-500">*</span>
                         </label>
-                        {selectedContractFloor && (
+                        {selectedContractFloor && selectedContractFloor !== "all" && selectedContractFloor !== "multiple" && (
                           <span className="text-[10px] text-teal-700 font-semibold">
                             Floor {selectedContractFloor === "0" ? "Ground" : selectedContractFloor}
                           </span>
@@ -6023,7 +6332,7 @@ export default function PropertyHierarchyModal({
                           if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
                             return false;
                           }
-                          if (!selectedContractFloor) return true;
+                          if (!selectedContractFloor || selectedContractFloor === "all" || selectedContractFloor === "multiple") return true;
                           const flStr = (s.floorName || "").toLowerCase().trim();
                           const nameStr = s.name.toLowerCase().trim();
                           const targetFl = selectedContractFloor.toLowerCase().trim();

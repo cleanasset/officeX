@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
   contract,
+  contractSpace,
   contractCharge,
   occupant,
   space,
@@ -91,6 +92,25 @@ export async function GET(req: Request) {
       .leftJoin(property, eq(building.property_id, property.id))
       .where(and(...contractConditions));
 
+    // Multi-space contract linking from contract_space
+    const multiSpaces = await db
+      .select({
+        contractId: contractSpace.contract_id,
+        spaceId: contractSpace.space_id,
+      })
+      .from(contractSpace)
+      .where(eq(contractSpace.org_id, auth.orgId));
+
+    const contractMultiSpaceIdsMap: Record<string, string[]> = {};
+    for (const ms of multiSpaces) {
+      if (!contractMultiSpaceIdsMap[ms.contractId]) {
+        contractMultiSpaceIdsMap[ms.contractId] = [];
+      }
+      contractMultiSpaceIdsMap[ms.contractId].push(ms.spaceId);
+    }
+
+    const spaceMap = new Map(spacesList.map((s) => [s.space.id, s]));
+
     // 3. Fetch active charges for contracts (Base Rent vs CAM vs Utilities)
     const allCharges = await db
       .select()
@@ -113,7 +133,9 @@ export async function GET(req: Request) {
 
       if (ch.component === "base_rent" || ch.invoice_group === "rent") {
         contractBaseRentMap[ch.contract_id] = (contractBaseRentMap[ch.contract_id] || 0) + monthly;
-        contractRateMap[ch.contract_id] = rate;
+        if (ch.calc_basis === "per_area" || (!ch.calc_basis && rate < 1000)) {
+          contractRateMap[ch.contract_id] = rate;
+        }
       } else if (ch.component === "cam" || ch.invoice_group === "cam") {
         contractCamMap[ch.contract_id] = (contractCamMap[ch.contract_id] || 0) + monthly;
       }
@@ -218,16 +240,21 @@ export async function GET(req: Request) {
       }
 
       if (include) {
-        if (c.contract.space_id) {
-          occupiedSpaceIds.add(c.contract.space_id);
+        const rawLinked = [c.contract.space_id, ...(contractMultiSpaceIdsMap[c.contract.id] || [])].filter(Boolean) as string[];
+        const linkedSpaceIds = Array.from(new Set(rawLinked));
+
+        for (const spId of linkedSpaceIds) {
+          occupiedSpaceIds.add(spId);
         }
 
-        const areaSqft = c.space?.chargeable_area_sqft ? parseFloat(c.space.chargeable_area_sqft) : 0;
-        const carpetAreaSqft = c.space?.carpet_area_sqft ? parseFloat(c.space.carpet_area_sqft) : Math.round(areaSqft * 0.75);
+        const primaryArea = c.space?.chargeable_area_sqft ? parseFloat(c.space.chargeable_area_sqft) : 0;
+        const totalContractArea = linkedSpaceIds.reduce((sum, spId) => {
+          const spObj = spaceMap.get(spId);
+          return sum + (spObj?.space.chargeable_area_sqft ? parseFloat(spObj.space.chargeable_area_sqft) : 0);
+        }, 0) || primaryArea;
+
         const monthlyBase = contractBaseRentMap[c.contract.id] || parseFloat((c.contract as any)?.base_rent_rate || "0") || 0;
-        const camMonthly = contractCamMap[c.contract.id] || Math.round(areaSqft * 25);
-        const grossMonthly = monthlyBase + camMonthly;
-        const currentRate = contractRateMap[c.contract.id] || (areaSqft > 0 ? monthlyBase / areaSqft : 0);
+        const currentRate = contractRateMap[c.contract.id] || (totalContractArea > 0 ? monthlyBase / totalContractArea : 0);
 
         // Days to expiry calculation
         const endDateObj = new Date(end);
@@ -260,66 +287,85 @@ export async function GET(req: Request) {
         const depHeld = parseFloat(c.contract.deposit_amount_inr || "0");
         const depShortfall = Math.max(0, depRequired - depHeld);
 
-        rows.push({
-          type: "contract",
-          row_class:
-            effectiveStatus === "holding_over"
-              ? "row_holding_over_red"
-              : effectiveStatus === "notice_served"
-              ? "row_notice_amber"
-              : effectiveStatus === "future"
-              ? "row_future_blue"
-              : "row_normal",
-          id: c.contract.id,
-          contract_code: c.contract.contract_code,
-          space_id: c.contract.space_id,
-          space_code: c.space?.space_code || "—",
-          space_name: c.space?.space_name || "—",
-          floor: (c.space as any)?.floor ?? 1,
-          space_type: (c.space as any)?.space_type || "Commercial Office",
-          property_name: c.property?.property_name || "—",
-          building_name: c.building?.building_name || "—",
-          occupant_id: c.contract.occupant_id,
-          occupant_name: c.occupant?.occupant_name || "—",
-          occupant_code: c.occupant?.occupant_code || "—",
-          occupant_trade_name: (c.occupant as any)?.trade_name || c.occupant?.occupant_name || "—",
-          industry: (c.occupant as any)?.industry || "Information Technology",
-          is_critical: (c.occupant as any)?.is_critical ?? false,
-          area_sqft: areaSqft,
-          carpet_area_sqft: carpetAreaSqft,
-          seats: c.building?.total_seats || 0,
-          billing_model: (c.contract as any)?.billing_model || "area",
-          contract_type: (c.contract as any)?.contract_type || "lease_deed",
-          start_date: c.contract.start_date,
-          end_date: c.contract.end_date,
-          expiry_date: c.contract.end_date,
-          days_to_expiry: daysToExpiry,
-          lock_in_end_date: lockInEnd,
-          notice_period_months: noticeMonths,
-          status: effectiveStatus,
-          approval_status: c.contract.approval_status || "approved",
-          escalation_summary: escData?.summary || "15% / 36m",
-          next_escalation_date: escData?.date || null,
-          next_escalation_uplift_inr: escData?.uplift || 0,
-          data_quality_status: (c.contract as any)?.data_quality_status || "verified",
-          renewal_stage: (c.contract as any)?.renewal_stage || (daysToExpiry < 90 ? "Discussion" : "—"),
+        const spacesToEmit = linkedSpaceIds.length > 0 ? linkedSpaceIds : [c.contract.space_id].filter(Boolean) as string[];
 
-          // FINANCIAL FIELDS — ROLE MASKING APPLIED HERE (§3.3 & §7.3)
-          is_financial_masked: isLeasing,
-          gstin: isLeasing ? null : (c.occupant as any)?.gst_number || "27AAAAA0000A1Z5",
-          current_rate_per_sqft: isLeasing ? null : Math.round(currentRate * 100) / 100,
-          monthly_base_rent: isLeasing ? null : monthlyBase,
-          cam_monthly_inr: isLeasing ? null : camMonthly,
-          gross_monthly_recurring_inr: isLeasing ? null : grossMonthly,
-          deposit_required_amount: isLeasing ? null : depRequired,
-          deposit_held_amount: isLeasing ? null : depHeld,
-          deposit_shortfall: isLeasing ? null : depShortfall,
-          deposit_status: c.contract.deposit_status || "held",
-          outstanding_amount_inr: isLeasing ? null : rawArrears,
-          has_arrears: hasArrears,
-          arrears_status: hasArrears ? "Yes" : "No", // Leasing sees ONLY this boolean indicator
-          aging_bucket: isLeasing ? null : agingBucket,
-        });
+        for (const spId of spacesToEmit) {
+          const spObj = spaceMap.get(spId);
+          const spData = spObj?.space || c.space;
+          const bldgData = spObj?.building || c.building;
+          const propData = spObj?.property || c.property;
+
+          const areaSqft = spData?.chargeable_area_sqft ? parseFloat(spData.chargeable_area_sqft) : primaryArea;
+          const carpetAreaSqft = spData?.carpet_area_sqft ? parseFloat(spData.carpet_area_sqft) : Math.round(areaSqft * 0.75);
+          const allocatedMonthlyBase = spacesToEmit.length > 1
+            ? (currentRate > 0 ? Math.round(areaSqft * currentRate) : Math.round(monthlyBase / spacesToEmit.length))
+            : monthlyBase;
+          const camMonthly = spacesToEmit.length > 1
+            ? Math.round(areaSqft * 25)
+            : (contractCamMap[c.contract.id] || Math.round(areaSqft * 25));
+          const grossMonthly = allocatedMonthlyBase + camMonthly;
+
+          rows.push({
+            type: "contract",
+            row_class:
+              effectiveStatus === "holding_over"
+                ? "row_holding_over_red"
+                : effectiveStatus === "notice_served"
+                ? "row_notice_amber"
+                : effectiveStatus === "future"
+                ? "row_future_blue"
+                : "row_normal",
+            id: spacesToEmit.length > 1 ? `${c.contract.id}-${spId}` : c.contract.id,
+            contract_code: c.contract.contract_code,
+            space_id: spId,
+            space_code: spData?.space_code || "—",
+            space_name: spData?.space_name || "—",
+            floor: (spData as any)?.floor ?? 1,
+            space_type: (spData as any)?.space_type || "Commercial Office",
+            property_name: propData?.property_name || c.property?.property_name || "—",
+            building_name: bldgData?.building_name || c.building?.building_name || "—",
+            occupant_id: c.contract.occupant_id,
+            occupant_name: c.occupant?.occupant_name || "—",
+            occupant_code: c.occupant?.occupant_code || "—",
+            occupant_trade_name: (c.occupant as any)?.trade_name || c.occupant?.occupant_name || "—",
+            industry: (c.occupant as any)?.industry || "Information Technology",
+            is_critical: (c.occupant as any)?.is_critical ?? false,
+            area_sqft: areaSqft,
+            carpet_area_sqft: carpetAreaSqft,
+            seats: bldgData?.total_seats || 0,
+            billing_model: (c.contract as any)?.billing_model || "area",
+            contract_type: (c.contract as any)?.contract_type || "lease_deed",
+            start_date: c.contract.start_date,
+            end_date: c.contract.end_date,
+            expiry_date: c.contract.end_date,
+            days_to_expiry: daysToExpiry,
+            lock_in_end_date: lockInEnd,
+            notice_period_months: noticeMonths,
+            status: effectiveStatus,
+            approval_status: c.contract.approval_status || "approved",
+            escalation_summary: escData?.summary || "15% / 36m",
+            next_escalation_date: escData?.date || null,
+            next_escalation_uplift_inr: escData?.uplift || 0,
+            data_quality_status: (c.contract as any)?.data_quality_status || "verified",
+            renewal_stage: (c.contract as any)?.renewal_stage || (daysToExpiry < 90 ? "Discussion" : "—"),
+
+            // FINANCIAL FIELDS — ROLE MASKING APPLIED HERE (§3.3 & §7.3)
+            is_financial_masked: isLeasing,
+            gstin: isLeasing ? null : (c.occupant as any)?.gst_number || "27AAAAA0000A1Z5",
+            current_rate_per_sqft: isLeasing ? null : Math.round(currentRate * 100) / 100,
+            monthly_base_rent: isLeasing ? null : allocatedMonthlyBase,
+            cam_monthly_inr: isLeasing ? null : camMonthly,
+            gross_monthly_recurring_inr: isLeasing ? null : grossMonthly,
+            deposit_required_amount: isLeasing ? null : depRequired,
+            deposit_held_amount: isLeasing ? null : depHeld,
+            deposit_shortfall: isLeasing ? null : depShortfall,
+            deposit_status: c.contract.deposit_status || "held",
+            outstanding_amount_inr: isLeasing ? null : rawArrears,
+            has_arrears: hasArrears,
+            arrears_status: hasArrears ? "Yes" : "No", // Leasing sees ONLY this boolean indicator
+            aging_bucket: isLeasing ? null : agingBucket,
+          });
+        }
       }
     }
 

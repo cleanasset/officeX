@@ -399,21 +399,34 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Link Space in contract_space
-    if (payload.space_id) {
-      await db.insert(contractSpace).values({
-        org_id: orgId,
-        client_account_id: clientAccountId,
-        contract_id: insertedContract.id,
-        space_id: payload.space_id,
-        created_by: auth.userId,
-        updated_by: auth.userId,
-      });
+    // Link Space(s) in contract_space
+    const allLinkedSpaceIds = new Set<string>();
+    if (payload.space_id) allLinkedSpaceIds.add(payload.space_id);
+    if (Array.isArray(body.space_ids)) {
+      for (const spId of body.space_ids) {
+        if (spId) allLinkedSpaceIds.add(spId);
+      }
+    }
+
+    for (const spId of allLinkedSpaceIds) {
+      try {
+        await db.insert(contractSpace).values({
+          org_id: orgId,
+          client_account_id: clientAccountId,
+          contract_id: insertedContract.id,
+          space_id: spId,
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        });
+      } catch (linkErr) {
+        console.warn(`[contract_space] Could not link space ${spId}:`, linkErr);
+      }
 
       await db
         .update(space)
         .set({ occupancy_status: "occupied" })
-        .where(eq(space.id, payload.space_id));
+        .where(eq(space.id, spId))
+        .catch(() => {});
     }
 
     // Insert Charges & Rent Steps
