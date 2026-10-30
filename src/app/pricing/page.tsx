@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   ArrowRight,
@@ -24,10 +24,21 @@ import EnquiryForm from "@/components/marketing/EnquiryForm";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 
-export default function PricingPage() {
+function PricingPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [slideInOpen, setSlideInOpen] = useState(false);
   const [selectedAudience, setSelectedAudience] = useState<string>("Commercial Property Portfolio");
+  const [minPortfolioSqft, setMinPortfolioSqft] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const paramSqft = Number(searchParams?.get("min_sqft") || 0);
+      const storedSqft = Number(localStorage.getItem("officex_total_portfolio_sqft") || 0);
+      const eff = Math.max(paramSqft, storedSqft);
+      if (eff > 0) setMinPortfolioSqft(eff);
+    }
+  }, [searchParams]);
 
   const openAudienceEnquiry = (audienceName: string) => {
     setSelectedAudience(audienceName);
@@ -94,6 +105,48 @@ export default function PricingPage() {
             </p>
           </div>
 
+          {/* Portfolio Scale Banner (When user has registered properties) */}
+          {minPortfolioSqft > 0 && (
+            <div className="mb-10 max-w-4xl mx-auto p-4 sm:p-5 rounded-3xl bg-teal-50 border border-teal-200 text-teal-950 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white text-[#0F8B7D] flex items-center justify-center font-bold shrink-0 border border-teal-200 shadow-2xs">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-sm sm:text-base text-slate-900">
+                      Your Registered Portfolio Area: {minPortfolioSqft.toLocaleString()} Sq.Ft
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-teal-200 text-teal-900 px-2 py-0.5 rounded-full">
+                      Portfolio Floor Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-teal-800 mt-1 font-medium">
+                    When subscribing for Rent Roll, your subscription cannot be below your total added property area ({minPortfolioSqft.toLocaleString()} Sq.Ft).
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("officex_subscription", "active");
+                    localStorage.setItem("officex_owner_subscribed", "true");
+                    localStorage.setItem("officex_rentroll_subscribed", "true");
+                    localStorage.setItem("officex_subscription_status", "active");
+                    localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
+                  }
+                  router.push("/properties/rent-roll");
+                }}
+                className="px-5 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <Sparkles size={14} />
+                <span>Subscribe ({minPortfolioSqft.toLocaleString()} Sq.Ft) →</span>
+              </button>
+            </div>
+          )}
+
           {/* 3 Stakeholder Proposal Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
             
@@ -115,8 +168,12 @@ export default function PricingPage() {
 
                 <div className="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pricing Model</div>
-                  <div className="text-base font-black text-slate-900 mt-0.5">Bespoke / Sq.Ft.</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Discounts for multi-tower portfolios</div>
+                  <div className="text-base font-black text-slate-900 mt-0.5">
+                    {minPortfolioSqft > 0 ? `₹${Math.round(minPortfolioSqft * 1.2).toLocaleString()} / mo` : "Bespoke / Sq.Ft."}
+                  </div>
+                  <div className="text-[11px] text-teal-800 font-semibold mt-0.5">
+                    {minPortfolioSqft > 0 ? `Covers ${minPortfolioSqft.toLocaleString()} Sq.Ft registered portfolio` : "Discounts for multi-tower portfolios"}
+                  </div>
                 </div>
                 
                 <ul className="space-y-3 text-xs text-slate-600 font-semibold">
@@ -139,13 +196,42 @@ export default function PricingPage() {
                 </ul>
               </div>
 
-              <button 
-                onClick={() => openAudienceEnquiry("Commercial Property Owners & Asset Managers")}
-                className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-              >
-                <span>Request Owner Proposal</span>
-                <ArrowRight size={14} />
-              </button>
+              {minPortfolioSqft > 0 ? (
+                <div className="space-y-2 mt-8">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_subscription", "active");
+                        localStorage.setItem("officex_owner_subscribed", "true");
+                        localStorage.setItem("officex_rentroll_subscribed", "true");
+                        localStorage.setItem("officex_subscription_status", "active");
+                        localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
+                      }
+                      router.push("/properties/rent-roll");
+                    }}
+                    className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Sparkles size={14} />
+                    <span>Subscribe ({minPortfolioSqft.toLocaleString()} Sq.Ft)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openAudienceEnquiry("Commercial Property Owners & Asset Managers")}
+                    className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Request Custom Enterprise Proposal
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => openAudienceEnquiry("Commercial Property Owners & Asset Managers")}
+                  className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <span>Request Owner Proposal</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
             </div>
 
             {/* Card 2: Facility Managers & Corporate Occupiers */}
@@ -319,5 +405,13 @@ export default function PricingPage() {
         onClose={() => setSlideInOpen(false)}
       />
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F8FAFC]" />}>
+      <PricingPageContent />
+    </Suspense>
   );
 }
