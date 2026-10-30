@@ -24,8 +24,14 @@ import {
   SlidersHorizontal,
   Save,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Lock,
+  Sparkles,
+  Building2,
+  Check
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
+import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
 
 interface DelegationRights {
   leaseIssuance: "requires_approval" | "full_authority" | "restricted";
@@ -58,6 +64,35 @@ function DelegationContent() {
   const [selectedMandateDetails, setSelectedMandateDetails] = useState<DelegationMandate | null>(null);
   const [copiedMandateId, setCopiedMandateId] = useState<string | null>(null);
 
+  // Pro Subscription Gate State
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  const [subscriptionReason, setSubscriptionReason] = useState("");
+
+  const checkIsSubscribed = (): boolean => {
+    if (typeof window !== "undefined") {
+      const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
+      const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
+      const ownerSub = localStorage.getItem("officex_owner_subscribed") || sessionStorage.getItem("officex_owner_subscribed");
+      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed") || sessionStorage.getItem("officex_rentroll_subscribed");
+      return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    const updateSub = () => setIsSubscribed(checkIsSubscribed());
+    updateSub();
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", updateSub);
+      window.addEventListener("storage", updateSub);
+      return () => {
+        window.removeEventListener("focus", updateSub);
+        window.removeEventListener("storage", updateSub);
+      };
+    }
+  }, []);
+
   // Editable Manager Authorities & Restrictions
   const [currentRights, setCurrentRights] = useState<DelegationRights>({
     leaseIssuance: "requires_approval",
@@ -70,7 +105,7 @@ function DelegationContent() {
   });
   const [savingRights, setSavingRights] = useState(false);
 
-  // Wizard State
+  // Wizard State (Step 1: Property Selection, Step 2: Company Details, Step 3: Scope, Step 4: Settlement)
   const [step, setStep] = useState(1);
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
@@ -92,11 +127,10 @@ function DelegationContent() {
   }, []);
 
   const handleCopyInvite = (m: DelegationMandate) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_owner_subscribed", "true");
-      localStorage.setItem("officex_subscription", "active");
-      localStorage.setItem("officex_rentroll_subscribed", "true");
-      document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+    if (!checkIsSubscribed()) {
+      setSubscriptionReason("Share and dispatch property management delegation link");
+      setSubscriptionModalOpen(true);
+      return;
     }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const activeProp = m.properties[0] || "Commercial Property";
@@ -160,14 +194,69 @@ function DelegationContent() {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Fetch properties
-      const propsRes = await fetch("/api/properties");
-      const propsData = await propsRes.json();
-      const pList: any[] = Array.isArray(propsData) ? propsData : propsData.properties || [];
+      const authHeaders = getClientAuthHeaders();
+      let pList: any[] = [];
+
+      // 1. Fetch properties from Rent-Roll system
+      try {
+        const rrRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
+        if (rrRes.ok) {
+          const rrJson = await rrRes.json();
+          if (Array.isArray(rrJson.data)) {
+            pList = rrJson.data.map((p: any) => ({
+              id: p.id,
+              name: p.property_name || p.name,
+              city: p.city || "Commercial Centre",
+              code: p.property_code || p.code || "Active",
+              area: p.total_leasable_area_sqft || p.area_sqft || 0,
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Rent roll properties fetch error", e);
+      }
+
+      // 2. Fallback to /api/properties if rent-roll returned none
+      if (pList.length === 0) {
+        try {
+          const propsRes = await fetch("/api/properties", { headers: authHeaders });
+          if (propsRes.ok) {
+            const propsData = await propsRes.json();
+            const raw = Array.isArray(propsData) ? propsData : propsData.properties || [];
+            pList = raw.map((p: any) => ({
+              id: p.id,
+              name: p.property_name || p.name,
+              city: p.city || "Commercial Centre",
+              code: p.property_code || p.code || "Active",
+              area: p.total_leasable_area_sqft || p.area_sqft || 0,
+            }));
+          }
+        } catch (e) {
+          console.error("Properties fetch error", e);
+        }
+      }
+
+      // 3. Resilient fallback to active property in localStorage
+      if (pList.length === 0 && typeof window !== "undefined") {
+        const storedProp = localStorage.getItem("officex_active_property");
+        if (storedProp) {
+          pList = [{
+            id: `local-prop-${storedProp.toLowerCase().replace(/\s+/g, "-")}`,
+            name: storedProp,
+            city: "Commercial Portfolio",
+            code: "ACTIVE-01",
+            area: 0,
+          }];
+        }
+      }
+
       setProperties(pList);
+      if (pList.length > 0 && selectedPropertyIds.length === 0) {
+        setSelectedPropertyIds([pList[0].id]);
+      }
 
       const activePropNames = pList.length > 0
-        ? pList.map((p: any) => p.property_name || p.name).filter(Boolean)
+        ? pList.map((p: any) => p.name).filter(Boolean)
         : [];
 
       // Fetch active mandates from API
@@ -436,14 +525,29 @@ function DelegationContent() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyInvite(m)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
-                  >
-                    <Copy size={13} />
-                    <span>{copiedMandateId === m.id ? "Link Copied!" : "Copy Manager Link"}</span>
-                  </button>
+                  {isSubscribed ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyInvite(m)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
+                    >
+                      <Copy size={13} />
+                      <span>{copiedMandateId === m.id ? "Link Copied!" : "Copy Manager Link"}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubscriptionReason("Share and dispatch property management delegation link");
+                        setSubscriptionModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition cursor-pointer"
+                      title="Pro Subscription required to share manager link"
+                    >
+                      <Lock size={13} className="text-amber-600" />
+                      <span>Subscribe to Share Link</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleOpenRightsModal(m)}
@@ -465,7 +569,7 @@ function DelegationContent() {
                 </p>
                 <button
                   onClick={() => setIsWizardOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold cursor-pointer"
                 >
                   + Delegate First Property
                 </button>
@@ -483,8 +587,8 @@ function DelegationContent() {
                       Step {step} of 4
                     </span>
                     <h2 className="text-base font-black text-slate-900">
-                      {step === 1 && "Managing Company Details"}
-                      {step === 2 && "Select Properties to Delegate"}
+                      {step === 1 && "Select Commercial Property to Delegate"}
+                      {step === 2 && "Managing Company Details"}
                       {step === 3 && "Delegated Scope & Authority"}
                       {step === 4 && "Financial Settlement & Fee Terms"}
                     </h2>
@@ -498,26 +602,96 @@ function DelegationContent() {
                 </div>
 
                 <form onSubmit={step === 4 ? handleSubmitDelegation : (e) => { e.preventDefault(); setStep(step + 1); }}>
-                  {/* STEP 1: Company Details */}
+                  {/* STEP 1: Property Selection (First Step per Requirement) */}
                   {step === 1 && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-500">
+                        Choose the commercial property from your portfolio that this FM company or management partner will have authority to oversee:
+                      </p>
+                      {properties.length > 0 ? (
+                        <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                          {properties.map((p) => {
+                            const isChecked = selectedPropertyIds.includes(p.id);
+                            return (
+                              <label
+                                key={p.id}
+                                className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                  isChecked
+                                    ? "bg-teal-50/70 border-teal-500 ring-1 ring-teal-500 text-teal-950 font-bold"
+                                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleToggleProperty(p.id)}
+                                    className="w-4 h-4 text-[#0F8B7D] rounded border-slate-300 focus:ring-[#0F8B7D]"
+                                  />
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-bold text-slate-900">{p.name}</p>
+                                      {p.area > 0 && (
+                                        <span className="text-[10px] font-mono text-teal-700 bg-teal-100/60 px-1.5 py-0.2 rounded">
+                                          {Number(p.area).toLocaleString()} Sq.Ft
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{p.city || "Commercial Building"}</p>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                  {p.code || "Active"}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-2xl bg-amber-50 border border-amber-300 text-center space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+                            <Building2 size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                              No Commercial Properties Registered
+                            </h4>
+                            <p className="text-[11px] text-amber-800 mt-1 max-w-sm mx-auto">
+                              You must create or register a commercial property first before assigning property management to an external agency.
+                            </p>
+                          </div>
+                          <Link
+                            href="/properties"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow transition cursor-pointer"
+                          >
+                            <Plus size={14} />
+                            <span>Register Commercial Property First</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 2: Company Details */}
+                  {step === 2 && (
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Facility Management Company Name *
+                          Facility Management Company / Agency Name *
                         </label>
                         <input
                           type="text"
                           required
                           value={managerName}
                           onChange={(e) => setManagerName(e.target.value)}
-                          placeholder="e.g., Apex Facility Management LLP"
+                          placeholder="e.g., Apex Facility Management LLP / Colliers / CBRE"
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0F8B7D] outline-none"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">
-                            Manager Email *
+                            Manager Work Email *
                           </label>
                           <input
                             type="email"
@@ -530,7 +704,7 @@ function DelegationContent() {
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">
-                            Contact Phone
+                            Contact Phone (Optional)
                           </label>
                           <input
                             type="tel"
@@ -540,50 +714,6 @@ function DelegationContent() {
                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0F8B7D] outline-none"
                           />
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* STEP 2: Property Selection */}
-                  {step === 2 && (
-                    <div className="space-y-3">
-                      <p className="text-xs text-slate-500">
-                        Choose which properties this FM company will have authority to manage:
-                      </p>
-                      <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                        {properties.map((p) => {
-                          const isChecked = selectedPropertyIds.includes(p.id);
-                          return (
-                            <label
-                              key={p.id}
-                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${
-                                isChecked
-                                  ? "bg-teal-50/50 border-teal-300 text-teal-950 font-bold"
-                                  : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => handleToggleProperty(p.id)}
-                                  className="w-4 h-4 text-[#0F8B7D] rounded border-slate-300"
-                                />
-                                <div>
-                                  <p className="text-xs font-bold">{p.name}</p>
-                                  <p className="text-[10px] text-slate-400">{p.city || "Commercial Building"}</p>
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-mono text-slate-400">{p.code || "Active"}</span>
-                            </label>
-                          );
-                        })}
-
-                        {properties.length === 0 && (
-                          <div className="p-4 rounded-xl bg-slate-100 text-center text-xs text-slate-500">
-                            Entire Commercial Portfolio will be delegated by default.
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -624,7 +754,7 @@ function DelegationContent() {
                     </div>
                   )}
 
-                  {/* STEP 4: Settlement & Financial Controls */}
+                  {/* STEP 4: Settlement & Financial Controls (Subscription Enforced) */}
                   {step === 4 && (
                     <div className="space-y-4">
                       <div>
@@ -681,6 +811,46 @@ function DelegationContent() {
                           <span className="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400">%</span>
                         </div>
                       </div>
+
+                      {/* Mandate Summary */}
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <div className="font-bold text-slate-900">Mandate Summary:</div>
+                        <div className="text-[11px] text-slate-600">
+                          • Assigned Properties: <span className="font-semibold text-teal-800">
+                            {properties.filter((p) => selectedPropertyIds.includes(p.id)).map((p) => p.name).join(", ") || "Selected Portfolio"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          • Manager: <span className="font-semibold text-slate-800">{managerName || "Designated Agency"}</span> ({managerEmail || "Email"})
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          • Delegated Scope: <span className="font-semibold">{services.length} operational scopes</span>
+                        </div>
+                      </div>
+
+                      {/* Pro Subscription Notice when unsubscribed */}
+                      {!isSubscribed && (
+                        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 space-y-2">
+                          <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                            <Lock size={14} className="text-amber-600 shrink-0" />
+                            <span>Pro Subscription Required for Management Delegation</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800">
+                            Third-party property management assignment and delegation portal invite links require an active OfficeX subscription.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSubscriptionReason("Assign Property Management to External Agency");
+                              setSubscriptionModalOpen(true);
+                            }}
+                            className="w-full py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider transition shadow cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles size={13} />
+                            <span>Subscribe Now to Delegate Access</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -710,17 +880,30 @@ function DelegationContent() {
                       {step < 4 ? (
                         <button
                           type="submit"
-                          className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold cursor-pointer"
+                          disabled={step === 1 && (selectedPropertyIds.length === 0 || properties.length === 0)}
+                          className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Next Step
                         </button>
-                      ) : (
+                      ) : isSubscribed ? (
                         <button
                           type="submit"
                           disabled={submitting}
                           className="px-6 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold shadow-md shadow-teal-900/10 cursor-pointer disabled:opacity-50"
                         >
                           {submitting ? "Delegating..." : "Create Delegation Agreement"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubscriptionReason("Assign Property Management to External Agency");
+                            setSubscriptionModalOpen(true);
+                          }}
+                          className="px-6 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Lock size={13} />
+                          <span>Subscribe to Finalize Delegation</span>
                         </button>
                       )}
                     </div>
@@ -874,14 +1057,28 @@ function DelegationContent() {
                 </div>
 
                 <div className="mt-5 flex items-center justify-between pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyInvite(selectedMandateDetails)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition cursor-pointer"
-                  >
-                    <Copy size={13} />
-                    <span>{copiedMandateId === selectedMandateDetails.id ? "Link Copied!" : "Copy Manager Link"}</span>
-                  </button>
+                  {isSubscribed ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyInvite(selectedMandateDetails)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition cursor-pointer"
+                    >
+                      <Copy size={13} />
+                      <span>{copiedMandateId === selectedMandateDetails.id ? "Link Copied!" : "Copy Manager Link"}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubscriptionReason("Share Property Management Delegation Link");
+                        setSubscriptionModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition cursor-pointer"
+                    >
+                      <Lock size={13} className="text-amber-600" />
+                      <span>Subscribe to Share Link</span>
+                    </button>
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -913,6 +1110,20 @@ function DelegationContent() {
               </div>
             </div>
           )}
+
+      {/* Pro Subscription Checkout / Unlock Modal */}
+      {subscriptionModalOpen && (
+        <SubscriptionGateModal
+          isOpen={subscriptionModalOpen}
+          onClose={() => setSubscriptionModalOpen(false)}
+          onSuccess={() => {
+            setIsSubscribed(true);
+            setSubscriptionModalOpen(false);
+            setSuccessMessage("✓ Pro Subscription activated! Property management delegation and portal link sharing unlocked.");
+          }}
+          moduleName={subscriptionReason || "Property Management Delegation"}
+        />
+      )}
     </div>
   );
 }
