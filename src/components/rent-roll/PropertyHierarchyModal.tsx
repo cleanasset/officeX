@@ -4103,27 +4103,7 @@ export default function PropertyHierarchyModal({
               return match && match[1] ? parseInt(match[1], 10) : 0;
             };
 
-            const getFloorTarget = (fl: number) => {
-              const matchingFloor = floorBreakdown.find((f) => f.floorNumber === fl);
-              if (matchingFloor && Number(matchingFloor.areaSqft) > 0) {
-                return Number(matchingFloor.areaSqft);
-              }
-              if (buildingTotalArea > 0 && allFloorNumbers.length > 0) {
-                return Math.round(buildingTotalArea / allFloorNumbers.length);
-              }
-              return 0;
-            };
-
             const selectedFloorNum = Number(spaceForm.floorNumber || "0");
-            const selectedFloorTarget = getFloorTarget(selectedFloorNum);
-            const selectedFloorAllocated = displaySpaces
-              .filter((s) => getFloorNum(s) === selectedFloorNum)
-              .reduce((sum, s) => sum + (s.area || 0), 0);
-            const selectedFloorRemaining = Math.max(0, selectedFloorTarget - selectedFloorAllocated);
-
-            const enteredArea = Number(spaceForm.areaSqft) || 0;
-            const enteredFloorRemainingAfter = selectedFloorRemaining - enteredArea;
-            const enteredBuildingRemainingAfter = remainingBuildingArea - enteredArea;
 
             return (
               <div className="space-y-4">
@@ -4162,77 +4142,53 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-                {/* Real-Time Area Allocation Ledger & Progress Bar */}
-                <div className="p-3.5 bg-gradient-to-br from-slate-50 to-teal-50/40 rounded-2xl border border-slate-200/90 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Layers size={13} className="text-[#0F8B7D]" />
-                      <span>Property Area Allocation Ledger</span>
-                    </span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                      isExceededBuilding
-                        ? "bg-rose-100 text-rose-800 border border-rose-200"
-                        : pctBuildingAllocated === 100
-                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        : "bg-teal-100/70 text-teal-900 border border-teal-200"
-                    }`}>
-                      {isExceededBuilding
-                        ? `⚠️ Exceeded by ${(allocatedUnitsArea - buildingTotalArea).toLocaleString()} Sq.Ft`
-                        : pctBuildingAllocated === 100
-                        ? "✓ 100% Fully Demarcated"
-                        : `${remainingBuildingArea.toLocaleString()} Sq.Ft Unallocated (${100 - pctBuildingAllocated}% Left)`}
+                {/* Summary KPI Strip */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Floors</span>
+                    <span className="text-sm font-black text-slate-800">{allFloorNumbers.length} Floors</span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Created Units</span>
+                    <span className="text-sm font-black text-teal-700">{displaySpaces.length} Units</span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Demarcated in Units</span>
+                    <span className="text-sm font-black text-slate-800">
+                      {allocatedUnitsArea > 0 ? `${allocatedUnitsArea.toLocaleString()} Sq.Ft` : "0 Sq.Ft"}
                     </span>
                   </div>
-
-                  {/* Summary KPI Strip */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Building Envelope</span>
-                      <span className="text-sm font-black text-slate-900">
-                        {buildingTotalArea > 0 ? `${buildingTotalArea.toLocaleString()} Sq.Ft` : "Open / Not Set"}
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Demarcated in Units</span>
-                      <span className="text-sm font-black text-teal-700">
-                        {allocatedUnitsArea.toLocaleString()} Sq.Ft
-                        <span className="text-[10px] text-slate-400 font-normal ml-1">({displaySpaces.length} units)</span>
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Remaining to Demarcate</span>
-                      <span className={`text-sm font-black ${remainingBuildingArea === 0 && buildingTotalArea > 0 ? "text-emerald-600" : isExceededBuilding ? "text-rose-600" : "text-amber-700"}`}>
-                        {remainingBuildingArea.toLocaleString()} Sq.Ft
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Floors</span>
-                      <span className="text-sm font-black text-slate-800">{allFloorNumbers.length} Floors</span>
-                    </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Property Total Area</span>
+                    <span className="text-sm font-black text-slate-600">
+                      {buildingTotalArea > 0 ? `${buildingTotalArea.toLocaleString()} Sq.Ft` : "Flexible / Open"}
+                    </span>
                   </div>
-
-                  {/* Progress Bar */}
-                  {buildingTotalArea > 0 && (
-                    <div className="space-y-1">
-                      <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden flex">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            isExceededBuilding
-                              ? "bg-rose-500"
-                              : pctBuildingAllocated === 100
-                              ? "bg-emerald-500"
-                              : "bg-[#0F8B7D]"
-                          }`}
-                          style={{ width: `${Math.min(100, Math.round((allocatedUnitsArea / buildingTotalArea) * 100))}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                        <span>{pctBuildingAllocated}% demarcated into units</span>
-                        <span>{remainingBuildingArea.toLocaleString()} Sq.Ft left to assign across floors</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Progress Bar (Only shown if total building area is defined) */}
+                {buildingTotalArea > 0 && (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-700">Demarcation Progress</span>
+                      <span className="text-teal-800 font-mono">
+                        {allocatedUnitsArea.toLocaleString()} / {buildingTotalArea.toLocaleString()} Sq.Ft ({pctBuildingAllocated}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden flex">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          isExceededBuilding
+                            ? "bg-rose-500"
+                            : pctBuildingAllocated === 100
+                            ? "bg-emerald-500"
+                            : "bg-[#0F8B7D]"
+                        }`}
+                        style={{ width: `${Math.min(100, pctBuildingAllocated)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Floor Navigation Tab Strip for Step 2 */}
                 <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
@@ -4260,9 +4216,6 @@ export default function PropertyHierarchyModal({
                     {allFloorNumbers.map((fl) => {
                       const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
                       const unitsOnFloor = displaySpaces.filter((s) => getFloorNum(s) === fl);
-                      const flAllocated = unitsOnFloor.reduce((sum, s) => sum + (s.area || 0), 0);
-                      const flTarget = getFloorTarget(fl);
-                      const flRemaining = Math.max(0, flTarget - flAllocated);
                       const isSelected = activeStudioFloor === String(fl);
                       return (
                         <button
@@ -4284,19 +4237,6 @@ export default function PropertyHierarchyModal({
                           }`}>
                             {unitsOnFloor.length}
                           </span>
-                          {flTarget > 0 && (
-                            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                              isSelected
-                                ? "bg-white/15 text-white"
-                                : flRemaining === 0
-                                ? "bg-emerald-100 text-emerald-800"
-                                : flAllocated > flTarget
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-slate-100 text-slate-600"
-                            }`}>
-                              {flRemaining === 0 ? "Full" : flAllocated > flTarget ? `+${(flAllocated - flTarget).toLocaleString()} Over` : `${flRemaining.toLocaleString()} Left`}
-                            </span>
-                          )}
                         </button>
                       );
                     })}
@@ -4379,37 +4319,22 @@ export default function PropertyHierarchyModal({
                   </div>
                 )}
 
-                {/* Active Floor Balance Card (Before Add Unit form) */}
+                {/* Selected Floor Context Banner */}
                 <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase text-teal-800 tracking-wider">
-                        Active Selected Floor:
-                      </span>
-                      <span className="text-xs font-black text-slate-900 bg-white px-2 py-0.5 rounded-md border border-teal-200">
-                        {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-600 flex items-center gap-2 flex-wrap">
-                      <span>Floor Capacity: <strong className="text-slate-900 font-mono">{selectedFloorTarget > 0 ? `${selectedFloorTarget.toLocaleString()} Sq.Ft` : "Flexible"}</strong></span>
-                      <span>•</span>
-                      <span>Allocated: <strong className="text-teal-800 font-mono">{selectedFloorAllocated.toLocaleString()} Sq.Ft</strong></span>
-                      <span>•</span>
-                      <span>Available on Floor: <strong className={`font-mono ${selectedFloorRemaining === 0 && selectedFloorTarget > 0 ? "text-emerald-700" : "text-amber-800"}`}>{selectedFloorRemaining.toLocaleString()} Sq.Ft</strong></span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-teal-800 tracking-wider">
+                      Selected Floor:
+                    </span>
+                    <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
+                      {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      ({displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum).length} unit(s) configured)
+                    </span>
                   </div>
-
-                  {selectedFloorRemaining > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSpaceForm((prev) => ({ ...prev, areaSqft: String(selectedFloorRemaining) }))}
-                      className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer shrink-0 self-start sm:self-auto"
-                      title="1-click fill remaining square footage into unit area"
-                    >
-                      <Zap size={12} className="fill-amber-300 text-amber-300" />
-                      <span>Fill Remaining Floor Area ({selectedFloorRemaining.toLocaleString()} Sq.Ft)</span>
-                    </button>
-                  )}
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Add individual suites, offices, or shops below
+                  </span>
                 </div>
 
                 {/* Full Original Space Creation Form */}
@@ -4469,10 +4394,9 @@ export default function PropertyHierarchyModal({
                           {buildingFloorNumbersForSpace.map((flNum) => {
                             const curB = buildingsList.find((b) => b.id === (spaceForm.buildingId || displayBuildings[0]?.id));
                             const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
-                            const rem = Math.max(0, getFloorTarget(flNum) - displaySpaces.filter((s) => getFloorNum(s) === flNum).reduce((sum, s) => sum + (s.area || 0), 0));
                             return (
                               <option key={flNum} value={String(flNum)}>
-                                {displayBuildings.length > 1 && curB ? `${curB.name} • ` : ""}{flLabel} ({rem.toLocaleString()} Sq.Ft Available)
+                                {displayBuildings.length > 1 && curB ? `${curB.name} • ` : ""}{flLabel}
                               </option>
                             );
                           })}
@@ -4492,59 +4416,23 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* 4. Area (Sq.Ft) with Live Floor & Building Deduction Preview */}
+                      {/* 4. Area (Sq.Ft) */}
                       <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="font-bold text-slate-700">Area (Sq.Ft) *</label>
-                          {selectedFloorTarget > 0 && (
-                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                              Floor Avail: {selectedFloorRemaining.toLocaleString()} Sq.Ft
-                            </span>
-                          )}
-                        </div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="number"
                           min="1"
                           required
-                          placeholder={selectedFloorRemaining > 0 ? `Max: ${selectedFloorRemaining}` : "e.g. 5000"}
+                          placeholder="e.g. 5000"
                           value={spaceForm.areaSqft}
                           onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900"
                         />
-                        {/* Live Subtraction Ledger Feedback */}
-                        {enteredArea > 0 ? (
-                          <div className={`mt-1.5 p-2 rounded-lg text-[11px] font-medium border flex flex-col gap-0.5 ${
-                            enteredArea > selectedFloorRemaining && selectedFloorTarget > 0
-                              ? "bg-amber-50 border-amber-300 text-amber-900"
-                              : "bg-teal-50 border-teal-200 text-teal-900"
-                          }`}>
-                            <div className="flex items-center justify-between">
-                              <span>
-                                {enteredArea > selectedFloorRemaining && selectedFloorTarget > 0
-                                  ? `⚠️ Exceeds floor target by ${(enteredArea - selectedFloorRemaining).toLocaleString()} Sq.Ft`
-                                  : `✓ Deducts ${enteredArea.toLocaleString()} Sq.Ft from floor`}
-                              </span>
-                              <span className="font-mono text-[10px] font-bold">
-                                Floor Rem: {Math.max(0, enteredFloorRemainingAfter).toLocaleString()} Sq.Ft
-                              </span>
-                            </div>
-                            {buildingTotalArea > 0 && (
-                              <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-200/60">
-                                <span>Building envelope after this unit:</span>
-                                <span className={`font-mono font-bold ${enteredBuildingRemainingAfter < 0 ? "text-rose-600" : "text-slate-800"}`}>
-                                  {enteredBuildingRemainingAfter < 0 ? `Exceeds by ${Math.abs(enteredBuildingRemainingAfter).toLocaleString()} Sq.Ft` : `${enteredBuildingRemainingAfter.toLocaleString()} Sq.Ft remaining`}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                            <span>Floor remaining: <strong className="text-slate-800 font-mono">{selectedFloorRemaining.toLocaleString()} Sq.Ft</strong></span>
-                            {buildingTotalArea > 0 && (
-                              <span>Building remaining: <strong className="text-slate-800 font-mono">{remainingBuildingArea.toLocaleString()} Sq.Ft</strong></span>
-                            )}
-                          </div>
-                        )}
+                        <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                          Size of this unit/suite in Sq.Ft (e.g. 5,000)
+                        </span>
                       </div>
 
                       {/* 5. Unit Type */}
