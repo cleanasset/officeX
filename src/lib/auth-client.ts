@@ -32,20 +32,9 @@ const AUTH_SESSION_KEYS = [
 // Prefixes that indicate auth session cookies (not data caches)
 const AUTH_KEY_PREFIXES = ['officex_sub_', 'sb-'];
 
-// Keys that represent USER DATA — preserved across logout
+// Keys that represent USER DATA — only email convenience is preserved across logout
 const DATA_KEYS_TO_KEEP = new Set([
   'officex_remembered_email',
-  'officex_org_name',
-  'officex_onboarding_completed',
-  'officex_user_properties',
-  'officex_active_leases',
-  'officex_active_tenants',
-  'officex_saved_bank_details',
-  'officex_active_org',
-  'officex_property_state',
-  'officex_property_city',
-  'officex_user_state',
-  'officex_user_city',
 ]);
 
 function isAuthKey(key: string): boolean {
@@ -54,14 +43,9 @@ function isAuthKey(key: string): boolean {
   for (const prefix of AUTH_KEY_PREFIXES) {
     if (key.startsWith(prefix)) return true;
   }
-  // Generic officex_ keys not in data list are auth-related
-  if (key.startsWith('officex_') && !DATA_KEYS_TO_KEEP.has(key)) {
-    // Keep anything that looks like cached data
-    if (key.includes('properties') || key.includes('tenants') || key.includes('leases') ||
-        key.includes('org') || key.includes('bank') || key.includes('compliance') ||
-        key.includes('onboarding')) {
-      return false;
-    }
+  // All officex_ data keys (properties, leases, org, etc.) belong to the user session
+  // and MUST be purged on logout to guarantee absolute multi-tenant privacy.
+  if (key.startsWith('officex_')) {
     return true;
   }
   if (key.includes('token') || key.startsWith('sb-')) return true;
