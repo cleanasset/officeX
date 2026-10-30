@@ -159,8 +159,6 @@ export default function SubscriptionGate({
   const finalPriceInRupees = is100PercentDiscount ? 0 : discountedCalculatedPrice;
   const finalAmountInPaise = is100PercentDiscount ? 0 : discountedCalculatedPrice * 100;
 
-  const minCyclePayable = Math.round(minAllowedSqft * selectedPlan.price * selectedDurationMonths * (1 - durationDiscountPct / 100));
-
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = couponInput.trim().toUpperCase();
