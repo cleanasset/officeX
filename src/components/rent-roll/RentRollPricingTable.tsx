@@ -364,8 +364,14 @@ export default function RentRollPricingTable({
             // Non-blocking
           }
 
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_rentroll_onboarded", "true");
+            localStorage.setItem("officex_onboarding_completed", "1");
+            sessionStorage.setItem("officex_onboarding_completed", "1");
+            document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+          }
           setProcessingActivation(false);
-          router.push("/select-workspace");
+          router.push("/properties/rent-roll");
         },
         onFailure: (err) => {
           console.error("Razorpay payment cancelled or failed:", err);
@@ -445,7 +451,13 @@ export default function RentRollPricingTable({
       leasing_manager: "/dashboard/leasing",
       finance_manager: "/dashboard/finance",
     };
-    const target = (userRoleKey && roleDashboards[userRoleKey]) ? roleDashboards[userRoleKey] : "/onboarding";
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_rentroll_onboarded", "true");
+      localStorage.setItem("officex_onboarding_completed", "1");
+      sessionStorage.setItem("officex_onboarding_completed", "1");
+      document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+    }
+    const target = (userRoleKey && roleDashboards[userRoleKey]) ? roleDashboards[userRoleKey] : "/properties/rent-roll";
 
     setTimeout(() => {
       router.push(target);

@@ -145,6 +145,10 @@ export default function RentRollRegisterPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      localStorage.setItem("officex_rentroll_onboarded", "true");
+      localStorage.setItem("officex_onboarding_completed", "1");
+      sessionStorage.setItem("officex_onboarding_completed", "1");
+      document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
       const savedScope = localStorage.getItem("officex_selected_property");
       if (savedScope) setPropertyFilter(savedScope);
 

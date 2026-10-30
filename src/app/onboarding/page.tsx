@@ -10,6 +10,27 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const initialRole = searchParams.get("role") || undefined;
 
+  // Auto-bypass: If user has already configured property, tenant, or completed hierarchy setup
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasAddedProperty =
+        localStorage.getItem("officex_onboarding_completed") === "1" ||
+        localStorage.getItem("officex_rentroll_onboarded") === "true" ||
+        Boolean(localStorage.getItem("officex_active_property")) ||
+        Boolean(localStorage.getItem("officex_property_name")) ||
+        Boolean(localStorage.getItem("officex_onboarded_property_details")) ||
+        Boolean(localStorage.getItem("officex_property_id"));
+
+      if (hasAddedProperty) {
+        localStorage.setItem("officex_rentroll_onboarded", "true");
+        localStorage.setItem("officex_onboarding_completed", "1");
+        sessionStorage.setItem("officex_onboarding_completed", "1");
+        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+        router.replace("/properties/rent-roll");
+      }
+    }
+  }, [router]);
+
   const handleOnboardingComplete = async (data: OnboardingCompleteData) => {
     // 1. Commit complete workspace hierarchy to database
     try {

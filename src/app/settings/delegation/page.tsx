@@ -1291,6 +1291,10 @@ function DelegationContent() {
                         localStorage.setItem("officex_owner_subscribed", "true");
                         localStorage.setItem("officex_rentroll_subscribed", "true");
                         localStorage.setItem("officex_subscribed_sqft", String(activeDelegationSqft));
+                        localStorage.setItem("officex_rentroll_onboarded", "true");
+                        localStorage.setItem("officex_onboarding_completed", "1");
+                        sessionStorage.setItem("officex_onboarding_completed", "1");
+                        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
                       }
                       setIsSubscribed(true);
                       setSubscriptionModalOpen(false);

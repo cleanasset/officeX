@@ -441,7 +441,6 @@ export default function SubscriptionGate({
     // If 100% Discounted (RENTROLL12 / OFFICEX100) — Instant One-Click Free Activation
     if (is100PercentDiscount) {
       await persistSubscription(email, appliedCoupon || "RENTROLL12", `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`, selectedPlan.id);
-      let isOnboarded = false;
       if (typeof window !== "undefined") {
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_session_active", "1");
@@ -449,16 +448,19 @@ export default function SubscriptionGate({
         localStorage.setItem("officex_user_email", email);
         localStorage.setItem("officex_subscribed_sqft", String(customSqft));
         sessionStorage.setItem("officex_subscribed_sqft", String(customSqft));
+        localStorage.setItem("officex_rentroll_onboarded", "true");
+        localStorage.setItem("officex_onboarding_completed", "1");
+        sessionStorage.setItem("officex_onboarding_completed", "1");
+        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-        isOnboarded = localStorage.getItem("officex_rentroll_onboarded") === "true";
       }
       setIsLoggedIn(true);
       setIsSubscribed(true);
       setIsPaymentProcessing(false);
       setPaymentToast(`🎉 100% Free Access to ${selectedPlan.name} Activated! Routing to workspace...`);
       setTimeout(() => {
-        router.push(isOnboarded ? "/properties/rent-roll" : "/onboarding");
+        router.push("/properties/rent-roll");
       }, 400);
       return;
     }
@@ -483,7 +485,6 @@ export default function SubscriptionGate({
         },
         onSuccess: async (response) => {
           await persistSubscription(email, appliedCoupon || "none", response.razorpay_payment_id, selectedPlan.id);
-          let isOnboarded = false;
           if (typeof window !== "undefined") {
             sessionStorage.setItem("officex_session_active", "1");
             localStorage.setItem("officex_session_active", "1");
@@ -491,15 +492,18 @@ export default function SubscriptionGate({
             localStorage.setItem("officex_user_email", email);
             localStorage.setItem("officex_subscribed_sqft", String(customSqft));
             sessionStorage.setItem("officex_subscribed_sqft", String(customSqft));
+            localStorage.setItem("officex_rentroll_onboarded", "true");
+            localStorage.setItem("officex_onboarding_completed", "1");
+            sessionStorage.setItem("officex_onboarding_completed", "1");
+            document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
             document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-            isOnboarded = localStorage.getItem("officex_rentroll_onboarded") === "true";
           }
           setIsLoggedIn(true);
           setIsSubscribed(true);
           setPaymentToast(`Subscription to ${selectedPlan.name} activated! Routing to workspace...`);
           setTimeout(() => {
-            router.push(isOnboarded ? "/properties/rent-roll" : "/onboarding");
+            router.push("/properties/rent-roll");
           }, 400);
         },
         onFailure: (error) => {

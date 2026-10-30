@@ -1373,6 +1373,10 @@ export default function PropertyHierarchyModal({
             managerRights: propForm.managerRights,
           };
           localStorage.setItem("officex_onboarded_property_details", JSON.stringify(snapshot));
+          localStorage.setItem("officex_rentroll_onboarded", "true");
+          localStorage.setItem("officex_onboarding_completed", "1");
+          sessionStorage.setItem("officex_onboarding_completed", "1");
+          document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
         }
 
         // Auto-fill SPV in Step 5 & tenant billing address with property address
@@ -7555,6 +7559,12 @@ export default function PropertyHierarchyModal({
                   <button
                     type="button"
                     onClick={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_rentroll_onboarded", "true");
+                        localStorage.setItem("officex_onboarding_completed", "1");
+                        sessionStorage.setItem("officex_onboarding_completed", "1");
+                        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                      }
                       onClose();
                       onSuccess?.();
                     }}
@@ -7897,6 +7907,10 @@ export default function PropertyHierarchyModal({
                           localStorage.setItem("officex_rentroll_subscribed", "true");
                           localStorage.setItem("officex_subscription_status", "active");
                           localStorage.setItem("officex_subscribed_sqft", String(currentChosenSqft));
+                          localStorage.setItem("officex_rentroll_onboarded", "true");
+                          localStorage.setItem("officex_onboarding_completed", "1");
+                          sessionStorage.setItem("officex_onboarding_completed", "1");
+                          document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
                         }
                         setIsOwnerSubscribed(true);
                         setSubscribedCapacity(currentChosenSqft);
