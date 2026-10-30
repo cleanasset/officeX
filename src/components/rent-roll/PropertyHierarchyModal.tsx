@@ -1463,18 +1463,24 @@ export default function PropertyHierarchyModal({
       showToast("Space / Unit Name is required", "error");
       return;
     }
-    const propMaxArea = Number(propForm.areaSqft) || 0;
+    const selectedBldg = buildingsList.find((b) => b.id === (spaceForm.buildingId || buildingsList[0]?.id));
+    const selectedProp = propertiesList.find((p) => p.id === selectedBldg?.propertyId) || activePropertyObj;
+    const propTotalArea = Number(propForm.areaSqft) || Number(selectedProp?.area) || Number(selectedBldg?.totalAreaSqft) || 0;
     const enteredArea = Number(spaceForm.areaSqft) || 0;
     if (enteredArea <= 0) {
       showToast("Please enter a valid area in Sq.Ft", "error");
       return;
     }
-    if (propMaxArea > 0 && enteredArea > propMaxArea) {
-      showToast(
-        `Space area (${enteredArea.toLocaleString()} Sq.Ft) cannot exceed property total leasable area (${propMaxArea.toLocaleString()} Sq.Ft).`,
-        "error"
-      );
-      return;
+    if (propTotalArea > 0) {
+      const alreadyAllocated = displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+      const remainingSpace = Math.max(0, propTotalArea - alreadyAllocated);
+      if (enteredArea > remainingSpace) {
+        showToast(
+          `Cannot add unit: ${enteredArea.toLocaleString()} Sq.Ft exceeds remaining building space (${remainingSpace.toLocaleString()} Sq.Ft available out of ${propTotalArea.toLocaleString()} Sq.Ft total).`,
+          "error"
+        );
+        return;
+      }
     }
     const bldgId = spaceForm.buildingId || buildingsList[0]?.id;
     if (!bldgId) {
@@ -4087,7 +4093,9 @@ export default function PropertyHierarchyModal({
 
           {/* ════════════════ TAB 2: SPACES / UNITS (Full Master Form & Space Registry) ════════════════ */}
           {activeTab === "space" && (() => {
-            const buildingTotalArea = Number(propForm.areaSqft) || 0;
+            const selectedBldg = buildingsList.find((b) => b.id === (spaceForm.buildingId || displayBuildings[0]?.id));
+            const selectedProp = propertiesList.find((p) => p.id === selectedBldg?.propertyId) || activePropertyObj;
+            const buildingTotalArea = Number(propForm.areaSqft) || Number(selectedProp?.area) || Number(selectedBldg?.totalAreaSqft) || 0;
             const allocatedUnitsArea = displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0);
             const remainingBuildingArea = Math.max(0, buildingTotalArea - allocatedUnitsArea);
             const isExceededBuilding = buildingTotalArea > 0 && allocatedUnitsArea > buildingTotalArea;
@@ -4416,23 +4424,47 @@ export default function PropertyHierarchyModal({
                         />
                       </div>
 
-                      {/* 4. Area (Sq.Ft) */}
+                      {/* 4. Area (Sq.Ft) with Live Capacity Cap & Enforcement */}
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">
+                            Unit Leasable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                          </label>
+                          {buildingTotalArea > 0 && (
+                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200 font-mono">
+                              Building Avail: {remainingBuildingArea.toLocaleString()} Sq.Ft
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           min="1"
+                          max={buildingTotalArea > 0 ? remainingBuildingArea : undefined}
                           required
-                          placeholder="e.g. 5000"
+                          placeholder={buildingTotalArea > 0 ? `Max: ${remainingBuildingArea.toLocaleString()}` : "e.g. 5000"}
                           value={spaceForm.areaSqft}
                           onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900"
+                          className={`w-full px-3 py-2 rounded-xl border font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900 ${
+                            buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea
+                              ? "border-rose-400 bg-rose-50/40 text-rose-900"
+                              : "border-slate-300"
+                          }`}
                         />
-                        <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                          Size of this unit/suite in Sq.Ft (e.g. 5,000)
-                        </span>
+                        {buildingTotalArea > 0 ? (
+                          Number(spaceForm.areaSqft) > remainingBuildingArea ? (
+                            <span className="text-[11px] text-rose-600 font-bold block mt-1">
+                              ⛔ Exceeds building limit! Only {remainingBuildingArea.toLocaleString()} Sq.Ft available out of {buildingTotalArea.toLocaleString()} Sq.Ft total.
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                              Available to assign in building: <strong className="font-mono text-slate-800">{remainingBuildingArea.toLocaleString()} Sq.Ft</strong> (Building Total: {buildingTotalArea.toLocaleString()} Sq.Ft)
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[11px] text-slate-500 font-medium block mt-1">
+                            Size of this unit/suite in Sq.Ft (e.g. 5,000)
+                          </span>
+                        )}
                       </div>
 
                       {/* 5. Unit Type */}
@@ -4523,16 +4555,16 @@ export default function PropertyHierarchyModal({
                       <button
                         type="button"
                         onClick={(e) => handleSaveSpace(e, false)}
-                        disabled={loading}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                        disabled={loading || (buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea)}
+                        className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
                         <span>+ Add Unit &amp; Keep Adding</span>
                       </button>
                       <button
                         type="submit"
-                        disabled={loading}
-                        className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                        disabled={loading || (buildingTotalArea > 0 && Number(spaceForm.areaSqft) > remainingBuildingArea)}
+                        className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
                         <span>Save Space &amp; Next (Add Tenants) →</span>
