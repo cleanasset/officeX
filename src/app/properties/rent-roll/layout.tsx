@@ -12,7 +12,7 @@ export default function RentRollLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SubscriptionGate portalName="Rent Roll Master" fallbackLandingPage="/operate/rent-roll">
+    <SubscriptionGate portalName="Rent Roll Master" fallbackLandingPage="/dashboard/owner">
       {children}
     </SubscriptionGate>
   );

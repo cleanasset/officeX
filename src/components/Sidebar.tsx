@@ -73,9 +73,9 @@ const ownerMenuItems: MenuItem[] = [
     name: "Rent Roll & Financials",
     href: "/properties/rent-roll",
     icon: DollarSign,
-    badge: "1 SUBSCRIPTION",
+    badge: "PRO",
     requiresSubscription: true,
-    section: "Pro Suite (1 Subscription)",
+    section: "Pro Suite",
     subItems: [
       { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
       { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
@@ -426,23 +426,33 @@ function SidebarInner() {
       if (storedOrgLogo) setOrgLogo(storedOrgLogo);
 
       const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
-      const hasExplicitSub =
-        localStorage.getItem("officex_rentroll_subscribed") === "true" &&
-        Boolean(localStorage.getItem("officex_payment_id"));
+      const isAdmin =
+        userEmail === "admin@gmail.com" ||
+        userEmail === "medistationlifecare@gmail.com" ||
+        localStorage.getItem("officex_admin") === "1" ||
+        localStorage.getItem("officex_role") === "super_admin";
 
-      setIsSubscribed(hasExplicitSub);
-
-      if (userEmail) {
+      if (isAdmin) {
+        setIsSubscribed(true);
+      } else if (userEmail) {
         fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
           .then((r) => r.json())
           .then((d) => {
-            if (d?.subscribed && d.plan !== "free") {
+            if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
               setIsSubscribed(true);
             } else {
               setIsSubscribed(false);
+              localStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
+              localStorage.removeItem("officex_payment_id");
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            setIsSubscribed(false);
+          });
+      } else {
+        setIsSubscribed(false);
       }
     }
   }, []);
@@ -591,7 +601,12 @@ function SidebarInner() {
                       {item.requiresSubscription && !isSubscribed ? (
                         <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
                           <Lock size={9} className="text-amber-700" />
-                          <span>1 SUBSCRIPTION</span>
+                          <span>PRO LOCKED</span>
+                        </span>
+                      ) : item.requiresSubscription && isSubscribed ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
+                          <CheckCircle size={9} className="text-emerald-700" />
+                          <span>ACTIVE</span>
                         </span>
                       ) : item.badge && !isItemActive ? (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0">
@@ -611,7 +626,7 @@ function SidebarInner() {
                         {item.requiresSubscription && !isSubscribed && (
                           <div className="p-2 mb-1.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[10px] text-amber-950 font-medium">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="font-extrabold text-amber-900">1 Plan Unlocks All 10:</span>
+                              <span className="font-extrabold text-amber-900">Requires Pro Plan:</span>
                               <Link
                                 href="/properties/rent-roll"
                                 className="px-2 py-0.5 rounded-md bg-[#0D7B6C] text-white font-black text-[9px] hover:bg-[#0A6357]"

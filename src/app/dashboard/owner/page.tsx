@@ -142,20 +142,31 @@ export default function OwnerDashboardPage() {
     if (typeof window !== "undefined") {
       const onboardedFlag = localStorage.getItem("officex_rentroll_onboarded") === "true";
       setIsOnboarded(onboardedFlag);
-      const hasSub = Boolean(
-        localStorage.getItem("officex_subscription") === "active" ||
-        localStorage.getItem("officex_owner_subscribed") === "true" ||
-        localStorage.getItem("officex_subscription_status") === "active" ||
-        localStorage.getItem("officex_payment_id") ||
-        localStorage.getItem("officex_applied_coupon") ||
-        localStorage.getItem("officex_rentroll_subscribed") === "true" ||
-        (document.cookie && (
-          document.cookie.includes("officex_subscription=active") ||
-          document.cookie.includes("officex_owner_subscribed=true") ||
-          document.cookie.includes("officex_subscription_status=active")
-        ))
-      );
-      setIsRentRollSubscribed(hasSub);
+      const uEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const isOwnerAdmin =
+        uEmail === "admin@gmail.com" ||
+        uEmail === "medistationlifecare@gmail.com" ||
+        localStorage.getItem("officex_admin") === "1" ||
+        localStorage.getItem("officex_role") === "super_admin";
+
+      if (isOwnerAdmin) {
+        setIsRentRollSubscribed(true);
+      } else if (uEmail) {
+        fetch(`/api/subscription/status?email=${encodeURIComponent(uEmail)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
+              setIsRentRollSubscribed(true);
+            } else {
+              setIsRentRollSubscribed(false);
+            }
+          })
+          .catch(() => {
+            setIsRentRollSubscribed(false);
+          });
+      } else {
+        setIsRentRollSubscribed(false);
+      }
       const logo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
       const bName = localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || "";
       if (logo) setBrandLogo(logo);

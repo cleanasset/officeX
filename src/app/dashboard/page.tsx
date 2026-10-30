@@ -110,8 +110,7 @@ export default function WorkspaceHubPage() {
           return;
         }
 
-        // 2. Evaluate Pillar 1: Rent Roll Subscription & Properties
-        // 2. Evaluate Pillar 1: Rent Roll Subscription (Strict Verification)
+        // 2. Evaluate Pillar 1: Rent Roll Subscription (Strict Server-Verified Tiering)
         // Free tier: access to Properties, Demarcated Spaces, Tenants, Leases & Third-Party Managers.
         // Paid tier: Institutional Rent Roll calculation & CAM engine requires an active subscription.
         let subActive = false;
@@ -122,21 +121,16 @@ export default function WorkspaceHubPage() {
             localStorage.getItem("officex_property_name") ||
             "";
           if (propName) setRentRollPropertyName(propName);
-
-          const explicitSub =
-            localStorage.getItem("officex_rentroll_subscribed") === "true" &&
-            Boolean(localStorage.getItem("officex_payment_id"));
-
-          subActive = explicitSub;
         }
 
-        // Cross-check with server-side verified subscription database
-        if (email) {
+        if (isAdmin) {
+          subActive = true;
+        } else if (email) {
           try {
             const subRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
             if (subRes.ok) {
               const subData = await subRes.json();
-              if (subData?.subscribed && subData.plan !== "free") {
+              if (subData?.subscribed && subData.plan !== "none" && subData.plan !== "free") {
                 subActive = true;
               } else {
                 subActive = false;
@@ -152,7 +146,7 @@ export default function WorkspaceHubPage() {
               }
             }
           } catch {
-            // Keep local state fallback
+            subActive = false;
           }
         }
         setIsRentRollSubscribed(subActive);

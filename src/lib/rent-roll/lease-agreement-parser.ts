@@ -1081,7 +1081,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     workstationsCount: workstationsCount || 0,
     cabinsCount: cabinsCount || 0,
     meetingRoomsCount: meetingRoomsCount || 0,
-    billingModel,
+    billingModel: (billingModel === "Hybrid" ? "Area-based" : billingModel) as "Area-based" | "Seat-based" | "Fixed",
     ratePerSqft: ratePerSqft || 0,
     ratePerSeat: ratePerSeat || 0,
     bareShellRate: bareShellRate || 0,

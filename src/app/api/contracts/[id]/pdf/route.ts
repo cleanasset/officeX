@@ -166,18 +166,19 @@ export async function GET(
     // Load Escalation Rent Steps
     let rentSteps: any[] = [];
     try {
+      const rsTable = rentStep as any;
       rentSteps = await db
         .select({
-          stepNumber: rentStep.step_no,
-          startDate: rentStep.start_date,
-          endDate: rentStep.end_date,
-          rentAmount: rentStep.rent_amount,
-          ratePerSqft: rentStep.rate_per_sqft,
+          stepNumber: rsTable.step_no || rsTable.stepNumber,
+          startDate: rsTable.effective_date || rsTable.start_date,
+          endDate: rsTable.effective_to || rsTable.end_date,
+          rentAmount: rsTable.monthly_base_rent || rsTable.rent_amount,
+          ratePerSqft: rsTable.base_rate_psf || rsTable.rate_per_sqft,
         })
         .from(rentStep)
-        .innerJoin(contractCharge, eq(rentStep.contract_charge_id, contractCharge.id))
-        .where(and(eq(contractCharge.contract_id, id), sql`${rentStep.deleted_at} IS NULL`))
-        .orderBy(rentStep.step_no);
+        .innerJoin(contractCharge, eq((rentStep as any).contract_charge_id, contractCharge.id))
+        .where(and(eq(contractCharge.contract_id, id), sql`${(rentStep as any).deleted_at} IS NULL`))
+        .orderBy((rentStep as any).step_no);
     } catch {
       rentSteps = [];
     }
@@ -198,11 +199,12 @@ export async function GET(
     }
 
     // Parse financial values & parameters
-    const monthlyRent = Number(c.base_rent_rate || 0);
-    const areaSqft = Number(sp?.chargeable_area_sqft || sp?.usable_area_sqft || c.notice_period_months || 0);
-    const depositAmount = Number(c.deposit_amount_inr || 0);
-    const lockInMonths = Number(c.lock_in_months || 12);
-    const noticePeriodDays = (Number(c.notice_period_months) || 3) * 30;
+    const cAny = c as any;
+    const monthlyRent = Number(cAny.base_rent_rate || cAny.monthly_rent || 0);
+    const areaSqft = Number(sp?.chargeable_area_sqft || sp?.usable_area_sqft || 0);
+    const depositAmount = Number(cAny.deposit_amount_inr || 0);
+    const lockInMonths = Number(cAny.lock_in_months || 12);
+    const noticePeriodDays = Number(cAny.notice_period_days || (cAny.notice_period_months ? cAny.notice_period_months * 30 : 90));
 
     // Entity details
     const tenantName = occ?.occupant_name || "M/S COMMERCIAL TENANT";

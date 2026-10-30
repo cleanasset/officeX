@@ -123,11 +123,22 @@ export default function SubscriptionGate({
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
+  // Selected Duration in Months (1, 3, 6, 12 months)
+  const [selectedDurationMonths, setSelectedDurationMonths] = useState<number>(1);
+
   // Active Plan & Dynamic Pricing Calculations
   const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[1];
   const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
-  const finalPriceInRupees = is100PercentDiscount ? 0 : customSqft * selectedPlan.price;
-  const finalAmountInPaise = is100PercentDiscount ? 0 : customSqft * selectedPlan.price * 100;
+
+  const durationDiscountPct =
+    selectedDurationMonths === 12 ? 20 :
+    selectedDurationMonths === 6 ? 10 :
+    selectedDurationMonths === 3 ? 5 : 0;
+
+  const baseCalculatedPrice = customSqft * selectedPlan.price * selectedDurationMonths;
+  const discountedCalculatedPrice = Math.round(baseCalculatedPrice * (1 - durationDiscountPct / 100));
+  const finalPriceInRupees = is100PercentDiscount ? 0 : discountedCalculatedPrice;
+  const finalAmountInPaise = is100PercentDiscount ? 0 : discountedCalculatedPrice * 100;
 
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -164,7 +175,8 @@ export default function SubscriptionGate({
     email: string,
     coupon: string = "none",
     paymentId: string = "FREE_OFFICEX100",
-    planId: string = selectedPlan.id
+    planId: string = selectedPlan.id,
+    durationMonths: number = selectedDurationMonths
   ) => {
     const cleanEmail = email.toLowerCase().trim();
     if (typeof window !== "undefined") {
@@ -179,6 +191,7 @@ export default function SubscriptionGate({
       localStorage.setItem("officex_subscription_plan", planId || "techpark");
       sessionStorage.setItem("officex_subscription_plan", planId || "techpark");
       localStorage.setItem("officex_selected_plan", planId || "techpark");
+      localStorage.setItem("officex_subscription_duration", String(durationMonths));
       if (cleanEmail) {
         localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
         sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
@@ -191,12 +204,21 @@ export default function SubscriptionGate({
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
     }
 
-    // Call server to persist in database/memory cache
+    // Call server to persist in PostgreSQL user_subscriptions table & system_kv_store
     try {
       await fetch("/api/subscription/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail || "active_user", coupon, paymentId, plan: planId || "techpark" })
+        body: JSON.stringify({
+          email: cleanEmail || "active_user",
+          coupon,
+          paymentId,
+          plan: planId || "techpark",
+          plan_name: selectedPlan.name,
+          duration_months: durationMonths,
+          billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 3 ? "quarterly" : "monthly",
+          amount: finalPriceInRupees
+        })
       });
     } catch {
       // Non-blocking
@@ -301,43 +323,51 @@ export default function SubscriptionGate({
       setIsLoggedIn(Boolean(email || sessionActive));
 
       // Strict Rent Roll subscription validation:
-      // Only users who have a verified paid subscription are granted access.
+      // Only users who have a verified paid subscription or executive super admin status are granted access.
       let verifiedSub = false;
 
-      // 1. Client-side explicit payment or unlocked verification
-      if (typeof window !== "undefined") {
-        const hasLocalUnlock = Boolean(
-          localStorage.getItem("officex_subscription") === "active" ||
-          sessionStorage.getItem("officex_subscription") === "active" ||
-          localStorage.getItem("officex_owner_subscribed") === "true" ||
-          localStorage.getItem("officex_subscription_status") === "active" ||
-          localStorage.getItem("officex_rentroll_subscribed") === "true" ||
-          localStorage.getItem("officex_payment_id") ||
-          localStorage.getItem("officex_applied_coupon") ||
-          (document.cookie && (
-            document.cookie.includes("officex_subscription=active") ||
-            document.cookie.includes("officex_owner_subscribed=true") ||
-            document.cookie.includes("officex_subscription_status=active")
-          ))
-        );
-        if (hasLocalUnlock) {
-          verifiedSub = true;
-        }
-      }
+      const isAdmin =
+        email === "admin@gmail.com" ||
+        email === "medistationlifecare@gmail.com" ||
+        role === "super_admin" ||
+        role === "Super Administrator" ||
+        (typeof window !== "undefined" && (
+          localStorage.getItem("officex_admin") === "1" ||
+          localStorage.getItem("officex_role") === "super_admin"
+        ));
 
-      // 2. Query server-side subscription database
-      if (email) {
+      if (isAdmin) {
+        verifiedSub = true;
+      } else if (email) {
+        // Query server-side subscription database
         try {
           const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
           if (res.ok) {
             const data = await res.json();
-            if (data?.subscribed && data.plan !== "free") {
+            if (data?.subscribed && data.plan !== "none" && data.plan !== "free") {
               verifiedSub = true;
+            } else {
+              verifiedSub = false;
+              // Clean up any stale client-side unlock flags
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_owner_subscribed");
+                localStorage.removeItem("officex_subscription_status");
+                localStorage.removeItem("officex_rentroll_subscribed");
+                localStorage.removeItem("officex_payment_id");
+                localStorage.removeItem("officex_applied_coupon");
+                sessionStorage.removeItem("officex_subscription");
+                document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+                document.cookie = "officex_owner_subscribed=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+                document.cookie = "officex_subscription_status=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+              }
             }
           }
         } catch {
-          // Fallback
+          verifiedSub = false;
         }
+      } else {
+        verifiedSub = false;
       }
 
       setIsSubscribed(verifiedSub);
@@ -750,6 +780,50 @@ export default function SubscriptionGate({
             </div>
           </div>
 
+                    {/* ──── SUBSCRIPTION DURATION / TIMEFRAME SELECTOR ──── */}
+          <div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block">
+                  Select Subscription Period
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Choose commitment duration. Recorded permanently in PostgreSQL.
+                </span>
+              </div>
+              {durationDiscountPct > 0 && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Save {durationDiscountPct}%
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { months: 1, label: "1 Month", tag: "Monthly", discount: 0 },
+                { months: 3, label: "3 Months", tag: "Quarterly", discount: 5 },
+                { months: 6, label: "6 Months", tag: "Half-Year", discount: 10 },
+                { months: 12, label: "12 Months", tag: "Annual · Best Value", discount: 20 },
+              ].map((d) => (
+                <button
+                  key={d.months}
+                  type="button"
+                  onClick={() => setSelectedDurationMonths(d.months)}
+                  className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                    selectedDurationMonths === d.months
+                      ? "bg-[#0F8B7D] text-white border-[#0F8B7D] shadow-xs font-black"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-bold"
+                  }`}
+                >
+                  <span className="text-xs">{d.label}</span>
+                  <span className={`text-[9px] mt-0.5 ${selectedDurationMonths === d.months ? "text-teal-100 font-semibold" : "text-slate-400 font-medium"}`}>
+                    {d.discount > 0 ? `${d.discount}% OFF` : d.tag}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ──── 3 CLEAN PLAN CARDS ──── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
             {SUBSCRIPTION_PLAN_OPTIONS.map((plan) => {
@@ -893,9 +967,9 @@ export default function SubscriptionGate({
                 </>
               ) : (
                 <div className="text-2xl font-black text-[#0F8B7D]">
-                  ₹{(customSqft * selectedPlan.price).toLocaleString("en-IN")}
+                  ₹{finalPriceInRupees.toLocaleString("en-IN")}
                   <span className="text-xs font-semibold text-slate-500 ml-1">
-                    ({customSqft.toLocaleString("en-IN")} sq.ft × ₹{selectedPlan.price}/sq.ft)
+                    ({customSqft.toLocaleString("en-IN")} sq.ft · {selectedDurationMonths} Month{selectedDurationMonths > 1 ? "s" : ""}{durationDiscountPct > 0 ? ` · ${durationDiscountPct}% Off` : ""})
                   </span>
                 </div>
               )}
@@ -926,7 +1000,7 @@ export default function SubscriptionGate({
               ) : (
                 <>
                   <CreditCard size={14} />
-                  <span>Pay ₹{finalPriceInRupees.toLocaleString("en-IN")} &amp; Activate {selectedPlan.name} Now</span>
+                  <span>Pay ₹{finalPriceInRupees.toLocaleString("en-IN")} &amp; Activate {selectedPlan.name} ({selectedDurationMonths} Mo) Now</span>
                 </>
               )}
             </button>

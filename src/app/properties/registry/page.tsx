@@ -20,6 +20,7 @@ import {
   Edit2,
   Eye,
   FileSpreadsheet,
+  Trash2,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -79,6 +80,9 @@ export default function SpaceAndBuildingRegistryPage() {
               chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
               status: s.occupancy_status || "available",
               standard_rate_psf: Number(s.standard_rate_psf || s.rate_per_sqft || 0),
+              workstations: s.workstations_count || null,
+              fitout: s.fitout_condition || null,
+              space_type: s.space_type || "Office",
             }))
           );
         } else if (loadedProps.length > 0) {
@@ -103,6 +107,57 @@ export default function SpaceAndBuildingRegistryPage() {
       console.error(e);
       setProperties([]);
       setSpaces([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleSpaceOccupancy = async (spaceId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "occupied" || currentStatus === "leased" ? "vacant" : "occupied";
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ occupancy_status: nextStatus }),
+      });
+      if (res.ok) {
+        setSpaces((prev) =>
+          prev.map((s) => (s.id === spaceId ? { ...s, status: nextStatus } : s))
+        );
+      }
+    } catch {}
+  };
+
+  const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete "${propertyName}" and all its units from your portfolio?\n\nThis will remove the property and its leasable spaces.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (res.ok) {
+        if (typeof window !== "undefined") {
+          const activeProp = localStorage.getItem("officex_active_property");
+          if (activeProp === propertyName || activeProp === propertyId) {
+            localStorage.removeItem("officex_active_property");
+          }
+        }
+        await fetchRegistryData();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.message || "Failed to delete property");
+      }
+    } catch {
+      alert("Network error deleting property");
     } finally {
       setLoading(false);
     }
@@ -377,6 +432,14 @@ export default function SpaceAndBuildingRegistryPage() {
                                 <span>Rent Roll</span>
                                 <ChevronRight size={13} />
                               </Link>
+                              <button
+                                onClick={() => handleDeleteProperty(p.id, p.property_name)}
+                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200"
+                                title="Delete Property from Portfolio"
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -436,7 +499,24 @@ export default function SpaceAndBuildingRegistryPage() {
                       {filteredSpaces.map((space) => (
                         <tr key={space.id} className="hover:bg-teal-50/30 transition">
                           <td className="py-3.5 px-4 font-black text-slate-900">
-                            {space.space_number}
+                            <div>
+                              <span>{space.space_number}</span>
+                              <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                                <span className="uppercase">{space.space_type || "Office"}</span>
+                                {space.workstations && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{space.workstations} Desks</span>
+                                  </>
+                                )}
+                                {space.fitout && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{space.fitout}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="py-3.5 px-4 text-slate-700 font-semibold">
                             {space.building_name || "Main Tower"}
@@ -451,15 +531,29 @@ export default function SpaceAndBuildingRegistryPage() {
                             {space.standard_rate_psf > 0 ? `₹${space.standard_rate_psf}/sqft` : "—"}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                space.status === "leased"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : "bg-teal-100 text-teal-800"
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSpaceOccupancy(space.id, space.status)}
+                              title="Click to toggle Vacant / Occupied"
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                                space.status === "occupied" || space.status === "leased"
+                                  ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
                               }`}
                             >
-                              {space.status || "Available"}
-                            </span>
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  space.status === "occupied" || space.status === "leased"
+                                    ? "bg-blue-600"
+                                    : "bg-emerald-600"
+                                }`}
+                              />
+                              <span>
+                                {space.status === "occupied" || space.status === "leased"
+                                  ? "Occupied (Tenant)"
+                                  : "Vacant (Available)"}
+                              </span>
+                            </button>
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <Link

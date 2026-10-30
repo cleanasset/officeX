@@ -280,15 +280,32 @@ export async function GET(req: NextRequest) {
 
     let isOwnerSubscribed = false;
     try {
+      const nowIso = new Date().toISOString();
       const { data: subData } = await supabase
         .from("user_subscriptions")
-        .select("id, status")
+        .select("id, status, ends_at")
         .eq("status", "active")
+        .gt("ends_at", nowIso)
         .limit(1);
+
       if (subData && subData.length > 0) {
         isOwnerSubscribed = true;
+      } else {
+        const { data: kvData } = await supabase
+          .from("system_kv_store")
+          .select("data")
+          .eq("key", "officex_user_subscriptions")
+          .maybeSingle();
+
+        const subsMap = (kvData?.data as Record<string, any>) || {};
+        const hasActive = Object.values(subsMap).some((s: any) => s.status === "active");
+        if (hasActive) {
+          isOwnerSubscribed = true;
+        }
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Portal summary subscription check error:", e);
+    }
 
     return NextResponse.json({
       success: true,

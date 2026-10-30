@@ -64,23 +64,18 @@ import {
   DELEGATED_ENTITY_TYPES,
   getDelegatedEntityLabel,
 } from "./RentRollOnboardingWizard";
-
+import { downloadLeaseContractPdf, LeaseContractPdfData } from "@/lib/pdf/lease-contract-pdf";
 
 export const checkIsOwnerSubscribed = (): boolean => {
   if (typeof window !== "undefined") {
-    localStorage.setItem("officex_owner_subscribed", "true");
-    localStorage.setItem("officex_subscription", "active");
-    localStorage.setItem("officex_rentroll_subscribed", "true");
-    localStorage.setItem("officex_subscription_status", "active");
-    sessionStorage.setItem("officex_owner_subscribed", "true");
-    sessionStorage.setItem("officex_subscription", "active");
-    sessionStorage.setItem("officex_rentroll_subscribed", "true");
-    sessionStorage.setItem("officex_subscription_status", "active");
-    document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
-    document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
-    document.cookie = "officex_subscription_status=active; path=/; max-age=31536000; SameSite=Lax";
+    const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
+    const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
+    const ownerSub = localStorage.getItem("officex_owner_subscribed") || sessionStorage.getItem("officex_owner_subscribed");
+    const rentrollSub = localStorage.getItem("officex_rentroll_subscribed") || sessionStorage.getItem("officex_rentroll_subscribed");
+    const appliedCoupon = localStorage.getItem("officex_applied_coupon") || sessionStorage.getItem("officex_applied_coupon");
+    return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true" || !!appliedCoupon;
   }
-  return true;
+  return false;
 };
 
 export const generateUniquePropertyCode = (propertyName = "", existingCodes: string[] = []): string => {
@@ -180,6 +175,25 @@ export default function PropertyHierarchyModal({
   } | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [isOwnerSubscribed, setIsOwnerSubscribed] = useState<boolean>(false);
+
+  // Active Floor selected in Step 2 Floor Studio
+  const [activeStudioFloor, setActiveStudioFloor] = useState<string>("0");
+
+  // Floor De-Registration / Sold Floors state (§5)
+  const [deRegModalOpen, setDeRegModalOpen] = useState(false);
+  const [deRegFloor, setDeRegFloor] = useState("");
+  const [deRegReason, setDeRegReason] = useState("");
+  const [deRegLoading, setDeRegLoading] = useState(false);
+
+  // Subscription Gate Modal state (§20)
+  const [subscriptionGateModalOpen, setSubscriptionGateModalOpen] = useState(false);
+  const [subscriptionGateReason, setSubscriptionGateReason] = useState("");
+
+  // Post-Contract Decision state (§20)
+  const [postContractChoice, setPostContractChoice] = useState<"undecided" | "assign" | "self_managed">("undecided");
+
+  // Warehouse Area Selection: Entire Facility vs Partial Sq.Ft (§10)
+  const [warehouseLeaseChoice, setWarehouseLeaseChoice] = useState<"entire" | "partial">("entire");
 
   // Step 4: Existing vs New Tenant Mode & Document Auto-Fill State
   const [tenantOnboardingMode, setTenantOnboardingMode] = useState<"existing" | "new">("existing");
@@ -4413,55 +4427,89 @@ export default function PropertyHierarchyModal({
                 </span>
               </div>
 
-              {/* Latest Generated Tenant Invite Banner (if available) */}
+              {/* Latest Generated Tenant Invite Banner (§20 Subscription Gated) */}
               {latestTenantInvite && (
-                <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-xs animate-in fade-in space-y-2.5">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 size={16} className="text-[#0F8B7D] shrink-0" />
                       <div>
                         <span className="font-bold text-teal-950">Active Portal Invite: {latestTenantInvite.name}</span>
                         <span className="text-slate-500 ml-1.5 font-medium">({latestTenantInvite.email})</span>
-                        <p className="text-[11px] text-teal-700 mt-0.5">Corporate tenant self-service portal link is active.</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(latestTenantInvite.link);
-                          setCopiedInvite(true);
-                          showToast("✓ Tenant invitation link copied to clipboard!");
-                          setTimeout(() => setCopiedInvite(false), 2500);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-[11px] shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                      >
-                        {copiedInvite ? <Check size={12} /> : <Copy size={12} />}
-                        <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
-                      </button>
-                      <a
-                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                          `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
-                      >
-                        <MessageCircle size={12} />
-                        <span>WhatsApp</span>
-                      </a>
-                      <a
-                        href={`mailto:${latestTenantInvite.email}?subject=${encodeURIComponent(
-                          "Corporate Tenant Portal Access - OfficeX"
-                        )}&body=${encodeURIComponent(
-                          `Hi ${latestTenantInvite.name},\n\nPlease access your tenant portal using the secure link below:\n\n${latestTenantInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
-                        )}`}
-                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
-                      >
-                        <Mail size={12} />
-                        <span>Email</span>
-                      </a>
-                    </div>
                   </div>
+
+                  {isOwnerSubscribed || checkIsOwnerSubscribed() ? (
+                    <div className="p-2 rounded-xl bg-white border border-teal-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={latestTenantInvite.link}
+                        className="text-[11px] font-mono text-slate-700 bg-slate-50 px-2 py-1 rounded border border-slate-200 flex-1 truncate"
+                      />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(latestTenantInvite.link);
+                            setCopiedInvite(true);
+                            showToast("✓ Tenant invitation link copied to clipboard!");
+                            setTimeout(() => setCopiedInvite(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-[11px] shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          {copiedInvite ? <Check size={12} /> : <Copy size={12} />}
+                          <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
+                        </button>
+                        <a
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                            `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
+                        >
+                          <MessageCircle size={12} />
+                          <span>WhatsApp</span>
+                        </a>
+                        <a
+                          href={`mailto:${latestTenantInvite.email}?subject=${encodeURIComponent(
+                            "Corporate Tenant Portal Access - OfficeX"
+                          )}&body=${encodeURIComponent(
+                            `Hi ${latestTenantInvite.name},\n\nPlease access your tenant portal using the secure link below:\n\n${latestTenantInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                          )}`}
+                          className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
+                        >
+                          <Mail size={12} />
+                          <span>Email</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative p-2.5 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden">
+                      <div className="filter blur-xs select-none opacity-40">
+                        <span className="font-mono text-xs text-slate-800">https://officex.ai/portal/tenant?id=act_••••••••••••</span>
+                      </div>
+                      <div className="absolute inset-0 bg-slate-900/65 backdrop-blur-[1px] flex items-center justify-between px-3 py-1.5">
+                        <div className="flex items-center gap-1.5 text-white">
+                          <Lock size={13} className="text-amber-400 shrink-0" />
+                          <span className="text-[11px] font-bold">Pro Subscription required to share tenant links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubscriptionGateReason("Share Corporate Tenant Portal Link");
+                            setSubscriptionGateModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded bg-amber-400 hover:bg-amber-300 text-slate-900 text-[11px] font-bold shadow cursor-pointer transition"
+                        >
+                          Subscribe Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* ──── TENANT ONBOARDING MODE SELECTOR (2 OPTIONS) ──── */}
@@ -4685,236 +4733,6 @@ export default function PropertyHierarchyModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                {/* Associated Commercial Property */}
-                {/* Associated Commercial Property (Locked to active wizard property) */}
-                <div className="sm:col-span-2 p-2.5 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-teal-700 uppercase block">Property Being Leased</span>
-                    <span className="font-extrabold text-teal-950 text-xs">{activePropertyObj?.name || propForm.propertyName || "Commercial Property"}</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-200">
-                    Auto-Linked
-                  </span>
-                </div>
-
-                {/* ──── DEMISED PREMISES (FLOOR & SUITE SELECTION) ──── */}
-                <div className="sm:col-span-2 p-4 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-teal-100 pb-2">
-                    <div>
-                      <span className="font-extrabold text-teal-950 text-xs block">
-                        Demised Premises Allocation (Floor &amp; Suites) *
-                      </span>
-                      <span className="text-[11px] text-teal-700">
-                        Choose which floor and which specific office suites / units this tenant occupies.
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200 self-start sm:self-auto">
-                      Auto-Binds to Lease Contract
-                    </span>
-                  </div>
-
-                  {/* 1. Which Tower / Building Dropdown (if campus / multiple towers) */}
-                  {displayBuildings.length > 1 && (
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1 text-xs">
-                        1. Which Tower / Building is this tenant leasing? <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={selectedTenantBuilding || displayBuildings[0]?.id || ""}
-                        onChange={(e) => {
-                          const bId = e.target.value;
-                          setSelectedTenantBuilding(bId);
-                          setSelectedTenantFloor("");
-                          setSelectedTenantSuites([]);
-                          setContractForm((prev) => ({ ...prev, buildingId: bId }));
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
-                      >
-                        {displayBuildings.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Which Floor Dropdown */}
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1 text-xs">
-                      {displayBuildings.length > 1
-                        ? `2. Which Floor in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}?`
-                        : "1. Which Floor is this tenant leasing?"} <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={selectedTenantFloor}
-                      onChange={(e) => {
-                        const fl = e.target.value;
-                        setSelectedTenantFloor(fl);
-                        setSelectedContractFloor(fl);
-                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
-                        // Auto-select suites on this floor belonging to this specific tower
-                        const matchingSpaces = spacesList.filter((s) => {
-                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
-                            return false;
-                          }
-                          const flStr = (s.floorName || "").toLowerCase().trim();
-                          const nameStr = s.name.toLowerCase().trim();
-                          const targetFl = fl.toLowerCase().trim();
-                          if (targetFl === "0") {
-                            return (
-                              flStr === "0" ||
-                              flStr.includes("ground") ||
-                              flStr === "g" ||
-                              nameStr.includes("ground") ||
-                              nameStr.includes("bay") ||
-                              nameStr.includes("shed")
-                            );
-                          }
-                          return (
-                            flStr === `floor ${targetFl}` ||
-                            flStr === `f${targetFl}` ||
-                            flStr === targetFl ||
-                            (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
-                          );
-                        });
-                        if (matchingSpaces.length > 0) {
-                          setSelectedTenantSuites(matchingSpaces.map((s) => s.id));
-                        } else {
-                          setSelectedTenantSuites([]);
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
-                    >
-                      <option value="">
-                        -- Select Demised Floor {displayBuildings.length > 1 ? `in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}` : ""} --
-                      </option>
-                      {buildingFloorNumbersForTenant.map((flNum) => {
-                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
-                        const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
-                        const spacesOnThisFloor = spacesList.filter((s) => {
-                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
-                          const flStr = (s.floorName || "").toLowerCase();
-                          return (
-                            flStr === `floor ${flNum}` ||
-                            flStr === `f${flNum}` ||
-                            flStr === String(flNum) ||
-                            flStr === formatFloorName(flNum).toLowerCase() ||
-                            (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
-                          );
-                        });
-                        const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
-                        const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
-                        return (
-                          <option key={flNum} value={String(flNum)}>
-                            {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel} {flArea > 0 ? `(${flArea.toLocaleString()} Sq.Ft)` : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  {/* 2. Which Suites / Units Selection */}
-                  {selectedTenantFloor && (
-                    <div className="space-y-2 pt-1 animate-in fade-in">
-                      <div className="flex items-center justify-between text-xs">
-                        <label className="font-bold text-slate-700">
-                          {displayBuildings.length > 1 ? "3. Which Suite(s) / Unit(s)" : "2. Which Suite(s) / Unit(s)"} does the tenant occupy on Floor {selectedTenantFloor}? *
-                        </label>
-                        {floorSpacesForTenant.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (selectedTenantSuites.length === floorSpacesForTenant.length) {
-                                setSelectedTenantSuites([]);
-                              } else {
-                                setSelectedTenantSuites(floorSpacesForTenant.map((s) => s.id));
-                              }
-                            }}
-                            className="text-[11px] font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer"
-                          >
-                            {selectedTenantSuites.length === floorSpacesForTenant.length
-                              ? "Deselect All"
-                              : "Select Entire Floor (All Units)"}
-                          </button>
-                        )}
-                      </div>
-
-                      {floorSpacesForTenant.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
-                          {floorSpacesForTenant.map((sp) => {
-                            const isSelected = selectedTenantSuites.includes(sp.id);
-                            return (
-                              <button
-                                key={sp.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedTenantSuites((prev) =>
-                                    isSelected ? prev.filter((id) => id !== sp.id) : [...prev, sp.id]
-                                  );
-                                }}
-                                className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer ${
-                                  isSelected
-                                    ? "bg-teal-700 text-white border-teal-800 shadow-2xs font-bold"
-                                    : "bg-white text-slate-700 border-slate-200 hover:border-teal-300"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 truncate">
-                                  <div
-                                    className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                                      isSelected
-                                        ? "bg-white text-teal-800"
-                                        : "border border-slate-300 bg-slate-50 text-transparent"
-                                    }`}
-                                  >
-                                    ✓
-                                  </div>
-                                  <div className="truncate">
-                                    <span className="block truncate text-xs">{sp.name}</span>
-                                    <span
-                                      className={`text-[10px] block font-normal ${
-                                        isSelected ? "text-teal-100" : "text-slate-400"
-                                      }`}
-                                    >
-                                      {sp.unitType || "Office"} • {sp.occupancyStatus === "occupied" ? "Currently Occupied" : "Vacant"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <span
-                                  className={`text-xs shrink-0 font-mono font-bold ${
-                                    isSelected ? "text-white" : "text-slate-700"
-                                  }`}
-                                >
-                                  {sp.area > 0 ? `${sp.area.toLocaleString()} Sq.Ft` : "Whole Floor"}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="p-3 bg-white/90 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
-                          No individual units subdivided on Floor {selectedTenantFloor} yet.
-                          The tenant will be assigned to <strong>Floor {selectedTenantFloor} (Full Floor)</strong>.
-                        </div>
-                      )}
-
-                      {/* Total Demised Area Calculation Banner */}
-                      <div className="p-2.5 bg-white rounded-xl border border-teal-200 flex items-center justify-between text-xs shadow-2xs">
-                        <span className="font-bold text-slate-700">
-                          Total Demised Area for this Tenant:
-                        </span>
-                        <span className="font-black text-[#0F8B7D] font-mono text-sm">
-                          {totalTenantSelectedArea > 0
-                            ? `${totalTenantSelectedArea.toLocaleString()} Sq.Ft`
-                            : (floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft
-                              ? `${Number(floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft).toLocaleString()} Sq.Ft`
-                              : "Whole Floor")}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* ──── UPPER SIDE: CORPORATE ENTITY & STATUTORY PARTICULARS ──── */}
                 <div className="sm:col-span-2 p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3.5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-2 gap-2">
@@ -4970,57 +4788,6 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    {/* 1. Legal Entity Structure / Company Type */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">
-                        Company Legal Structure <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={tenantForm.companyType}
-                        onChange={(e) => {
-                          const ct = e.target.value as any;
-                          setTenantForm((prev) => ({
-                            ...prev,
-                            companyType: ct,
-                            // If sole proprietorship, clear CIN as CIN does not exist for proprietorships
-                            cinNumber: ct === "sole_proprietorship" ? "" : prev.cinNumber,
-                          }));
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
-                      >
-                        <option value="pvt_ltd">Private Limited Company (Pvt Ltd)</option>
-                        <option value="public_ltd">Public Limited Company (Ltd)</option>
-                        <option value="llp">Limited Liability Partnership (LLP)</option>
-                        <option value="partnership">Partnership Firm</option>
-                        <option value="sole_proprietorship">Sole Proprietorship (Proprietor / Individual)</option>
-                        <option value="trust_society">Trust / Society / Association</option>
-                      </select>
-                    </div>
-
-                    {/* 2. Industry Type / Vertical */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">
-                        Industry / Sector Vertical <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={tenantForm.industryType}
-                        onChange={(e) => setTenantForm({ ...tenantForm, industryType: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
-                      >
-                        <option value="IT & Software">IT / SaaS / Tech</option>
-                        <option value="BFSI">BFSI / FinTech / Investment</option>
-                        <option value="Consulting & Legal">Consulting &amp; Legal</option>
-                        <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
-                        <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
-                        <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
-                        <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
-                        <option value="Education">Education &amp; EdTech</option>
-                        <option value="Hospitality">Hospitality &amp; F&amp;B</option>
-                        <option value="Media & Entertainment">Media &amp; Entertainment</option>
-                        <option value="Other">Other Commercial Enterprise</option>
-                      </select>
-                    </div>
-
                     {/* 3. Company Legal Registered Name */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -5059,6 +4826,57 @@ export default function PropertyHierarchyModal({
                           "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white"
                         )}
                       />
+                    </div>
+
+                    {/* 2. Industry Type / Vertical */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Industry / Sector Vertical <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={tenantForm.industryType}
+                        onChange={(e) => setTenantForm({ ...tenantForm, industryType: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      >
+                        <option value="IT & Software">IT / SaaS / Tech</option>
+                        <option value="BFSI">BFSI / FinTech / Investment</option>
+                        <option value="Consulting & Legal">Consulting &amp; Legal</option>
+                        <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
+                        <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
+                        <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
+                        <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
+                        <option value="Education">Education &amp; EdTech</option>
+                        <option value="Hospitality">Hospitality &amp; F&amp;B</option>
+                        <option value="Media & Entertainment">Media &amp; Entertainment</option>
+                        <option value="Other">Other Commercial Enterprise</option>
+                      </select>
+                    </div>
+
+                    {/* 1. Legal Entity Structure / Company Type */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Company Legal Structure <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={tenantForm.companyType}
+                        onChange={(e) => {
+                          const ct = e.target.value as any;
+                          setTenantForm((prev) => ({
+                            ...prev,
+                            companyType: ct,
+                            // If sole proprietorship, clear CIN as CIN does not exist for proprietorships
+                            cinNumber: ct === "sole_proprietorship" ? "" : prev.cinNumber,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:border-[#0F8B7D] outline-none cursor-pointer"
+                      >
+                        <option value="pvt_ltd">Private Limited Company (Pvt Ltd)</option>
+                        <option value="public_ltd">Public Limited Company (Ltd)</option>
+                        <option value="llp">Limited Liability Partnership (LLP)</option>
+                        <option value="partnership">Partnership Firm</option>
+                        <option value="sole_proprietorship">Sole Proprietorship (Proprietor / Individual)</option>
+                        <option value="trust_society">Trust / Society / Association</option>
+                      </select>
                     </div>
 
                     {/* 4. Trade / Brand Name */}
@@ -5336,6 +5154,327 @@ export default function PropertyHierarchyModal({
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Associated Commercial Property */}
+                {/* Associated Commercial Property (Locked to active wizard property) */}
+                <div className="sm:col-span-2 p-2.5 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-teal-700 uppercase block">Property Being Leased</span>
+                    <span className="font-extrabold text-teal-950 text-xs">{activePropertyObj?.name || propForm.propertyName || "Commercial Property"}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                    Auto-Linked
+                  </span>
+                </div>
+
+                {/* ──── DEMISED PREMISES (FLOOR & SUITE SELECTION) ──── */}
+                <div className="sm:col-span-2 p-4 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-teal-100 pb-2">
+                    <div>
+                      <span className="font-extrabold text-teal-950 text-xs block">
+                        Demised Premises Allocation (Floor &amp; Suites) *
+                      </span>
+                      <span className="text-[11px] text-teal-700">
+                        Choose which floor and which specific office suites / units this tenant occupies.
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200 self-start sm:self-auto">
+                      Auto-Binds to Lease Contract
+                    </span>
+                  </div>
+
+                  {/* Warehouse Asset: Entire Facility vs Partial Bay Allocation (§10) */}
+                  {isSingleLevelAssetType(propForm.propertyType) ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-800 text-xs">
+                          Warehouse Leased Space Allocation <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                          Total Facility: {Number(propForm.areaSqft || 0).toLocaleString()} Sq.Ft
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWarehouseLeaseChoice("entire");
+                            const totalArea = propForm.areaSqft || "0";
+                            setContractForm((prev) => ({ ...prev, areaSqft: totalArea }));
+                          }}
+                          className={`p-3 rounded-xl border text-left cursor-pointer transition ${
+                            warehouseLeaseChoice === "entire"
+                              ? "border-[#0F8B7D] bg-teal-50/80 text-teal-950 font-bold shadow-2xs"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#0F8B7D]" />
+                            <span className="text-xs font-black">Entire Warehouse (100%)</span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal block mt-1">
+                            Tenant occupies the full {Number(propForm.areaSqft || 0).toLocaleString()} Sq.Ft facility
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWarehouseLeaseChoice("partial");
+                          }}
+                          className={`p-3 rounded-xl border text-left cursor-pointer transition ${
+                            warehouseLeaseChoice === "partial"
+                              ? "border-[#0F8B7D] bg-teal-50/80 text-teal-950 font-bold shadow-2xs"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-xs font-black">Partial Warehouse Bay / Area</span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal block mt-1">
+                            Specify exact leasable square footage (e.g. Bay A or 15,000 sq.ft)
+                          </span>
+                        </button>
+                      </div>
+
+                      {warehouseLeaseChoice === "partial" && (
+                        <div className="p-3 bg-white rounded-xl border border-teal-200 space-y-2 animate-in fade-in">
+                          <div className="flex items-center justify-between">
+                            <label className="font-bold text-slate-800 text-xs">
+                              Demised Leased Area (Sq.Ft) <span className="text-rose-500">*</span>
+                            </label>
+                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                              Max Limit: {Number(propForm.areaSqft || 0).toLocaleString()} Sq.Ft
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            max={Number(propForm.areaSqft) || undefined}
+                            required
+                            placeholder="e.g. 15000"
+                            value={contractForm.areaSqft}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const cap = Number(propForm.areaSqft) || 0;
+                              if (cap > 0 && Number(val) > cap) {
+                                showToast(`Cannot exceed warehouse capacity of ${cap.toLocaleString()} Sq.Ft`, "error");
+                                return;
+                              }
+                              setContractForm({ ...contractForm, areaSqft: val });
+                            }}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                    {/* 1. Which Tower / Building Dropdown (if campus / multiple towers) */}
+                  {displayBuildings.length > 1 && (
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-xs">
+                        1. Which Tower / Building is this tenant leasing? <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={selectedTenantBuilding || displayBuildings[0]?.id || ""}
+                        onChange={(e) => {
+                          const bId = e.target.value;
+                          setSelectedTenantBuilding(bId);
+                          setSelectedTenantFloor("");
+                          setSelectedTenantSuites([]);
+                          setContractForm((prev) => ({ ...prev, buildingId: bId }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
+                      >
+                        {displayBuildings.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Which Floor Dropdown */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1 text-xs">
+                      {displayBuildings.length > 1
+                        ? `2. Which Floor in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}?`
+                        : "1. Which Floor is this tenant leasing?"} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={selectedTenantFloor}
+                      onChange={(e) => {
+                        const fl = e.target.value;
+                        setSelectedTenantFloor(fl);
+                        setSelectedContractFloor(fl);
+                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                        // Auto-select suites on this floor belonging to this specific tower
+                        const matchingSpaces = spacesList.filter((s) => {
+                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
+                            return false;
+                          }
+                          const flStr = (s.floorName || "").toLowerCase().trim();
+                          const nameStr = s.name.toLowerCase().trim();
+                          const targetFl = fl.toLowerCase().trim();
+                          if (targetFl === "0") {
+                            return (
+                              flStr === "0" ||
+                              flStr.includes("ground") ||
+                              flStr === "g" ||
+                              nameStr.includes("ground") ||
+                              nameStr.includes("bay") ||
+                              nameStr.includes("shed")
+                            );
+                          }
+                          return (
+                            flStr === `floor ${targetFl}` ||
+                            flStr === `f${targetFl}` ||
+                            flStr === targetFl ||
+                            (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
+                          );
+                        });
+                        if (matchingSpaces.length > 0) {
+                          setSelectedTenantSuites(matchingSpaces.map((s) => s.id));
+                        } else {
+                          setSelectedTenantSuites([]);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer text-xs bg-white"
+                    >
+                      <option value="">
+                        -- Select Demised Floor {displayBuildings.length > 1 ? `in ${(buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id))?.name || "Tower")}` : ""} --
+                      </option>
+                      {buildingFloorNumbersForTenant.map((flNum) => {
+                        const curBldgId = selectedTenantBuilding || displayBuildings[0]?.id;
+                        const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
+                        const spacesOnThisFloor = spacesList.filter((s) => {
+                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
+                          const flStr = (s.floorName || "").toLowerCase();
+                          return (
+                            flStr === `floor ${flNum}` ||
+                            flStr === `f${flNum}` ||
+                            flStr === String(flNum) ||
+                            flStr === formatFloorName(flNum).toLowerCase() ||
+                            (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
+                          );
+                        });
+                        const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
+                        const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
+                        return (
+                          <option key={flNum} value={String(flNum)}>
+                            {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel} {flArea > 0 ? `(${flArea.toLocaleString()} Sq.Ft)` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* 2. Which Suites / Units Selection */}
+                  {selectedTenantFloor && (
+                    <div className="space-y-2 pt-1 animate-in fade-in">
+                      <div className="flex items-center justify-between text-xs">
+                        <label className="font-bold text-slate-700">
+                          {displayBuildings.length > 1 ? "3. Which Suite(s) / Unit(s)" : "2. Which Suite(s) / Unit(s)"} does the tenant occupy on Floor {selectedTenantFloor}? *
+                        </label>
+                        {floorSpacesForTenant.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedTenantSuites.length === floorSpacesForTenant.length) {
+                                setSelectedTenantSuites([]);
+                              } else {
+                                setSelectedTenantSuites(floorSpacesForTenant.map((s) => s.id));
+                              }
+                            }}
+                            className="text-[11px] font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer"
+                          >
+                            {selectedTenantSuites.length === floorSpacesForTenant.length
+                              ? "Deselect All"
+                              : "Select Entire Floor (All Units)"}
+                          </button>
+                        )}
+                      </div>
+
+                      {floorSpacesForTenant.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                          {floorSpacesForTenant.map((sp) => {
+                            const isSelected = selectedTenantSuites.includes(sp.id);
+                            return (
+                              <button
+                                key={sp.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTenantSuites((prev) =>
+                                    isSelected ? prev.filter((id) => id !== sp.id) : [...prev, sp.id]
+                                  );
+                                }}
+                                className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer ${
+                                  isSelected
+                                    ? "bg-teal-700 text-white border-teal-800 shadow-2xs font-bold"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-teal-300"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <div
+                                    className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                                      isSelected
+                                        ? "bg-white text-teal-800"
+                                        : "border border-slate-300 bg-slate-50 text-transparent"
+                                    }`}
+                                  >
+                                    ✓
+                                  </div>
+                                  <div className="truncate">
+                                    <span className="block truncate text-xs">{sp.name}</span>
+                                    <span
+                                      className={`text-[10px] block font-normal ${
+                                        isSelected ? "text-teal-100" : "text-slate-400"
+                                      }`}
+                                    >
+                                      {sp.unitType || "Office"} • {sp.occupancyStatus === "occupied" ? "Currently Occupied" : "Vacant"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-xs shrink-0 font-mono font-bold ${
+                                    isSelected ? "text-white" : "text-slate-700"
+                                  }`}
+                                >
+                                  {sp.area > 0 ? `${sp.area.toLocaleString()} Sq.Ft` : "Whole Floor"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-white/90 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
+                          No individual units subdivided on Floor {selectedTenantFloor} yet.
+                          The tenant will be assigned to <strong>Floor {selectedTenantFloor} (Full Floor)</strong>.
+                        </div>
+                      )}
+
+                      {/* Total Demised Area Calculation Banner */}
+                      <div className="p-2.5 bg-white rounded-xl border border-teal-200 flex items-center justify-between text-xs shadow-2xs">
+                        <span className="font-bold text-slate-700">
+                          Total Demised Area for this Tenant:
+                        </span>
+                        <span className="font-black text-[#0F8B7D] font-mono text-sm">
+                          {totalTenantSelectedArea > 0
+                            ? `${totalTenantSelectedArea.toLocaleString()} Sq.Ft`
+                            : (floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft
+                              ? `${Number(floorBreakdown.find((f) => String(f.floorNumber) === selectedTenantFloor)?.areaSqft).toLocaleString()} Sq.Ft`
+                              : "Whole Floor")}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -5805,6 +5944,11 @@ export default function PropertyHierarchyModal({
                           <label className="font-bold text-slate-700">
                             Chargeable Area (Sq.Ft) <span className="text-rose-500">*</span>
                           </label>
+                          {(totalTenantSelectedArea > 0 || Number(propForm.areaSqft) > 0) && (
+                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                              Cap: {(totalTenantSelectedArea || Number(propForm.areaSqft)).toLocaleString()} Sq.Ft
+                            </span>
+                          )}
                           {changedFieldKeys.has("areaSqft") && (
                             <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
                               Updated
@@ -5814,12 +5958,18 @@ export default function PropertyHierarchyModal({
                         <input
                           type="number"
                           placeholder="e.g. 5000"
+                          max={totalTenantSelectedArea || Number(propForm.areaSqft) || undefined}
                           value={contractForm.areaSqft}
                           onClick={() => clearFieldHighlight("areaSqft")}
                           onFocus={() => clearFieldHighlight("areaSqft")}
                           onChange={(e) => {
                             clearFieldHighlight("areaSqft");
                             const area = e.target.value;
+                            const maxArea = totalTenantSelectedArea || Number(propForm.areaSqft) || 0;
+                            if (maxArea > 0 && Number(area) > maxArea) {
+                              showToast(`Area cannot exceed leasable cap of ${maxArea.toLocaleString()} Sq.Ft`, "error");
+                              return;
+                            }
                             const rate = Number(contractForm.ratePerSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(rate * Number(area))) : contractForm.monthlyRent;
                             setContractForm({
@@ -6341,7 +6491,14 @@ export default function PropertyHierarchyModal({
                     onFocus={() => clearFieldHighlight("startDate")}
                     onChange={(e) => {
                       clearFieldHighlight("startDate");
-                      setContractForm({ ...contractForm, startDate: e.target.value });
+                      const nextStart = e.target.value;
+                      setContractForm((prev) => {
+                        const updated = { ...prev, startDate: nextStart };
+                        if (prev.endDate && nextStart && prev.endDate <= nextStart) {
+                          updated.endDate = "";
+                        }
+                        return updated;
+                      });
                     }}
                     className={getHighlightClass(
                       "startDate",
@@ -6350,12 +6507,15 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* Contract End Date */}
+                {/* Contract End Date (Must be strictly after Start Date) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-slate-700">
                       Contract End Date <span className="text-rose-500">*</span>
                     </label>
+                    {contractForm.startDate && (
+                      <span className="text-[10px] text-teal-700 font-semibold">Min: {contractForm.startDate}</span>
+                    )}
                     {changedFieldKeys.has("endDate") && (
                       <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
                         Updated
@@ -6365,12 +6525,18 @@ export default function PropertyHierarchyModal({
                   <input
                     type="date"
                     required
+                    min={contractForm.startDate || undefined}
                     value={contractForm.endDate}
                     onClick={() => clearFieldHighlight("endDate")}
                     onFocus={() => clearFieldHighlight("endDate")}
                     onChange={(e) => {
                       clearFieldHighlight("endDate");
-                      setContractForm({ ...contractForm, endDate: e.target.value });
+                      const nextEnd = e.target.value;
+                      if (contractForm.startDate && nextEnd && nextEnd <= contractForm.startDate) {
+                        showToast("Contract End Date must be after Start Date (" + contractForm.startDate + ")", "error");
+                        return;
+                      }
+                      setContractForm({ ...contractForm, endDate: nextEnd });
                     }}
                     className={getHighlightClass(
                       "endDate",
@@ -6659,35 +6825,91 @@ export default function PropertyHierarchyModal({
                 );
               })()}
 
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {/* Contract Action Buttons & PDF Download & Next Step (§17, §20) */}
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setActiveTab("tenant")}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer self-start sm:self-auto"
                 >
                   ← Back to Tenants
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {/* Download Contract PDF Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isOwnerSubscribed && !checkIsOwnerSubscribed()) {
+                        setSubscriptionGateReason("Download Official Formatted Lease Contract PDF");
+                        setSubscriptionGateModalOpen(true);
+                        return;
+                      }
+                      // Generate and download full commercial deed
+                      const activeBldg = buildingsList.find((b) => b.id === contractForm.buildingId);
+                      const activeSpc = displaySpaces.find((s) => s.id === contractForm.spaceId);
+                      downloadLeaseContractPdf({
+                        landlordName: propForm.spvName || propForm.contactName || "Commercial Property Owner",
+                        landlordAddress: propForm.address || propForm.city || "",
+                        landlordPan: (propForm as any).spvPan || "",
+                        landlordGstin: (propForm as any).spvGst || "",
+                        tenantName: tenantForm.companyName || "Lessee Organization",
+                        tenantTradeName: tenantForm.tradeName || "",
+                        tenantCompanyType: tenantForm.companyType,
+                        tenantCin: tenantForm.cinNumber || "",
+                        tenantPan: tenantForm.pan || "",
+                        tenantGstin: tenantForm.gst || "",
+                        tenantAddress: tenantForm.billingAddress || "",
+                        signatoryName: tenantForm.signatoryName || "Authorized Signatory",
+                        signatoryDesignation: tenantForm.signatoryDesignation || "Director",
+                        propertyName: propForm.propertyName || "Commercial Property",
+                        buildingName: activeBldg?.name,
+                        floorName: selectedTenantFloor === "0" ? "Ground Floor" : formatFloorName(Number(selectedTenantFloor)),
+                        spaceName: activeSpc?.name || "Demised Commercial Suite",
+                        chargeableAreaSqft: Number(contractForm.areaSqft) || 5000,
+                        monthlyRent: Number(contractForm.monthlyRent) || 0,
+                        ratePerSqft: Number(contractForm.ratePerSqft) || undefined,
+                        camMonthly: Number(contractForm.camMonthly) || undefined,
+                        camRatePerSqft: Number(contractForm.camRate) || undefined,
+                        securityDeposit: Number(contractForm.securityDeposit) || 0,
+                        securityDepositMonths: undefined,
+                        startDate: contractForm.startDate || new Date().toISOString().split("T")[0],
+                        endDate: contractForm.endDate || new Date(Date.now() + 365*24*3600*1000).toISOString().split("T")[0],
+                        lockInMonths: Number(contractForm.lockInMonths) || undefined,
+                        noticePeriodDays: Number(contractForm.noticeDays) || 90,
+                        escalationPct: Number(contractForm.escalationPct) || 5,
+                        escalationFrequency: contractForm.escalationFrequency,
+                      });
+                      showToast("✓ Commercial Lease Deed generated & opened for printing/PDF!");
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText size={14} className="text-[#0F8B7D]" />
+                    <span>Download Contract PDF</span>
+                    {!isOwnerSubscribed && (
+                      <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded border border-amber-300">
+                        PRO
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Option A: Assign 3rd Party Manager */}
                   <button
                     type="button"
                     onClick={() => setActiveTab("delegation")}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold transition cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
                   >
-                    Skip to Management Assignment →
+                    <span>Assign 3rd Party Manager →</span>
                   </button>
+
+                  {/* Option B: Self-Managed / Complete Onboarding */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                   >
                     {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
-                    <span>
-                      {shouldSkipSpaceStep
-                        ? "Save Contract & Assign Management (Step 4) →"
-                        : "Save Contract & Assign Management (Step 5) →"}
-                    </span>
+                    <span>Save Contract &amp; Finish ✓</span>
                   </button>
                 </div>
               </div>
@@ -6718,9 +6940,10 @@ export default function PropertyHierarchyModal({
                 </span>
               </div>
 
-              {/* Latest Generated Manager Invite Banner */}
+              {/* Latest Generated Manager Invite Banner (§20 Subscription Gated) */}
               {latestManagerInvite && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 text-xs animate-in fade-in space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-start gap-2.5">
                       <div className="w-9 h-9 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
                         <UserCheck size={16} />
@@ -6733,48 +6956,83 @@ export default function PropertyHierarchyModal({
                           </span>
                         </div>
                         <p className="text-[11px] text-teal-800 mt-0.5">
-                          Assigned for <span className="font-bold">{latestManagerInvite.propertyName}</span>. Share this activation link via WhatsApp or Email:
+                          Assigned for <span className="font-bold">{latestManagerInvite.propertyName}</span>.
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(latestManagerInvite.link);
-                          setCopiedManagerInvite(true);
-                          showToast("✓ Management invitation link copied to clipboard!");
-                          setTimeout(() => setCopiedManagerInvite(false), 2500);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                      >
-                        {copiedManagerInvite ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
-                      </button>
-                      <a
-                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                          `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                      >
-                        <MessageCircle size={13} />
-                        <span>WhatsApp</span>
-                      </a>
-                      <a
-                        href={`mailto:${latestManagerInvite.email}?subject=${encodeURIComponent(
-                          `Property Management Access - ${latestManagerInvite.propertyName}`
-                        )}&body=${encodeURIComponent(
-                          `Hi ${latestManagerInvite.name},\n\nYou have been assigned as property manager for ${latestManagerInvite.propertyName}.\n\nPlease activate your access using the link below:\n${latestManagerInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
-                        )}`}
-                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                      >
-                        <Mail size={13} />
-                        <span>Email</span>
-                      </a>
-                    </div>
                   </div>
+
+                  {/* Subscription Check for Sharable Link */}
+                  {isOwnerSubscribed || checkIsOwnerSubscribed() ? (
+                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={latestManagerInvite.link}
+                        className="text-[11px] font-mono text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 flex-1 truncate"
+                      />
+                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(latestManagerInvite.link);
+                            setCopiedManagerInvite(true);
+                            showToast("✓ Management invitation link copied to clipboard!");
+                            setTimeout(() => setCopiedManagerInvite(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          {copiedManagerInvite ? <Check size={13} /> : <Copy size={13} />}
+                          <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
+                        </button>
+                        <a
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                            `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          <MessageCircle size={13} />
+                          <span>WhatsApp</span>
+                        </a>
+                        <a
+                          href={`mailto:${latestManagerInvite.email}?subject=${encodeURIComponent(
+                            `Property Management Access - ${latestManagerInvite.propertyName}`
+                          )}&body=${encodeURIComponent(
+                            `Hi ${latestManagerInvite.name},\n\nYou have been assigned as property manager for ${latestManagerInvite.propertyName}.\n\nPlease activate your access using the link below:\n${latestManagerInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                          )}`}
+                          className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          <Mail size={13} />
+                          <span>Email</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative p-3 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden">
+                      <div className="filter blur-xs select-none opacity-40">
+                        <span className="font-mono text-xs text-slate-800">https://officex.ai/invite?role=pm_company&mgr=Authorized&access=••••••••••••••••</span>
+                      </div>
+                      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-between px-4 py-2">
+                        <div className="flex items-center gap-2 text-white">
+                          <Lock size={15} className="text-amber-400 shrink-0" />
+                          <span className="text-xs font-bold">Pro Subscription required to share manager invite links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubscriptionGateReason("Share Manager Activation Link via WhatsApp/Email");
+                            setSubscriptionGateModalOpen(true);
+                          }}
+                          className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black shadow cursor-pointer transition"
+                        >
+                          Subscribe Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Form Fields Container */}
@@ -7043,6 +7301,164 @@ export default function PropertyHierarchyModal({
             onSuccess?.();
           }}
         />
+
+        {/* ──── FLOOR DE-REGISTRATION & REMOVAL REQUEST MODAL (§5) ──── */}
+        {deRegModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+                    🏢
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Request Floor De-Registration</h3>
+                    <p className="text-[11px] text-slate-500">Sell or remove floors from registered property</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeRegModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-amber-700 shrink-0" />
+                  <span>Institutional Maker-Checker Governance</span>
+                </p>
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  Because commercial leases and financial stacking plans depend on registered floor assets, removing or selling floors requires Administrative Verification. A notification will be dispatched to the Admin Portal for approval.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Select Floor to De-Register / Sell</label>
+                  <select
+                    value={deRegFloor}
+                    onChange={(e) => setDeRegFloor(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                  >
+                    <option value="">-- Choose Floor --</option>
+                    {allFloorNumbers.map((fl) => (
+                      <option key={fl} value={String(fl)}>
+                        {fl === 0 ? "Ground Floor" : `Floor ${fl}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Reason for Removal / Transaction Details</label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Sold Floor 3 to third-party investor / Title deed transferred / Change of commercial asset layout..."
+                    value={deRegReason}
+                    onChange={(e) => setDeRegReason(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setDeRegModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!deRegFloor || !deRegReason.trim() || deRegLoading}
+                  onClick={async () => {
+                    setDeRegLoading(true);
+                    try {
+                      const res = await fetch("/api/admin/change-requests", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          property_id: propForm.existingPropId || activePropertyObj?.id || "OX-PROP",
+                          property_name: propForm.propertyName || activePropertyObj?.name || "Commercial Tower",
+                          request_type: "sell_floors",
+                          floors_to_remove: [deRegFloor],
+                          description: deRegReason.trim(),
+                        }),
+                      });
+                      if (res.ok) {
+                        showToast("✓ Floor de-registration request submitted to Admin for approval!");
+                        setDeRegModalOpen(false);
+                        setDeRegReason("");
+                        setDeRegFloor("");
+                      } else {
+                        showToast("Failed to submit change request. Please try again.", "error");
+                      }
+                    } catch (err) {
+                      showToast("Network error submitting change request.", "error");
+                    } finally {
+                      setDeRegLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {deRegLoading ? <Loader2 size={13} className="animate-spin" /> : <Shield size={13} />}
+                  <span>Submit for Admin Approval</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ──── SUBSCRIPTION REQUIRED MODAL (§20) ──── */}
+        {subscriptionGateModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
+                <Lock size={26} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-black text-lg text-slate-900">Pro Feature Locked</h3>
+                <p className="text-xs text-slate-600 font-medium">
+                  {subscriptionGateReason || "This action requires an active Commercial Pro Subscription."}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2 text-xs">
+                <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-teal-700" />
+                  <span>Included with OfficeX Pro Suite:</span>
+                </div>
+                <ul className="space-y-1 text-slate-600 font-medium pl-4 list-disc text-[11px]">
+                  <li>Institutional Commercial Lease Deed PDF Generator</li>
+                  <li>Sharable Tenant Self-Service Portal Access &amp; Auto-Invoicing</li>
+                  <li>WhatsApp &amp; Email Direct Integration</li>
+                  <li>Automated Step Escalation Tracker &amp; CAM pooling</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSubscriptionGateModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Close
+                </button>
+                <a
+                  href="/pricing"
+                  onClick={() => setSubscriptionGateModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer text-center"
+                >
+                  Subscribe Now →
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

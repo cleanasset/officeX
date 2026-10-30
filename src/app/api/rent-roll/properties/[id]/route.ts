@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { property } from "@/db/schema";
+import { property, building, space, properties } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 
 export async function GET(
   req: Request,
@@ -64,12 +64,37 @@ export async function DELETE(
     const auth = getAuthContext(req);
     const { id } = await params;
 
+    // 1. Soft-delete property in Rent Roll master
     await db
       .update(property)
       .set({ deleted_at: new Date(), updated_by: auth.userId })
       .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)));
 
-    return NextResponse.json({ success: true, message: "Property deleted successfully" });
+    // 2. Cascade delete buildings and spaces
+    const bldgs = await db
+      .select({ id: building.id })
+      .from(building)
+      .where(eq(building.property_id, id));
+
+    if (bldgs.length > 0) {
+      const bldgIds = bldgs.map((b) => b.id);
+      await db
+        .update(building)
+        .set({ deleted_at: new Date(), updated_by: auth.userId })
+        .where(eq(building.property_id, id));
+
+      await db
+        .update(space)
+        .set({ deleted_at: new Date(), updated_by: auth.userId })
+        .where(inArray(space.building_id, bldgIds));
+    }
+
+    // 3. Also delete from marketplace / SaaS properties table if present
+    try {
+      await db.delete(properties).where(eq(properties.id, id));
+    } catch {}
+
+    return NextResponse.json({ success: true, message: "Property and its spaces removed successfully" });
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to delete property", message: err.message }, { status: 500 });
   }

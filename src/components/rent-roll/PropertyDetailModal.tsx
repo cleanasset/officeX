@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Briefcase,
   Landmark,
+  Trash2,
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
@@ -216,6 +217,45 @@ export default function PropertyDetailModal({
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteProperty = async () => {
+    if (!property?.id) return;
+    const pName = property.property_name || property.name || "this property";
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete "${pName}" and all its units from your portfolio?\n\nThis will remove the property and its leasable spaces.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setDeleting(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${property.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (res.ok) {
+        if (typeof window !== "undefined") {
+          const activeProp = localStorage.getItem("officex_active_property");
+          if (activeProp === pName || activeProp === property.id) {
+            localStorage.removeItem("officex_active_property");
+          }
+        }
+        onPropertyUpdated?.();
+        onClose();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setToastMessage({ text: d.message || "Failed to delete property", type: "error" });
+      }
+    } catch {
+      setToastMessage({ text: "Network error deleting property", type: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isOpen || !property) return null;
 
   const propName = editForm.property_name || property.property_name || property.name || "Commercial Property";
@@ -262,6 +302,15 @@ export default function PropertyDetailModal({
                 <span>Edit Property</span>
               </button>
             )}
+            <button
+              onClick={handleDeleteProperty}
+              disabled={deleting}
+              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-rose-200 disabled:opacity-60"
+              title="Delete Property from Portfolio"
+            >
+              <Trash2 size={13} />
+              <span>{deleting ? "Deleting..." : "Delete"}</span>
+            </button>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"
@@ -761,12 +810,22 @@ export default function PropertyDetailModal({
           <span className="text-slate-500 font-medium">
             Property ID: <span className="font-mono text-slate-700">{property.id}</span>
           </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition cursor-pointer"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDeleteProperty}
+              disabled={deleting}
+              className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+            >
+              <Trash2 size={13} />
+              <span>{deleting ? "Deleting Property..." : "Delete Property"}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
