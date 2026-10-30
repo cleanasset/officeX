@@ -2922,17 +2922,6 @@ export default function PropertyHierarchyModal({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {hasSavedOnboarding && (
-                    <button
-                      type="button"
-                      onClick={handleLoadFromOnboarding}
-                      title="Auto-fill form with details saved during onboarding"
-                      className="px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50/80 hover:bg-teal-100 text-teal-800 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <Sparkles size={13} className="text-teal-700" />
-                      <span>Fill from Onboarding</span>
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -2996,7 +2985,6 @@ export default function PropertyHierarchyModal({
                   <div>
                     <label className="font-semibold text-slate-700 block mb-1">
                       Property Code
-                      <span className="text-[10px] font-normal text-slate-400 ml-1.5">(Globally unique · built from name)</span>
                     </label>
                     <div className="relative">
                       <input
@@ -3332,21 +3320,29 @@ export default function PropertyHierarchyModal({
                           <label className="font-semibold text-slate-700 block">
                             {isSingleLevelAssetType(propForm.propertyType)
                               ? "Facility Levels / Upper Floors *"
-                              : "Total Floors (including Ground Floor) *"}
+                              : "Total Floors (Ground + Upper Floors, min 1) *"}
                           </label>
                           <span className="text-[11px] text-teal-700 font-semibold">
                             {isSingleLevelAssetType(propForm.propertyType)
-                              ? "0 = Single Ground Shed"
-                              : "e.g. 2 = Ground + 1st Floor"}
+                              ? "0 = Single Ground Shed · 1 = Ground + Mezzanine"
+                              : "1 = Ground Floor only · 2 = Ground + 1st Floor"}
                           </span>
                         </div>
                         <input
                           type="number"
                           min={isSingleLevelAssetType(propForm.propertyType) ? 0 : 1}
                           max={50}
-                          placeholder={isSingleLevelAssetType(propForm.propertyType) ? "0 (Ground Level)" : "e.g. 2 (Ground + 1st)"}
+                          required
+                          placeholder={isSingleLevelAssetType(propForm.propertyType) ? "0 (Ground Level)" : "e.g. 5 (Ground + 4 Upper Floors)"}
                           value={propForm.floorsCount}
-                          onChange={(e) => handleFloorsCountChange(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (!isSingleLevelAssetType(propForm.propertyType) && val === "0") {
+                              handleFloorsCountChange("1");
+                            } else {
+                              handleFloorsCountChange(val);
+                            }
+                          }}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
                         />
                       </div>
@@ -3771,19 +3767,11 @@ export default function PropertyHierarchyModal({
                   )}
 
                   {/* Warehouse & Industrial Operational Specifications */}
-                  {(isSingleLevelAssetType(propForm.propertyType) || Number(propForm.floorsCount) === 0) && (
+                  {isSingleLevelAssetType(propForm.propertyType) && (
                     <div className="sm:col-span-2 p-3.5 bg-teal-50/70 rounded-2xl border border-teal-200 space-y-3 animate-in fade-in">
                       <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
-                        <div>
-                          <span className="text-xs font-bold text-teal-950 block">
-                            Warehouse &amp; Facility Operational Specifications
-                          </span>
-                          <span className="text-[11px] text-teal-700 font-medium">
-                            Configured directly on the facility (Step 2 is bypassed).
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200 shrink-0">
-                          Facility Handover Specs
+                        <span className="text-xs font-bold text-teal-950 block">
+                          Warehouse &amp; Logistics Operational Specifications
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -3809,13 +3797,18 @@ export default function PropertyHierarchyModal({
                         </div>
                         <div>
                           <label className="font-bold text-slate-700 block mb-1">Flooring Type &amp; Load Capacity</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Laser Screed FM2 (5 Ton/sq.m)"
-                            value={propForm.warehouseFlooringType}
+                          <select
+                            value={propForm.warehouseFlooringType || "Standard Heavy-Duty Industrial Concrete (5 Ton/sq.m)"}
                             onChange={(e) => setPropForm({ ...propForm, warehouseFlooringType: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white"
-                          />
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none bg-white cursor-pointer"
+                          >
+                            <option value="Standard Heavy-Duty Industrial Concrete (5 Ton/sq.m)">Standard Heavy-Duty Industrial Concrete (5 Ton/sq.m)</option>
+                            <option value="Laser Screed FM2 Superflat Floor (Heavy Load)">Laser Screed FM2 Superflat Floor (Heavy Load)</option>
+                            <option value="Epoxy Coated Anti-Dust Industrial Floor">Epoxy Coated Anti-Dust Industrial Floor</option>
+                            <option value="Reinforced Cement Concrete (RCC)">Reinforced Cement Concrete (RCC)</option>
+                            <option value="Basic Polished Trimix Flooring">Basic Polished Trimix Flooring</option>
+                            <option value="Standard Commercial Concrete">Standard Commercial Concrete</option>
+                          </select>
                         </div>
                         <div>
                           <label className="font-bold text-slate-700 block mb-1">Power Load Sanctioned</label>
@@ -3833,10 +3826,11 @@ export default function PropertyHierarchyModal({
 
                   {/* Primary Contact Name */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Primary On-site Contact Name</label>
+                    <label className="font-bold text-slate-700 block mb-1">Property Owner / Primary Contact Name *</label>
                     <input
                       type="text"
-                      placeholder="e.g. Rajesh Sharma"
+                      required
+                      placeholder="e.g. Rajesh Sharma (Owner / Director)"
                       value={propForm.contactName}
                       onChange={(e) => setPropForm({ ...propForm, contactName: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
@@ -4099,14 +4093,29 @@ export default function PropertyHierarchyModal({
                     Configure leasable units (offices, suites, retail, or entire floors) and occupancy status.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("tenant")}
-                  className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs shrink-0 transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
-                >
-                  <span>Proceed to Tenants (Step 3)</span>
-                  <ArrowRight size={13} />
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (allFloorNumbers.length > 0 && !deRegFloor) {
+                        setDeRegFloor(String(allFloorNumbers[0]));
+                      }
+                      setDeRegModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs shrink-0 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    title="Sold or transferred floors? Request de-registration with Admin Approval"
+                  >
+                    <span>🏢 Sold Floors? Request Removal</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("tenant")}
+                    className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs shrink-0 transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                  >
+                    <span>Proceed to Tenants (Step 3)</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
               </div>
 
               {/* Summary KPI Strip */}
@@ -4133,16 +4142,78 @@ export default function PropertyHierarchyModal({
                 </div>
               </div>
 
+              {/* Floor Navigation Tab Strip for Step 2 */}
+              <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Layers size={13} className="text-[#0F8B7D]" />
+                    <span>Select Floor to View &amp; Configure Units:</span>
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Filter units or add new spaces floor-by-floor
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStudioFloor("all")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
+                      activeStudioFloor === "all"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    }`}
+                  >
+                    All Floors ({displaySpaces.length} Units)
+                  </button>
+                  {allFloorNumbers.map((fl) => {
+                    const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
+                    const unitsOnFloor = displaySpaces.filter((s) => {
+                      const num = s.floorName?.toLowerCase().includes("ground") || s.floorName === "Floor 0" ? 0 : parseInt(s.floorName?.replace(/\D/g, "") || "0", 10);
+                      return num === fl;
+                    });
+                    const isSelected = activeStudioFloor === String(fl);
+                    return (
+                      <button
+                        key={fl}
+                        type="button"
+                        onClick={() => {
+                          setActiveStudioFloor(String(fl));
+                          setSpaceForm((prev) => ({ ...prev, floorNumber: String(fl) }));
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? "bg-[#0F8B7D] text-white shadow-xs"
+                            : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                        }`}
+                      >
+                        <span>{flLabel}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                          isSelected ? "bg-white/20 text-white" : "bg-teal-50 text-teal-800 border border-teal-200"
+                        }`}>
+                          {unitsOnFloor.length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Already Configured Spaces Strip (if any exist) */}
               {displaySpaces.length > 0 && (
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                        Registered Spaces ({displaySpaces.length})
+                        Registered Spaces ({activeStudioFloor === "all" ? displaySpaces.length : displaySpaces.filter((sp) => {
+                          const num = sp.floorName?.toLowerCase().includes("ground") || sp.floorName === "Floor 0" ? 0 : parseInt(sp.floorName?.replace(/\D/g, "") || "0", 10);
+                          return num === Number(activeStudioFloor);
+                        }).length})
                       </span>
                       <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
-                        {displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0).toLocaleString()} Sq.Ft Total
+                        {(activeStudioFloor === "all" ? displaySpaces : displaySpaces.filter((sp) => {
+                          const num = sp.floorName?.toLowerCase().includes("ground") || sp.floorName === "Floor 0" ? 0 : parseInt(sp.floorName?.replace(/\D/g, "") || "0", 10);
+                          return num === Number(activeStudioFloor);
+                        })).reduce((acc, s) => acc + (s.area || 0), 0).toLocaleString()} Sq.Ft Total
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-400 font-medium">
@@ -4151,7 +4222,10 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1">
-                    {displaySpaces.map((sp) => {
+                    {(activeStudioFloor === "all" ? displaySpaces : displaySpaces.filter((sp) => {
+                      const num = sp.floorName?.toLowerCase().includes("ground") || sp.floorName === "Floor 0" ? 0 : parseInt(sp.floorName?.replace(/\D/g, "") || "0", 10);
+                      return num === Number(activeStudioFloor);
+                    })).map((sp) => {
                       const spBldg = buildingsList.find((b) => b.id === sp.buildingId);
                       return (
                         <div
@@ -4591,16 +4665,11 @@ export default function PropertyHierarchyModal({
                           <UploadCloud size={20} />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold text-slate-900">
-                              Upload Agreement &amp; Auto-Fill Tenant Details
-                            </h4>
-                            <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
-                              Rent Roll AI Extractor
-                            </span>
-                          </div>
+                          <h4 className="text-xs font-bold text-slate-900">
+                            Upload Existing Lease Document (PDF / Scanned)
+                          </h4>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            Upload your signed <strong>Rent Agreement</strong>, <strong>Maintenance Deed</strong>, or <strong>Both Mixed Documents</strong>. Auto-fills name, area, floor, rent, CAM, and covenants.
+                            Upload signed rent agreement or maintenance deed. Terms and tenant details will be mapped directly to the form below.
                           </p>
                         </div>
                       </div>
@@ -4952,28 +5021,12 @@ export default function PropertyHierarchyModal({
                       <input
                         type="text"
                         required
-                        placeholder={
-                          tenantForm.companyType === "sole_proprietorship"
-                            ? "ABCDE1234P (4th letter 'P' for Individual)"
-                            : tenantForm.companyType === "llp" || tenantForm.companyType === "partnership"
-                            ? "AABCF1234F (4th letter 'F' for Firm)"
-                            : "AABCS1234C (4th letter 'C' for Company)"
-                        }
+                        placeholder="e.g. ABCDE1234F"
                         maxLength={10}
                         value={tenantForm.pan}
                         onChange={(e) => setTenantForm({ ...tenantForm, pan: e.target.value.toUpperCase() })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
                       />
-                      {tenantForm.pan.length === 10 && tenantForm.companyType === "sole_proprietorship" && tenantForm.pan[3] !== "P" && (
-                        <p className="text-[10px] text-amber-700 mt-0.5">
-                          Note: Sole Proprietorships typically use the proprietor's individual PAN (4th letter 'P').
-                        </p>
-                      )}
-                      {tenantForm.pan.length === 10 && (tenantForm.companyType === "pvt_ltd" || tenantForm.companyType === "public_ltd") && tenantForm.pan[3] !== "C" && (
-                        <p className="text-[10px] text-amber-700 mt-0.5">
-                          Note: Company PANs typically have 'C' as the 4th letter.
-                        </p>
-                      )}
                     </div>
 
                     {/* 7. GSTIN Number */}
@@ -4986,17 +5039,12 @@ export default function PropertyHierarchyModal({
                       </div>
                       <input
                         type="text"
-                        placeholder="29AAAAA0000A1Z5 (15 chars)"
+                        placeholder="e.g. 29AAAAA0000A1Z5"
                         maxLength={15}
                         value={tenantForm.gst}
                         onChange={(e) => setTenantForm({ ...tenantForm, gst: e.target.value.toUpperCase() })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
                       />
-                      {tenantForm.gst.length === 15 && tenantForm.pan.length === 10 && tenantForm.gst.slice(2, 12) !== tenantForm.pan && (
-                        <p className="text-[10px] text-amber-700 mt-0.5">
-                          Warning: Characters 3–12 of GSTIN do not match entered PAN ({tenantForm.pan}).
-                        </p>
-                      )}
                     </div>
 
                     {/* 8. Registered Billing Address - User Fills It (Empty by Default) */}
@@ -5591,93 +5639,114 @@ export default function PropertyHierarchyModal({
                   </div>
               )}
 
-              {/* ──── UPLOAD RENT AGREEMENT BOX (AUTO-EXTRACT TERMS) ──── */}
-              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-dashed border-teal-300 hover:border-teal-500 transition-all">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 mt-0.5">
-                      <FileUp size={20} />
+              {/* ──── UPLOAD RENT AGREEMENT OR SYNC BANNER (§16) ──── */}
+              {uploadedTenantFileList.length > 0 || parsedTenantDocMeta ? (
+                <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-xs text-teal-950 flex items-center justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-white text-[#0F8B7D] border border-teal-200 flex items-center justify-center shrink-0">
+                      <FileCheck2 size={16} />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-black text-slate-900">
-                          Upload Rent Agreement / Lease Deed
-                        </h4>
-                        <span className="text-[10px] font-black text-teal-700 bg-teal-100/70 px-2 py-0.5 rounded-full">
-                          Auto-Extract
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        Upload PDF, DOCX, or text agreement. Automatically detects tenant, rent rate/sqft, CAM, parking, escalation, deposit, and lock-in. You can review and edit all fields below.
-                      </p>
-                    </div>
-                  </div>
-
-                  <label className="cursor-pointer shrink-0">
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.doc,.txt,.rtf"
-                      disabled={isUploadingAgreement}
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleUploadRentAgreement(file);
-                        e.target.value = "";
-                      }}
-                    />
-                    <div
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1.5 shadow-xs ${
-                        isUploadingAgreement
-                          ? "bg-slate-200 text-slate-500 cursor-not-allowed"
-                          : "bg-teal-700 hover:bg-teal-800 text-white"
-                      }`}
-                    >
-                      {isUploadingAgreement ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin" />
-                          <span>Extracting Terms...</span>
-                        </>
-                      ) : (
-                        <>
-                          <UploadCloud size={14} />
-                          <span>Browse Lease Deed</span>
-                        </>
-                      )}
-                    </div>
-                  </label>
-                </div>
-
-                {/* Parsed Highlights Banner */}
-                {parsedAgreementMeta && (
-                  <div className="mt-3 p-3 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <FileCheck2 size={15} className="text-emerald-700" />
-                        <span>Parsed: {parsedAgreementMeta.fileName}</span>
-                      </div>
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
-                        {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
+                      <span className="font-bold block text-slate-900">
+                        Terms Loaded from Lease Agreement ({parsedTenantDocMeta?.fileName || uploadedTenantFileList[0]?.name})
+                      </span>
+                      <span className="text-[11px] text-teal-800">
+                        Tenant and contract details are unified. Review and verify financial rates, demised area, and dates below.
                       </span>
                     </div>
-
-                    {parsedAgreementMeta.summaryHighlights.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {parsedAgreementMeta.summaryHighlights.map((hl, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-md border border-emerald-300 text-emerald-900"
-                          >
-                            ✓ {hl}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-[10px] text-emerald-800 italic pt-0.5">
-                      ✓ All detected parameters have been auto-populated into the contract form below. You can modify any value as needed.
-                    </p>
                   </div>
-                )}
-              </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white px-2.5 py-1 rounded-full border border-teal-300 text-teal-900 shrink-0">
+                    Agreement Linked ✓
+                  </span>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-slate-50 border-2 border-dashed border-teal-300 hover:border-teal-500 transition-all">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <FileUp size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-black text-slate-900">
+                            Upload Rent Agreement / Lease Deed
+                          </h4>
+                          <span className="text-[10px] font-black text-teal-700 bg-teal-100/70 px-2 py-0.5 rounded-full">
+                            Auto-Extract
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          Upload PDF, DOCX, or text agreement. Automatically detects tenant, rent rate/sqft, CAM, parking, escalation, deposit, and lock-in. You can review and edit all fields below.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="cursor-pointer shrink-0">
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.doc,.txt,.rtf"
+                        disabled={isUploadingAgreement}
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadRentAgreement(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <div
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1.5 shadow-xs ${
+                          isUploadingAgreement
+                            ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                            : "bg-teal-700 hover:bg-teal-800 text-white"
+                        }`}
+                      >
+                        {isUploadingAgreement ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" />
+                            <span>Extracting Terms...</span>
+                          </>
+                        ) : (
+                          <>
+                            <UploadCloud size={14} />
+                            <span>Browse Lease Deed</span>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Parsed Highlights Banner */}
+                  {parsedAgreementMeta && (
+                    <div className="mt-3 p-3 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <FileCheck2 size={15} className="text-emerald-700" />
+                          <span>Parsed: {parsedAgreementMeta.fileName}</span>
+                        </div>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                          {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
+                        </span>
+                      </div>
+
+                      {parsedAgreementMeta.summaryHighlights.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {parsedAgreementMeta.summaryHighlights.map((hl, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-md border border-emerald-300 text-emerald-900"
+                            >
+                              ✓ {hl}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-emerald-800 italic pt-0.5">
+                        ✓ All detected parameters have been auto-populated into the contract form below. You can modify any value as needed.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ──── SECTION 1: HIERARCHY MAPPING (FLOOR-FIRST SPACE BINDING) ──── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
