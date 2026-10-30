@@ -72,8 +72,7 @@ export const checkIsOwnerSubscribed = (): boolean => {
     const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
     const ownerSub = localStorage.getItem("officex_owner_subscribed") || sessionStorage.getItem("officex_owner_subscribed");
     const rentrollSub = localStorage.getItem("officex_rentroll_subscribed") || sessionStorage.getItem("officex_rentroll_subscribed");
-    const appliedCoupon = localStorage.getItem("officex_applied_coupon") || sessionStorage.getItem("officex_applied_coupon");
-    return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true" || !!appliedCoupon;
+    return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
   }
   return false;
 };
@@ -427,6 +426,7 @@ export default function PropertyHierarchyModal({
     signatoryName: "",
     signatoryDesignation: "",
   });
+  const [sameSignatoryContact, setSameSignatoryContact] = useState(true);
 
   // ──── 5. CONTRACT FORM (Comprehensive Commercial Terms) ────
   const [contractForm, setContractForm] = useState({
@@ -1879,8 +1879,9 @@ export default function PropertyHierarchyModal({
   // ──── SUBMIT 4: TENANT MASTER ────
   const handleSaveTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenantForm.occupantName.trim()) {
-      showToast("Occupant Name is required", "error");
+    const effectiveContactName = (tenantForm.signatoryName || tenantForm.occupantName).trim();
+    if (!effectiveContactName) {
+      showToast("Authorized Signatory / Primary Contact Name is required", "error");
       return;
     }
     if (!tenantForm.email.trim()) {
@@ -1903,8 +1904,8 @@ export default function PropertyHierarchyModal({
           ...authHeaders,
         },
         body: JSON.stringify({
-          tenant_name: tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
-          trade_name: tenantForm.tradeName.trim() || tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
+          tenant_name: tenantForm.companyName.trim() || effectiveContactName,
+          trade_name: tenantForm.tradeName.trim() || tenantForm.companyName.trim() || effectiveContactName,
           company_type: tenantForm.companyType,
           occupant_type: tenantForm.companyType === "sole_proprietorship" ? "individual" : "company",
           email: tenantForm.email.trim(),
@@ -1918,8 +1919,8 @@ export default function PropertyHierarchyModal({
           remarks: JSON.stringify({
             company_type: tenantForm.companyType,
             trade_name: tenantForm.tradeName.trim(),
-            signatory_name: tenantForm.signatoryName.trim() || tenantForm.occupantName.trim(),
-            signatory_designation: tenantForm.signatoryDesignation.trim(),
+            signatory_name: effectiveContactName,
+            signatory_designation: tenantForm.signatoryDesignation.trim() || "Director / Authorized Signatory",
             industry_type: tenantForm.industryType,
             cin_number: tenantForm.companyType === "sole_proprietorship" ? "" : tenantForm.cinNumber.trim().toUpperCase(),
           }),
@@ -1927,7 +1928,7 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
-        setLastSavedOccupantName((tenantForm.companyName || tenantForm.occupantName).trim());
+        setLastSavedOccupantName((tenantForm.companyName || effectiveContactName).trim());
         // Generate Tenant Portal Invite Link
         const origin =
           typeof window !== "undefined" && window.location.origin
@@ -1941,16 +1942,17 @@ export default function PropertyHierarchyModal({
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";
+        const isOwnerSub = checkIsOwnerSubscribed();
         const inviteToken = `ten_${Date.now()}`;
-        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(tenantForm.occupantName.trim())}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=1&invite=${inviteToken}`;
+        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(effectiveContactName)}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${isOwnerSub ? "1" : "0"}&invite=${inviteToken}`;
 
         setLatestTenantInvite({
-          name: (tenantForm.companyName || tenantForm.occupantName).trim(),
+          name: (tenantForm.companyName || effectiveContactName).trim(),
           email: tenantForm.email.trim(),
           link: inviteUrl,
         });
 
-        showToast(`✓ Tenant "${tenantForm.companyName || tenantForm.occupantName}" enrolled! Portal invite link generated.`);
+        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled! Portal invite link generated.`);
         await loadHierarchyDropdowns();
 
         // Mark all selected suites as occupied in database
@@ -2642,7 +2644,7 @@ export default function PropertyHierarchyModal({
   };
 
   // ──── SUBMIT 5: CONTRACT / LEASE ────
-  const handleSaveContract = async (e: React.FormEvent) => {
+  const handleSaveContract = async (e: React.FormEvent, targetAction: "finish" | "delegate" = "finish") => {
     e.preventDefault();
     if (!contractForm.occupantId) {
       showToast("Please select an occupant / tenant", "error");
@@ -2729,17 +2731,25 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("✓ Commercial Lease Contract registered successfully! Proceeding to Assignment.");
         onSuccess?.();
-        setDelegationForm((prev) => ({
-          ...prev,
-          propertyId: contractForm.propertyId || propForm.existingPropId || prev.propertyId,
-          propertyName:
-            propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
-            propForm.propertyName ||
-            prev.propertyName,
-        }));
-        setActiveTab("delegation");
+        if (targetAction === "delegate") {
+          showToast("✓ Commercial Lease Contract registered! Proceeding to Management Assignment.");
+          setDelegationForm((prev) => ({
+            ...prev,
+            propertyId: contractForm.propertyId || propForm.existingPropId || prev.propertyId,
+            propertyName:
+              propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
+              propForm.propertyName ||
+              prev.propertyName,
+          }));
+          setActiveTab("delegation");
+        } else {
+          showToast("✓ Commercial Lease Contract registered successfully! Setup complete.");
+          setPostContractChoice("self_managed");
+          setTimeout(() => {
+            onClose();
+          }, 1200);
+        }
       } else {
         showToast(data.message || data.error || "Failed to create lease contract", "error");
       }
@@ -4976,7 +4986,6 @@ export default function PropertyHierarchyModal({
                           setTenantForm({
                             ...tenantForm,
                             companyName: e.target.value,
-                            tradeName: tenantForm.tradeName || e.target.value,
                           });
                         }}
                         className={getHighlightClass(
@@ -5179,63 +5188,95 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    {/* Authorized Signatory Name */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">
-                        Authorized Signatory Name <span className="text-rose-500">*</span>
-                      </label>
+                    {/* Primary Contact / Authorized Signatory Name */}
+                    <div className="sm:col-span-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
+                        <label className="font-bold text-slate-700">
+                          {sameSignatoryContact
+                            ? "Authorized Signatory / Primary Contact Name *"
+                            : "Authorized Signatory Name *"}
+                        </label>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#0F8B7D] cursor-pointer self-start sm:self-auto bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                          <input
+                            type="checkbox"
+                            checked={sameSignatoryContact}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setSameSignatoryContact(checked);
+                              if (checked) {
+                                const unifiedName = tenantForm.signatoryName || tenantForm.occupantName;
+                                setTenantForm((prev) => ({
+                                  ...prev,
+                                  signatoryName: unifiedName,
+                                  occupantName: unifiedName,
+                                }));
+                              }
+                            }}
+                            className="rounded accent-[#0F8B7D] cursor-pointer"
+                          />
+                          <span>Primary Contact Person is same as Signatory</span>
+                        </label>
+                      </div>
                       <input
                         type="text"
                         required
                         placeholder="e.g. Rahul Sharma"
-                        value={tenantForm.signatoryName}
-                        onChange={(e) => setTenantForm({ ...tenantForm, signatoryName: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                        value={tenantForm.signatoryName || tenantForm.occupantName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTenantForm((prev) => ({
+                            ...prev,
+                            signatoryName: val,
+                            occupantName: sameSignatoryContact ? val : prev.occupantName,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white text-slate-900"
                       />
                     </div>
 
                     {/* Authorized Signatory Designation */}
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">
-                        Signatory Designation <span className="text-rose-500">*</span>
+                        Signatory Designation
                       </label>
                       <input
                         type="text"
-                        required
                         placeholder="e.g. Director / Managing Partner / Proprietor"
                         value={tenantForm.signatoryDesignation}
                         onChange={(e) => setTenantForm({ ...tenantForm, signatoryDesignation: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
                       />
                     </div>
 
-                    {/* Primary Contact Person Name */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="font-bold text-slate-700">Primary Contact Person *</label>
-                        {changedFieldKeys.has("occupantName") && (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                            Updated
-                          </span>
-                        )}
+                    {/* Separate Primary Contact Person (Only if checkbox unchecked) */}
+                    {!sameSignatoryContact && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Separate Operational Contact Person *</label>
+                          {changedFieldKeys.has("occupantName") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          required={!sameSignatoryContact}
+                          placeholder="e.g. Vikas Nair (Facilities / Ops Lead)"
+                          value={tenantForm.occupantName}
+                          onClick={() => clearFieldHighlight("occupantName")}
+                          onFocus={() => clearFieldHighlight("occupantName")}
+                          onChange={(e) => {
+                            clearFieldHighlight("occupantName");
+                            setTenantForm({ ...tenantForm, occupantName: e.target.value });
+                          }}
+                          className={getHighlightClass(
+                            "occupantName",
+                            "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none bg-white"
+                          )}
+                        />
                       </div>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Vikas Nair"
-                        value={tenantForm.occupantName}
-                        onClick={() => clearFieldHighlight("occupantName")}
-                        onFocus={() => clearFieldHighlight("occupantName")}
-                        onChange={(e) => {
-                          clearFieldHighlight("occupantName");
-                          setTenantForm({ ...tenantForm, occupantName: e.target.value });
-                        }}
-                        className={getHighlightClass(
-                          "occupantName",
-                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                        )}
-                      />
-                    </div>
+                    )}
 
                     {/* Primary Email */}
                     <div>
@@ -5664,31 +5705,30 @@ export default function PropertyHierarchyModal({
                     Link tenant to demised commercial space, configure rent calculation basis, CAM, parking, and legal covenants.
                   </p>
                 </div>
-                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 self-start sm:self-auto">
-                  Space &amp; Tenant Binding
-                </span>
               </div>
 
-              {/* Tenant Portal Invite Link Banner (if available) */}
+              {/* Tenant Portal Invite Link Banner (Subscription Gated) */}
               {latestTenantInvite && (
                 <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
-                        <User size={16} />
-                      </div>
-                      <div>
-                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
-                          <span>Tenant Enrolled: {latestTenantInvite.name}</span>
-                          <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
-                            {latestTenantInvite.email}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-teal-800 mt-0.5">
-                          Copy and dispatch this verified invitation link so your tenant can log directly into their institutional tenant portal (<span className="font-mono font-bold">/portal</span>).
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <User size={16} />
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                    <div>
+                      <div className="font-bold text-teal-950 flex items-center gap-1.5">
+                        <span>Tenant Enrolled: {latestTenantInvite.name}</span>
+                        <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
+                          {latestTenantInvite.email}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-teal-800 mt-0.5">
+                        Verified tenant invitation link generated for institutional tenant portal (<span className="font-mono font-bold">/portal</span>).
+                      </p>
+                    </div>
+                  </div>
+
+                  {isOwnerSubscribed ? (
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <button
                         type="button"
                         onClick={() => {
@@ -5697,7 +5737,7 @@ export default function PropertyHierarchyModal({
                           showToast("✓ Tenant Portal invitation link copied to clipboard!");
                           setTimeout(() => setCopiedInvite(false), 2500);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition"
                       >
                         {copiedInvite ? <Check size={13} /> : <Copy size={13} />}
                         <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
@@ -5708,7 +5748,7 @@ export default function PropertyHierarchyModal({
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition"
                       >
                         <MessageCircle size={13} />
                         <span>WhatsApp</span>
@@ -5719,13 +5759,31 @@ export default function PropertyHierarchyModal({
                         )}&body=${encodeURIComponent(
                           `Hi ${latestTenantInvite.name},\n\nPlease access your tenant portal using the secure link below:\n\n${latestTenantInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
                         )}`}
-                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition"
                       >
                         <Mail size={13} />
                         <span>Email</span>
                       </a>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900 text-white shadow-xs shrink-0 border border-slate-700">
+                      <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
+                        <Lock size={13} />
+                        <span>Pro Subscription Required</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSubscriptionGateReason("Share Corporate Tenant Portal Link");
+                          setSubscriptionGateModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-xs"
+                      >
+                        Subscribe to Copy &amp; Share
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* ──── UPLOAD RENT AGREEMENT OR SYNC BANNER (§16) ──── */}
@@ -5837,175 +5895,229 @@ export default function PropertyHierarchyModal({
                 </div>
               )}
 
-              {/* ──── SECTION 1: HIERARCHY MAPPING (FLOOR-FIRST SPACE BINDING) ──── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
-                {/* 1. Occupant */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">
-                      Occupant (Tenant) <span className="text-rose-500">*</span>
-                    </label>
-                    {changedFieldKeys.has("occupantName") && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                        Updated
-                      </span>
-                    )}
-                  </div>
-                  <select
-                    value={contractForm.occupantId}
-                    onChange={(e) => {
-                      clearFieldHighlight("occupantName");
-                      setContractForm({ ...contractForm, occupantId: e.target.value });
-                    }}
-                    onClick={() => clearFieldHighlight("occupantName")}
-                    onFocus={() => clearFieldHighlight("occupantName")}
-                    className={getHighlightClass(
-                      "occupantName",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                    )}
-                  >
-                    {tenantsList.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} {t.company ? `(${t.company})` : ""}
-                      </option>
-                    ))}
-                    {tenantsList.length === 0 && <option value="">No occupants registered yet</option>}
-                  </select>
-                </div>
-
-                {/* 2. Property (Auto-bound to active property) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Property <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-900 truncate">
-                    {activePropertyObj?.name || propForm.propertyName || "Commercial Property"}
-                  </div>
-                </div>
-
-                {/* 3. Building */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Building / Tower <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={contractForm.buildingId}
-                    onChange={(e) => {
-                      const newBldgId = e.target.value;
-                      setContractForm({ ...contractForm, buildingId: newBldgId });
-                      setSelectedContractFloor("");
-                    }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {displayBuildings.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
-                      </option>
-                    ))}
-                    {displayBuildings.length === 0 && <option value="">No buildings created</option>}
-                  </select>
-                </div>
-
-                {/* 4. Floor Selection (Floor-First Filter) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">Floor Filter *</label>
-                    <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-1 rounded border border-teal-200">
-                      Filters Units
+              {/* ──── SECTION 1: HIERARCHY MAPPING (ORGANIZED 2-TIER DEMISED ALLOCATION) ──── */}
+              <div className="space-y-3.5">
+                {/* Tier 1: Property, Building & Floor Location */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                      <Building2 size={14} className="text-teal-700" />
+                      <span>Property Location &amp; Floor Filter</span>
+                    </div>
+                    <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                      Asset Demised Hierarchy
                     </span>
                   </div>
-                  <select
-                    value={selectedContractFloor}
-                    onChange={(e) => {
-                      const fl = e.target.value;
-                      setSelectedContractFloor(fl);
-                      if (fl) {
-                        const curBId = contractForm.buildingId || displayBuildings[0]?.id;
-                        const isG = fl === "0";
-                        const match = spacesList.find(
-                          (s) =>
-                            (!curBId || s.buildingId === curBId) &&
-                            ((isG && ((s.floorName || "").toLowerCase().includes("ground") || (s.floorName || "").toLowerCase() === "g" || s.name.toLowerCase().includes("ground") || s.name.toLowerCase().includes("bay"))) ||
-                              s.name.toLowerCase().includes(`floor ${fl}`) ||
-                              s.name.toLowerCase().includes(`fl-${fl}`) ||
-                              s.name.toLowerCase().includes(`f${fl}`) ||
-                              s.floorName?.toLowerCase() === `floor ${fl}` ||
-                              s.floorName?.toLowerCase() === `f${fl}` ||
-                              s.floorName === fl ||
-                              s.floorName?.toLowerCase() === formatFloorName(Number(fl)).toLowerCase())
-                        );
-                        if (match) {
-                          handleSpaceSelect(match.id);
-                        }
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="">All Floors</option>
-                    {buildingFloorNumbersForContract.map((flNum) => {
-                      const curBName = displayBuildings.find((b) => b.id === (contractForm.buildingId || displayBuildings[0]?.id))?.name;
-                      const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
-                      return (
-                        <option key={flNum} value={String(flNum)}>
-                          {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
 
-                {/* 5. Space / Unit (Filtered by Floor) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Space / Unit <span className="text-rose-500">*</span>
-                  </label>
-                  {(() => {
-                    const curBldgId = contractForm.buildingId || displayBuildings[0]?.id;
-                    const filteredSpaces = spacesList.filter((s) => {
-                      if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
-                        return false;
-                      }
-                      if (!selectedContractFloor) return true;
-                      const flStr = (s.floorName || "").toLowerCase().trim();
-                      const nameStr = s.name.toLowerCase().trim();
-                      const targetFl = selectedContractFloor.toLowerCase().trim();
-                      if (targetFl === "0") {
-                        return (
-                          flStr === "0" ||
-                          flStr.includes("ground") ||
-                          flStr === "g" ||
-                          nameStr.includes("ground") ||
-                          nameStr.includes("bay") ||
-                          nameStr.includes("shed")
-                        );
-                      }
-                      return (
-                        flStr === `floor ${targetFl}` ||
-                        flStr === `f${targetFl}` ||
-                        flStr === targetFl ||
-                        nameStr.includes(`floor ${targetFl}`) ||
-                        nameStr.includes(`f${targetFl}`)
-                      );
-                    });
-                    const displayList = filteredSpaces.length > 0 ? filteredSpaces : spacesList;
-                    return (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 1. Property (Auto-bound to active property) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Commercial Property <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-900 truncate shadow-2xs flex items-center justify-between">
+                        <span className="truncate">{activePropertyObj?.name || propForm.propertyName || "Commercial Property"}</span>
+                        {propForm.areaSqft && (
+                          <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-1">
+                            {Number(propForm.areaSqft).toLocaleString()} Sq.Ft
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Building / Tower */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Building / Tower <span className="text-rose-500">*</span>
+                      </label>
                       <select
-                        value={contractForm.spaceId}
-                        onChange={(e) => handleSpaceSelect(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                        value={contractForm.buildingId}
+                        onChange={(e) => {
+                          const newBldgId = e.target.value;
+                          setContractForm({ ...contractForm, buildingId: newBldgId });
+                          setSelectedContractFloor("");
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
                       >
-                        {displayList.map((s) => {
-                          const sBldg = buildingsList.find((b) => b.id === s.buildingId);
+                        {displayBuildings.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                          </option>
+                        ))}
+                        {displayBuildings.length === 0 && <option value="">No buildings created</option>}
+                      </select>
+                    </div>
+
+                    {/* 3. Floor Filter */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Demised Floor Level <span className="text-rose-500">*</span></label>
+                        <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                          Filters Spaces
+                        </span>
+                      </div>
+                      <select
+                        value={selectedContractFloor}
+                        onChange={(e) => {
+                          const fl = e.target.value;
+                          setSelectedContractFloor(fl);
+                          if (fl) {
+                            const curBId = contractForm.buildingId || displayBuildings[0]?.id;
+                            const isG = fl === "0";
+                            const match = spacesList.find(
+                              (s) =>
+                                (!curBId || s.buildingId === curBId) &&
+                                ((isG && ((s.floorName || "").toLowerCase().includes("ground") || (s.floorName || "").toLowerCase() === "g" || s.name.toLowerCase().includes("ground") || s.name.toLowerCase().includes("bay"))) ||
+                                  s.name.toLowerCase().includes(`floor ${fl}`) ||
+                                  s.name.toLowerCase().includes(`fl-${fl}`) ||
+                                  s.name.toLowerCase().includes(`f${fl}`) ||
+                                  s.floorName?.toLowerCase() === `floor ${fl}` ||
+                                  s.floorName?.toLowerCase() === `f${fl}` ||
+                                  s.floorName === fl ||
+                                  s.floorName?.toLowerCase() === formatFloorName(Number(fl)).toLowerCase())
+                            );
+                            if (match) {
+                              handleSpaceSelect(match.id);
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
+                      >
+                        <option value="">All Floors</option>
+                        {buildingFloorNumbersForContract.map((flNum) => {
+                          const curBName = displayBuildings.find((b) => b.id === (contractForm.buildingId || displayBuildings[0]?.id))?.name;
+                          const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
                           return (
-                            <option key={s.id} value={s.id}>
-                              {displayBuildings.length > 1 && sBldg ? `[${sBldg.name}] ` : ""}{s.name} ({s.area > 0 ? `${s.area.toLocaleString()} Sq.Ft` : "Standard"}) • {s.occupancyStatus === "occupied" ? "Occupied" : "Vacant"}
+                            <option key={flNum} value={String(flNum)}>
+                              {displayBuildings.length > 1 && curBName ? `${curBName} • ` : ""}{flLabel}
                             </option>
                           );
                         })}
-                        {displayList.length === 0 && <option value="">No spaces created</option>}
                       </select>
-                    );
-                  })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tier 2: Occupant & Space Unit Binding */}
+                <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-3 text-xs">
+                  <div className="flex items-center justify-between border-b border-teal-100 pb-2">
+                    <div className="flex items-center gap-1.5 font-bold text-teal-950">
+                      <User size={14} className="text-[#0F8B7D]" />
+                      <span>Tenant &amp; Demised Unit Binding</span>
+                    </div>
+                    <span className="text-[10px] text-teal-800 font-bold bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                      Contract Signatories &amp; Premises
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* 1. Occupant (Tenant) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          Occupant / Tenant <span className="text-rose-500">*</span>
+                        </label>
+                        {changedFieldKeys.has("occupantName") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        value={contractForm.occupantId}
+                        onChange={(e) => {
+                          clearFieldHighlight("occupantName");
+                          setContractForm({ ...contractForm, occupantId: e.target.value });
+                        }}
+                        onClick={() => clearFieldHighlight("occupantName")}
+                        onFocus={() => clearFieldHighlight("occupantName")}
+                        className={getHighlightClass(
+                          "occupantName",
+                          "w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
+                        )}
+                      >
+                        {tenantsList.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} {t.company && t.company !== t.name ? `(${t.company})` : ""}
+                          </option>
+                        ))}
+                        {tenantsList.length === 0 && <option value="">No occupants registered yet</option>}
+                      </select>
+                    </div>
+
+                    {/* 2. Space / Unit */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          Demised Space / Unit <span className="text-rose-500">*</span>
+                        </label>
+                        {selectedContractFloor && (
+                          <span className="text-[10px] text-teal-700 font-semibold">
+                            Floor {selectedContractFloor === "0" ? "Ground" : selectedContractFloor}
+                          </span>
+                        )}
+                      </div>
+                      {(() => {
+                        const curBldgId = contractForm.buildingId || displayBuildings[0]?.id;
+                        const filteredSpaces = spacesList.filter((s) => {
+                          if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
+                            return false;
+                          }
+                          if (!selectedContractFloor) return true;
+                          const flStr = (s.floorName || "").toLowerCase().trim();
+                          const nameStr = s.name.toLowerCase().trim();
+                          const targetFl = selectedContractFloor.toLowerCase().trim();
+                          if (targetFl === "0") {
+                            return (
+                              flStr === "0" ||
+                              flStr.includes("ground") ||
+                              flStr === "g" ||
+                              nameStr.includes("ground") ||
+                              nameStr.includes("bay") ||
+                              nameStr.includes("shed")
+                            );
+                          }
+                          return (
+                            flStr === `floor ${targetFl}` ||
+                            flStr === `f${targetFl}` ||
+                            flStr === targetFl ||
+                            nameStr.includes(`floor ${targetFl}`) ||
+                            nameStr.includes(`f${targetFl}`)
+                          );
+                        });
+                        const displayList = filteredSpaces.length > 0 ? filteredSpaces : spacesList;
+                        return (
+                          <select
+                            value={contractForm.spaceId}
+                            onChange={(e) => handleSpaceSelect(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
+                          >
+                            {displayList.map((s) => {
+                              const sBldg = buildingsList.find((b) => b.id === s.buildingId);
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {displayBuildings.length > 1 && sBldg ? `[${sBldg.name}] ` : ""}{s.name} ({s.area > 0 ? `${s.area.toLocaleString()} Sq.Ft` : "Standard Area"}) • {s.occupancyStatus === "occupied" ? "Occupied" : "Vacant"}
+                                </option>
+                              );
+                            })}
+                            {displayList.length === 0 && <option value="">No spaces created</option>}
+                          </select>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Single level warehouse facility notice */}
+                  {isSingleLevelAssetType(propForm.propertyType) && (
+                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 flex items-center justify-between text-[11px] text-teal-900">
+                      <span className="font-medium">
+                        🏢 <strong>Single-Level / Warehouse Asset:</strong> Demised premises automatically points to Ground Facility Bay ({Number(propForm.areaSqft || 0).toLocaleString()} Sq.Ft capacity).
+                      </span>
+                      <span className="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0 ml-2">
+                        Full Facility
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -6988,9 +7100,9 @@ export default function PropertyHierarchyModal({
                 <button
                   type="button"
                   onClick={() => setActiveTab("tenant")}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer self-start sm:self-auto"
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs self-start sm:self-auto"
                 >
-                  ← Back to Tenants
+                  <span>← Back to Tenants</span>
                 </button>
 
                 <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -7054,15 +7166,17 @@ export default function PropertyHierarchyModal({
                   {/* Option A: Assign 3rd Party Manager */}
                   <button
                     type="button"
-                    onClick={() => setActiveTab("delegation")}
-                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                    onClick={(e) => handleSaveContract(e, "delegate")}
+                    disabled={loading}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
                   >
                     <span>Assign 3rd Party Manager →</span>
                   </button>
 
                   {/* Option B: Self-Managed / Complete Onboarding */}
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={(e) => handleSaveContract(e, "finish")}
                     disabled={loading}
                     className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                   >

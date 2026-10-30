@@ -57,8 +57,22 @@ function InviteContent() {
     if (mgrParam) setManagerName(mgrParam);
     if (emailParam) setManagerEmail(emailParam);
 
-    // Default owner subscription to active for invited tenants and managers
-    setOwnerSubscribed(true);
+    // Strictly check if property owner has an active subscription
+    const ownerSubParam = searchParams.get("owner_sub");
+    if (ownerSubParam === "0" || ownerSubParam === "false") {
+      setOwnerSubscribed(false);
+    } else if (ownerSubParam === "1" || ownerSubParam === "true") {
+      setOwnerSubscribed(true);
+    } else if (typeof window !== "undefined") {
+      const sub = localStorage.getItem("officex_subscription");
+      const subStatus = localStorage.getItem("officex_subscription_status");
+      const ownerSub = localStorage.getItem("officex_owner_subscribed");
+      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
+      const isSub = sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
+      setOwnerSubscribed(isSub);
+    } else {
+      setOwnerSubscribed(false);
+    }
 
     // Fetch live portfolio data from DB
     Promise.all([

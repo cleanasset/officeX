@@ -65,36 +65,56 @@ export default function TenantDirectoryPage() {
   const [contractViewerOpen, setContractViewerOpen] = useState(false);
   const [contractToView, setContractToView] = useState<any | null>(null);
 
-  // Tenant Sharable Link State
+  // Tenant Sharable Link State & Subscription Verification
   const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
   const [copySuccessToast, setCopySuccessToast] = useState<string | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
-  const checkSubscribed = () => {
+  const checkIsSubscribed = (): boolean => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("officex_owner_subscribed", "true");
-      localStorage.setItem("officex_subscription", "active");
-      localStorage.setItem("officex_rentroll_subscribed", "true");
-      document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+      const sub = localStorage.getItem("officex_subscription");
+      const subStatus = localStorage.getItem("officex_subscription_status");
+      const ownerSub = localStorage.getItem("officex_owner_subscribed");
+      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
+      return sub === "active" || subStatus === "active" || ownerSub === "true" || rentrollSub === "true";
     }
-    return true;
+    return false;
   };
+
+  useEffect(() => {
+    const updateSub = () => setIsSubscribed(checkIsSubscribed());
+    updateSub();
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", updateSub);
+      window.addEventListener("storage", updateSub);
+      return () => {
+        window.removeEventListener("focus", updateSub);
+        window.removeEventListener("storage", updateSub);
+      };
+    }
+  }, []);
 
   const getTenantSharableLink = (t: any) => {
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
     const prop = t.property_name || "Commercial Centre";
     const name = t.tenant_name || "Tenant";
     const email = t.email || "";
-    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
+    const subActive = checkIsSubscribed();
+    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=${subActive ? "1" : "0"}&invite=t_${Date.now()}`;
   };
 
   const handleCopyTenantLink = (t: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    checkSubscribed();
+    if (!checkIsSubscribed()) {
+      setCopySuccessToast("🔒 Pro Subscription required to copy & share tenant portal links.");
+      setTimeout(() => setCopySuccessToast(null), 3500);
+      return;
+    }
     const link = getTenantSharableLink(t);
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(link);
       setCopiedTenantId(t.id);
-      setCopySuccessToast(`Sharable tenant portal link for ${t.tenant_name} copied!`);
+      setCopySuccessToast(`✓ Sharable tenant portal link for ${t.tenant_name} copied!`);
       setTimeout(() => {
         setCopiedTenantId(null);
         setCopySuccessToast(null);
@@ -376,16 +396,32 @@ export default function TenantDirectoryPage() {
                         </td>
                         <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Copy Tenant Portal Link */}
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyTenantLink(t, e)}
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer"
-                              title="Copy Tenant Sharable Link"
-                            >
-                              <Copy size={12} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
-                              <span>{copiedTenantId === t.id ? "Copied!" : "Share Link"}</span>
-                            </button>
+                            {/* Copy Tenant Portal Link (Subscription Gated) */}
+                            {isSubscribed ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyTenantLink(t, e)}
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer"
+                                title="Copy Tenant Sharable Link"
+                              >
+                                <Copy size={12} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
+                                <span>{copiedTenantId === t.id ? "Copied!" : "Share Link"}</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCopySuccessToast("🔒 Pro Subscription required to copy & share tenant portal links.");
+                                  setTimeout(() => setCopySuccessToast(null), 3500);
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-500 hover:text-amber-800 font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer border border-transparent hover:border-amber-300"
+                                title="Pro Subscription required"
+                              >
+                                <Lock size={12} className="text-amber-600" />
+                                <span>Share Link</span>
+                              </button>
+                            )}
 
                             {/* View Executed Contract Modal */}
                             <button
@@ -450,33 +486,66 @@ export default function TenantDirectoryPage() {
                 </button>
               </div>
 
-              {/* Sharable Tenant Portal Link Box */}
+              {/* Sharable Tenant Portal Link Box (Subscription Gated) */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50/80 via-emerald-50/60 to-slate-50 border border-teal-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-teal-900">
                     <Share2 size={14} className="text-teal-700" />
                     <span>Tenant Self-Service Portal Access Link</span>
                   </div>
-                  <span className="text-[10px] font-bold text-teal-800 bg-white border border-teal-200 px-2 py-0.5 rounded-md">
-                    Instant Access
-                  </span>
+                  {isSubscribed ? (
+                    <span className="text-[10px] font-bold text-teal-800 bg-white border border-teal-200 px-2 py-0.5 rounded-md">
+                      Instant Access
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Lock size={10} />
+                      Subscription Required
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={getTenantSharableLink(selectedTenantDetails)}
-                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-teal-200 text-xs font-mono text-slate-700 select-all outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
-                    className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
-                  >
-                    <Copy size={13} />
-                    <span>{copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Link"}</span>
-                  </button>
-                </div>
+
+                {isSubscribed ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={getTenantSharableLink(selectedTenantDetails)}
+                      className="flex-1 px-3 py-2 bg-white rounded-xl border border-teal-200 text-xs font-mono text-slate-700 select-all outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
+                      className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                    >
+                      <Copy size={13} />
+                      <span>{copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Link"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative p-3 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden">
+                    <div className="filter blur-xs select-none opacity-40">
+                      <span className="font-mono text-xs text-slate-800">https://www.officex.pro/invite?role=tenant&mgr=••••••••&access=••••••••</span>
+                    </div>
+                    <div className="absolute inset-0 bg-slate-900/65 backdrop-blur-[1px] flex items-center justify-between px-3 py-1.5">
+                      <div className="flex items-center gap-1.5 text-white">
+                        <Lock size={13} className="text-amber-400 shrink-0" />
+                        <span className="text-xs font-bold">Pro Subscription required to share portal links</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHierarchyTab("property");
+                          setHierarchyModalOpen(true);
+                        }}
+                        className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow cursor-pointer transition"
+                      >
+                        Subscribe Now
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-[11px] text-slate-500">
                   Share this secure link with the tenant via WhatsApp or Email. They can log in to view rent receipts, GST invoices, and submit maintenance tickets.
                 </p>
@@ -601,10 +670,14 @@ export default function TenantDirectoryPage() {
                   <button
                     type="button"
                     onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                      isSubscribed
+                        ? "border-slate-200 text-slate-700 hover:bg-slate-50"
+                        : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    }`}
                   >
-                    <Copy size={13} />
-                    <span>Copy Sharable Link</span>
+                    {isSubscribed ? <Copy size={13} /> : <Lock size={13} className="text-amber-600" />}
+                    <span>{isSubscribed ? (copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Sharable Link") : "Pro Link (Locked)"}</span>
                   </button>
                   <button
                     type="button"
