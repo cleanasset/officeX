@@ -7849,6 +7849,7 @@ export default function PropertyHierarchyModal({
           onSuccess={() => {
             setExcelImporterOpen(false);
             showToast("✓ Excel portfolio data imported successfully!");
+            onClose(); // Close the hierarchy/property setup wizard so the user sees the Property Registry
             onSuccess?.();
           }}
         />

@@ -51,11 +51,11 @@ const TARGET_FIELDS: Array<{ key: keyof ColumnMapping; label: string; required: 
   { key: "areaSqft", label: "Area (Sq.Ft)", required: false, hints: ["area", "sqft", "sq ft", "chargeable", "carpet"] },
   { key: "monthlyRent", label: "Monthly Rent (₹)", required: false, hints: ["rent", "monthly rent", "total rent", "base rent", "amount"] },
   { key: "securityDeposit", label: "Security Deposit (₹)", required: false, hints: ["deposit", "security deposit", "sd"] },
-  { key: "startDate", label: "Lease Start Date", required: false, hints: ["start", "commencement", "lease start", "from"] },
-  { key: "endDate", label: "Lease End Date", required: false, hints: ["end", "expiry", "lease end", "to"] },
+  { key: "startDate", label: "Lease Start Date", required: false, hints: ["start date", "lease start", "start_date", "commencement", "from date", "valid from"] },
+  { key: "endDate", label: "Lease End Date", required: false, hints: ["end date", "lease end", "end_date", "expiry date", "expiry", "valid till", "valid to", "to date"] },
   { key: "camRate", label: "CAM Rate (₹/sqft)", required: false, hints: ["cam", "maintenance", "cam rate", "opex"] },
   { key: "escalationPct", label: "Annual Escalation (%)", required: false, hints: ["escalation", "hike", "step up"] },
-  { key: "buildingName", label: "Tower / Wing", required: false, hints: ["tower", "wing", "block", "building"] },
+  { key: "buildingName", label: "Tower / Wing", required: false, hints: ["tower", "wing", "block", "building", "tower name", "bldg"] },
   { key: "city", label: "City", required: false, hints: ["city", "location", "town"] },
   { key: "state", label: "State", required: false, hints: ["state", "province"] },
   { key: "tenantEmail", label: "Tenant Email", required: false, hints: ["email", "contact email", "mail"] },
@@ -97,12 +97,30 @@ export default function RentRollExcelImporterModal({
   // Auto-detect best column matches
   const autoDetectMapping = (cols: string[]) => {
     const newMapping: any = {};
+    const usedCols = new Set<string>();
+
     for (const field of TARGET_FIELDS) {
       const match = cols.find((c) => {
+        if (usedCols.has(c)) return false;
         const cleanCol = c.toLowerCase().replace(/[^a-z0-9]/g, " ").trim();
-        return field.hints.some((hint) => cleanCol.includes(hint) || hint.includes(cleanCol));
+        // Disallow tower/building names from matching date fields
+        if ((field.key === "startDate" || field.key === "endDate") && (cleanCol.includes("tower") || cleanCol.includes("wing") || cleanCol.includes("block"))) {
+          return false;
+        }
+        return field.hints.some((hint) => {
+          if (hint.length <= 3) {
+            const words = cleanCol.split(/\s+/);
+            return words.includes(hint);
+          }
+          return cleanCol.includes(hint) || hint.includes(cleanCol);
+        });
       });
-      newMapping[field.key] = match || "";
+      if (match) {
+        newMapping[field.key] = match;
+        usedCols.add(match);
+      } else {
+        newMapping[field.key] = "";
+      }
     }
     setMapping(newMapping as ColumnMapping);
   };
@@ -546,7 +564,7 @@ export default function RentRollExcelImporterModal({
                   }}
                   className="px-8 py-3 rounded-2xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-black uppercase tracking-wider transition shadow-md cursor-pointer"
                 >
-                  View Updated Rent Roll
+                  View Property Registry
                 </button>
               </div>
             </div>

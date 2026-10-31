@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { property, building, space, occupant, contract, contractSpace, contractCharge } from "@/db/schema";
+import { client_account } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql } from "drizzle-orm";
@@ -24,11 +25,47 @@ interface ImportRow {
   escalationPct?: number;
 }
 
+function parseDateOrFallback(val: any, fallbackDate: Date): string {
+  if (!val) return fallbackDate.toISOString().split("T")[0];
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return val.toISOString().split("T")[0];
+  }
+  const str = String(val).trim();
+  // Don't treat text words like 'Tower A' or non-dates as dates
+  if (str.length < 4 || /^[a-zA-Z\s]+$/.test(str)) {
+    return fallbackDate.toISOString().split("T")[0];
+  }
+  const parsed = Date.parse(str);
+  if (!isNaN(parsed)) {
+    const d = new Date(parsed);
+    if (d.getFullYear() >= 1990 && d.getFullYear() <= 2100) {
+      return d.toISOString().split("T")[0];
+    }
+  }
+  return fallbackDate.toISOString().split("T")[0];
+}
+
 export async function POST(req: Request) {
   try {
     const auth = getAuthContext(req);
-    await ensureTenantOrgRecord(auth.orgId);
-    const clientAccountId = auth.clientAccountId || auth.orgId;
+    const ensured = await ensureTenantOrgRecord(auth.orgId, auth.clientAccountId, auth.userEmail);
+    const clientAccountId = ensured.clientAccountId || auth.clientAccountId || auth.orgId;
+
+    // Explicitly guarantee client_account exists in PostgreSQL to satisfy FK constraint
+    try {
+      await db
+        .insert(client_account)
+        .values({
+          id: clientAccountId,
+          org_id: auth.orgId,
+          client_name: "Primary Commercial Portfolio",
+          client_code: `CLI-${auth.orgId.slice(0, 6).toUpperCase()}`,
+          is_self: true,
+        })
+        .onConflictDoNothing();
+    } catch {
+      // ignore if already exists
+    }
 
     const body = await req.json();
     const rows: ImportRow[] = Array.isArray(body.rows) ? body.rows : [];
@@ -66,8 +103,11 @@ export async function POST(req: Request) {
       occupantCache.set(o.name.trim().toLowerCase(), o.id);
     }
 
+    const rowErrors: string[] = [];
+
     for (const row of rows) {
-      const propName = (row.propertyName || "Commercial Property").trim();
+      try {
+        const propName = (row.propertyName || "Commercial Property").trim();
       if (!propName) continue;
 
       const propKey = propName.toLowerCase();
@@ -203,12 +243,15 @@ export async function POST(req: Request) {
       }
 
       // 5. Create Contract
-      const rentAmt = row.monthlyRent || (row.areaSqft ? row.areaSqft * 65 : 250000);
-      const depositAmt = row.securityDeposit || rentAmt * 6;
-      const startDate = row.startDate || new Date().toISOString().split("T")[0];
-      const endDate =
-        row.endDate ||
-        new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const numArea = Number(row.areaSqft) > 0 ? Number(row.areaSqft) : 5000;
+      const rentAmt = Number(row.monthlyRent) > 0 ? Number(row.monthlyRent) : (numArea * 65);
+      const depositAmt = Number(row.securityDeposit) > 0 ? Number(row.securityDeposit) : (rentAmt * 6);
+      
+      const now = new Date();
+      const defaultStart = now;
+      const defaultEnd = new Date(now.getTime() + 3 * 365 * 24 * 60 * 60 * 1000);
+      const startDate = parseDateOrFallback(row.startDate, defaultStart);
+      const endDate = parseDateOrFallback(row.endDate, defaultEnd);
 
       // Check if contract already exists for this space and occupant
       const existingContracts = await db
@@ -307,19 +350,24 @@ export async function POST(req: Request) {
 
         contractsCreated++;
       }
+    } catch (rowErr: any) {
+      console.error("Bulk import row error for row:", row?.tenantName || row?.propertyName, rowErr);
+      rowErrors.push(rowErr?.message || "Failed to process row");
     }
+  }
 
-    return NextResponse.json({
-      success: true,
-      message: `Successfully imported ${rows.length} records.`,
-      stats: {
-        propertiesCreated,
-        unitsCreated,
-        tenantsCreated,
-        contractsCreated,
-        totalRowsProcessed: rows.length,
-      },
-    });
+  return NextResponse.json({
+    success: true,
+    message: `Successfully imported ${rows.length} records.`,
+    stats: {
+      propertiesCreated,
+      unitsCreated,
+      tenantsCreated,
+      contractsCreated,
+      totalRowsProcessed: rows.length,
+      warnings: rowErrors.length > 0 ? rowErrors : undefined,
+    },
+  });
   } catch (err: any) {
     console.error("Bulk rent roll import error:", err);
     return NextResponse.json(

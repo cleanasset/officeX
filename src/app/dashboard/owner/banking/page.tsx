@@ -27,15 +27,20 @@ import {
   Clock,
   Layers,
   CheckCircle,
-  Cloud
+  Cloud,
+  Receipt
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import SubscriptionGate from "@/components/SubscriptionGate";
+import BillingRunModal from "@/components/rent-roll/BillingRunModal";
+import InvoiceViewModal from "@/components/rent-roll/InvoiceViewModal";
 
 export default function OwnerBankingAndERPPage() {
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [billingRunOpen, setBillingRunOpen] = useState(false);
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<any | null>(null);
 
   // Bank Account State
   const [bankDetails, setBankDetails] = useState({
@@ -408,7 +413,16 @@ export default function OwnerBankingAndERPPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setBillingRunOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition flex items-center gap-2 shadow-sm shadow-slate-900/20 cursor-pointer active:scale-95 border border-slate-700 hover:border-slate-600"
+          >
+            <Receipt size={15} className="text-teal-400" />
+            <span>Run Monthly Billing / Generate Invoices</span>
+          </button>
+
           <button
             type="button"
             onClick={handleDownloadTallyXML}
@@ -617,7 +631,137 @@ export default function OwnerBankingAndERPPage() {
         </div>
       </div>
 
-      {/* SECTION 2: DIRECT INVOICING & ACCOUNTING INTEGRATION (EXCLUSIVELY TALLY & ZOHO) */}
+      {/* SECTION 2: MONTHLY INVOICING & DIRECT SYNC ACTIVITY (CORE OPERATIONAL COMMAND CENTER) */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 border border-teal-200">
+                Core Billing Operations
+              </span>
+              <span className="text-xs text-slate-400 font-medium">Rent Roll · CAM · Utilities · Direct Remittance Sync</span>
+            </div>
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">
+              Monthly Invoicing &amp; Direct Sync Activity
+            </h3>
+            <p className="text-xs text-slate-500">
+              Generate GST Rule-46 compliant invoices, dispatch remittance links to tenants, and synchronize with your escrow account.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">Active Channel:</span>
+              <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-teal-50 text-teal-800 border border-teal-200 uppercase tracking-wider">
+                {directInvoicingMode === "tally"
+                  ? "Tally Prime Direct"
+                  : directInvoicingMode === "zoho"
+                  ? "Zoho Books Direct"
+                  : "OfficeX Sovereign"}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBillingRunOpen(true)}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition flex items-center gap-2 shadow-xs cursor-pointer active:scale-95 border border-slate-700"
+            >
+              <Receipt size={14} className="text-teal-400" />
+              <span>+ Run Monthly Billing / Generate Invoices</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-slate-50 text-slate-600 font-extrabold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="py-3 px-4">Invoice #</th>
+                <th className="py-3 px-4">Tenant / Occupant</th>
+                <th className="py-3 px-4">Cycle</th>
+                <th className="py-3 px-4">Amount (INR)</th>
+                <th className="py-3 px-4">Direct Channel</th>
+                <th className="py-3 px-4">Remittance Bank</th>
+                <th className="py-3 px-4">Sync Status</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+              {recentInvoices.length > 0 ? (
+                recentInvoices.map((inv: any, idx: number) => (
+                  <tr key={inv.id || idx} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                      {inv.invoice_number || `INV-26-27-00${idx + 1}`}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      {inv.occupant_name || "Commercial Occupant"}
+                    </td>
+                    <td className="py-3 px-4 text-slate-500">
+                      {inv.invoice_date || "Oct 2026"}
+                    </td>
+                    <td className="py-3 px-4 font-mono font-bold">
+                      ₹{Number(inv.gross_total || inv.total_amount_inr || 0).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-slate-100 text-slate-800 border border-slate-200">
+                        {directInvoicingMode === "tally"
+                          ? "Tally XML Voucher"
+                          : directInvoicingMode === "zoho"
+                          ? "Zoho Books API"
+                          : "OfficeX Rule 46"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
+                      {bankDetails.bank_name} (••••{bankDetails.account_number.slice(-4)})
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-max">
+                        <CheckCircle2 size={10} /> Synced
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedInvoiceForView(inv)}
+                        className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] font-bold text-[11px] transition border border-teal-200 cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
+                      <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0D7B6C]">
+                        <Receipt size={22} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">No Invoices Generated Yet for Current Period</h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Generate GST Rule-46 compliant rent invoices, CAM maintenance bills, and utility charges for your registered tenants.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBillingRunOpen(true)}
+                        className="mt-1 px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+                      >
+                        <Zap size={14} className="text-amber-300" />
+                        <span>Run Monthly Billing &amp; Generate Invoices Now</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* SECTION 3: DIRECT INVOICING & ACCOUNTING INTEGRATION (EXCLUSIVELY TALLY & ZOHO) */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-xs space-y-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -993,89 +1137,7 @@ export default function OwnerBankingAndERPPage() {
         </div>
       </div>
 
-      {/* SECTION 3: RECENT INVOICES & DIRECT INVOICING CHANNEL AUDIT */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-base font-black text-slate-900">
-              Monthly Invoicing &amp; Direct Sync Activity
-            </h3>
-            <p className="text-xs text-slate-500">
-              Audit log of monthly rent roll cycles and their active ERP invoicing channel.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">Active Channel:</span>
-            <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-teal-50 text-teal-800 border border-teal-200 uppercase tracking-wider">
-              {directInvoicingMode === "tally"
-                ? "Tally Prime Direct"
-                : directInvoicingMode === "zoho"
-                ? "Zoho Books Direct"
-                : "OfficeX Sovereign"}
-            </span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-600 font-extrabold uppercase tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="py-3 px-4">Invoice #</th>
-                <th className="py-3 px-4">Tenant / Occupant</th>
-                <th className="py-3 px-4">Cycle</th>
-                <th className="py-3 px-4">Amount (INR)</th>
-                <th className="py-3 px-4">Direct Channel</th>
-                <th className="py-3 px-4">Remittance Bank</th>
-                <th className="py-3 px-4">Sync Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-              {recentInvoices.length > 0 ? (
-                recentInvoices.map((inv: any, idx: number) => (
-                  <tr key={inv.id || idx} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                      {inv.invoice_number || `INV-26-27-00${idx + 1}`}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-900">
-                      {inv.occupant_name || "Commercial Occupant"}
-                    </td>
-                    <td className="py-3 px-4 text-slate-500">
-                      {inv.invoice_date || "Oct 2026"}
-                    </td>
-                    <td className="py-3 px-4 font-mono font-bold">
-                      ₹{Number(inv.gross_total || inv.total_amount_inr || 0).toLocaleString("en-IN")}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-slate-100 text-slate-800 border border-slate-200">
-                        {directInvoicingMode === "tally"
-                          ? "Tally XML Voucher"
-                          : directInvoicingMode === "zoho"
-                          ? "Zoho Books API"
-                          : "OfficeX Rule 46"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                      {bankDetails.bank_name} (••••{bankDetails.account_number.slice(-4)})
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-max">
-                        <CheckCircle2 size={10} /> Synced
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 font-semibold text-xs">
-                    No direct bank invoices generated yet for this property. Invoices will automatically sync to your escrow account once issued.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {/* MODAL 1: EDIT BANK DETAILS */}
       {editBankModalOpen && (
@@ -1319,6 +1381,22 @@ export default function OwnerBankingAndERPPage() {
           </div>
         </div>
       )}
+
+      {/* S-40 Monthly Billing Run Wizard Modal */}
+      <BillingRunModal
+        isOpen={billingRunOpen}
+        onClose={() => setBillingRunOpen(false)}
+        onSuccess={() => {
+          loadAllData();
+          showToast("✓ Monthly Billing Run completed! Invoices generated & refreshed.");
+        }}
+      />
+
+      {/* Invoice Detail / Print / Dispatch Modal */}
+      <InvoiceViewModal
+        invoice={selectedInvoiceForView}
+        onClose={() => setSelectedInvoiceForView(null)}
+      />
     </div>
     </SubscriptionGate>
   );

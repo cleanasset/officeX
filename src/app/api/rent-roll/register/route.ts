@@ -93,8 +93,8 @@ export async function GET(req: Request) {
       .leftJoin(property, eq(building.property_id, property.id))
       .where(and(...spaceConditions));
 
-    const propertyFilteredSpaces = propertyId
-      ? spacesList.filter((s) => s.property?.id === propertyId)
+    const propertyFilteredSpaces = propertyId && propertyId !== "all"
+      ? spacesList.filter((s) => s.property?.id === propertyId || (s.property?.property_name && s.property.property_name.toLowerCase() === propertyId.toLowerCase()))
       : spacesList;
 
     // 2. Fetch contracts covering org (and client filter)
@@ -324,6 +324,17 @@ export async function GET(req: Request) {
           const bldgData = spObj?.building || c.building;
           const propData = spObj?.property || c.property;
 
+          // Scope contract rows strictly by Property ID or Name if filter is active
+          if (propertyId && propertyId !== "all") {
+            const rowPropId = propData?.id || c.property?.id || bldgData?.property_id;
+            const rowPropName = propData?.property_name || c.property?.property_name || "";
+            const matchesId = rowPropId === propertyId;
+            const matchesName = rowPropName.toLowerCase() === propertyId.toLowerCase();
+            if (!matchesId && !matchesName) {
+              continue;
+            }
+          }
+
           const areaSqft = spData?.chargeable_area_sqft ? parseFloat(spData.chargeable_area_sqft) : primaryArea;
           const carpetAreaSqft = spData?.carpet_area_sqft ? parseFloat(spData.carpet_area_sqft) : Math.round(areaSqft * 0.75);
           const allocatedMonthlyBase = spacesToEmit.length > 1
@@ -352,6 +363,7 @@ export async function GET(req: Request) {
             floor: parseFloorInfo(spData).floor,
             floor_name: parseFloorInfo(spData).floor_name,
             space_type: (spData as any)?.space_type || "Commercial Office",
+            property_id: propData?.id || c.property?.id || bldgData?.property_id || "",
             property_name: propData?.property_name || c.property?.property_name || "—",
             building_name: bldgData?.building_name || c.building?.building_name || "—",
             occupant_id: c.contract.occupant_id,

@@ -381,7 +381,15 @@ function SidebarInner() {
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
   const [orgLogo, setOrgLogo] = useState<string>("");
-  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({});
+  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_expanded_submenus");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return { "Rent Roll & Financials": true };
+  });
 
   // Synchronously compute active portal from URL first
   const findPortalKey = (path: string): string | undefined => {
@@ -579,13 +587,20 @@ function SidebarInner() {
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
         <nav className="flex-1 px-3 py-2 flex flex-col gap-1 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {activeMenu.map((item, idx) => {
-            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const hasSubItems = Boolean(item.subItems && item.subItems.length > 0);
             const itemPath = item.href.split("?")[0];
+            const isSubItemActive = Boolean(item.subItems?.some((sub) => {
+              const subBase = sub.href.split("?")[0];
+              return pathname === subBase || (subBase !== "/" && pathname.startsWith(subBase));
+            }));
             const isItemActive = hasSubItems
-              ? pathname.startsWith(itemPath)
+              ? (pathname.startsWith(itemPath) || isSubItemActive)
               : pathname === item.href || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && pathname.startsWith(item.href));
             const Icon = item.icon;
-            const isExpanded = expandedSubMenus[item.name] ?? isItemActive;
+            // Respect user toggle state stored in localStorage; otherwise auto-expand if active or Rent Roll suite
+            const isExpanded = expandedSubMenus[item.name] !== undefined
+              ? expandedSubMenus[item.name]
+              : (isItemActive || item.name === "Rent Roll & Financials");
 
             return (
               <React.Fragment key={item.name}>
@@ -599,10 +614,17 @@ function SidebarInner() {
                   <div className="flex flex-col gap-0.5 my-0.5">
                     <div
                       onClick={() => {
-                        setExpandedSubMenus(prev => ({
-                          ...prev,
-                          [item.name]: !isExpanded
-                        }));
+                        const nextVal = !isExpanded;
+                        setExpandedSubMenus(prev => {
+                          const updated = {
+                            ...prev,
+                            [item.name]: nextVal
+                          };
+                          try {
+                            localStorage.setItem("officex_expanded_submenus", JSON.stringify(updated));
+                          } catch (e) {}
+                          return updated;
+                        });
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
                         isItemActive

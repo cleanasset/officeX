@@ -53,7 +53,18 @@ function formatINR(val: number) {
 export default function TenantDirectoryPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("officex_selected_property") || "all";
+    }
+    return "all";
+  });
+  const [selectedPropertyName, setSelectedPropertyName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("officex_selected_property_name") || "All Properties";
+    }
+    return "All Properties";
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
@@ -166,6 +177,23 @@ export default function TenantDirectoryPage() {
 
   useEffect(() => {
     fetchData();
+
+    if (typeof window !== "undefined") {
+      const savedScopeId = localStorage.getItem("officex_selected_property") || "all";
+      const savedScopeName = localStorage.getItem("officex_selected_property_name") || "All Properties";
+      setSelectedPropertyId(savedScopeId);
+      setSelectedPropertyName(savedScopeName);
+
+      const handlePropUpdate = (e: any) => {
+        const pId = e.detail?.propertyId || "all";
+        const pName = e.detail?.propertyName || "All Properties";
+        setSelectedPropertyId(pId);
+        setSelectedPropertyName(pName);
+      };
+
+      window.addEventListener("officex-property-change", handlePropUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropUpdate);
+    }
   }, []);
 
   const fetchData = async () => {
@@ -199,6 +227,22 @@ export default function TenantDirectoryPage() {
     }
   };
 
+  const handlePagePropertyChange = (val: string) => {
+    setSelectedPropertyId(val);
+    const found = properties.find((p) => p.id === val || p.property_name === val);
+    const pName = found ? (found.property_name || found.name) : val === "all" ? "All Properties" : val;
+    setSelectedPropertyName(pName);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_selected_property", val);
+      localStorage.setItem("officex_selected_property_name", pName);
+      window.dispatchEvent(
+        new CustomEvent("officex-property-change", {
+          detail: { propertyId: val, propertyName: pName },
+        })
+      );
+    }
+  };
+
   const filteredTenants = tenants.filter((t) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
@@ -207,10 +251,23 @@ export default function TenantDirectoryPage() {
       (t.trade_name && t.trade_name.toLowerCase().includes(q)) ||
       (t.pan && t.pan.toLowerCase().includes(q));
 
-    const matchesProp =
-      selectedPropertyId === "all" ||
-      t.property_id === selectedPropertyId ||
-      t.property_name === selectedPropertyId;
+    let matchesProp = true;
+    if (selectedPropertyId && selectedPropertyId !== "all") {
+      const pId = selectedPropertyId.toLowerCase();
+      const pName = selectedPropertyName.toLowerCase();
+      const tPropId = (t.property_id || "").toLowerCase();
+      const tPropName = (t.property_name || "").toLowerCase();
+
+      const targetPropObj = properties.find(
+        (p) => p.id === selectedPropertyId || (p.property_name && p.property_name.toLowerCase() === pName)
+      );
+      const targetId = (targetPropObj?.id || "").toLowerCase();
+      const targetName = (targetPropObj?.property_name || "").toLowerCase();
+
+      matchesProp =
+        (tPropId && (tPropId === pId || tPropId === targetId)) ||
+        (tPropName && (tPropName === pId || tPropName === pName || tPropName === targetName || (pName !== "all properties" && tPropName.includes(pName)) || (targetName && tPropName.includes(targetName))));
+    }
 
     return matchesSearch && matchesProp;
   });
@@ -320,13 +377,19 @@ export default function TenantDirectoryPage() {
                   {/* Registered Property Dropdown */}
                   <div className="w-full sm:w-auto">
                     <select
-                      value={selectedPropertyId}
-                      onChange={(e) => setSelectedPropertyId(e.target.value)}
+                      value={
+                        selectedPropertyId === "all"
+                          ? "all"
+                          : properties.some((p) => p.id === selectedPropertyId)
+                          ? selectedPropertyId
+                          : properties.find((p) => p.property_name?.toLowerCase() === selectedPropertyName.toLowerCase())?.id || "all"
+                      }
+                      onChange={(e) => handlePagePropertyChange(e.target.value)}
                       className="w-full sm:w-auto px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600 cursor-pointer"
                     >
                       <option value="all">All Registered Properties ({properties.length})</option>
                       {properties.map((p) => (
-                        <option key={p.id || p.property_name} value={p.id || p.property_name}>
+                        <option key={p.id} value={p.id}>
                           {p.property_name} ({p.city || "Commercial"})
                         </option>
                       ))}
@@ -382,7 +445,7 @@ export default function TenantDirectoryPage() {
                       <th className="py-3 px-4">PAN / GSTIN</th>
                       <th className="py-3 px-4">Leased Unit</th>
                       <th className="py-3 px-4">Portal Status</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4 text-right whitespace-nowrap">Share Tenant Portal Link &amp; Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -430,46 +493,55 @@ export default function TenantDirectoryPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            {/* WhatsApp Share Button */}
-                            <a
-                              href={getTenantWhatsAppUrl(t)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer shadow-2xs"
-                              title={`Share Tenant Portal link via WhatsApp to ${t.tenant_name || t.occupant_name}`}
-                            >
-                              <MessageCircle size={13} />
-                              <span>WhatsApp</span>
-                            </a>
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                            {/* Tenant Portal Link Share Group */}
+                            <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 shadow-2xs">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1 mr-1">
+                                <Share2 size={11} className="text-[#0F8B7D]" />
+                                <span>Portal Link:</span>
+                              </span>
 
-                            {/* Email Share Button */}
-                            <a
-                              href={getTenantMailtoUrl(t)}
-                              className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer shadow-2xs"
-                              title={`Send Tenant Portal invite email to ${t.email || t.tenant_name}`}
-                            >
-                              <Mail size={13} />
-                              <span>Email</span>
-                            </a>
+                              {/* WhatsApp Share Button */}
+                              <a
+                                href={getTenantWhatsAppUrl(t)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
+                                title={`Share Tenant Portal link via WhatsApp to ${t.tenant_name || t.occupant_name}`}
+                              >
+                                <MessageCircle size={12} />
+                                <span>WhatsApp</span>
+                              </a>
 
-                            {/* Copy Tenant Portal Link */}
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyTenantLink(t, e)}
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer border border-slate-200"
-                              title="Copy Tenant Sharable Link"
-                            >
-                              <Copy size={12} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
-                              <span>{copiedTenantId === t.id ? "Copied!" : "Copy"}</span>
-                            </button>
+                              {/* Email Share Button */}
+                              <a
+                                href={getTenantMailtoUrl(t)}
+                                className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
+                                title={`Send Tenant Portal invite email to ${t.email || t.tenant_name}`}
+                              >
+                                <Mail size={12} />
+                                <span>Email</span>
+                              </a>
+
+                              {/* Copy Tenant Portal Link */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyTenantLink(t, e)}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer border border-slate-200 whitespace-nowrap"
+                                title="Copy Tenant Portal Invite Link"
+                              >
+                                <Copy size={11} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
+                                <span>{copiedTenantId === t.id ? "Copied!" : "Copy Link"}</span>
+                              </button>
+                            </div>
 
                             {/* View Executed Contract Modal */}
                             <button
                               type="button"
                               onClick={(e) => handleOpenContractViewer(t, e)}
-                              className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0F8B7D] font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0F8B7D] font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              title="View Executed Commercial Lease Contract"
                             >
                               <FileText size={12} />
                               <span>Contract →</span>

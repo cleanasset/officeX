@@ -123,18 +123,19 @@ export async function GET(req: NextRequest) {
     const emailCookie = cookieHeader
       .split(";")
       .find((c) => c.trim().startsWith("officex_user_email="));
-    const userEmail = emailCookie
+    const headerEmail = req.headers.get("x-user-email");
+    const effectiveEmail = emailCookie
       ? decodeURIComponent(emailCookie.split("=")[1].trim())
-      : null;
+      : headerEmail || null;
 
     let matchedUser: any = null;
 
-    if (userEmail) {
+    if (effectiveEmail) {
       try {
         const found = await db
           .select()
           .from(users)
-          .where(eq(users.email, userEmail.toLowerCase()))
+          .where(eq(users.email, effectiveEmail.toLowerCase()))
           .limit(1);
         if (found.length > 0) {
           matchedUser = found[0];
@@ -144,14 +145,23 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const email = matchedUser?.email || userEmail || "director@officex.pro";
-    const fullName = matchedUser?.fullName || email.split("@")[0] || "Commercial Leader";
+    if (!effectiveEmail && !matchedUser) {
+      return NextResponse.json({
+        success: true,
+        user: null,
+        roles: SPEC_ROLES,
+        count: SPEC_ROLES.length,
+      });
+    }
+
+    const email = matchedUser?.email || effectiveEmail;
+    const fullName = matchedUser?.fullName || (email ? email.split("@")[0] : "");
     const currentStoredRole = cookieHeader
       .split(";")
       .find((c) => c.trim().startsWith("officex_user_role="));
     const activeRoleLabel = currentStoredRole
       ? decodeURIComponent(currentStoredRole.split("=")[1].trim())
-      : "Owner / Client Principal";
+      : (matchedUser?.role || "Owner / Client Principal");
 
     return NextResponse.json({
       success: true,

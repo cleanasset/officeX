@@ -59,8 +59,16 @@ export default function PropertySelector() {
           setSelectedPropertyId(savedId);
 
           if (savedId !== "all") {
-            const found = list.find((p: any) => p.id === savedId);
-            if (found) setSelectedPropertyName(found.name);
+            const found = list.find((p: any) => p.id === savedId || p.name.toLowerCase() === savedId.toLowerCase());
+            if (found) {
+              setSelectedPropertyName(found.name);
+              // Dispatch to sync all pages on load
+              window.dispatchEvent(
+                new CustomEvent("officex-property-change", {
+                  detail: { propertyId: found.id, propertyName: found.name },
+                })
+              );
+            }
           }
         }
       })
@@ -74,8 +82,16 @@ export default function PropertySelector() {
         setIsOpen(false);
       }
     };
+    const handleGlobalUpdate = (e: any) => {
+      if (e.detail?.propertyId) setSelectedPropertyId(e.detail.propertyId);
+      if (e.detail?.propertyName) setSelectedPropertyName(e.detail.propertyName);
+    };
+    window.addEventListener("officex-property-change", handleGlobalUpdate);
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("officex-property-change", handleGlobalUpdate);
+    };
   }, []);
 
   const handleSelect = (id: string, name: string) => {

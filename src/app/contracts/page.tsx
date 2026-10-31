@@ -61,18 +61,55 @@ export default function ContractsPage() {
     }
   };
 
+  const [propertyScope, setPropertyScope] = useState<string>("all");
+  const [propertyScopeName, setPropertyScopeName] = useState<string>("All Properties");
+
   useEffect(() => {
     fetchContracts();
+
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property") || "all";
+      const savedName = localStorage.getItem("officex_selected_property_name") || "All Properties";
+      setPropertyScope(savedScope);
+      setPropertyScopeName(savedName);
+
+      const handlePropUpdate = (e: any) => {
+        const pId = e.detail?.propertyId || "all";
+        const pName = e.detail?.propertyName || "All Properties";
+        setPropertyScope(pId);
+        setPropertyScopeName(pName);
+      };
+      window.addEventListener("officex-property-change", handlePropUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropUpdate);
+    }
   }, []);
 
   const filteredContracts = contracts.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const occupant = (c.occupant_name || c.tenant_name || "").toLowerCase();
-    const prop = (c.property_name || c.building_name || "").toLowerCase();
-    const space = (c.space_name || c.unit_name || "").toLowerCase();
-    const code = (c.contract_code || "").toLowerCase();
-    return occupant.includes(q) || prop.includes(q) || space.includes(q) || code.includes(q);
+    let matchesSearch = true;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const occupant = (c.occupant_name || c.tenant_name || "").toLowerCase();
+      const prop = (c.property_name || c.building_name || "").toLowerCase();
+      const space = (c.space_name || c.unit_name || "").toLowerCase();
+      const code = (c.contract_code || "").toLowerCase();
+      matchesSearch = occupant.includes(q) || prop.includes(q) || space.includes(q) || code.includes(q);
+    }
+
+    let matchesProperty = true;
+    if (propertyScope && propertyScope !== "all") {
+      const pId = propertyScope.toLowerCase();
+      const pName = propertyScopeName.toLowerCase();
+      const cPropId = (c.property_id || "").toLowerCase();
+      const cPropName = (c.property_name || c.building_name || "").toLowerCase();
+      matchesProperty =
+        cPropId === pId ||
+        cPropName === pId ||
+        cPropName === pName ||
+        (pName !== "all properties" && cPropName.includes(pName)) ||
+        (pName !== "all properties" && pName.includes(cPropName));
+    }
+
+    return matchesSearch && matchesProperty;
   });
 
   const totalMonthlyBaseRent = filteredContracts.reduce(

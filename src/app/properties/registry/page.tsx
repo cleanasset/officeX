@@ -46,9 +46,27 @@ export default function SpaceAndBuildingRegistryPage() {
   const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
   const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
+  const [selectedPropertyScope, setSelectedPropertyScope] = useState<string>("all");
+  const [selectedPropertyScopeName, setSelectedPropertyScopeName] = useState<string>("All Properties");
 
   useEffect(() => {
     fetchRegistryData();
+
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property") || "all";
+      const savedName = localStorage.getItem("officex_selected_property_name") || "All Properties";
+      setSelectedPropertyScope(savedScope);
+      setSelectedPropertyScopeName(savedName);
+
+      const handlePropUpdate = (e: any) => {
+        const pId = e.detail?.propertyId || "all";
+        const pName = e.detail?.propertyName || "All Properties";
+        setSelectedPropertyScope(pId);
+        setSelectedPropertyScopeName(pName);
+      };
+      window.addEventListener("officex-property-change", handlePropUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropUpdate);
+    }
   }, []);
 
   const fetchRegistryData = async () => {
@@ -212,12 +230,21 @@ export default function SpaceAndBuildingRegistryPage() {
 
   const filteredProperties = properties.filter((p) => {
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       !q ||
       (p.property_name && p.property_name.toLowerCase().includes(q)) ||
       (p.city && p.city.toLowerCase().includes(q)) ||
-      (p.property_code && p.property_code.toLowerCase().includes(q))
-    );
+      (p.property_code && p.property_code.toLowerCase().includes(q));
+
+    let matchesScope = true;
+    if (selectedPropertyScope && selectedPropertyScope !== "all") {
+      const pId = selectedPropertyScope.toLowerCase();
+      const pName = selectedPropertyScopeName.toLowerCase();
+      const thisId = (p.id || "").toLowerCase();
+      const thisName = (p.property_name || "").toLowerCase();
+      matchesScope = thisId === pId || thisName === pId || thisName === pName || (pName !== "all properties" && thisName.includes(pName));
+    }
+    return matchesSearch && matchesScope;
   });
 
   const filteredSpaces = spaces.filter((s) => {
@@ -228,7 +255,17 @@ export default function SpaceAndBuildingRegistryPage() {
       (s.building_name && s.building_name.toLowerCase().includes(q));
     const matchBuilding =
       selectedBuilding === "all" || s.building_name === selectedBuilding;
-    return matchSearch && matchBuilding;
+
+    let matchesScope = true;
+    if (selectedPropertyScope && selectedPropertyScope !== "all") {
+      const pId = selectedPropertyScope.toLowerCase();
+      const pName = selectedPropertyScopeName.toLowerCase();
+      const sPropId = (s.property_id || "").toLowerCase();
+      const sBldgName = (s.building_name || "").toLowerCase();
+      matchesScope = sPropId === pId || (pName !== "all properties" && sBldgName.includes(pName));
+    }
+
+    return matchSearch && matchBuilding && matchesScope;
   });
 
   return (
@@ -387,14 +424,14 @@ export default function SpaceAndBuildingRegistryPage() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 px-4">Property Name</th>
-                        <th className="py-3 px-4">Code</th>
-                        <th className="py-3 px-4">Location</th>
-                        <th className="py-3 px-4">Leasable Area</th>
-                        <th className="py-3 px-4">Base Rate PSF</th>
-                        <th className="py-3 px-4">Occupancy &amp; Tenants</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Code</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Location</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Base Rate PSF</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Occupancy &amp; Tenants</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -462,22 +499,22 @@ export default function SpaceAndBuildingRegistryPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                            <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
                               {p.property_code || "—"}
                             </td>
-                            <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                            <td className="py-3.5 px-4 text-slate-700 font-semibold whitespace-nowrap">
                               <div className="flex items-center gap-1 text-slate-600">
                                 <MapPin size={12} className="text-teal-600 shrink-0" />
                                 <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 font-black text-slate-900">
+                            <td className="py-3.5 px-4 font-black text-slate-900 whitespace-nowrap">
                               {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
                             </td>
-                            <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-800 whitespace-nowrap">
                               ₹{Number(effectivePsf).toLocaleString("en-IN")}/sqft
                             </td>
-                            <td className="py-3.5 px-4">
+                            <td className="py-3.5 px-4 min-w-[200px]">
                               {uniqueOccupants.length > 0 ? (
                                 <div className="flex flex-col gap-0.5">
                                   <div className="flex items-center gap-1.5 font-bold text-teal-900">
@@ -492,7 +529,7 @@ export default function SpaceAndBuildingRegistryPage() {
                                 <span className="text-slate-400 italic text-[11px]">— Vacant Asset</span>
                               )}
                             </td>
-                            <td className="py-3.5 px-4">
+                            <td className="py-3.5 px-4 whitespace-nowrap">
                               {isFullyLeased ? (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase tracking-wider">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
@@ -510,14 +547,14 @@ export default function SpaceAndBuildingRegistryPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => {
                                     setSelectedPropertyForDetail(p);
                                     setPropertyDetailMode("view");
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
                                   title="View All Details"
                                 >
                                   <Eye size={12} />
@@ -528,7 +565,7 @@ export default function SpaceAndBuildingRegistryPage() {
                                     setSelectedPropertyForDetail(p);
                                     setPropertyDetailMode("edit");
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
                                   title="Edit Property"
                                 >
                                   <Edit2 size={12} />
@@ -538,11 +575,11 @@ export default function SpaceAndBuildingRegistryPage() {
                                 {uniqueOccupants.length > 0 ? (
                                   <Link
                                     href={`/properties/tenants?property=${encodeURIComponent(p.id)}`}
-                                    className="px-2.5 py-1 rounded-lg bg-teal-100/90 hover:bg-teal-200 text-teal-900 border border-teal-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                    className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
                                     title={`View enrolled tenant(s): ${uniqueOccupants.join(", ")}`}
                                   >
                                     <Users size={12} />
-                                    <span>Tenants ({uniqueOccupants.length}: {uniqueOccupants[0]})</span>
+                                    <span>Tenants ({uniqueOccupants.length})</span>
                                   </Link>
                                 ) : null}
 
@@ -553,7 +590,7 @@ export default function SpaceAndBuildingRegistryPage() {
                                       setHierarchyTab("tenant");
                                       setHierarchyModalOpen(true);
                                     }}
-                                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 text-[11px] font-bold transition cursor-pointer"
+                                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
                                     title="Add / Lease space to tenant"
                                   >
                                     + Tenant
@@ -562,14 +599,14 @@ export default function SpaceAndBuildingRegistryPage() {
 
                                 <Link
                                   href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
-                                  className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1"
+                                  className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1 whitespace-nowrap"
                                 >
                                   <span>Rent Roll</span>
-                                  <ChevronRight size={13} />
+                                  <ChevronRight size={13} className="shrink-0" />
                                 </Link>
                                 <button
                                   onClick={() => handleDeleteProperty(p.id, p.property_name)}
-                                  className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200"
+                                  className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200 whitespace-nowrap"
                                   title="Delete Property from Portfolio"
                                 >
                                   <Trash2 size={12} />

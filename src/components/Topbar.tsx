@@ -169,9 +169,14 @@ export default function Topbar() {
     fetch("/api/users/me", { headers: getClientAuthHeaders() })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.user?.email && !data.user.email.includes("subscriber@officex.in")) {
+        if (data?.user?.email && !data.user.email.includes("subscriber@officex.in") && !data.user.email.includes("director@officex.pro")) {
           setUserEmail(data.user.email);
           if (data.user.fullName) setUserName(data.user.fullName);
+        } else if (!data?.user) {
+          if (typeof window !== "undefined" && !localStorage.getItem("officex_user_email")) {
+            setUserEmail("");
+            setUserName("");
+          }
         }
       })
       .catch(() => {});

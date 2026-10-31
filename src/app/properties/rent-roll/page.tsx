@@ -258,12 +258,25 @@ export default function RentRollRegisterPage() {
     }
   }
 
-  // Filter rows based on search
+  // Filter rows based on search and property scope
   const visibleRows = useMemo(() => {
     if (!registerData?.rows) return [];
-    if (!searchQuery.trim()) return registerData.rows;
+    let rows = registerData.rows;
+
+    // Strict client-side property scope filter
+    if (propertyFilter && propertyFilter !== "all") {
+      const savedScopeName = typeof window !== "undefined" ? localStorage.getItem("officex_selected_property_name") : null;
+      rows = rows.filter((r: any) => {
+        const matchesId = r.property_id === propertyFilter;
+        const matchesPropId = r.property_name && r.property_name.toLowerCase() === propertyFilter.toLowerCase();
+        const matchesSavedName = savedScopeName && savedScopeName !== "All Properties" && r.property_name && r.property_name.toLowerCase() === savedScopeName.toLowerCase();
+        return matchesId || matchesPropId || matchesSavedName;
+      });
+    }
+
+    if (!searchQuery.trim()) return rows;
     const q = searchQuery.toLowerCase();
-    return registerData.rows.filter(
+    return rows.filter(
       (r: any) =>
         r.contract_code?.toLowerCase().includes(q) ||
         r.space_name?.toLowerCase().includes(q) ||
@@ -272,7 +285,7 @@ export default function RentRollRegisterPage() {
         r.property_name?.toLowerCase().includes(q) ||
         r.building_name?.toLowerCase().includes(q)
     );
-  }, [registerData, searchQuery]);
+  }, [registerData, searchQuery, propertyFilter]);
 
   // Group visible rows by property (§S-10: Group by Property with subtotal headers)
   const groupedRows = useMemo(() => {
@@ -384,14 +397,14 @@ export default function RentRollRegisterPage() {
 
               {/* Action Buttons Suite */}
               <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Secondary: Run Billing */}
+                {/* Primary Action: Run Monthly Billing / Invoices */}
                 <button
                   type="button"
                   onClick={() => setBillingRunOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 border border-slate-700"
                 >
                   <Receipt size={14} className="text-teal-400" />
-                  <span>Run Billing</span>
+                  <span>Run Monthly Billing / Invoices</span>
                 </button>
 
                 {/* Secondary: Import */}
