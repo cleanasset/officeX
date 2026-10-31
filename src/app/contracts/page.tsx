@@ -22,7 +22,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
+import PropertyHierarchyModal from "@/components/rent-roll/PropertyHierarchyModal";
 import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
@@ -277,8 +277,9 @@ export default function ContractsPage() {
       <MobileBottomNav />
 
       {/* Contract Creation Wizard Modal */}
-      <ContractWizardModal
+      <PropertyHierarchyModal
         isOpen={wizardOpen}
+        initialTab="contract"
         onClose={() => setWizardOpen(false)}
         onSuccess={() => {
           setWizardOpen(false);

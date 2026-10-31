@@ -70,7 +70,8 @@ export const checkIsOwnerSubscribed = (): boolean => {
   if (typeof window !== "undefined") {
     const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
     const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-    return sub === "active" && subStatus === "active";
+    const ownerSub = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
+    return sub === "active" || subStatus === "active" || ownerSub === "true";
   }
   return false;
 };
@@ -137,6 +138,8 @@ interface PropertyHierarchyModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: HierarchyTab;
+  initialSpaceId?: string;
+  initialPropertyId?: string;
   onSuccess?: () => void;
 }
 
@@ -144,6 +147,8 @@ export default function PropertyHierarchyModal({
   isOpen,
   onClose,
   initialTab = "property",
+  initialSpaceId,
+  initialPropertyId,
   onSuccess,
 }: PropertyHierarchyModalProps) {
   const [activeTab, setActiveTabState] = useState<HierarchyTab>(initialTab);
@@ -176,7 +181,7 @@ export default function PropertyHierarchyModal({
     link: string;
   } | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
-  const [isOwnerSubscribed, setIsOwnerSubscribed] = useState<boolean>(false);
+  const [isOwnerSubscribed, setIsOwnerSubscribed] = useState<boolean>(() => checkIsOwnerSubscribed());
 
   // Active Floor selected in Step 2 Floor Studio
   const [activeStudioFloor, setActiveStudioFloor] = useState<string>("0");
@@ -609,7 +614,7 @@ export default function PropertyHierarchyModal({
         }
       }
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, initialSpaceId, initialPropertyId]);
 
   useEffect(() => {
     const updateSubStatus = () => {
@@ -640,9 +645,19 @@ export default function PropertyHierarchyModal({
           area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
         }));
         setPropertiesList(pArr);
-        if (pArr.length > 0 && !bldgForm.propertyId) {
-          setBldgForm((prev) => ({ ...prev, propertyId: pArr[0].id }));
-          setContractForm((prev) => ({ ...prev, propertyId: pArr[0].id }));
+        const targetPropId = initialPropertyId || (pArr.length > 0 ? pArr[0].id : "");
+        if (targetPropId) {
+          const matchedProp = pArr.find((p: any) => p.id === targetPropId);
+          if (matchedProp) {
+            setPropForm((prev) => ({
+              ...prev,
+              existingPropId: matchedProp.id,
+              propertyName: matchedProp.name,
+              areaSqft: String(matchedProp.area || ""),
+            }));
+            setBldgForm((prev) => ({ ...prev, propertyId: matchedProp.id }));
+            setContractForm((prev) => ({ ...prev, propertyId: matchedProp.id }));
+          }
         }
       }
 
@@ -681,7 +696,30 @@ export default function PropertyHierarchyModal({
           occupancyStatus: s.occupancy_status || "vacant",
         }));
         setSpacesList(sArr);
-        if (sArr.length > 0 && !contractForm.spaceId) {
+        if (initialSpaceId) {
+          const matched = sArr.find((s: any) => s.id === initialSpaceId);
+          if (matched) {
+            setContractForm((prev) => ({
+              ...prev,
+              spaceId: matched.id,
+              areaSqft: String(matched.area || ""),
+              buildingId: matched.buildingId || prev.buildingId,
+            }));
+            setSelectedTenantSuites([matched.id]);
+            if (matched.floorName) {
+              const flNum = matched.floorName.match(/\d+/);
+              const fl = flNum ? flNum[0] : (/ground|g/i.test(matched.floorName) ? "0" : "");
+              if (fl) {
+                setSelectedTenantFloor(fl);
+                setSelectedContractFloor(fl);
+                setSelectedTenantFloors([fl]);
+              }
+            }
+            if (matched.buildingId) {
+              setSelectedTenantBuilding(matched.buildingId);
+            }
+          }
+        } else if (sArr.length > 0 && !contractForm.spaceId) {
           setContractForm((prev) => ({
             ...prev,
             spaceId: sArr[0].id,
@@ -6286,11 +6324,20 @@ export default function PropertyHierarchyModal({
                         <label className="font-bold text-slate-700">
                           Occupant / Tenant <span className="text-rose-500">*</span>
                         </label>
-                        {changedFieldKeys.has("occupantName") && (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                            Updated
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {changedFieldKeys.has("occupantName") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("tenant")}
+                            className="text-[11px] text-[#0F8B7D] hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus size={12} /> Add New
+                          </button>
+                        </div>
                       </div>
                       <select
                         value={contractForm.occupantId}
@@ -6320,12 +6367,25 @@ export default function PropertyHierarchyModal({
                         <label className="font-bold text-slate-700">
                           Demised Space / Unit <span className="text-rose-500">*</span>
                         </label>
-                        {selectedContractFloor && selectedContractFloor !== "all" && selectedContractFloor !== "multiple" && (
+                        {selectedTenantSuites.length > 1 ? (
+                          <span className="text-[10px] text-teal-800 font-bold bg-teal-100/70 px-1.5 py-0.2 rounded border border-teal-300">
+                            {selectedTenantSuites.length} Spaces Selected
+                          </span>
+                        ) : selectedContractFloor && selectedContractFloor !== "all" && selectedContractFloor !== "multiple" ? (
                           <span className="text-[10px] text-teal-700 font-semibold">
                             Floor {selectedContractFloor === "0" ? "Ground" : selectedContractFloor}
                           </span>
-                        )}
+                        ) : null}
                       </div>
+
+                      {selectedTenantSuites.length > 1 && (
+                        <div className="mb-1.5 p-2 rounded-lg bg-teal-100/60 border border-teal-200 text-[11px] text-teal-950 flex items-center justify-between">
+                          <span className="truncate">🏢 <strong>Leasing {selectedTenantSuites.length} Spaces:</strong> {spacesList.filter(s => selectedTenantSuites.includes(s.id)).map(s => s.name).join(", ")}</span>
+                          <span className="font-mono font-bold text-teal-800 shrink-0 ml-1">
+                            {spacesList.filter(s => selectedTenantSuites.includes(s.id)).reduce((a, s) => a + (s.area || 0), 0).toLocaleString()} Sq.Ft
+                          </span>
+                        </div>
+                      )}
                       {(() => {
                         const curBldgId = contractForm.buildingId || displayBuildings[0]?.id;
                         const filteredSpaces = spacesList.filter((s) => {

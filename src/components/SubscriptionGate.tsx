@@ -92,9 +92,25 @@ export default function SubscriptionGate({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isChecking, setIsChecking] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
+      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
+      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
+      if (s === "active" || st === "active" || o === "true") return true;
+    }
+    return false;
+  });
+  const [isChecking, setIsChecking] = useState(() => {
+    if (typeof window !== "undefined") {
+      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
+      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
+      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
+      if (s === "active" || st === "active" || o === "true") return false;
+    }
+    return true;
+  });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
@@ -355,7 +371,16 @@ export default function SubscriptionGate({
           localStorage.getItem("officex_role") === "super_admin"
         ));
 
-      if (isAdmin) {
+      const locallySubscribed =
+        (typeof window !== "undefined" && (
+          localStorage.getItem("officex_subscription") === "active" ||
+          localStorage.getItem("officex_subscription_status") === "active" ||
+          localStorage.getItem("officex_owner_subscribed") === "true" ||
+          localStorage.getItem("officex_rentroll_subscribed") === "true" ||
+          sessionStorage.getItem("officex_subscription") === "active"
+        )) || getCookie("officex_subscription") === "active";
+
+      if (isAdmin || locallySubscribed) {
         verifiedSub = true;
       } else if (email) {
         // Query server-side subscription database
@@ -365,28 +390,22 @@ export default function SubscriptionGate({
             const data = await res.json();
             if (data?.subscribed && data.plan !== "none" && data.plan !== "free") {
               verifiedSub = true;
+              if (typeof window !== "undefined") {
+                localStorage.setItem("officex_subscription", "active");
+                localStorage.setItem("officex_owner_subscribed", "true");
+                localStorage.setItem("officex_subscription_status", "active");
+              }
+            } else if (locallySubscribed) {
+              verifiedSub = true;
             } else {
               verifiedSub = false;
-              // Clean up any stale client-side unlock flags
-              if (typeof window !== "undefined") {
-                localStorage.removeItem("officex_subscription");
-                localStorage.removeItem("officex_owner_subscribed");
-                localStorage.removeItem("officex_subscription_status");
-                localStorage.removeItem("officex_rentroll_subscribed");
-                localStorage.removeItem("officex_payment_id");
-                localStorage.removeItem("officex_applied_coupon");
-                sessionStorage.removeItem("officex_subscription");
-                document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-                document.cookie = "officex_owner_subscribed=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-                document.cookie = "officex_subscription_status=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-              }
             }
           }
         } catch {
-          verifiedSub = false;
+          verifiedSub = locallySubscribed;
         }
       } else {
-        verifiedSub = false;
+        verifiedSub = locallySubscribed;
       }
 
       setIsSubscribed(verifiedSub);

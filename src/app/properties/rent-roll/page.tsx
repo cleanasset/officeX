@@ -41,6 +41,7 @@ import {
   IndianRupee,
   LayoutGrid,
   Maximize2,
+  UserPlus,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -48,7 +49,6 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Rent Roll Modular Subcomponents (§S-10–S-25)
 import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
-import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
 import DocumentViewerModal from "@/components/rent-roll/DocumentViewerModal";
 import DealsRegisterView from "@/components/rent-roll/DealsRegisterView";
 import ExpiryPipelineView from "@/components/rent-roll/ExpiryPipelineView";
@@ -116,8 +116,7 @@ export default function RentRollRegisterPage() {
   });
 
   // Modals
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardPrefill, setWizardPrefill] = useState<any>(null);
+  const [preloadSpaceId, setPreloadSpaceId] = useState<string | undefined>(undefined);
   const [dealsOpen, setDealsOpen] = useState(false);
   const [expiryOpen, setExpiryOpen] = useState(false);
   const [escalationOpen, setEscalationOpen] = useState(false);
@@ -161,8 +160,14 @@ export default function RentRollRegisterPage() {
         setCurrentView("current");
       }
       if (urlParams.get("openContract") === "1" || urlParams.get("tab") === "newContract") {
-        setWizardPrefill(null);
-        setWizardOpen(true);
+        setPreloadSpaceId(undefined);
+        setHierarchyTab("contract");
+        setMasterDataOpen(true);
+      }
+      if (urlParams.get("openTenant") === "1" || urlParams.get("tab") === "newTenant" || urlParams.get("addTenant") === "1") {
+        setPreloadSpaceId(undefined);
+        setHierarchyTab("tenant");
+        setMasterDataOpen(true);
       }
       if (urlParams.get("openImport") === "1" || urlParams.get("tab") === "import") {
         setImportOpen(true);
@@ -474,12 +479,27 @@ export default function RentRollRegisterPage() {
                   )}
                 </div>
 
+                {/* Add Tenant CTA */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreloadSpaceId(undefined);
+                    setHierarchyTab("tenant");
+                    setMasterDataOpen(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <UserPlus size={14} className="text-[#0F8B7D]" />
+                  <span>Add Tenant</span>
+                </button>
+
                 {/* Primary CTA: New Contract */}
                 <button
                   type="button"
                   onClick={() => {
-                    setWizardPrefill(null);
-                    setWizardOpen(true);
+                    setPreloadSpaceId(undefined);
+                    setHierarchyTab("contract");
+                    setMasterDataOpen(true);
                   }}
                   className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-sm shadow-teal-900/10 flex items-center gap-1.5 transition cursor-pointer"
                 >
@@ -776,8 +796,20 @@ export default function RentRollRegisterPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setWizardPrefill(null);
-                          setWizardOpen(true);
+                          setPreloadSpaceId(undefined);
+                          setHierarchyTab("tenant");
+                          setMasterDataOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                      >
+                        Add Tenant
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreloadSpaceId(undefined);
+                          setHierarchyTab("contract");
+                          setMasterDataOpen(true);
                         }}
                         className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
                       >
@@ -976,8 +1008,21 @@ export default function RentRollRegisterPage() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setWizardPrefill(null);
-                                  setWizardOpen(true);
+                                  setPreloadSpaceId(undefined);
+                                  setHierarchyTab("tenant");
+                                  setMasterDataOpen(true);
+                                }}
+                                className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
+                              >
+                                <UserPlus size={14} className="text-[#0F8B7D]" />
+                                <span>Add Tenant</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreloadSpaceId(undefined);
+                                  setHierarchyTab("contract");
+                                  setMasterDataOpen(true);
                                 }}
                                 className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
                               >
@@ -1353,18 +1398,28 @@ export default function RentRollRegisterPage() {
                     type="button"
                     onClick={() => {
                       setVacantModalOpen(false);
-                      setWizardPrefill({
-                        space_id: selectedVacantSpace.space_id,
-                        space_name: selectedVacantSpace.space_name,
-                        area_sqft: selectedVacantSpace.area_sqft,
-                        rate_per_sqft: selectedVacantSpace.asking_rate_per_sqft || 85,
-                      });
-                      setWizardOpen(true);
+                      setPreloadSpaceId(selectedVacantSpace.space_id);
+                      setHierarchyTab("tenant");
+                      setMasterDataOpen(true);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    <UserPlus size={15} className="text-[#0F8B7D]" />
+                    <span>Assign / Add Tenant to this Space</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVacantModalOpen(false);
+                      setPreloadSpaceId(selectedVacantSpace.space_id);
+                      setHierarchyTab("contract");
+                      setMasterDataOpen(true);
                     }}
                     className="w-full py-2.5 px-4 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition cursor-pointer"
                   >
                     <Plus size={15} />
-                    <span>Create Lease Contract for this Space (§S-21)</span>
+                    <span>Create Lease Contract for this Space</span>
                   </button>
 
                   <button
@@ -1398,19 +1453,6 @@ export default function RentRollRegisterPage() {
             }}
           />
 
-          {/* 7-Step Contract Wizard (§S-21) */}
-          <ContractWizardModal
-            isOpen={wizardOpen}
-            onClose={() => {
-              setWizardOpen(false);
-              setWizardPrefill(null);
-            }}
-            onSuccess={() => {
-              fetchRegisterData();
-            }}
-            prefill={wizardPrefill}
-          />
-
           {/* Document Viewer Modal with Watermark (§S-23) */}
           <DocumentViewerModal
             isOpen={viewerOpen}
@@ -1426,8 +1468,11 @@ export default function RentRollRegisterPage() {
             isOpen={dealsOpen}
             onClose={() => setDealsOpen(false)}
             onConvertToContract={(prefill) => {
-              setWizardPrefill(prefill);
-              setWizardOpen(true);
+              if (prefill?.space_id) {
+                setPreloadSpaceId(prefill.space_id);
+              }
+              setHierarchyTab("contract");
+              setMasterDataOpen(true);
             }}
           />
 
@@ -1449,8 +1494,13 @@ export default function RentRollRegisterPage() {
           {/* Unified Commercial Hierarchy, Tenant & Lease Setup */}
           <PropertyHierarchyModal
             isOpen={masterDataOpen}
-            onClose={() => setMasterDataOpen(false)}
+            onClose={() => {
+              setMasterDataOpen(false);
+              setPreloadSpaceId(undefined);
+            }}
             initialTab={hierarchyTab}
+            initialSpaceId={preloadSpaceId}
+            initialPropertyId={propertyFilter !== "all" ? propertyFilter : undefined}
             onSuccess={fetchRegisterData}
           />
 

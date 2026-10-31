@@ -30,7 +30,7 @@ import {
   Mail,
   X
 } from "lucide-react";
-import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
+import PropertyHierarchyModal from "@/components/rent-roll/PropertyHierarchyModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 type TaskCategory =
@@ -821,9 +821,10 @@ export default function PropertyManagerDashboardPage() {
         </div>
       </div>
 
-      {/* Contract Wizard Modal (§S-21) */}
-      <ContractWizardModal
+      {/* Unified Commercial Hierarchy, Tenant & Lease Setup */}
+      <PropertyHierarchyModal
         isOpen={wizardOpen}
+        initialTab="contract"
         onClose={() => setWizardOpen(false)}
         onSuccess={() => {
           setWizardOpen(false);

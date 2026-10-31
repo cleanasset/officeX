@@ -365,7 +365,15 @@ function SidebarInner() {
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
+      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
+      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
+      return s === "active" || st === "active" || o === "true";
+    }
+    return false;
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -432,7 +440,13 @@ function SidebarInner() {
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
 
-      if (isAdmin) {
+      const storedSub =
+        localStorage.getItem("officex_subscription") === "active" ||
+        localStorage.getItem("officex_subscription_status") === "active" ||
+        localStorage.getItem("officex_owner_subscribed") === "true" ||
+        localStorage.getItem("officex_rentroll_subscribed") === "true";
+
+      if (isAdmin || storedSub) {
         setIsSubscribed(true);
       } else if (userEmail) {
         fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
@@ -440,19 +454,21 @@ function SidebarInner() {
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
               setIsSubscribed(true);
+              localStorage.setItem("officex_subscription", "active");
+              localStorage.setItem("officex_subscription_status", "active");
+              localStorage.setItem("officex_owner_subscribed", "true");
+            } else if (storedSub) {
+              setIsSubscribed(true);
             } else {
               setIsSubscribed(false);
-              localStorage.removeItem("officex_subscription");
-              localStorage.removeItem("officex_owner_subscribed");
-              localStorage.removeItem("officex_rentroll_subscribed");
-              localStorage.removeItem("officex_payment_id");
             }
           })
           .catch(() => {
-            setIsSubscribed(false);
+            if (storedSub) setIsSubscribed(true);
+            else setIsSubscribed(false);
           });
       } else {
-        setIsSubscribed(false);
+        setIsSubscribed(Boolean(storedSub));
       }
     }
   }, []);

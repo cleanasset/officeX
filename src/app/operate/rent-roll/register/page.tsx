@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
 import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
-import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
+import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
 import EscalationCalendarView from "@/components/rent-roll/EscalationCalendarView";
 import DocumentViewerModal from "@/components/rent-roll/DocumentViewerModal";
 
@@ -113,8 +113,9 @@ export default function RentRollRegisterPage() {
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [wizardPrefill, setWizardPrefill] = useState<any>(null);
+  const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("contract");
+  const [preloadSpaceId, setPreloadSpaceId] = useState<string | undefined>(undefined);
 
   const [isEscalationCalendarOpen, setIsEscalationCalendarOpen] = useState(false);
   const [viewerDoc, setViewerDoc] = useState<any>(null);
@@ -408,17 +409,11 @@ export default function RentRollRegisterPage() {
 
   // Row Action: Duplicate for Renewal
   const handleDuplicateContract = (row: RegisterRow) => {
-    setWizardPrefill({
-      occupant_id: row.occupant_id,
-      space_id: row.space_id,
-      contract_code: `${row.contract_code}-REN`,
-      start_date: row.end_date,
-      end_date: new Date(new Date(row.end_date).getTime() + 3 * 365 * 24 * 3600 * 1000)
-        .toISOString()
-        .slice(0, 10),
-      contract_rent_inr: row.monthly_base_rent,
-    });
-    setIsWizardOpen(true);
+    if (row.space_id) {
+      setPreloadSpaceId(row.space_id);
+    }
+    setHierarchyTab("contract");
+    setIsHierarchyOpen(true);
     setActiveMenuRowId(null);
   };
 
@@ -483,8 +478,21 @@ export default function RentRollRegisterPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
-                setWizardPrefill(null);
-                setIsWizardOpen(true);
+                setPreloadSpaceId(undefined);
+                setHierarchyTab("tenant");
+                setIsHierarchyOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <User size={14} className="text-[#0F8B7D]" />
+              <span>Add Tenant</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setPreloadSpaceId(undefined);
+                setHierarchyTab("contract");
+                setIsHierarchyOpen(true);
               }}
               className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
@@ -1059,16 +1067,11 @@ export default function RentRollRegisterPage() {
                           {!isVacant && (
                             <button
                               onClick={() => {
-                                setWizardPrefill({
-                                  contract_id: row.id,
-                                  contract_code: row.contract_code,
-                                  occupant_id: row.occupant_id,
-                                  space_id: row.space_id,
-                                  start_date: row.start_date,
-                                  end_date: row.end_date,
-                                  contract_rent_inr: row.monthly_base_rent,
-                                });
-                                setIsWizardOpen(true);
+                                if (row.space_id) {
+                                  setPreloadSpaceId(row.space_id);
+                                }
+                                setHierarchyTab("contract");
+                                setIsHierarchyOpen(true);
                               }}
                               disabled={row.approval_status === "approved"}
                               className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -1257,19 +1260,20 @@ export default function RentRollRegisterPage() {
           }}
         />
 
-        {/* 2. Contract Wizard Modal (§S-21 7-step wizard) */}
-        <ContractWizardModal
-          isOpen={isWizardOpen}
-          onClose={() => setIsWizardOpen(false)}
-          onSuccess={(newContract) => {
-            setIsWizardOpen(false);
-            setAlertMessage({
-              type: "success",
-              text: `Contract ${newContract?.contract_code || "record"} saved successfully in draft status.`,
-            });
+        {/* 2. Unified Commercial Hierarchy, Tenant & Lease Setup */}
+        <PropertyHierarchyModal
+          isOpen={isHierarchyOpen}
+          onClose={() => {
+            setIsHierarchyOpen(false);
+            setPreloadSpaceId(undefined);
+          }}
+          initialTab={hierarchyTab}
+          initialSpaceId={preloadSpaceId}
+          initialPropertyId={selectedProperty !== "all" ? selectedProperty : undefined}
+          onSuccess={() => {
+            setIsHierarchyOpen(false);
             fetchRegisterData();
           }}
-          prefill={wizardPrefill}
         />
 
         {/* 3. Escalation Calendar Timeline Modal */}
