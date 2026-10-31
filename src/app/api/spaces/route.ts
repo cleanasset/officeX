@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         space: space,
         building_name: building.building_name,
         property_name: property.property_name,
+        property_id: property.id,
       })
       .from(space)
       .leftJoin(building, eq(space.building_id, building.id))
@@ -50,6 +51,7 @@ export async function GET(req: Request) {
           ...l.space,
           building_name: l.building_name,
           property_name: l.property_name,
+          property_id: l.property_id,
           fitout_condition: meta.fitout_condition || "Fully Furnished",
           workstations_count: meta.workstations_count || null,
           cabins_count: meta.cabins_count || null,

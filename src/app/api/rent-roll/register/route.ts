@@ -232,11 +232,11 @@ export async function GET(req: Request) {
       // Determine inclusion based on View Type
       let include = false;
       if (viewType === "current") {
-        include = ["active", "notice_served", "holding_over"].includes(effectiveStatus);
+        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
       } else if (viewType === "contracted") {
-        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus);
+        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
       } else if (viewType === "forecast") {
-        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus);
+        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
       }
 
       if (include) {
@@ -369,17 +369,18 @@ export async function GET(req: Request) {
       }
     }
 
-    // 7. Include Vacant Spaces (shown in grey with asking rent in brackets)
+    // 7. Include Vacant & Uncontracted Spaces
     for (const sp of propertyFilteredSpaces) {
       if (!occupiedSpaceIds.has(sp.space.id)) {
         const area = sp.space.chargeable_area_sqft ? parseFloat(sp.space.chargeable_area_sqft) : 0;
         const askingRate = 85; // Asking rate per sqft
         const askingRent = area * askingRate;
+        const isSpaceMarkedOccupied = (sp.space.occupancy_status as string) === "occupied" || (sp.space.occupancy_status as string) === "leased";
 
         rows.push({
-          type: "vacant_space",
-          row_class: "row_vacant_grey",
-          id: `vacant-${sp.space.id}`,
+          type: isSpaceMarkedOccupied ? "occupied_space" : "vacant_space",
+          row_class: isSpaceMarkedOccupied ? "row_occupied" : "row_vacant_grey",
+          id: `space-${sp.space.id}`,
           contract_code: "—",
           space_id: sp.space.id,
           space_code: sp.space.space_code,
@@ -387,7 +388,7 @@ export async function GET(req: Request) {
           floor: (sp.space as any)?.floor ?? 1,
           space_type: (sp.space as any)?.space_type || "Commercial Office",
           occupant_id: null,
-          occupant_name: "(Vacant Space)",
+          occupant_name: isSpaceMarkedOccupied ? "(Occupied)" : "(Vacant Space)",
           occupant_code: "—",
           occupant_trade_name: "—",
           industry: "—",

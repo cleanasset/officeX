@@ -36,6 +36,8 @@ export default function SpaceAndBuildingRegistryPage() {
   const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
   const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
+  const [registerRows, setRegisterRows] = useState<any[]>([]);
+  const [selectedPropertyIdForHierarchy, setSelectedPropertyIdForHierarchy] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("all");
@@ -54,9 +56,10 @@ export default function SpaceAndBuildingRegistryPage() {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
 
-      const [propsRes, spacesRes] = await Promise.all([
+      const [propsRes, spacesRes, regRes] = await Promise.all([
         fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),
         fetch("/api/spaces", { headers: authHeaders }).catch(() => null),
+        fetch("/api/rent-roll/register?view=current", { headers: authHeaders }).catch(() => null),
       ]);
 
       let loadedProps: any[] = [];
@@ -68,35 +71,56 @@ export default function SpaceAndBuildingRegistryPage() {
         }
       }
 
+      let loadedRegRows: any[] = [];
+      if (regRes && regRes.ok) {
+        const json = await regRes.json();
+        if (Array.isArray(json.rows)) {
+          loadedRegRows = json.rows;
+          setRegisterRows(json.rows);
+        }
+      }
+
       if (spacesRes && spacesRes.ok) {
         const json = await spacesRes.json();
         if (Array.isArray(json.data) && json.data.length > 0) {
           setSpaces(
-            json.data.map((s: any) => ({
-              id: s.id,
-              space_number: s.space_name || s.space_code,
-              building_name: s.building_name || s.property_name || "Main Tower",
-              floor_number: s.floor_name ? s.floor_name.replace("Floor ", "") : "1",
-              chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
-              status: s.occupancy_status || "available",
-              standard_rate_psf: Number(s.standard_rate_psf || s.rate_per_sqft || 0),
-              workstations: s.workstations_count || null,
-              fitout: s.fitout_condition || null,
-              space_type: s.space_type || "Office",
-            }))
+            json.data.map((s: any) => {
+              const matchedRow = loadedRegRows.find(
+                (r: any) =>
+                  r.space_id === s.id ||
+                  (s.space_name && r.space_name?.toLowerCase() === s.space_name.toLowerCase()) ||
+                  (s.space_code && r.space_code?.toLowerCase() === s.space_code.toLowerCase())
+              );
+              const occName = matchedRow?.occupant_name || null;
+              const isOccupied = Boolean(occName) || s.occupancy_status === "occupied" || s.occupancy_status === "leased";
+              return {
+                id: s.id,
+                space_number: s.space_name || s.space_code,
+                building_name: s.building_name || s.property_name || "Main Tower",
+                floor_number: s.floor_name ? s.floor_name.replace(/floor\s*/i, "") : "1",
+                chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
+                status: isOccupied ? "occupied" : "available",
+                occupant_name: occName,
+                contract_code: matchedRow?.contract_code || null,
+                standard_rate_psf: Number(matchedRow?.rate_per_sqft || s.standard_rate_psf || s.rate_per_sqft || 85),
+                workstations: s.workstations_count || null,
+                fitout: s.fitout_condition || null,
+                space_type: s.space_type || "Office",
+              };
+            })
           );
         } else if (loadedProps.length > 0) {
-          // If no spaces are explicitly demarcated yet, generate primary demarcated unit rows
-          // from registered commercial properties so users immediately see their asset structure
           setSpaces(
-            loadedProps.map((p: any, idx: number) => ({
+            loadedProps.map((p: any) => ({
               id: p.id,
               space_number: `Unit ${p.property_code ? p.property_code.slice(-4) : "101"}`,
               building_name: p.property_name,
-              floor_number: 1,
+              floor_number: "1",
               chargeable_area: Number(p.total_leasable_area_sqft || 0),
               status: "available",
-              standard_rate_psf: Number(p.price_per_sqft || 0),
+              occupant_name: null,
+              contract_code: null,
+              standard_rate_psf: Number(p.price_per_sqft || 85),
             }))
           );
         } else {
@@ -160,6 +184,28 @@ export default function SpaceAndBuildingRegistryPage() {
       alert("Network error deleting property");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSpace = async (spaceId: string, spaceNumber: string) => {
+    if (!confirm(`Are you sure you want to permanently delete unit "${spaceNumber}"?\n\nThis will remove it from the space registry and rent roll.`)) {
+      return;
+    }
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (res.ok) {
+        setSpaces((prev) => prev.filter((s) => s.id !== spaceId));
+        await fetchRegistryData();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.message || "Failed to delete unit");
+      }
+    } catch {
+      alert("Network error deleting unit");
     }
   };
 
@@ -345,105 +391,194 @@ export default function SpaceAndBuildingRegistryPage() {
                         <th className="py-3 px-4">Location</th>
                         <th className="py-3 px-4">Leasable Area</th>
                         <th className="py-3 px-4">Base Rate PSF</th>
+                        <th className="py-3 px-4">Occupancy &amp; Tenants</th>
                         <th className="py-3 px-4">Status</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredProperties.map((p) => (
-                        <tr
-                          key={p.id}
-                          onClick={() => {
-                            setSelectedPropertyForDetail(p);
-                            setPropertyDetailMode("view");
-                          }}
-                          className="hover:bg-teal-50/40 transition cursor-pointer group"
-                        >
-                          <td className="py-3.5 px-4 font-black text-slate-900">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-[#0F8B7D] group-hover:text-white transition">
-                                <Building size={14} />
-                              </div>
-                              <div>
-                                <span className="group-hover:text-[#0F8B7D] transition">{p.property_name}</span>
-                                <div className="text-[10px] text-slate-400 font-normal">
-                                  {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
+                      {filteredProperties.map((p) => {
+                        const propRegRows = registerRows.filter(
+                          (r) =>
+                            r.property_id === p.id ||
+                            (r.property_name && r.property_name.toLowerCase() === p.property_name.toLowerCase())
+                        );
+                        const propSpaces = spaces.filter(
+                          (s) =>
+                            s.property_id === p.id ||
+                            (s.building_name && s.building_name.toLowerCase().includes(p.property_name.toLowerCase()))
+                        );
+
+                        const rawOccupants = [
+                          ...propRegRows.map((r) => r.occupant_name),
+                          ...propSpaces.map((s) => s.occupant_name),
+                        ].filter((name) => name && !name.includes("Vacant") && name !== "—");
+
+                        const uniqueOccupants = Array.from(new Set(rawOccupants));
+
+                        const occupiedSqft =
+                          propRegRows
+                            .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
+                            .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
+                          propSpaces
+                            .filter((s) => s.status === "occupied" || Boolean(s.occupant_name))
+                            .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0);
+
+                        const totalPropArea =
+                          Number(p.total_leasable_area_sqft) ||
+                          propSpaces.reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0) ||
+                          1;
+                        const occupancyPct = totalPropArea > 0 ? Math.min(100, Math.round((occupiedSqft / totalPropArea) * 100)) : 0;
+                        const isFullyLeased = occupancyPct >= 99 || (uniqueOccupants.length > 0 && occupiedSqft >= totalPropArea);
+
+                        // Effective Base Rate PSF
+                        const effectivePsf =
+                          Number(p.price_per_sqft) > 0
+                            ? Number(p.price_per_sqft)
+                            : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
+                              propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
+                              85;
+
+                        return (
+                          <tr
+                            key={p.id}
+                            onClick={() => {
+                              setSelectedPropertyForDetail(p);
+                              setPropertyDetailMode("view");
+                            }}
+                            className="hover:bg-teal-50/40 transition cursor-pointer group"
+                          >
+                            <td className="py-3.5 px-4 font-black text-slate-900">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-[#0F8B7D] group-hover:text-white transition">
+                                  <Building size={14} />
+                                </div>
+                                <div>
+                                  <span className="group-hover:text-[#0F8B7D] transition">{p.property_name}</span>
+                                  <div className="text-[10px] text-slate-400 font-normal">
+                                    {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                            {p.property_code || "—"}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-700 font-semibold">
-                            <div className="flex items-center gap-1 text-slate-600">
-                              <MapPin size={12} className="text-teal-600 shrink-0" />
-                              <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 font-black text-slate-900">
-                            {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                            ₹{Number(p.price_per_sqft || 0).toLocaleString("en-IN")}/sqft
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                              Active Asset
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => {
-                                  setSelectedPropertyForDetail(p);
-                                  setPropertyDetailMode("view");
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                title="View All Details"
-                              >
-                                <Eye size={12} />
-                                <span>Details</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedPropertyForDetail(p);
-                                  setPropertyDetailMode("edit");
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                title="Edit Property"
-                              >
-                                <Edit2 size={12} />
-                                <span>Edit</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setHierarchyTab("tenant");
-                                  setHierarchyModalOpen(true);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold transition cursor-pointer"
-                              >
-                                + Tenant
-                              </button>
-                              <Link
-                                href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
-                                className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1"
-                              >
-                                <span>Rent Roll</span>
-                                <ChevronRight size={13} />
-                              </Link>
-                              <button
-                                onClick={() => handleDeleteProperty(p.id, p.property_name)}
-                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200"
-                                title="Delete Property from Portfolio"
-                              >
-                                <Trash2 size={12} />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                              {p.property_code || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                              <div className="flex items-center gap-1 text-slate-600">
+                                <MapPin size={12} className="text-teal-600 shrink-0" />
+                                <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-black text-slate-900">
+                              {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                              ₹{Number(effectivePsf).toLocaleString("en-IN")}/sqft
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {uniqueOccupants.length > 0 ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-1.5 font-bold text-teal-900">
+                                    <Users size={12} className="text-[#0F8B7D] shrink-0" />
+                                    <span>{uniqueOccupants.join(", ")}</span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 font-medium">
+                                    {occupiedSqft > 0 ? `${occupiedSqft.toLocaleString("en-IN")} sq.ft leased` : "Contract active"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic text-[11px]">— Vacant Asset</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {isFullyLeased ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                  100% Leased
+                                </span>
+                              ) : occupancyPct > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-300 uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                  {occupancyPct}% Leased
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                  Vacant Asset
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPropertyForDetail(p);
+                                    setPropertyDetailMode("view");
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  title="View All Details"
+                                >
+                                  <Eye size={12} />
+                                  <span>Details</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPropertyForDetail(p);
+                                    setPropertyDetailMode("edit");
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  title="Edit Property"
+                                >
+                                  <Edit2 size={12} />
+                                  <span>Edit</span>
+                                </button>
+
+                                {uniqueOccupants.length > 0 ? (
+                                  <Link
+                                    href={`/properties/tenants?property=${encodeURIComponent(p.id)}`}
+                                    className="px-2.5 py-1 rounded-lg bg-teal-100/90 hover:bg-teal-200 text-teal-900 border border-teal-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title={`View enrolled tenant(s): ${uniqueOccupants.join(", ")}`}
+                                  >
+                                    <Users size={12} />
+                                    <span>Tenants ({uniqueOccupants.length}: {uniqueOccupants[0]})</span>
+                                  </Link>
+                                ) : null}
+
+                                {!isFullyLeased ? (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPropertyIdForHierarchy(p.id);
+                                      setHierarchyTab("tenant");
+                                      setHierarchyModalOpen(true);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 text-[11px] font-bold transition cursor-pointer"
+                                    title="Add / Lease space to tenant"
+                                  >
+                                    + Tenant
+                                  </button>
+                                ) : null}
+
+                                <Link
+                                  href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
+                                  className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1"
+                                >
+                                  <span>Rent Roll</span>
+                                  <ChevronRight size={13} />
+                                </Link>
+                                <button
+                                  onClick={() => handleDeleteProperty(p.id, p.property_name)}
+                                  className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200"
+                                  title="Delete Property from Portfolio"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -490,7 +625,8 @@ export default function SpaceAndBuildingRegistryPage() {
                         <th className="py-3 px-4">Tower / Property</th>
                         <th className="py-3 px-4">Floor</th>
                         <th className="py-3 px-4">Chargeable Sq.Ft</th>
-                        <th className="py-3 px-4">Standard Rate PSF</th>
+                        <th className="py-3 px-4">Base Rate PSF</th>
+                        <th className="py-3 px-4">Occupant / Lessee</th>
                         <th className="py-3 px-4">Status</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
@@ -528,7 +664,17 @@ export default function SpaceAndBuildingRegistryPage() {
                             {parseFloat(space.chargeable_area || 0).toLocaleString("en-IN")} sq.ft
                           </td>
                           <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                            {space.standard_rate_psf > 0 ? `₹${space.standard_rate_psf}/sqft` : "—"}
+                            ₹{space.standard_rate_psf > 0 ? space.standard_rate_psf : 85}/sqft
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-slate-800">
+                            {space.occupant_name ? (
+                              <div className="flex items-center gap-1.5 text-teal-800">
+                                <Building size={12} className="text-[#0F8B7D] shrink-0" />
+                                <span>{space.occupant_name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic">— (Vacant)</span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
                             <button
@@ -550,18 +696,29 @@ export default function SpaceAndBuildingRegistryPage() {
                               />
                               <span>
                                 {space.status === "occupied" || space.status === "leased"
-                                  ? "Occupied (Tenant)"
+                                  ? space.occupant_name ? `Occupied (${space.occupant_name})` : "Occupied (Tenant)"
                                   : "Vacant (Available)"}
                               </span>
                             </button>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <Link
-                              href="/properties/rent-roll"
-                              className="text-[#0F8B7D] font-bold text-xs hover:underline"
-                            >
-                              View in Rent Roll →
-                            </Link>
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href="/properties/rent-roll"
+                                className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5"
+                              >
+                                <span>Rent Roll</span>
+                                <ChevronRight size={13} />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSpace(space.id, space.space_number)}
+                                className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                title="Delete unit from space registry"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -576,8 +733,12 @@ export default function SpaceAndBuildingRegistryPage() {
         {/* Unified Canonical Commercial Hierarchy, Space & Property Modal */}
         <PropertyHierarchyModal
           isOpen={hierarchyModalOpen}
-          onClose={() => setHierarchyModalOpen(false)}
+          onClose={() => {
+            setHierarchyModalOpen(false);
+            setSelectedPropertyIdForHierarchy(undefined);
+          }}
           initialTab={hierarchyTab}
+          initialPropertyId={selectedPropertyIdForHierarchy}
           onSuccess={fetchRegistryData}
         />
 

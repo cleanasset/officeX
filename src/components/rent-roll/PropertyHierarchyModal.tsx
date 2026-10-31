@@ -132,6 +132,34 @@ export const formatFloorBadge = (floorNumber: number): string => {
   return `F${floorNumber}`;
 };
 
+export function extractFloorNumberFromSpace(s: any): number {
+  if (s == null) return 0;
+  if (s.floorNumber !== undefined && s.floorNumber !== null && s.floorNumber !== "" && !isNaN(Number(s.floorNumber))) {
+    return Number(s.floorNumber);
+  }
+  const flStr = String(s.floorName || s.name || s.space_name || "").trim().toLowerCase();
+  if (/ground|bay|shed|\bg\b/i.test(flStr) || flStr === "floor 0" || flStr === "0") {
+    return 0;
+  }
+  // 1. Ordinal match: "1st floor", "2nd floor", "3rd floor", "5th floor", "1st", "2nd"
+  const ordinalMatch = flStr.match(/(\d+)(?:st|nd|rd|th)?\s*floor/i) || flStr.match(/^(\d+)(?:st|nd|rd|th)$/i);
+  if (ordinalMatch && ordinalMatch[1]) return parseInt(ordinalMatch[1], 10);
+
+  // 2. Prefix match: "floor 1", "level 1", "fl 1"
+  const prefixMatch = flStr.match(/(?:floor|level|fl)\s*(\d+)/i);
+  if (prefixMatch && prefixMatch[1]) return parseInt(prefixMatch[1], 10);
+
+  // 3. Short code match: "f1", "f01", "l1", "f-1"
+  const codeMatch = flStr.match(/\b[fl]-?(\d+)\b/i);
+  if (codeMatch && codeMatch[1]) return parseInt(codeMatch[1], 10);
+
+  // 4. Standalone number
+  const numMatch = flStr.match(/^\d+$/);
+  if (numMatch) return parseInt(numMatch[0], 10);
+
+  return 0;
+}
+
 export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract" | "delegation";
 
 interface PropertyHierarchyModalProps {
@@ -1517,14 +1545,7 @@ export default function PropertyHierarchyModal({
     const targetFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === rawFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(propTotalArea / allFloorNumbers.length) : propTotalArea);
     if (targetFloorPlanned > 0) {
       const alreadyAllocatedOnFloor = displaySpaces
-        .filter((s) => {
-          const sAny = s as any;
-          if (sAny.floorNumber !== undefined && sAny.floorNumber !== null && sAny.floorNumber !== "") return Number(sAny.floorNumber) === rawFloorNum;
-          const flStr = String(s.floorName || s.name || "");
-          if (/ground|bay|shed/i.test(flStr) || flStr === "Floor 0") return rawFloorNum === 0;
-          const match = flStr.match(/floor\s*(\d+)/i) || flStr.match(/f(\d+)/i);
-          return match && match[1] ? parseInt(match[1], 10) === rawFloorNum : false;
-        })
+        .filter((s) => extractFloorNumberFromSpace(s) === rawFloorNum)
         .reduce((acc, s) => acc + (s.area || 0), 0);
       const remainingOnFloor = Math.max(0, targetFloorPlanned - alreadyAllocatedOnFloor);
       if (enteredArea > remainingOnFloor) {
@@ -1680,13 +1701,7 @@ export default function PropertyHierarchyModal({
     const count = isSingle && rawFloors === 0 ? 0 : (rawFloors || 0);
     for (let i = 1; i < count; i++) nums.add(i);
     spacesList.forEach((s) => {
-      const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
-      if (match && match[1]) {
-        nums.add(parseInt(match[1], 10));
-      }
-      if (/ground|bay|shed/i.test(s.floorName || s.name)) {
-        nums.add(0);
-      }
+      nums.add(extractFloorNumberFromSpace(s));
     });
     if (nums.size === 0) nums.add(0);
     return Array.from(nums).sort((a, b) => a - b);
@@ -1703,15 +1718,11 @@ export default function PropertyHierarchyModal({
     const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
     for (let i = 1; i < count; i++) nums.add(i);
 
-    if (targetBldgId) {
-      spacesList
-        .filter((s) => s.buildingId === targetBldgId)
-        .forEach((s) => {
-          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
-          if (match && match[1]) nums.add(parseInt(match[1], 10));
-          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
-        });
-    }
+    spacesList
+      .filter((s) => !targetBldgId || !s.buildingId || s.buildingId === targetBldgId)
+      .forEach((s) => {
+        nums.add(extractFloorNumberFromSpace(s));
+      });
     return Array.from(nums).sort((a, b) => a - b);
   }, [spaceForm.buildingId, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
 
@@ -1726,15 +1737,11 @@ export default function PropertyHierarchyModal({
     const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
     for (let i = 1; i < count; i++) nums.add(i);
 
-    if (targetBldgId) {
-      spacesList
-        .filter((s) => s.buildingId === targetBldgId)
-        .forEach((s) => {
-          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
-          if (match && match[1]) nums.add(parseInt(match[1], 10));
-          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
-        });
-    }
+    spacesList
+      .filter((s) => !targetBldgId || !s.buildingId || s.buildingId === targetBldgId)
+      .forEach((s) => {
+        nums.add(extractFloorNumberFromSpace(s));
+      });
     return Array.from(nums).sort((a, b) => a - b);
   }, [selectedTenantBuilding, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
 
@@ -1749,40 +1756,17 @@ export default function PropertyHierarchyModal({
     const count = isSingle && rawFloors === 0 ? 0 : (curBldg?.floors || (propForm.hasMultipleBuildings ? 5 : rawFloors || 1));
     for (let i = 1; i < count; i++) nums.add(i);
 
-    if (targetBldgId) {
-      spacesList
-        .filter((s) => s.buildingId === targetBldgId)
-        .forEach((s) => {
-          const match = (s.floorName || s.name).match(/floor\s*(\d+)/i) || (s.floorName || s.name).match(/f(\d+)/i);
-          if (match && match[1]) nums.add(parseInt(match[1], 10));
-          if (/ground|bay|shed/i.test(s.floorName || s.name)) nums.add(0);
-        });
-    }
+    spacesList
+      .filter((s) => !targetBldgId || !s.buildingId || s.buildingId === targetBldgId)
+      .forEach((s) => {
+        nums.add(extractFloorNumberFromSpace(s));
+      });
     return Array.from(nums).sort((a, b) => a - b);
   }, [contractForm.buildingId, displayBuildings, buildingsList, propForm.hasMultipleBuildings, propForm.floorsCount, propForm.propertyType, spacesList]);
 
   // Filter spaces that belong to a specific floor or ground bay
   const getSpacesForFloor = (flNum: number) => {
-    return spacesList.filter((s) => {
-      const flStr = (s.floorName || "").toLowerCase().trim();
-      const nameStr = s.name.toLowerCase().trim();
-      if (flNum === 0) {
-        return (
-          flStr === "0" ||
-          flStr.includes("ground") ||
-          flStr === "g" ||
-          nameStr.includes("ground") ||
-          nameStr.includes("bay") ||
-          nameStr.includes("shed")
-        );
-      }
-      return (
-        flStr === `floor ${flNum}` ||
-        flStr === `f${flNum}` ||
-        flStr === String(flNum) ||
-        (!flStr && (nameStr.startsWith(`floor ${flNum}`) || nameStr.startsWith(`f${flNum}`)))
-      );
-    });
+    return spacesList.filter((s) => extractFloorNumberFromSpace(s) === flNum);
   };
 
   // Handler to add a unit to a specific floor
@@ -1889,30 +1873,8 @@ export default function PropertyHierarchyModal({
         return false;
       }
       if (isAll) return true;
-
-      const flStr = (s.floorName || "").toLowerCase().trim();
-      const nameStr = s.name.toLowerCase().trim();
-
-      return activeFloors.some((targetFl) => {
-        const normFl = targetFl.toLowerCase().trim();
-        if (normFl === "0") {
-          return (
-            flStr === "0" ||
-            flStr.includes("ground") ||
-            flStr === "g" ||
-            nameStr.includes("ground") ||
-            nameStr.includes("bay") ||
-            nameStr.includes("shed")
-          );
-        }
-        return (
-          flStr === `floor ${normFl}` ||
-          flStr === `f${normFl}` ||
-          flStr === normFl ||
-          flStr === formatFloorName(Number(normFl)).toLowerCase() ||
-          (!flStr && (nameStr.startsWith(`floor ${normFl}`) || nameStr.startsWith(`f${normFl}`)))
-        );
-      });
+      const sFlNum = extractFloorNumberFromSpace(s);
+      return activeFloors.some((targetFl) => Number(targetFl) === sFlNum);
     });
   }, [selectedTenantFloor, selectedTenantFloors, selectedTenantBuilding, displayBuildings, buildingsList, spacesList, buildingFloorNumbersForTenant]);
 
@@ -4205,15 +4167,7 @@ export default function PropertyHierarchyModal({
             const isExceededBuilding = buildingTotalArea > 0 && allocatedUnitsArea > buildingTotalArea;
             const pctBuildingAllocated = buildingTotalArea > 0 ? Math.min(100, Math.round((allocatedUnitsArea / buildingTotalArea) * 100)) : 0;
 
-            const getFloorNum = (s: any) => {
-              if (s.floorNumber !== undefined && s.floorNumber !== null && s.floorNumber !== "") {
-                return Number(s.floorNumber);
-              }
-              const flStr = String(s.floorName || s.name || "");
-              if (/ground|bay|shed/i.test(flStr) || flStr === "Floor 0") return 0;
-              const match = flStr.match(/floor\s*(\d+)/i) || flStr.match(/f(\d+)/i);
-              return match && match[1] ? parseInt(match[1], 10) : 0;
-            };
+            const getFloorNum = (s: any) => extractFloorNumberFromSpace(s);
 
             const selectedFloorNum = Number(spaceForm.floorNumber || "0");
             const currentFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === selectedFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : buildingTotalArea);
@@ -5628,25 +5582,7 @@ export default function PropertyHierarchyModal({
                           if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) {
                             return false;
                           }
-                          const flStr = (s.floorName || "").toLowerCase().trim();
-                          const nameStr = s.name.toLowerCase().trim();
-                          const targetFl = fl.toLowerCase().trim();
-                          if (targetFl === "0") {
-                            return (
-                              flStr === "0" ||
-                              flStr.includes("ground") ||
-                              flStr === "g" ||
-                              nameStr.includes("ground") ||
-                              nameStr.includes("bay") ||
-                              nameStr.includes("shed")
-                            );
-                          }
-                          return (
-                            flStr === `floor ${targetFl}` ||
-                            flStr === `f${targetFl}` ||
-                            flStr === targetFl ||
-                            (!flStr && (nameStr.startsWith(`floor ${targetFl}`) || nameStr.startsWith(`f${targetFl}`)))
-                          );
+                          return extractFloorNumberFromSpace(s) === Number(fl);
                         });
                         if (matchingSpaces.length > 0) {
                           setSelectedTenantSuites(matchingSpaces.map((s) => s.id));
@@ -5672,14 +5608,7 @@ export default function PropertyHierarchyModal({
                               const curBName = buildingsList.find((b) => b.id === curBldgId)?.name;
                               const spacesOnThisFloor = spacesList.filter((s) => {
                                 if (displayBuildings.length > 1 && curBldgId && s.buildingId && s.buildingId !== curBldgId) return false;
-                                const flStr = (s.floorName || "").toLowerCase();
-                                return (
-                                  flStr === `floor ${flNum}` ||
-                                  flStr === `f${flNum}` ||
-                                  flStr === String(flNum) ||
-                                  flStr === formatFloorName(flNum).toLowerCase() ||
-                                  (flNum === 0 && (flStr.includes("ground") || flStr === "g"))
-                                );
+                                return extractFloorNumberFromSpace(s) === flNum;
                               });
                               const flArea = spacesOnThisFloor.reduce((sum, s) => sum + (s.area || 0), 0);
                               const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
@@ -5757,14 +5686,7 @@ export default function PropertyHierarchyModal({
                           const flSpaces = spacesList.filter((s) => {
                             const curBId = selectedTenantBuilding || displayBuildings[0]?.id;
                             if (displayBuildings.length > 1 && curBId && s.buildingId && s.buildingId !== curBId) return false;
-                            const flS = (s.floorName || "").toLowerCase();
-                            return (
-                              flS === `floor ${flNum}` ||
-                              flS === `f${flNum}` ||
-                              flS === String(flNum) ||
-                              flS === formatFloorName(flNum).toLowerCase() ||
-                              (flNum === 0 && (flS.includes("ground") || flS === "g"))
-                            );
+                            return extractFloorNumberFromSpace(s) === flNum;
                           });
                           const flArea = flSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
 
@@ -5800,17 +5722,8 @@ export default function PropertyHierarchyModal({
                                 const curBId = selectedTenantBuilding || displayBuildings[0]?.id;
                                 const matching = spacesList.filter((s) => {
                                   if (displayBuildings.length > 1 && curBId && s.buildingId && s.buildingId !== curBId) return false;
-                                  const sFlStr = (s.floorName || "").toLowerCase();
-                                  return nextFloors.some((nf) => {
-                                    const nfNum = Number(nf);
-                                    return (
-                                      sFlStr === `floor ${nf}` ||
-                                      sFlStr === `f${nf}` ||
-                                      sFlStr === nf ||
-                                      sFlStr === formatFloorName(nfNum).toLowerCase() ||
-                                      (nfNum === 0 && (sFlStr.includes("ground") || sFlStr === "g"))
-                                    );
-                                  });
+                                  const sFlNum = extractFloorNumberFromSpace(s);
+                                  return nextFloors.some((nf) => Number(nf) === sFlNum);
                                 });
                                 setSelectedTenantSuites(matching.map((s) => s.id));
                               }}
