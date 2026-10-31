@@ -732,23 +732,6 @@ export async function POST(req: Request) {
           generatedInvoices.push(rentInv);
         }
 
-          await db.insert(invoice_line).values({
-            org_id: auth.orgId,
-            client_account_id: auth.clientAccountId,
-            invoice_id: rentInv.id,
-            description: `Commercial Space Lease Rental (SAC: 997212) [POS: ${occStateCode} • ${isInterState ? "IGST 18%" : "CGST 9% + SGST 9%"}]`,
-            quantity: "1.00",
-            rate: String(baseRentAmt),
-            amount_inr: String(baseRentAmt),
-            tax_rate_percent: "18.00",
-            tax_amount_inr: String(gst),
-            created_by: auth.userId,
-            updated_by: auth.userId,
-          });
-
-          generatedInvoices.push(rentInv);
-        }
-
         if (include_groups.includes("cam")) {
           const invCamNum = `INV-CAM-${fy}-${String(invoiceSeq++).padStart(4, "0")}`;
           const gst = camAmt * 0.18;
