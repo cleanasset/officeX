@@ -14,6 +14,35 @@ import { invoice, rent_step } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc, or, ilike, lte, gte } from "drizzle-orm";
 
+function parseFloorInfo(s: any): { floor: number; floor_name: string } {
+  const raw = String(s?.floor_name || s?.space_name || "").trim();
+  if (/ground|bay|shed|\bg\b/i.test(raw) || raw === "0" || raw === "floor 0") {
+    return { floor: 0, floor_name: "Ground Floor" };
+  }
+  const ordinalMatch = raw.match(/(\d+)(?:st|nd|rd|th)?\s*floor/i) || raw.match(/^(\d+)(?:st|nd|rd|th)$/i);
+  if (ordinalMatch && ordinalMatch[1]) {
+    const num = parseInt(ordinalMatch[1], 10);
+    const suffix = num === 1 ? "st" : num === 2 ? "nd" : num === 3 ? "rd" : "th";
+    return { floor: num, floor_name: s?.floor_name || `${num}${suffix} Floor` };
+  }
+  const prefixMatch = raw.match(/(?:floor|level|fl)\s*(\d+)/i);
+  if (prefixMatch && prefixMatch[1]) {
+    const num = parseInt(prefixMatch[1], 10);
+    return { floor: num, floor_name: s?.floor_name || `Floor ${num}` };
+  }
+  const codeMatch = raw.match(/\b[fl]-?(\d+)\b/i);
+  if (codeMatch && codeMatch[1]) {
+    const num = parseInt(codeMatch[1], 10);
+    return { floor: num, floor_name: s?.floor_name || `Floor ${num}` };
+  }
+  const numMatch = raw.match(/^\d+$/);
+  if (numMatch) {
+    const num = parseInt(numMatch[0], 10);
+    return { floor: num, floor_name: s?.floor_name || `Floor ${num}` };
+  }
+  return { floor: (s as any)?.floor ?? 1, floor_name: s?.floor_name || "Floor 1" };
+}
+
 /**
  * RR-CONT-04, §S-10: Rent Roll Register View
  * - Supports as-of-date recalculation (default: today)
@@ -320,7 +349,8 @@ export async function GET(req: Request) {
             space_id: spId,
             space_code: spData?.space_code || "—",
             space_name: spData?.space_name || "—",
-            floor: (spData as any)?.floor ?? 1,
+            floor: parseFloorInfo(spData).floor,
+            floor_name: parseFloorInfo(spData).floor_name,
             space_type: (spData as any)?.space_type || "Commercial Office",
             property_name: propData?.property_name || c.property?.property_name || "—",
             building_name: bldgData?.building_name || c.building?.building_name || "—",
@@ -385,7 +415,8 @@ export async function GET(req: Request) {
           space_id: sp.space.id,
           space_code: sp.space.space_code,
           space_name: sp.space.space_name,
-          floor: (sp.space as any)?.floor ?? 1,
+          floor: parseFloorInfo(sp.space).floor,
+          floor_name: parseFloorInfo(sp.space).floor_name,
           space_type: (sp.space as any)?.space_type || "Commercial Office",
           occupant_id: null,
           occupant_name: isSpaceMarkedOccupied ? "(Occupied)" : "(Vacant Space)",

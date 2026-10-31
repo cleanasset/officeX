@@ -97,6 +97,7 @@ export default function SpaceAndBuildingRegistryPage() {
                 id: s.id,
                 space_number: s.space_name || s.space_code,
                 building_name: s.building_name || s.property_name || "Main Tower",
+                floor_name: s.floor_name || (s.space_name?.toLowerCase().includes("ground") ? "Ground Floor" : s.space_name?.toLowerCase().includes("floor") ? s.space_name : null),
                 floor_number: s.floor_name ? s.floor_name.replace(/floor\s*/i, "") : "1",
                 chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
                 status: isOccupied ? "occupied" : "available",
@@ -658,7 +659,7 @@ export default function SpaceAndBuildingRegistryPage() {
                             {space.building_name || "Main Tower"}
                           </td>
                           <td className="py-3.5 px-4 text-slate-600 font-medium">
-                            Floor {space.floor_number || 1}
+                            {space.floor_name || (space.floor_number === 0 || space.floor_number === "0" ? "Ground Floor" : `Floor ${space.floor_number || 1}`)}
                           </td>
                           <td className="py-3.5 px-4 font-black text-slate-900">
                             {parseFloat(space.chargeable_area || 0).toLocaleString("en-IN")} sq.ft

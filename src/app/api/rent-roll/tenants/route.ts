@@ -122,6 +122,7 @@ export async function GET(req: Request) {
           industry_sector: occ.industry_sector,
           status: occ.occupant_status || "active",
           property_id: associatedPropId,
+          property_name: associatedPropName,
           unit_number: item.space?.space_name || "--",
           space_code: item.space?.space_code || "--",
           area_sqft: Number((item.space as any)?.usable_area_sqft || (item.space as any)?.chargeable_area_sqft || 0),

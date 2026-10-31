@@ -23,6 +23,9 @@ import {
   Bell,
   LogOut,
   FileCheck,
+  MessageCircle,
+  Mail,
+  Copy,
 } from "lucide-react";
 
 interface ContractDetailDrawerProps {
@@ -49,6 +52,50 @@ export default function ContractDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [copiedPortal, setCopiedPortal] = useState(false);
+
+  const getTenantSharableLink = () => {
+    const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
+    const email = data?.occupant?.billing_email || data?.occupant?.email || "";
+    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
+  };
+
+  const formatPhoneForWhatsApp = (rawPhone?: string): string => {
+    if (!rawPhone) return "";
+    const clean = rawPhone.replace(/\D/g, "");
+    if (clean.length === 10) return `91${clean}`;
+    return clean;
+  };
+
+  const getTenantWhatsAppUrl = () => {
+    const link = getTenantSharableLink();
+    const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const phone = formatPhoneForWhatsApp(data?.occupant?.phone || data?.occupant?.mobile);
+    const message = `Hi ${name}, here is your corporate tenant self-service portal access link for ${prop}:\n\n${link}\n\nYou can log in to view GST invoices, rent schedules, payment receipts, and submit facility tickets.`;
+    return `https://api.whatsapp.com/send?${phone ? `phone=${phone}&` : ""}text=${encodeURIComponent(message)}`;
+  };
+
+  const getTenantMailtoUrl = () => {
+    const link = getTenantSharableLink();
+    const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const email = data?.occupant?.billing_email || data?.occupant?.email || "";
+    const subject = `Corporate Tenant Portal Access - ${prop}`;
+    const body = `Dear ${name},\n\nPlease access your corporate tenant self-service portal using the secure link below:\n\n${link}\n\nVia this portal, you can:\n• View and download executed lease agreements\n• Access statutory GST invoices and rent receipts\n• Submit and track facility maintenance requests\n\nBest regards,\n${prop} Commercial Asset Management`;
+    return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleCopyTenantPortalLink = () => {
+    const link = getTenantSharableLink();
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      setCopiedPortal(true);
+      setTimeout(() => setCopiedPortal(false), 2500);
+    }
+  };
 
   // Approval modal state
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -418,6 +465,42 @@ export default function ContractDetailDrawer({
                 <FileText className="w-3.5 h-3.5 text-teal-700" />
                 Download Commercial Lease Agreement (PDF)
               </button>
+
+              <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold text-slate-700">Share Tenant Portal Access</span>
+                  <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">1-Click Dispatch</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <a
+                    href={getTenantWhatsAppUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                    title="Share portal access via WhatsApp"
+                  >
+                    <MessageCircle size={13} />
+                    <span>WhatsApp</span>
+                  </a>
+                  <a
+                    href={getTenantMailtoUrl()}
+                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                    title="Send portal invitation via Email"
+                  >
+                    <Mail size={13} />
+                    <span>Email</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyTenantPortalLink}
+                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition cursor-pointer shadow-2xs"
+                    title="Copy secure portal link"
+                  >
+                    {copiedPortal ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    <span>{copiedPortal ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

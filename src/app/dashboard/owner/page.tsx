@@ -37,7 +37,9 @@ import {
   UserCheck,
   Plus,
   FileSpreadsheet,
-  Landmark
+  Landmark,
+  MessageCircle,
+  Mail
 } from "lucide-react";
 import { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
@@ -204,13 +206,32 @@ export default function OwnerDashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCopyManagerActivationLink = () => {
+  const getManagerSharableLink = () => {
     const origin =
       typeof window !== "undefined" && window.location.origin
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
     const activePropName = properties[0]?.name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
-    const inviteLink = `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
+    return `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&email=${encodeURIComponent(delegatedManagerEmail || "")}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
+  };
+
+  const getManagerWhatsAppUrl = () => {
+    const link = getManagerSharableLink();
+    const activePropName = properties[0]?.name || "Commercial Assets";
+    const text = `Hi ${delegatedManagerName}, you have been appointed as Managing Partner for ${activePropName}. Click the link below to activate your administrative portal and manage operations:\n\n${link}`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  };
+
+  const getManagerMailtoUrl = () => {
+    const link = getManagerSharableLink();
+    const activePropName = properties[0]?.name || "Commercial Assets";
+    const subject = `Managing Partner Delegation - ${activePropName}`;
+    const body = `Dear ${delegatedManagerName},\n\nYou have been authorized as the Managing Partner for ${activePropName}.\n\nPlease activate your operational workspace via the link below:\n\n${link}\n\nVia this portal, you can:\n• Manage commercial tenant leases and rent roll\n• Monitor collections, deposits, and statutory GST compliances\n• Coordinate facility desk and operations\n\nBest regards,\n${brandName || "Property Owner"}`;
+    return `mailto:${delegatedManagerEmail || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleCopyManagerActivationLink = () => {
+    const inviteLink = getManagerSharableLink();
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(inviteLink);
       setManagerLinkCopied(true);
@@ -583,11 +604,29 @@ export default function OwnerDashboardPage() {
               {delegatedManagerName} {delegatedManagerEmail && `(${delegatedManagerEmail})`} · Sovereign access granted for day-to-day operations.
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <a
+              href={getManagerWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Share manager link via WhatsApp"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </a>
+            <a
+              href={getManagerMailtoUrl()}
+              className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Send manager invite via Email"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Email</span>
+            </a>
             <button
               type="button"
               onClick={handleCopyManagerActivationLink}
-              className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-2.5 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <Copy className="w-3.5 h-3.5 text-emerald-600" />
               <span>{managerLinkCopied ? "Copied!" : "Copy Link"}</span>

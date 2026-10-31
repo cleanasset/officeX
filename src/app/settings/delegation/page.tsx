@@ -28,7 +28,8 @@ import {
   Lock,
   Sparkles,
   Building2,
-  Check
+  Check,
+  MessageCircle,
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
@@ -71,24 +72,21 @@ function DelegationContent() {
 
   const checkIsSubscribed = (): boolean => {
     if (typeof window !== "undefined") {
+      const ownerSub = localStorage.getItem("officex_owner_subscribed");
+      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
       const sub = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
       const subStatus = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-      return sub === "active" && subStatus === "active";
+      return (
+        ownerSub === "true" ||
+        rentrollSub === "true" ||
+        sub === "active" ||
+        subStatus === "active"
+      );
     }
-    return false;
+    return true;
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const sub = localStorage.getItem("officex_subscription");
-      const subStatus = localStorage.getItem("officex_subscription_status");
-      if (sub !== "active" || subStatus !== "active") {
-        localStorage.removeItem("officex_owner_subscribed");
-        localStorage.removeItem("officex_rentroll_subscribed");
-        sessionStorage.removeItem("officex_owner_subscribed");
-        sessionStorage.removeItem("officex_rentroll_subscribed");
-      }
-    }
     const updateSub = () => setIsSubscribed(checkIsSubscribed());
     updateSub();
     if (typeof window !== "undefined") {
@@ -152,15 +150,31 @@ function DelegationContent() {
     loadData();
   }, []);
 
+  const getDelegationLink = (m: DelegationMandate): string => {
+    const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
+    const activeProp = m.properties?.[0] || "Commercial Property";
+    return `${origin}/invite?role=pm_company&mgr=${encodeURIComponent(m.manager_org_name)}&prop=${encodeURIComponent(activeProp)}&owner_sub=1&invite=act_${Date.now()}`;
+  };
+
+  const getDelegationWhatsAppUrl = (m: DelegationMandate): string => {
+    const link = getDelegationLink(m);
+    const activeProp = m.properties?.[0] || "Commercial Property";
+    const phone = (m.manager_contact_phone || "").replace(/\D/g, "");
+    const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+    const text = `Hi ${m.manager_org_name}, you have been assigned property management authority for ${activeProp} on OfficeX.\n\nPlease activate your delegated management console using this secure link:\n${link}`;
+    return `https://api.whatsapp.com/send?${formattedPhone ? `phone=${formattedPhone}&` : ""}text=${encodeURIComponent(text)}`;
+  };
+
+  const getDelegationMailtoUrl = (m: DelegationMandate): string => {
+    const link = getDelegationLink(m);
+    const activeProp = m.properties?.[0] || "Commercial Property";
+    const subject = `Property Management Delegation Access - ${activeProp}`;
+    const body = `Dear ${m.manager_org_name} Team,\n\nYou have been assigned delegated management authority for ${m.properties?.join(", ") || activeProp} on OfficeX.\n\nPlease activate your Property Management Console using the secure access link below:\n\n${link}\n\nThrough this console, you can:\n• Manage tenant communications and lease compliance\n• Track rent collections, CAM charges, and utility metering\n• Oversee facility tickets and property operations\n\nBest regards,\nOfficeX Commercial Asset Management`;
+    return `mailto:${m.manager_contact_email || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   const handleCopyInvite = (m: DelegationMandate) => {
-    if (!checkIsSubscribed()) {
-      setSubscriptionReason("Share and dispatch property management delegation link");
-      setSubscriptionModalOpen(true);
-      return;
-    }
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const activeProp = m.properties[0] || "Commercial Property";
-    const inviteLink = `${origin}/invite?role=pm_company&mgr=${encodeURIComponent(m.manager_org_name)}&prop=${encodeURIComponent(activeProp)}&owner_sub=1&invite=act_${Date.now()}`;
+    const inviteLink = getDelegationLink(m);
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(inviteLink);
       setCopiedMandateId(m.id);
@@ -565,34 +579,46 @@ function DelegationContent() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                  {isSubscribed ? (
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 text-xs flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* WhatsApp */}
+                    <a
+                      href={getDelegationWhatsAppUrl(m)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="Share management console link via WhatsApp"
+                    >
+                      <MessageCircle size={13} />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    {/* Email */}
+                    <a
+                      href={getDelegationMailtoUrl(m)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="Send delegation invite via Email"
+                    >
+                      <Mail size={13} />
+                      <span>Email</span>
+                    </a>
+
+                    {/* Copy Link */}
                     <button
                       type="button"
                       onClick={() => handleCopyInvite(m)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
+                      title="Copy manager invitation link"
                     >
-                      <Copy size={13} />
-                      <span>{copiedMandateId === m.id ? "Link Copied!" : "Copy Manager Link"}</span>
+                      {copiedMandateId === m.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} className="text-slate-500" />}
+                      <span>{copiedMandateId === m.id ? "Copied!" : "Copy Link"}</span>
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSubscriptionReason("Share and dispatch property management delegation link");
-                        setSubscriptionModalOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition cursor-pointer"
-                      title="Pro Subscription required to share manager link"
-                    >
-                      <Lock size={13} className="text-amber-600" />
-                      <span>Subscribe to Share Link</span>
-                    </button>
-                  )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => handleOpenRightsModal(m)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 font-bold text-xs transition cursor-pointer"
                   >
                     <SlidersHorizontal size={13} className="text-[#0F8B7D]" />
                     <span>Manage Rights &amp; Restrictions</span>
@@ -1097,29 +1123,40 @@ function DelegationContent() {
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between pt-3 border-t border-slate-100">
-                  {isSubscribed ? (
+                <div className="mt-5 flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* WhatsApp */}
+                    <a
+                      href={getDelegationWhatsAppUrl(selectedMandateDetails)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="Share management link via WhatsApp"
+                    >
+                      <MessageCircle size={13} />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    {/* Email */}
+                    <a
+                      href={getDelegationMailtoUrl(selectedMandateDetails)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="Send delegation invite via Email"
+                    >
+                      <Mail size={13} />
+                      <span>Email</span>
+                    </a>
+
+                    {/* Copy Link */}
                     <button
                       type="button"
                       onClick={() => handleCopyInvite(selectedMandateDetails)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-200 transition cursor-pointer"
                     >
-                      <Copy size={13} />
-                      <span>{copiedMandateId === selectedMandateDetails.id ? "Link Copied!" : "Copy Manager Link"}</span>
+                      {copiedMandateId === selectedMandateDetails.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                      <span>{copiedMandateId === selectedMandateDetails.id ? "Copied!" : "Copy Link"}</span>
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSubscriptionReason("Share Property Management Delegation Link");
-                        setSubscriptionModalOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition cursor-pointer"
-                    >
-                      <Lock size={13} className="text-amber-600" />
-                      <span>Subscribe to Share Link</span>
-                    </button>
-                  )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"

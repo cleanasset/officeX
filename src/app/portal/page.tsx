@@ -185,7 +185,7 @@ export default function TenantHomePage() {
           notes: {
             invoice_id: targetInvoiceId,
             occupant_id: occupant.id || "",
-            building: primaryContract?.property_name || "Commercial Centre",
+            building: primaryContract?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "Commercial Property",
             suite: primaryContract?.space_name || "Commercial Unit",
           },
           onSuccess: async (rzpRes) => {

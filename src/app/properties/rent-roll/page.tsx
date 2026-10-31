@@ -863,7 +863,7 @@ export default function RentRollRegisterPage() {
                               <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
                                 <span className="font-bold text-teal-800">{r.space_name}</span>
                                 <span className="font-mono text-[10px] text-slate-400">({r.space_code})</span>
-                                <span>· Floor {r.floor || 1}</span>
+                                <span>· {r.floor_name || (r.floor === 0 ? "Ground Floor" : `Floor ${r.floor || 1}`)}</span>
                               </div>
                             </div>
                             <span
@@ -1133,7 +1133,7 @@ export default function RentRollRegisterPage() {
                             {visibleColumns.building && (
                               <td className="p-3.5 text-slate-600">
                                 <span>{r.building_name || "—"}</span>
-                                <span className="block text-[10px] text-slate-400">Floor {r.floor || 1}</span>
+                                <span className="block text-[10px] text-slate-400">{r.floor_name || (r.floor === 0 ? "Ground Floor" : `Floor ${r.floor || 1}`)}</span>
                               </td>
                             )}
 
@@ -1355,7 +1355,7 @@ export default function RentRollRegisterPage() {
                       {selectedVacantSpace.space_name} ({selectedVacantSpace.space_code})
                     </h3>
                     <p className="text-xs text-slate-500">
-                      {selectedVacantSpace.building_name} · Floor {selectedVacantSpace.floor || 1}
+                      {selectedVacantSpace.building_name} · {selectedVacantSpace.floor_name || (selectedVacantSpace.floor === 0 ? "Ground Floor" : `Floor ${selectedVacantSpace.floor || 1}`)}
                     </p>
                   </div>
                   <button

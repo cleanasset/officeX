@@ -160,6 +160,13 @@ export function extractFloorNumberFromSpace(s: any): number {
   return 0;
 }
 
+export function formatPhoneForWhatsApp(rawPhone?: string): string {
+  if (!rawPhone) return "";
+  const clean = rawPhone.replace(/\D/g, "");
+  if (clean.length === 10) return `91${clean}`;
+  return clean;
+}
+
 export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract" | "delegation";
 
 interface PropertyHierarchyModalProps {
@@ -206,6 +213,7 @@ export default function PropertyHierarchyModal({
   const [latestTenantInvite, setLatestTenantInvite] = useState<{
     name: string;
     email: string;
+    phone?: string;
     link: string;
   } | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
@@ -1983,10 +1991,12 @@ export default function PropertyHierarchyModal({
             ? window.location.origin
             : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
         const activePropName =
-          propertiesList.find((p) => p.id === contractForm.propertyId)?.name ||
+          propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
+          (propForm.propertyName || "").trim() ||
+          lastSavedPropName ||
           (typeof window !== "undefined" && localStorage.getItem("officex_active_property")) ||
-          propForm.propertyName ||
-          "Commercial Property";
+          propertiesList[0]?.name ||
+          "divi towers";
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";
@@ -1997,6 +2007,7 @@ export default function PropertyHierarchyModal({
         setLatestTenantInvite({
           name: (tenantForm.companyName || effectiveContactName).trim(),
           email: tenantForm.email.trim(),
+          phone: tenantForm.phone?.trim() || "",
           link: inviteUrl,
         });
 
@@ -4708,9 +4719,11 @@ export default function PropertyHierarchyModal({
                           <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
                         </button>
                         <a
-                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                            `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
-                          )}`}
+                          href={(() => {
+                            const cleanPhone = formatPhoneForWhatsApp(latestTenantInvite.phone);
+                            const msg = `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`;
+                            return `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ""}text=${encodeURIComponent(msg)}`;
+                          })()}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 shrink-0 cursor-pointer transition"
@@ -5963,9 +5976,11 @@ export default function PropertyHierarchyModal({
                         <span>{copiedInvite ? "Copied!" : "Copy Link"}</span>
                       </button>
                       <a
-                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                          `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`
-                        )}`}
+                        href={(() => {
+                          const cleanPhone = formatPhoneForWhatsApp(latestTenantInvite.phone);
+                          const msg = `Hi ${latestTenantInvite.name}, here is your corporate tenant portal invitation link: ${latestTenantInvite.link}`;
+                          return `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ""}text=${encodeURIComponent(msg)}`;
+                        })()}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition"
@@ -7500,9 +7515,11 @@ export default function PropertyHierarchyModal({
                           <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
                         </button>
                         <a
-                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                            `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`
-                          )}`}
+                          href={(() => {
+                            const cleanPhone = formatPhoneForWhatsApp(latestManagerInvite.phone);
+                            const msg = `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`;
+                            return `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ""}text=${encodeURIComponent(msg)}`;
+                          })()}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
