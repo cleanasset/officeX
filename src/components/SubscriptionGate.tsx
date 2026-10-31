@@ -92,24 +92,8 @@ export default function SubscriptionGate({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isSubscribed, setIsSubscribed] = useState(() => {
-    if (typeof window !== "undefined") {
-      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
-      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
-      if (s === "active" || st === "active" || o === "true") return true;
-    }
-    return false;
-  });
-  const [isChecking, setIsChecking] = useState(() => {
-    if (typeof window !== "undefined") {
-      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
-      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
-      if (s === "active" || st === "active" || o === "true") return false;
-    }
-    return true;
-  });
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");

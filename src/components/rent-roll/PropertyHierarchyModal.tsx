@@ -1996,7 +1996,7 @@ export default function PropertyHierarchyModal({
           lastSavedPropName ||
           (typeof window !== "undefined" && localStorage.getItem("officex_active_property")) ||
           propertiesList[0]?.name ||
-          "divi towers";
+          "Apex Tech Park";
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";

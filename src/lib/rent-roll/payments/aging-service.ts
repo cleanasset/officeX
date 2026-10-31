@@ -144,6 +144,16 @@ export async function calculateAgingReport(
   const allInvoices: AgingBucketItem[] = [];
 
   for (const inv of rawInvoices) {
+    const occId = inv.occupant_id || "unassigned";
+
+    // Strictly skip unassigned or dummy placeholder invoices (e.g. divi towers / test seeds)
+    if (occId === "unassigned" || !occupantMap.has(occId)) {
+      continue;
+    }
+    if (inv.property_name && inv.property_name.toLowerCase().includes("divi")) {
+      continue;
+    }
+
     const due = new Date(inv.due_date);
     const diffTime = asOf.getTime() - due.getTime();
     const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
@@ -168,7 +178,6 @@ export async function calculateAgingReport(
     };
     allInvoices.push(bucketItem);
 
-    const occId = inv.occupant_id || "unassigned";
     let occSummary = occupantBucketsMap.get(occId);
     if (!occSummary) {
       const occMeta = occupantMap.get(occId);

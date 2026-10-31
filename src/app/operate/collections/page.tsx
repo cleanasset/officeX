@@ -234,6 +234,14 @@ export default function AgeingCollectionsPage() {
   };
 
   const filteredRows = rows.filter((r) => {
+    // Exclude unassigned placeholder or test dummy seeds
+    if (!r.occupant_name || r.occupant_name === "Unassigned Occupant" || r.occupant_id === "unassigned") {
+      return false;
+    }
+    if (r.property_name && r.property_name.toLowerCase().includes("divi")) {
+      return false;
+    }
+
     const b90 = Number(r.bucket_90_plus || 0);
     const b60 = Number(r.bucket_61_90 || 0);
     const b30 = Number(r.bucket_31_60 || 0);
