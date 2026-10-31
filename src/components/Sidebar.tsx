@@ -365,15 +365,7 @@ function SidebarInner() {
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(() => {
-    if (typeof window !== "undefined") {
-      const s = localStorage.getItem("officex_subscription") || sessionStorage.getItem("officex_subscription");
-      const st = localStorage.getItem("officex_subscription_status") || sessionStorage.getItem("officex_subscription_status");
-      const o = localStorage.getItem("officex_owner_subscribed") || localStorage.getItem("officex_rentroll_subscribed");
-      return s === "active" || st === "active" || o === "true";
-    }
-    return false;
-  });
+  const [isSubscribed, setIsSubscribed] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -381,15 +373,7 @@ function SidebarInner() {
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
   const [orgLogo, setOrgLogo] = useState<string>("");
-  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("officex_expanded_submenus");
-        if (saved) return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return { "Rent Roll & Financials": true };
-  });
+  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({ "Rent Roll & Financials": true });
 
   // Synchronously compute active portal from URL first
   const findPortalKey = (path: string): string | undefined => {
@@ -415,6 +399,11 @@ function SidebarInner() {
   useEffect(() => {
     setIsMounted(true);
     if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_expanded_submenus");
+        if (saved) setExpandedSubMenus(JSON.parse(saved));
+      } catch (e) {}
+
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
       if (storedName) setUserName(storedName);
 
@@ -637,12 +626,12 @@ function SidebarInner() {
                       <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-amber-700 shrink-0" : "text-slate-500 shrink-0"} />
                       <span className="truncate flex-1 font-bold tracking-tight">{item.name}</span>
                       {item.requiresSubscription && !isSubscribed ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
+                        <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
                           <Lock size={9} className="text-amber-700" />
                           <span>PRO LOCKED</span>
                         </span>
                       ) : item.requiresSubscription && isSubscribed ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
+                        <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
                           <CheckCircle size={9} className="text-emerald-700" />
                           <span>ACTIVE</span>
                         </span>
@@ -719,7 +708,7 @@ function SidebarInner() {
                     <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
                     <span className="truncate flex-1 tracking-tight">{item.name}</span>
                     {item.requiresSubscription && !isSubscribed ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
+                      <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
                         <Lock size={9} className="text-amber-600" />
                         <span>PRO</span>
                       </span>

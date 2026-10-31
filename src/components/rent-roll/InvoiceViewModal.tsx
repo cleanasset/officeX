@@ -4,7 +4,6 @@ import React, { useRef } from "react";
 import {
   X,
   Printer,
-  Download,
   Building2,
   CheckCircle2,
   FileText,
@@ -13,18 +12,6 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-
-interface InvoiceLineItem {
-  id: string;
-  description: string;
-  hsn_sac: string;
-  quantity: number | string;
-  rate: number | string;
-  taxable_amount: number;
-  cgst_amount: number;
-  sgst_amount: number;
-  total_amount: number;
-}
 
 export interface InvoiceViewModalProps {
   invoice: any;
@@ -37,9 +24,33 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
   if (!invoice) return null;
 
   const invoiceNumber = invoice.invoice_number || `INV-${invoice.id?.slice(0, 8) || "DRAFT"}`;
-  const invoiceDate = invoice.invoice_date || new Date().toISOString().split("T")[0];
-  const dueDate = invoice.due_date || new Date(Date.now() + 15 * 86400 * 1000).toISOString().split("T")[0];
+  
+  // Format dates cleanly
+  const rawDate = invoice.invoice_date || new Date().toISOString().split("T")[0];
+  const invoiceDate = new Date(rawDate).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const rawDueDate = invoice.due_date || new Date(Date.now() + 10 * 86400 * 1000).toISOString().split("T")[0];
+  const dueDate = new Date(rawDueDate).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
   const period = invoice.period || "October 2026";
+
+  // Dynamic Landlord Brand / Property Info
+  const brandLogo = typeof window !== "undefined"
+    ? localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo")
+    : "";
+  const brandName = typeof window !== "undefined"
+    ? localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || localStorage.getItem("officex_active_org")
+    : "";
+  const landlordLegalName = brandName || invoice.billing_entity_name || "Commercial Property Asset SPV";
+  const propertyName = invoice.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_property_name") : "") || "Apex Tech Park";
 
   const taxableAmount = Number(invoice.subtotal || invoice.taxable || invoice.base_rent || 0);
   const gstAmount = Number(invoice.gst_amount || invoice.gst || 0);
@@ -53,35 +64,64 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8">
-        {/* Modal Top Bar */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
+      {/* Print Isolation Stylesheet */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #owner-tax-invoice-printable, #owner-tax-invoice-printable * {
+            visibility: visible !important;
+          }
+          #owner-tax-invoice-printable {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 24px !important;
+            background: white !important;
+            color: #0f172a !important;
+            box-shadow: none !important;
+            border: 2px solid #0f172a !important;
+            border-radius: 0 !important;
+            z-index: 999999 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}} />
+
+      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[94vh] flex flex-col">
+        {/* Modal Top Bar (Hidden during Print) */}
+        <div className="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between shrink-0 no-print">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-sm border border-teal-500/30">
               OX
             </div>
             <div>
               <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                S-41 Tax Invoice Preview
+                Statutory GST Tax Invoice Preview
                 <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {invoice.status || "Draft"}
                 </span>
               </h2>
-              <p className="text-[11px] text-slate-400">Official GST Compliant Commercial Tax Invoice</p>
+              <p className="text-[11px] text-slate-400">Rule 46 CGST Act Commercial Lease Invoice</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              Print / Save PDF
+              Print / Save PDF (A4)
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -89,43 +129,57 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
         </div>
 
         {/* Printable Official GST Invoice Document */}
-        <div ref={printRef} className="p-8 text-slate-900 text-xs space-y-6 bg-white font-sans">
-          {/* Header & GSTIN Details */}
-          <div className="flex items-start justify-between border-b-2 border-slate-900 pb-6">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-teal-700">
-                TAX INVOICE · SECTION 31 CGST ACT
-              </span>
-              <h1 className="text-xl font-black text-slate-900 mt-1">
-                {invoice.billing_entity_name || "Apex Real Estate Holdings LLP"}
-              </h1>
-              <p className="text-slate-600 mt-0.5">
-                Regd. Office: 100 MG Road, Outer Ring Road, Bengaluru - 560103, Karnataka
-              </p>
-              <div className="mt-2 space-y-0.5 font-mono text-[11px] text-slate-700">
-                <p>
-                  <strong className="text-slate-900">GSTIN:</strong>{" "}
-                  {invoice.billing_entity_gstin || "29AABCS1429B1Z1"} (State Code: 29)
+        <div
+          id="owner-tax-invoice-printable"
+          ref={printRef}
+          className="p-8 text-slate-900 text-xs space-y-5 bg-white font-sans overflow-y-auto"
+        >
+          {/* Header & GSTIN Details with Real Property / Landlord Logo */}
+          <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5 gap-4">
+            <div className="flex items-start gap-3.5">
+              {brandLogo ? (
+                <div className="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                  <img src={brandLogo} alt="Logo" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl shrink-0">
+                  {landlordLegalName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-teal-700 block">
+                  TAX INVOICE · SECTION 31 CGST ACT
+                </span>
+                <h1 className="text-lg font-black text-slate-950 mt-0.5">
+                  {landlordLegalName}
+                </h1>
+                <p className="text-slate-600 text-xs mt-0.5">
+                  Commercial Asset Management · {propertyName}
                 </p>
-                <p>
-                  <strong className="text-slate-900">PAN:</strong> AABCS1429B | CIN: U70109KA2020LLP123456
-                </p>
+                <div className="mt-1 space-y-0.5 font-mono text-[11px] text-slate-700">
+                  <p>
+                    <strong className="text-slate-900">GSTIN:</strong> 24AAFCO9876C1Z2 · State: Gujarat (Code: 24)
+                  </p>
+                  <p>
+                    <strong className="text-slate-900">PAN:</strong> AAFCO9876C | SAC: 997212 / 997221
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="text-right">
-              <div className="inline-block p-3 rounded-xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-[10px] text-slate-400 uppercase font-bold block">Invoice Number</span>
-                <span className="text-base font-black font-mono text-slate-900">{invoiceNumber}</span>
+            <div className="text-right shrink-0">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-right">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Tax Invoice No:</span>
+                <span className="text-sm font-black font-mono text-slate-950 block">{invoiceNumber}</span>
                 <div className="mt-2 pt-2 border-t border-slate-200 text-[11px] space-y-0.5 text-slate-600">
                   <p>
-                    <strong>Date:</strong> {invoiceDate}
+                    <strong>Invoice Date:</strong> {invoiceDate}
                   </p>
-                  <p>
+                  <p className="text-teal-800 font-bold">
                     <strong>Due Date:</strong> {dueDate}
                   </p>
                   <p>
-                    <strong>Period:</strong> {period}
+                    <strong>Billing Period:</strong> {period}
                   </p>
                 </div>
               </div>
@@ -133,41 +187,43 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
           </div>
 
           {/* Bill To & Premises */}
-          <div className="grid grid-cols-2 gap-6 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
             <div>
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block mb-1">
-                Billed To (Occupant / Lessee)
+                Billed To (Lessee / Tenant)
               </span>
               <h3 className="text-sm font-bold text-slate-900">
-                {invoice.occupant_name || "TechNova Solutions Pvt Ltd"}
+                {invoice.occupant_name || "Cognitive Cloud Technologies Pvt Ltd"}
               </h3>
-              <p className="text-slate-600 mt-0.5">Demised Premises: {invoice.space_name || "Floor 2, Suite 201"}</p>
-              <div className="mt-2 space-y-0.5 font-mono text-[11px] text-slate-700">
+              <p className="text-slate-600 mt-0.5">
+                Demised Space: <strong>{invoice.space_name || "Suite 401"}</strong>
+              </p>
+              <div className="mt-1.5 space-y-0.5 font-mono text-[11px] text-slate-700">
                 <p>
-                  <strong>GSTIN:</strong> {invoice.occupant_gstin || "29AABCT8841F1Z8"}
+                  <strong>GSTIN:</strong> {invoice.occupant_gstin || "24AAACG1234F1Z8"}
                 </p>
                 <p>
-                  <strong>Place of Supply:</strong> Karnataka (State Code 29)
+                  <strong>Place of Supply:</strong> Gujarat (Code 24) · Intra-State
                 </p>
               </div>
             </div>
 
             <div>
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block mb-1">
-                Property & Commercial Terms
+                Property & Demised Premises
               </span>
-              <p className="font-semibold text-slate-800">
-                {invoice.property_name || "Apex Business Tower"} (Tower A)
+              <p className="font-bold text-slate-900">
+                {propertyName}
               </p>
-              <p className="text-slate-600">Chargeable Area: {invoice.area_sqft || 8500} sq ft</p>
-              <p className="text-slate-600 mt-1">Payment Mode: NEFT / RTGS / Corporate NetBanking</p>
-              <p className="text-emerald-700 font-semibold mt-1">Billing Frequency: Monthly in Advance</p>
+              <p className="text-slate-600">Chargeable Area: {invoice.area_sqft || 15000} sq.ft</p>
+              <p className="text-slate-600 mt-1">Payment Mode: Direct RTGS / Virtual Escrow Account</p>
+              <p className="text-teal-700 font-bold mt-0.5">Payment Terms: 10 Days from Invoice Date</p>
             </div>
           </div>
 
           {/* Itemized Line Items Table */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100 text-[10px] font-bold text-slate-600 uppercase border-b border-slate-200">
                   <th className="p-3">#</th>
@@ -183,9 +239,9 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                 <tr>
                   <td className="p-3 font-mono">01</td>
                   <td className="p-3 font-semibold text-slate-900">
-                    Commercial Office Base Rent for {period}
+                    Commercial Space Lease Rental for {period}
                     <span className="block text-[10px] text-slate-500 font-normal">
-                      Premises: {invoice.space_name || "Suite 201"} ({invoice.area_sqft || 8500} sq ft)
+                      Demised: {invoice.space_name || "Suite 401"} ({invoice.area_sqft || 15000} sq.ft)
                     </span>
                   </td>
                   <td className="p-3 font-mono text-slate-600">997212</td>
@@ -198,17 +254,17 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                   <td className="p-3 text-right font-mono text-slate-600">
                     {sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="p-3 text-right font-mono font-bold text-slate-900">
+                  <td className="p-3 text-right font-mono font-black text-slate-900">
                     {grossTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
               </tbody>
               <tfoot>
-                <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-900">
-                  <td colSpan={3} className="p-3 uppercase text-[10px] tracking-wider text-slate-600">
-                    Total Invoice Amount
+                <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-900">
+                  <td colSpan={3} className="p-3 uppercase text-[10px] tracking-wider text-slate-700">
+                    Total Gross Payable
                   </td>
-                  <td className="p-3 text-right font-mono">
+                  <td className="p-3 text-right font-mono font-bold">
                     ₹{taxableAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
                   <td className="p-3 text-right font-mono text-slate-700">
@@ -217,7 +273,7 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                   <td className="p-3 text-right font-mono text-slate-700">
                     ₹{sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="p-3 text-right font-mono text-sm text-teal-900 font-black">
+                  <td className="p-3 text-right font-mono text-sm text-teal-950 font-black">
                     ₹{grossTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -225,25 +281,25 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
             </table>
           </div>
 
-          {/* Statutory TDS & Remittance Note */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-900 space-y-1">
-              <span className="font-bold flex items-center gap-1.5 text-amber-950">
+          {/* Statutory TDS & Bank Wire Coordinates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-[11px] text-amber-950 space-y-1">
+              <span className="font-bold flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-amber-700" />
-                Statutory Income Tax TDS Note (Section 194-I)
+                Statutory TDS Guidance (Section 194-I)
               </span>
-              <p className="text-amber-800 leading-relaxed">
-                TDS @ 10% is deductible on taxable base rent of ₹{taxableAmount.toLocaleString("en-IN")} (deduction amount: ₹{tdsGuideline.toLocaleString("en-IN")}). Please remit net balance of ₹{(grossTotal - tdsGuideline).toLocaleString("en-IN")} and issue Form 16A TDS certificate quarterly.
+              <p className="text-amber-900 leading-snug">
+                TDS @ 10% is deductible on taxable base rent of ₹{taxableAmount.toLocaleString("en-IN")} (deduction: ₹{tdsGuideline.toLocaleString("en-IN")}). Please remit net ₹{(grossTotal - tdsGuideline).toLocaleString("en-IN")} and upload Form 16A TDS certificate.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 space-y-1">
-              <span className="font-bold text-slate-900 block">Bank Account Remittance Details</span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 space-y-1">
+              <span className="font-bold text-slate-900 block">Bank Wire Remittance Coordinates</span>
               <p>
-                <strong>Bank:</strong> HDFC Bank Ltd | Branch: MG Road, Bengaluru
+                <strong>Bank:</strong> HDFC Bank Ltd | Operating Corporate SPV
               </p>
               <p>
-                <strong>A/C No:</strong> 50200049281928 (Current Account)
+                <strong>A/C No:</strong> 50200049281928 (Escrow Current A/c)
               </p>
               <p>
                 <strong>IFSC Code:</strong> HDFC0000042
@@ -251,16 +307,16 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
             </div>
           </div>
 
-          {/* Authorized Signatory */}
-          <div className="pt-6 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+          {/* Authorized Signatory & Compliance Certification */}
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
             <div>
-              <p>This is a computer-generated tax invoice verified under Section 31 of CGST Act.</p>
-              <p className="text-slate-400">OFFICEX Secure Lease-to-Cash SaaS Engine</p>
+              <p className="font-medium text-slate-700">Computer generated official tax invoice issued pursuant to Rule 46 CGST Rules, 2017.</p>
+              <p className="text-slate-400">OFFICEX Institutional Commercial Operating Suite</p>
             </div>
             <div className="text-right">
-              <div className="w-36 h-10 border-b border-slate-400 mb-1" />
-              <span className="font-semibold text-slate-800">Authorized Signatory</span>
-              <span className="block text-[10px] text-slate-400">For {invoice.billing_entity_name || "Apex Real Estate Holdings LLP"}</span>
+              <div className="w-36 h-8 border-b-2 border-slate-400 mb-1" />
+              <span className="font-bold text-slate-900 block">Authorized Signatory</span>
+              <span className="text-[10px] text-slate-500">For {landlordLegalName}</span>
             </div>
           </div>
         </div>

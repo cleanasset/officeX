@@ -561,12 +561,12 @@ function TenantInvoicesContent() {
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {inv.period_start || "Current Period"}
+                      <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                        {inv.period_start ? new Date(inv.period_start).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Oct 2026"}
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-IN") : "Immediate"}
+                      <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "10 Nov 2026"}
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-bold text-slate-800">
@@ -709,9 +709,41 @@ function TenantInvoicesContent() {
       {/* Statutory Tax Invoice Modal with Brand Logo & Rule 46 CGST Compliance */}
       {selectedInvoice && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto border border-slate-200">
+          {/* Print Isolation Stylesheet */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #statutory-tax-invoice-printable, #statutory-tax-invoice-printable * {
+                visibility: visible !important;
+              }
+              #statutory-tax-invoice-printable {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 24px !important;
+                background: white !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                z-index: 999999 !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}} />
+
+          <div
+            id="statutory-tax-invoice-printable"
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto border border-slate-200"
+          >
             {/* Modal Header & Quick Actions */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 no-print">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -722,9 +754,9 @@ function TenantInvoicesContent() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
-                  <Printer size={13} /> Print / PDF
+                  <Printer size={13} /> Print / Save PDF
                 </button>
                 <button
                   onClick={() => setSelectedInvoice(null)}

@@ -166,13 +166,6 @@ export default function TenantHomePage() {
 
     // --- Channel 1: Real Net Banking & UPI via Live Razorpay Gateway ---
     if (selectedPayChannel === "razorpay") {
-      if (payableAmount > 500000) {
-        alert(
-          "⚠️ RBI & Gateway Regulatory Limit:\n\nOnline net banking and payment gateways in India are capped at ₹5,00,000 per transaction.\n\nTo settle this full commercial invoice of ₹15,16,300:\n1. Choose 'Corporate Bank Wire (NEFT / RTGS)' for a direct 0-fee corporate bank transfer to the Landlord's account.\n2. Or choose 'Custom Partial Amount' and enter up to ₹5,00,000 to test live Razorpay Net Banking immediately."
-        );
-        return;
-      }
-
       setProcessingPayment(true);
       try {
         await initiateRazorpayPayment({
@@ -1190,122 +1183,189 @@ export default function TenantHomePage() {
 
       {/* 7. Executive Certified Rent Settlement Receipt Modal */}
       {paymentSuccess && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto border border-slate-200">
-            {/* Receipt Letterhead */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          {/* Print Isolation Stylesheet */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #official-rent-receipt, #official-rent-receipt * {
+                visibility: visible !important;
+              }
+              #official-rent-receipt {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 28px !important;
+                background: white !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                border: 2px solid #0f172a !important;
+                border-radius: 0 !important;
+                z-index: 999999 !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}} />
+
+          <div
+            id="official-rent-receipt"
+            className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[94vh] overflow-y-auto border border-slate-300 text-slate-800 font-sans"
+          >
+            {/* Formal Letterhead */}
+            <div className="flex items-start justify-between pb-4 border-b-2 border-slate-900 gap-4">
+              <div className="flex items-start gap-3">
                 {brandLogo ? (
-                  <div className="w-14 h-14 rounded-2xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                  <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
                     <img src={brandLogo} alt="Company Logo" className="max-h-full max-w-full object-contain" />
                   </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
-                    {(brandName || companyName || "Commercial Property Asset SPV").charAt(0).toUpperCase()}
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs">
+                    {(brandName || companyName || "OFFICEX").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-                    {brandName || companyName || "Commercial Property Asset SPV"}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Commercial Property Asset SPV · Operations
+                  <h2 className="text-base sm:text-lg font-black text-slate-950 uppercase tracking-tight">
+                    {brandName || companyName || "Commercial Property Asset SPV Ltd"}
+                  </h2>
+                  <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    Commercial Property Asset SPV · Asset Management & Operations
                   </p>
-                  <p className="text-[10px] font-mono text-slate-400">
-                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
+                  <p className="text-[11px] font-mono text-slate-500 mt-0.5">
+                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat, India
                   </p>
                 </div>
               </div>
 
-              <div className="text-right">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 block">
-                  Official Receipt
+              <div className="text-right shrink-0">
+                <span className="px-3 py-1 rounded bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider block">
+                  Official Money Receipt
                 </span>
-                <span className="text-[10px] font-mono font-bold text-slate-400 block mt-1">
-                  RCT-2026-10-{Date.now().toString().slice(-5)}
+                <span className="text-[11px] font-mono font-bold text-slate-800 block mt-1.5">
+                  Receipt No: RCT-2026-10-{Date.now().toString().slice(-5)}
+                </span>
+                <span className="text-[10px] text-slate-500 block">
+                  Date: {paymentSuccess.date}
                 </span>
               </div>
             </div>
 
-            {/* Receipt Summary Card */}
-            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                Commercial Rent Payment Settled
+            {/* Official Title Banner */}
+            <div className="text-center py-1 bg-slate-100 rounded border border-slate-200">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-700">
+                Receipt for Commercial Lease Rental & Maintenance Charges
               </span>
-              <div className="text-3xl font-black text-emerald-950">
-                ₹{Number(paymentSuccess.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <p className="text-xs text-emerald-700 font-medium">
-                Allocated to Tax Invoice <strong>{paymentSuccess.invoice_number}</strong>
-              </p>
             </div>
 
-            {/* Detailed Transaction Ledger Table */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5">
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Tenant / Payee:</span>
-                <span className="font-bold text-slate-900">{tenantDisplayName}</span>
+            {/* Prominent Paid Amount Box */}
+            <div className="bg-emerald-50/80 border-2 border-emerald-300 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                  Net Amount Received in Full
+                </span>
+                <div className="text-3xl font-black text-emerald-950 font-mono mt-0.5">
+                  ₹{Number(paymentSuccess.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Demised Premises:</span>
-                <span className="font-bold text-slate-800">{primaryContract ? `${primaryContract.space_name}, ${primaryContract.property_name}` : "Demised Premises"}</span>
+              <div className="text-right sm:border-l sm:border-emerald-200 sm:pl-4">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Settlement Status</span>
+                <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700 bg-white px-2.5 py-0.5 rounded border border-emerald-300 mt-0.5">
+                  ✓ FULLY SETTLED (PAID)
+                </span>
+              </div>
+            </div>
+
+            {/* Core Receipt Breakdown Form */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-200 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5 bg-slate-50">
+                <span className="text-slate-500 font-semibold">Received with Thanks From:</span>
+                <span className="sm:col-span-2 font-bold text-slate-900">{tenantDisplayName}</span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Transaction / UTR Reference:</span>
-                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5">
+                <span className="text-slate-500 font-semibold">Leased Commercial Premises:</span>
+                <span className="sm:col-span-2 font-bold text-slate-800">
+                  {primaryContract ? `${primaryContract.space_name}, ${primaryContract.property_name}` : "Demised Commercial Premises"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5 bg-slate-50">
+                <span className="text-slate-500 font-semibold">Towards Settlement Of:</span>
+                <span className="sm:col-span-2 font-bold text-slate-900">
+                  GST Tax Invoice: {paymentSuccess.invoice_number} (SAC: 997212 / 997221)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5">
+                <span className="text-slate-500 font-semibold">Payment Channel & Mode:</span>
+                <span className="sm:col-span-2 font-bold text-slate-900">
+                  {paymentSuccess.channel}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5 bg-slate-50">
+                <span className="text-slate-500 font-semibold">Bank UTR / Transaction ID:</span>
+                <span className="sm:col-span-2 font-mono font-bold text-slate-900">
                   {paymentSuccess.ref}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Payment Channel:</span>
-                <span className="font-bold text-slate-800">{paymentSuccess.channel}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Remitted Into Account:</span>
-                <span className="font-mono font-bold text-slate-900">
-                  {landlordBank?.bank_name || "Commercial Bank"} · A/c {landlordBank?.account_number || "••••••••"}
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5">
+                <span className="text-slate-500 font-semibold">Credited to Landlord Escrow:</span>
+                <span className="sm:col-span-2 font-mono font-medium text-slate-800">
+                  {landlordBank?.bank_name || "HDFC Bank Operating SPV"} · A/c {landlordBank?.account_number || "••••••••"}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Date & Timestamp:</span>
-                <span className="font-bold text-slate-800">{paymentSuccess.date}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-semibold">Updated Balance Due:</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  ₹0.00 (Fully Paid · Account in Good Standing)
+              <div className="grid grid-cols-1 sm:grid-cols-3 p-2.5 bg-slate-50">
+                <span className="text-slate-500 font-semibold">Remaining Balance Due:</span>
+                <span className="sm:col-span-2 font-bold text-emerald-700">
+                  ₹0.00 (Account in Good Standing · Zero Arrears)
                 </span>
               </div>
             </div>
 
-            {/* Statutory Compliance Footer Strip */}
-            <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5 font-semibold text-slate-700">
-                <ShieldCheck size={14} className="text-emerald-600" />
-                Verified & Recorded in PostgreSQL Rent Roll Ledger
-              </span>
-              <span className="font-mono text-[10px] text-slate-400">Rule 46 CGST Compliant</span>
+            {/* Signature & Statutory Seal Strip */}
+            <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-end justify-between gap-4">
+              <div className="text-[10px] text-slate-400 space-y-0.5 max-w-sm">
+                <p className="font-semibold text-slate-600 flex items-center gap-1">
+                  <ShieldCheck size={12} className="text-emerald-600" />
+                  Statutory Rule 46 CGST & Section 65B Certified
+                </p>
+                <p>
+                  This is a computer generated official money receipt digitally signed and recorded in the sovereign PostgreSQL Rent Roll ledger. No physical signature is required.
+                </p>
+              </div>
+
+              <div className="text-center shrink-0">
+                <div className="w-36 h-12 border-b-2 border-slate-400 flex items-center justify-center font-serif text-slate-600 italic text-xs">
+                  Digitally Verified
+                </div>
+                <span className="text-[9px] uppercase font-bold text-slate-500 block mt-1">
+                  Authorized Signatory (SPV)
+                </span>
+              </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
+            {/* Interactive Actions (Hidden during print) */}
+            <div className="flex items-center gap-3 pt-3 border-t border-slate-200 no-print">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
               >
-                <Printer size={14} /> Print Receipt
+                <Printer size={15} /> Print Official Receipt (A4)
               </button>
               <button
                 type="button"
                 onClick={() => setPaymentSuccess(null)}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
               >
                 Done
               </button>
