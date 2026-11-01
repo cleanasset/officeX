@@ -109,8 +109,13 @@ export default function SpaceAndBuildingRegistryPage() {
                   (s.space_name && r.space_name?.toLowerCase() === s.space_name.toLowerCase()) ||
                   (s.space_code && r.space_code?.toLowerCase() === s.space_code.toLowerCase())
               );
-              const occName = matchedRow?.occupant_name || null;
-              const isOccupied = Boolean(occName) || s.occupancy_status === "occupied" || s.occupancy_status === "leased";
+              const occName =
+                matchedRow?.occupant_name &&
+                !matchedRow.occupant_name.includes("Vacant") &&
+                matchedRow.occupant_name !== "—"
+                  ? matchedRow.occupant_name
+                  : null;
+              const isOccupied = Boolean(occName) || (s.occupancy_status === "occupied" && Boolean(occName));
               return {
                 id: s.id,
                 space_number: s.space_name || s.space_code,
@@ -121,7 +126,7 @@ export default function SpaceAndBuildingRegistryPage() {
                 status: isOccupied ? "occupied" : "available",
                 occupant_name: occName,
                 contract_code: matchedRow?.contract_code || null,
-                standard_rate_psf: Number(matchedRow?.rate_per_sqft || s.standard_rate_psf || s.rate_per_sqft || 85),
+                standard_rate_psf: Number(matchedRow?.rate_per_sqft || s.standard_rate_psf || s.rate_per_sqft || 0),
                 workstations: s.workstations_count || null,
                 fitout: s.fitout_condition || null,
                 space_type: s.space_type || "Office",
@@ -139,7 +144,7 @@ export default function SpaceAndBuildingRegistryPage() {
               status: "available",
               occupant_name: null,
               contract_code: null,
-              standard_rate_psf: Number(p.price_per_sqft || 85),
+              standard_rate_psf: Number(p.price_per_sqft || 0),
             }))
           );
         } else {
@@ -454,20 +459,25 @@ export default function SpaceAndBuildingRegistryPage() {
 
                         const uniqueOccupants = Array.from(new Set(rawOccupants));
 
-                        const occupiedSqft =
-                          propRegRows
-                            .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
-                            .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
-                          propSpaces
-                            .filter((s) => s.status === "occupied" || Boolean(s.occupant_name))
-                            .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0);
+                        const occupiedSqft = uniqueOccupants.length > 0
+                          ? (
+                              propRegRows
+                                .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
+                                .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
+                              propSpaces
+                                .filter((s) => s.status === "occupied" && Boolean(s.occupant_name))
+                                .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0)
+                            )
+                          : 0;
 
                         const totalPropArea =
                           Number(p.total_leasable_area_sqft) ||
                           propSpaces.reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0) ||
-                          1;
-                        const occupancyPct = totalPropArea > 0 ? Math.min(100, Math.round((occupiedSqft / totalPropArea) * 100)) : 0;
-                        const isFullyLeased = occupancyPct >= 99 || (uniqueOccupants.length > 0 && occupiedSqft >= totalPropArea);
+                          0;
+                        const occupancyPct = totalPropArea > 0 && uniqueOccupants.length > 0
+                          ? Math.min(100, Math.round((occupiedSqft / totalPropArea) * 100))
+                          : 0;
+                        const isFullyLeased = uniqueOccupants.length > 0 && occupancyPct >= 99;
 
                         // Effective Base Rate PSF
                         const effectivePsf =
@@ -475,7 +485,7 @@ export default function SpaceAndBuildingRegistryPage() {
                             ? Number(p.price_per_sqft)
                             : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
                               propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
-                              85;
+                              null;
 
                         return (
                           <tr
@@ -512,7 +522,7 @@ export default function SpaceAndBuildingRegistryPage() {
                               {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
                             </td>
                             <td className="py-3.5 px-4 font-mono font-bold text-slate-800 whitespace-nowrap">
-                              ₹{Number(effectivePsf).toLocaleString("en-IN")}/sqft
+                              {effectivePsf ? `₹${Number(effectivePsf).toLocaleString("en-IN")}/sqft` : "—"}
                             </td>
                             <td className="py-3.5 px-4 min-w-[200px]">
                               {uniqueOccupants.length > 0 ? (
@@ -702,7 +712,7 @@ export default function SpaceAndBuildingRegistryPage() {
                             {parseFloat(space.chargeable_area || 0).toLocaleString("en-IN")} sq.ft
                           </td>
                           <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                            ₹{space.standard_rate_psf > 0 ? space.standard_rate_psf : 85}/sqft
+                            {space.standard_rate_psf > 0 ? `₹${space.standard_rate_psf}/sqft` : "—"}
                           </td>
                           <td className="py-3.5 px-4 font-bold text-slate-800">
                             {space.occupant_name ? (

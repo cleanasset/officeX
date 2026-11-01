@@ -1522,7 +1522,7 @@ function CompleteProfileContent() {
         fitout_condition: fitoutLabel,
         fitout_period_days: tenantForm.fitout_period_days || "30",
         seat_count: tenantForm.workstation_count || "",
-        monthly_rent: prev.monthly_rent || String(Math.round(effectiveArea * (Number(prev.rate_per_sqft) || 85))),
+        monthly_rent: prev.monthly_rent || String(Math.round(effectiveArea * (Number(prev.rate_per_sqft) || 0))),
         billing_entity: prev.billing_entity || propForm.spv_name || companyName || "",
       }));
 
@@ -1828,8 +1828,8 @@ function CompleteProfileContent() {
           occupant_id: nxt.id,
           occupant_name: nxt.name,
           space_unit: nxt.spaceUnit || nxt.floorLabels,
-          area_sqft: String(nxt.areaSqft || 5000),
-          monthly_rent: String(Math.round((nxt.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
+          area_sqft: String(nxt.areaSqft || 0),
+          monthly_rent: String(Math.round((nxt.areaSqft || 0) * (Number(prev.rate_per_sqft) || 0))),
         }));
       } else {
         markStepDone("contract");
@@ -4358,9 +4358,9 @@ function CompleteProfileContent() {
                                   ...prev,
                                   occupant_id: t.id,
                                   occupant_name: t.name,
-                                  space_unit: t.spaceUnit || t.floorLabels || "Suite 101",
-                                  area_sqft: String(t.areaSqft || 5000),
-                                  monthly_rent: t.monthlyRent ? String(t.monthlyRent) : String(Math.round((t.areaSqft || 5000) * (Number(prev.rate_per_sqft) || 85))),
+                                  space_unit: t.spaceUnit || t.floorLabels || "",
+                                  area_sqft: String(t.areaSqft || 0),
+                                  monthly_rent: t.monthlyRent ? String(t.monthlyRent) : String(Math.round((t.areaSqft || 0) * (Number(prev.rate_per_sqft) || 0))),
                                 }));
                               }}
                               className={`p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between gap-2 ${

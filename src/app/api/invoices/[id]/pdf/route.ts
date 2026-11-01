@@ -252,10 +252,10 @@ export async function GET(
           address: buyerAddress,
         },
         space_details: {
-          property_name: prop?.property_name || "Cyber Greens Commercial Complex",
-          building_name: bld?.building_name || "Tower A",
-          unit: sp?.space_name || sp?.space_number || "Suite 401",
-          chargeable_area_sqft: sp?.chargeable_area || 8500,
+          property_name: prop?.property_name || "Commercial Complex",
+          building_name: bld?.building_name || "",
+          unit: sp?.space_name || sp?.space_number || "",
+          chargeable_area_sqft: Number(sp?.chargeable_area || sp?.chargeable_area_sqft || 0),
         },
         taxation: {
           sac_code: "997212",

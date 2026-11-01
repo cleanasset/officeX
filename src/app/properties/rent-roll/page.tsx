@@ -1202,7 +1202,7 @@ export default function RentRollRegisterPage() {
                             {visibleColumns.rate && !isLeasing && (
                               <td className="p-3.5 text-right font-mono text-slate-700">
                                 {isVacant
-                                  ? `(₹${r.asking_rate_per_sqft || 85})`
+                                  ? (r.asking_rate_per_sqft ? `(₹${r.asking_rate_per_sqft})` : "—")
                                   : r.current_rate_per_sqft
                                   ? `₹${r.current_rate_per_sqft}`
                                   : "—"}
@@ -1402,7 +1402,7 @@ export default function RentRollRegisterPage() {
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Asking Rate</span>
                     <span className="font-mono font-bold text-teal-900 text-sm">
-                      ₹{selectedVacantSpace.asking_rate_per_sqft || 85}/sqft
+                      {selectedVacantSpace.asking_rate_per_sqft ? `₹${selectedVacantSpace.asking_rate_per_sqft}/sqft` : "—"}
                     </span>
                   </div>
                   <div>
