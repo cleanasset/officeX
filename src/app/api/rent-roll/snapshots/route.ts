@@ -86,12 +86,12 @@ export async function POST(req: Request) {
     const auth = getAuthContext(req);
     const body = await req.json();
     const {
-      period = "Oct-2026",
+      period = new Date().toISOString().slice(0, 7),
       action = "lock",
-      totalOccupiedAreaSqft = 48500,
-      totalLeasableAreaSqft = 50000,
-      monthlyBaseRentInr = 4122500,
-      monthlyGrossRentInr = 4864550,
+      totalOccupiedAreaSqft = 0,
+      totalLeasableAreaSqft = 0,
+      monthlyBaseRentInr = 0,
+      monthlyGrossRentInr = 0,
     } = body;
     const orgKey = auth.orgId || "default-org";
 

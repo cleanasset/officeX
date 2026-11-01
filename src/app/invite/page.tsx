@@ -64,10 +64,10 @@ function InviteContent() {
     }
 
     return {
-      name: name || propParam || "divi towers",
+      name: name || propParam || "Commercial Property",
       location,
-      totalArea: totalArea > 0 ? totalArea : 50000,
-      occupancyPct: 100,
+      totalArea: totalArea > 0 ? totalArea : 0,
+      occupancyPct: 0,
       monthlyRevenue: 0,
       tenants: [],
     };
@@ -151,11 +151,8 @@ function InviteContent() {
         effArea = spacesList.reduce((acc: number, s: any) => acc + (parseFloat(s.chargeable_area_sqft || s.area_sqft || 0) || 0), 0);
       }
 
-      if (!effName || effName === "Commercial Centre") {
-        effName = "divi towers";
-      }
-      if (effArea === 0) {
-        effArea = 50000;
+      if (!effName) {
+        effName = "Commercial Property";
       }
 
       // Resolve tenants

@@ -136,7 +136,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ role: s
         employeeCount = 45,
         technicalStaffCount = 20,
         activeClientCount = 12,
-        managedAreaSqft = 250000,
+        managedAreaSqft = 0,
         insuranceAvailable = true,
         pfRegistration = true,
         esicRegistration = true,

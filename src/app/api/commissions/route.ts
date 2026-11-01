@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       );
     } else {
       // Marketplace escrow split
-      const val = typeof contractValue === "number" ? contractValue : 250000;
+      const val = typeof contractValue === "number" ? contractValue : 0;
       const { takeRatePercent, officeXFee, vendorDisbursement } = calculateMarketplaceTakeRate(
         val,
         category || "HVAC"

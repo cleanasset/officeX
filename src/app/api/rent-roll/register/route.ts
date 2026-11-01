@@ -501,8 +501,8 @@ export async function GET(req: Request) {
         .where(and(...dealConditions));
 
       for (const d of dealsList) {
-        const prob = d.probability_percent || 50;
-        const estRent = d.estimated_rent_inr ? parseFloat(d.estimated_rent_inr) : 50000;
+        const prob = d.probability_percent || 0;
+        const estRent = d.estimated_rent_inr ? parseFloat(d.estimated_rent_inr) : 0;
         const weightedRent = (estRent * prob) / 100;
         totalWeightedPipelineRent += weightedRent;
 

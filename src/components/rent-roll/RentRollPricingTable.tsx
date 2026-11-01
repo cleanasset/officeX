@@ -232,7 +232,7 @@ export default function RentRollPricingTable({
 
   // Open checkout modal for plan review with exact sq.ft calculation
   const handleChoosePlan = (slab: typeof SLABS[0], chosenSqft?: number) => {
-    const area = chosenSqft || customSqft || 50000;
+    const area = chosenSqft || customSqft || 0;
     const totalPrice = area * slab.ratePerSqft;
 
     if (typeof window !== "undefined") {
@@ -277,7 +277,7 @@ export default function RentRollPricingTable({
         sessionStorage.setItem("officex_applied_coupon", code);
         localStorage.setItem("officex_subscription", "active");
         sessionStorage.setItem("officex_subscription", "active");
-        localStorage.setItem("officex_subscribed_sqft", String(customSqft || 50000));
+        localStorage.setItem("officex_subscribed_sqft", String(customSqft || 0));
         document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
         if (userEmail) {
           localStorage.setItem(`officex_sub_${userEmail}`, "active");

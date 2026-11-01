@@ -245,10 +245,10 @@ export default function RentRollRegisterPage() {
         body: JSON.stringify({
           period: periodStr,
           action,
-          totalOccupiedAreaSqft: registerData?.summary?.total_occupied_area_sqft || 45000,
-          totalLeasableAreaSqft: registerData?.summary?.total_leasable_area_sqft || 50000,
-          monthlyBaseRentInr: registerData?.summary?.total_monthly_base_rent || 3825000,
-          monthlyGrossRentInr: registerData?.summary?.total_gross_monthly || 4513500,
+          totalOccupiedAreaSqft: registerData?.summary?.total_occupied_area_sqft || 0,
+          totalLeasableAreaSqft: registerData?.summary?.total_leasable_area_sqft || 0,
+          monthlyBaseRentInr: registerData?.summary?.total_monthly_base_rent || 0,
+          monthlyGrossRentInr: registerData?.summary?.total_gross_monthly || 0,
         }),
       });
       const data = await res.json();

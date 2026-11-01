@@ -236,7 +236,7 @@ export async function POST(req: Request) {
             state: row.state || "Gujarat",
             address: row.propertyAddress || row.address || `${propName}, Commercial District`,
             postal_code: row.pincode ? String(row.pincode).trim() : null,
-            total_leasable_area_sqft: String(row.areaSqft || 50000),
+            total_leasable_area_sqft: String(Number(row.areaSqft) || 0),
             source_row_id: landlordMetadata,
           })
           .returning({ id: property.id });
@@ -274,8 +274,8 @@ export async function POST(req: Request) {
               property_id: propId,
               building_name: bldgName,
               building_code: bldgCode,
-              floors: 10,
-              total_area_sqft: String(row.areaSqft || 50000),
+              floors: 1,
+              total_area_sqft: String(Number(row.areaSqft) || 0),
             })
             .returning({ id: building.id });
           bldgId = newBldg.id;
@@ -339,8 +339,8 @@ export async function POST(req: Request) {
       if (!tenantName) continue;
 
       // RR-39: Field & Format Validations
-      if (row.areaSqft !== undefined && (Number(row.areaSqft) <= 0 || Number(row.areaSqft) > 500000)) {
-        rowErrors.push(`Row for '${tenantName}' rejected: Area (${row.areaSqft} sqft) must be between 1 and 500,000 sqft.`);
+      if (row.areaSqft !== undefined && (Number(row.areaSqft) <= 0 || Number(row.areaSqft) > 50000000)) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Area (${row.areaSqft} sqft) must be a positive number.`);
         continue;
       }
       if (row.monthlyRent !== undefined && Number(row.monthlyRent) < 0) {

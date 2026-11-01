@@ -132,7 +132,7 @@ export async function GET(req: Request) {
 
       const totalHeldForContract = cashHeld + bgHeld;
       const depositMonths = 6; // Standard commercial lease baseline
-      const monthlyRent = totalHeldForContract > 0 ? totalHeldForContract / depositMonths : 50000;
+      const monthlyRent = totalHeldForContract > 0 ? totalHeldForContract / depositMonths : 0;
       const requiredAmount = depositMonths * monthlyRent;
       const shortfallAmount = Math.max(0, requiredAmount - totalHeldForContract);
       const coverMonths = monthlyRent > 0 ? Number((totalHeldForContract / monthlyRent).toFixed(1)) : 0;

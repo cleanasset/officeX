@@ -132,7 +132,7 @@ export default function SubscriptionGate({
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) return stored;
     }
-    return 50000;
+    return 0;
   });
 
   // Coupon state (Initially null; user must click apply to activate 100% Free access)

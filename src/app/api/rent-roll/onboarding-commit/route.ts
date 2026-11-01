@@ -251,7 +251,7 @@ export async function POST(req: Request) {
     const propertyId = randomUUID();
     const propertyName = (propData.propertyName || "Apex Commercial Tower").trim();
     const propertyCode = (propData.propertyCode || `PROP-${targetOrgId.slice(0, 4).toUpperCase()}`).trim();
-    const totalAreaSqft = Number(propData.totalLeasableAreaSqft) || 50000;
+    const totalAreaSqft = Number(propData.totalLeasableAreaSqft) || 0;
     const city = propData.city || "Bengaluru";
     const state = propData.state || "Karnataka";
     const address = propData.address || "Outer Ring Road";

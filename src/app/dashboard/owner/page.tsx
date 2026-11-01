@@ -559,7 +559,7 @@ export default function OwnerDashboardPage() {
   // Subscribed Capacity Tracking (Strictly 2% remaining threshold)
   const rawSubscribed = (typeof window !== "undefined" && Number(localStorage.getItem("officex_subscribed_sqft"))) || 0;
   const usedSqft = totalLeasableArea;
-  const subscribedSqft = rawSubscribed && rawSubscribed > 0 ? rawSubscribed : Math.max(500000, usedSqft * 5);
+  const subscribedSqft = rawSubscribed && rawSubscribed > 0 ? rawSubscribed : (usedSqft > 0 ? usedSqft * 2 : 0);
   const remainingSqft = Math.max(0, subscribedSqft - usedSqft);
   const percentRemaining = subscribedSqft > 0 ? (remainingSqft / subscribedSqft) * 100 : 100;
   // STRICT REQUIREMENT: Warning ONLY comes when strictly 2% or less remains

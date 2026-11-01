@@ -86,7 +86,7 @@ export default function ContractWizardModal({
     lock_in_period_days: 365,
     notice_period_days: 90,
     registration_status: "registered", // registered | unregistered
-    stamp_duty_amount: "50000",
+    stamp_duty_amount: "",
     stamp_duty_borne_by: "shared", // landlord | tenant | shared
     tds_applicable: true, // Section 194-I 10% commercial rent TDS deduction
 

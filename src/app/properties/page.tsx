@@ -46,7 +46,7 @@ export default function PropertiesPortfolioPage() {
     if (typeof window !== "undefined") {
       const storedSub = localStorage.getItem("officex_subscribed_sqft");
       const storedUsed = localStorage.getItem("officex_used_sqft");
-      const subVal = storedSub ? parseFloat(storedSub) : 50000;
+      const subVal = storedSub ? parseFloat(storedSub) : 0;
       const usedVal = storedUsed ? parseFloat(storedUsed) : 0;
       setSubscribedSqft(subVal);
       setUsedSqft(usedVal);
@@ -115,7 +115,7 @@ export default function PropertiesPortfolioPage() {
   };
 
   const rawSub = typeof window !== "undefined" ? Number(localStorage.getItem("officex_subscribed_sqft")) : 0;
-  const effectiveSubscribed = rawSub && rawSub > 0 ? rawSub : Math.max(500000, usedSqft * 5);
+  const effectiveSubscribed = rawSub && rawSub > 0 ? rawSub : (usedSqft > 0 ? usedSqft * 2 : 0);
   const remainingSqft = Math.max(0, effectiveSubscribed - usedSqft);
   const percentRemaining = effectiveSubscribed > 0 ? (remainingSqft / effectiveSubscribed) * 100 : 100;
   // STRICT REQUIREMENT: Warning ONLY comes when strictly 2% or less remains

@@ -98,7 +98,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const areaVal = Number(body.total_leasable_area_sqft || body.totalArea) || 50000;
+    const areaVal = Number(body.total_leasable_area_sqft ?? body.totalArea ?? 0) || 0;
     const seatsRaw = body.total_leasable_seats ?? body.total_seats;
     const parsedSeats =
       seatsRaw !== null && seatsRaw !== undefined && seatsRaw !== "" && !isNaN(Number(seatsRaw))

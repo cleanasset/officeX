@@ -78,7 +78,7 @@ export async function POST(
       .returning();
 
     // 6. Create active Lease record in Rent Roll
-    const monthlyRent = deal.dealValue ? String(Math.round(Number(deal.dealValue) / 12)) : "150000.00";
+    const monthlyRent = deal.dealValue ? String(Math.round(Number(deal.dealValue) / 12)) : "0.00";
     const leaseCode = `LSE-MP-${Date.now().toString().slice(-4)}`;
 
     const [createdLease] = await db

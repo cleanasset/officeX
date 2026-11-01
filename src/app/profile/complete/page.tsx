@@ -792,7 +792,7 @@ function CompleteProfileContent() {
             property_code: prev.property_code || ob.propertyCode || (propNameVal ? propNameVal.slice(0, 4).toUpperCase() : ""),
             property_type: (ob.propertyType ? ob.propertyType.toLowerCase() : prev.property_type) || "office",
             ownership_structure: ob.ownershipStructure || prev.ownership_structure || "pvt_ltd",
-            total_leasable_area_sqft: prev.total_leasable_area_sqft || Number(ob.areaSqft) || 50000,
+            total_leasable_area_sqft: prev.total_leasable_area_sqft || Number(ob.areaSqft) || 0,
             floors_count: prev.floors_count || Number(ob.floorsCount) || 1,
             wings_count: prev.wings_count || Number(ob.wingsCount) || 1,
             address: prev.address || ob.address || "",
@@ -1152,7 +1152,7 @@ function CompleteProfileContent() {
           property_name: propForm.property_name.trim(),
           property_code: propForm.property_code || undefined,
           property_type: propForm.property_type,
-          total_leasable_area_sqft: propForm.total_leasable_area_sqft || 50000,
+          total_leasable_area_sqft: propForm.total_leasable_area_sqft || 0,
           city: propForm.city,
           state: propForm.state,
           address: propForm.address,
@@ -1357,7 +1357,7 @@ function CompleteProfileContent() {
     }
 
     const totalF = Math.max(1, Number(propForm.floors_count) || 1);
-    const totalArea = Number(propForm.total_leasable_area_sqft) || 50000;
+    const totalArea = Number(propForm.total_leasable_area_sqft) || 0;
     const defaultFloorArea = Math.round(totalArea / totalF);
 
     const assignedFloors = tenancyMode === "single"
@@ -3360,7 +3360,7 @@ function CompleteProfileContent() {
                       1,
                       Number(propForm.floors_count) || Number(activeProp?.floors_count) || 1
                     );
-                    const currentTotalArea = Number(propForm.total_leasable_area_sqft) || Number(activeProp?.total_leasable_area_sqft) || 50000;
+                    const currentTotalArea = Number(propForm.total_leasable_area_sqft) || Number(activeProp?.total_leasable_area_sqft) || 0;
                     const currentAreaPerFloor = Math.round(currentTotalArea / currentFloorsCount);
 
                     return (
@@ -4262,11 +4262,11 @@ function CompleteProfileContent() {
 
               {/* ──── WHOLE BUILDING & INDIVIDUAL TENANT CONTRACT ARCHITECTURE ──── */}
               {(() => {
-                const totalBldgArea = Number(propForm.total_leasable_area_sqft) || 50000;
+                const totalBldgArea = Number(propForm.total_leasable_area_sqft) || 0;
                 const totalLeased = enrolledTenants.reduce((sum, t) => sum + (t.areaSqft || 0), 0);
                 const occupancyPct = totalBldgArea > 0 ? Math.min(100, Math.round((totalLeased / totalBldgArea) * 100)) : 0;
                 const totalBldgMonthlyRent = enrolledTenants.reduce((sum, t) => {
-                  return sum + (t.monthlyRent || Math.round((t.areaSqft || 5000) * (Number(contractForm.rate_per_sqft) || 85)));
+                  return sum + (t.monthlyRent || Math.round((t.areaSqft || 0) * (Number(contractForm.rate_per_sqft) || 0)));
                 }, 0);
                 const annualRentRoll = totalBldgMonthlyRent * 12;
 

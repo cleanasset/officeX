@@ -66,12 +66,12 @@ export function validateImportRow(
       actual: String(space.chargeable_area_sqft),
       message: "Chargeable area must be greater than zero.",
     });
-  } else if (space.chargeable_area_sqft > 500000) {
+  } else if (space.chargeable_area_sqft > 50000000) {
     errors.push({
       field: "chargeable_area_sqft",
-      expected: "<= 500,000 sq ft",
+      expected: "<= 50,000,000 sq ft",
       actual: String(space.chargeable_area_sqft),
-      message: "Chargeable area exceeds maximum commercial threshold (500,000 sq ft).",
+      message: "Chargeable area exceeds maximum allowable threshold.",
     });
   } else if (space.chargeable_area_sqft > 100000) {
     // Exception queue trigger (Warning)

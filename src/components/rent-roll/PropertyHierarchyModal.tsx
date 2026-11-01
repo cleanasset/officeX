@@ -42,10 +42,13 @@ import {
   Mail,
   RefreshCw,
   Trash2,
+  MapPin,
+  Scissors,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
+import MapPinPicker from "@/components/MapPinPicker";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import AgreementVarianceModal, {
@@ -412,6 +415,9 @@ export default function PropertyHierarchyModal({
 
   const [availableCities, setAvailableCities] = useState<string[]>(INDIAN_STATES_CITIES["Karnataka"] || []);
   const [copiedManagerLink, setCopiedManagerLink] = useState(false);
+  const [propLat, setPropLat] = useState<number | null>(null);
+  const [propLng, setPropLng] = useState<number | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
 
   // ──── 2. BUILDING FORM (3 Fields) ────
   const [bldgForm, setBldgForm] = useState({
@@ -1182,6 +1188,11 @@ export default function PropertyHierarchyModal({
       setAvailableCities(cities);
       finalCity = cities[0];
     }
+    if (res.latitude && res.longitude) {
+      setPropLat(res.latitude);
+      setPropLng(res.longitude);
+      setShowMapPicker(true);
+    }
     setPropForm((prev) => ({
       ...prev,
       address: res.streetAddress || res.fullAddress,
@@ -1253,7 +1264,7 @@ export default function PropertyHierarchyModal({
           state: propForm.state.trim() || "Delhi",
           postal_code: propForm.pincode.trim() || undefined,
           property_type: propForm.propertyType.toLowerCase().replace(/\s+/g, "_"),
-          total_leasable_area_sqft: enteredArea || 50000,
+          total_leasable_area_sqft: enteredArea,
           floors_count: Number(propForm.floorsCount) || 1,
           buildings_count: Number(propForm.buildingsCount) || 1,
           primary_contact_name: propForm.contactName.trim(),
@@ -1338,8 +1349,12 @@ export default function PropertyHierarchyModal({
                     }
                   }
 
-                  // Auto-create leasable floor spaces for this tower
-                  if (targetBldgId && towerFloors > 0) {
+                  // Only auto-create space if skipping the space step completely (e.g. single-level asset)
+                  const shouldSkipForTower = Boolean(
+                    (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+                    towerFloors <= 1
+                  );
+                  if (targetBldgId && towerFloors > 0 && shouldSkipForTower) {
                     const perFloorArea = towerArea > 0 ? Math.floor(towerArea / towerFloors) : 0;
                     for (let f = 0; f < towerFloors; f++) {
                       const isG = f === 0;
@@ -1390,31 +1405,40 @@ export default function PropertyHierarchyModal({
                 if (targetBldgId) {
                   setSpaceForm((prev) => ({ ...prev, buildingId: targetBldgId }));
                   setContractForm((prev) => ({ ...prev, buildingId: targetBldgId }));
-                  for (const fl of floorBreakdown) {
-                    const flArea = Number(fl.areaSqft) || 0;
-                    if (flArea > 0) {
-                      const isGround = fl.floorNumber === 0;
-                      const floorName = isGround ? "Ground Floor" : formatFloorName(fl.floorNumber);
-                      const defaultName = isSingle
-                        ? (isGround ? "Main Warehouse Bay" : `Warehouse Level ${fl.floorNumber}`)
-                        : (isGround ? "Ground Floor" : formatFloorName(fl.floorNumber));
-                      const codeSuffix = isGround ? "G" : `F${fl.floorNumber}`;
+                  // Only auto-create space if skipping the space step completely (e.g. single-level asset).
+                  // For multi-floor properties, Step 2 is where the user custom configures units.
+                  const shouldAutoCreateSpaces = Boolean(
+                    (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+                    !propForm.hasMultipleBuildings &&
+                    floorBreakdown.length <= 1
+                  );
+                  if (shouldAutoCreateSpaces) {
+                    for (const fl of floorBreakdown) {
+                      const flArea = Number(fl.areaSqft) || 0;
+                      if (flArea > 0) {
+                        const isGround = fl.floorNumber === 0;
+                        const floorName = isGround ? "Ground Floor" : formatFloorName(fl.floorNumber);
+                        const defaultName = isSingle
+                          ? (isGround ? "Main Warehouse Bay" : `Warehouse Level ${fl.floorNumber}`)
+                          : (isGround ? "Ground Floor" : formatFloorName(fl.floorNumber));
+                        const codeSuffix = isGround ? "G" : `F${fl.floorNumber}`;
 
-                      await fetch("/api/spaces", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", ...authHeaders },
-                        body: JSON.stringify({
-                          space_name: fl.spaceName.trim() || defaultName,
-                          space_code: `SP-${uniqueCodeToUse}-${codeSuffix}`,
-                          building_id: targetBldgId,
-                          chargeable_area_sqft: flArea,
-                          floor_name: floorName,
-                          space_type: isSingle ? "entire_building" : "suite",
-                          occupancy_status: "vacant",
-                          fitout_condition: propForm.fitoutCondition || "Warm Shell",
-                          default_fitout_days: propForm.defaultFitoutDays || "60",
-                        }),
-                      }).catch(() => {});
+                        await fetch("/api/spaces", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", ...authHeaders },
+                          body: JSON.stringify({
+                            space_name: fl.spaceName.trim() || defaultName,
+                            space_code: `SP-${uniqueCodeToUse}-${codeSuffix}`,
+                            building_id: targetBldgId,
+                            chargeable_area_sqft: flArea,
+                            floor_name: floorName,
+                            space_type: isSingle ? "entire_building" : "suite",
+                            occupancy_status: "vacant",
+                            fitout_condition: propForm.fitoutCondition || "Warm Shell",
+                            default_fitout_days: propForm.defaultFitoutDays || "60",
+                          }),
+                        }).catch(() => {});
+                      }
                     }
                   }
                 }
@@ -1610,10 +1634,13 @@ export default function PropertyHierarchyModal({
     // Floor and Building Area Capacity Check
     const rawFloorNum = Number(spaceForm.floorNumber || "0");
     const targetFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === rawFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(propTotalArea / allFloorNumbers.length) : propTotalArea);
+
+    // Check if there is an unleased sole placeholder taking the full floor
+    const floorSpaces = displaySpaces.filter((s) => extractFloorNumberFromSpace(s) === rawFloorNum);
+    const isSolePlaceholder = floorSpaces.length === 1 && floorSpaces[0].area >= targetFloorPlanned;
+
     if (targetFloorPlanned > 0) {
-      const alreadyAllocatedOnFloor = displaySpaces
-        .filter((s) => extractFloorNumberFromSpace(s) === rawFloorNum)
-        .reduce((acc, s) => acc + (s.area || 0), 0);
+      const alreadyAllocatedOnFloor = isSolePlaceholder ? 0 : floorSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
       const remainingOnFloor = Math.max(0, targetFloorPlanned - alreadyAllocatedOnFloor);
       if (enteredArea > remainingOnFloor) {
         showToast(
@@ -1624,7 +1651,9 @@ export default function PropertyHierarchyModal({
       }
     }
     if (propTotalArea > 0) {
-      const alreadyAllocatedBuilding = displaySpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+      const alreadyAllocatedBuilding = displaySpaces
+        .filter((s) => !(isSolePlaceholder && s.id === floorSpaces[0]?.id))
+        .reduce((acc, s) => acc + (s.area || 0), 0);
       const remainingBuilding = Math.max(0, propTotalArea - alreadyAllocatedBuilding);
       if (enteredArea > remainingBuilding) {
         showToast(
@@ -1644,6 +1673,15 @@ export default function PropertyHierarchyModal({
       const authHeaders = getClientAuthHeaders();
       const rawFloor = spaceForm.floorNumber || (allFloorNumbers[0] ? String(allFloorNumbers[0]) : "1");
       const floorStr = rawFloor.toLowerCase().startsWith("floor") ? rawFloor : `Floor ${rawFloor}`;
+
+      // If replacing an unleased full-floor placeholder, remove it so user's subdivided unit takes over cleanly
+      if (isSolePlaceholder && floorSpaces[0]) {
+        await fetch(`/api/spaces/${floorSpaces[0].id}`, {
+          method: "DELETE",
+          headers: authHeaders,
+        }).catch(() => {});
+        setSpacesList((prev) => prev.filter((s) => s.id !== floorSpaces[0].id));
+      }
 
       const res = await fetch("/api/spaces", {
         method: "POST",
@@ -3207,9 +3245,9 @@ export default function PropertyHierarchyModal({
                     </label>
                     <input
                       type="number"
-                      min="10"
+                      min="1"
                       required
-                      placeholder="e.g. 50000"
+                      placeholder="Enter total area (e.g. 1500, 10000, 50000)"
                       value={propForm.areaSqft}
                       onChange={(e) => handleAreaSqftChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
@@ -3649,16 +3687,62 @@ export default function PropertyHierarchyModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   {/* Google Maps Autocomplete */}
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 space-y-2">
                     <GoogleAddressAutocomplete
                       value={propForm.address}
                       onChange={(val) => setPropForm((prev) => ({ ...prev, address: val }))}
                       onAddressSelect={handleAddressSelect}
                       label="Property Full Street Address"
-                      placeholder="Search tech park, landmark, commercial building, or street address..."
+                      placeholder="Search tech park, landmark, commercial building, or street address on Google Maps..."
                       required
                       hint="Selecting an address autofills City, State, and Pincode."
                     />
+
+                    {/* Interactive Google Map Pin Toggle */}
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowMapPicker(!showMapPicker)}
+                        className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl border border-teal-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <MapPin size={13} className="text-teal-600" />
+                        <span>{showMapPicker ? "Hide Google Map" : "📍 Pinpoint & View on Google Map"}</span>
+                      </button>
+                      {propLat && propLng && (
+                        <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                          Coordinates: {propLat.toFixed(5)}, {propLng.toFixed(5)}
+                        </span>
+                      )}
+                    </div>
+
+                    {showMapPicker && (
+                      <div className="mt-2 rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-in fade-in duration-200">
+                        <MapPinPicker
+                          lat={propLat}
+                          lng={propLng}
+                          onChange={async (newLat, newLng) => {
+                            setPropLat(newLat);
+                            setPropLng(newLng);
+                            try {
+                              const rRes = await fetch(`/api/geocode?lat=${newLat}&lon=${newLng}`);
+                              if (rRes.ok) {
+                                const rJson = await rRes.json();
+                                if (rJson.results && rJson.results[0]) {
+                                  const rItem = rJson.results[0];
+                                  setPropForm((prev) => ({
+                                    ...prev,
+                                    address: rItem.fullAddress || prev.address,
+                                    city: rItem.city || prev.city,
+                                    state: rItem.state || prev.state,
+                                    pincode: rItem.pincode || prev.pincode,
+                                  }));
+                                }
+                              }
+                            } catch (_) {}
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* State Dropdown */}
@@ -4251,9 +4335,12 @@ export default function PropertyHierarchyModal({
 
             const selectedFloorNum = Number(spaceForm.floorNumber || "0");
             const currentFloorPlanned = Number(floorBreakdown.find((f) => f.floorNumber === selectedFloorNum)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : buildingTotalArea);
-            const currentFloorAllocated = displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum).reduce((acc, s) => acc + (s.area || 0), 0);
+            const currentFloorSpaces = displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum);
+            const isSolePlaceholderOnCurrentFloor = currentFloorSpaces.length === 1 && currentFloorSpaces[0].area >= currentFloorPlanned;
+            const currentFloorAllocated = isSolePlaceholderOnCurrentFloor ? 0 : currentFloorSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
             const currentFloorRemaining = Math.max(0, currentFloorPlanned - currentFloorAllocated);
-            const effectiveRemaining = currentFloorPlanned > 0 ? Math.min(currentFloorRemaining, remainingBuildingArea) : remainingBuildingArea;
+            const remainingBldgAdjusted = isSolePlaceholderOnCurrentFloor ? remainingBuildingArea + (currentFloorSpaces[0]?.area || 0) : remainingBuildingArea;
+            const effectiveRemaining = currentFloorPlanned > 0 ? Math.min(currentFloorRemaining, remainingBldgAdjusted) : remainingBldgAdjusted;
 
             return (
               <div className="space-y-4">
@@ -4471,18 +4558,60 @@ export default function PropertyHierarchyModal({
                     <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
                       {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
                     </span>
-                    {currentFloorPlanned > 0 && (
-                      <span className="text-xs font-bold text-teal-900 bg-teal-100/70 px-2 py-0.5 rounded-md border border-teal-200 font-mono">
-                        Floor Capacity: {currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft ({currentFloorRemaining.toLocaleString()} Sq.Ft Available)
-                      </span>
+                    {isSolePlaceholderOnCurrentFloor ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300 font-mono">
+                          Capacity: {currentFloorPlanned.toLocaleString()} Sq.Ft (Full Floor Ready to Subdivide)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const target = currentFloorSpaces[0];
+                            if (target) {
+                              setSpacesList((prev) => prev.filter((s) => s.id !== target.id));
+                              const authHeaders = getClientAuthHeaders();
+                              await fetch(`/api/spaces/${target.id}`, { method: "DELETE", headers: authHeaders }).catch(() => {});
+                              await loadHierarchyDropdowns();
+                              showToast("Floor opened for subdivision! You can now add individual units.");
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-1"
+                        >
+                          <Scissors size={12} />
+                          <span>Subdivide Floor into Units</span>
+                        </button>
+                      </div>
+                    ) : (
+                      currentFloorPlanned > 0 && (
+                        <span className="text-xs font-bold text-teal-900 bg-teal-100/70 px-2 py-0.5 rounded-md border border-teal-200 font-mono">
+                          Floor Capacity: {currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft ({currentFloorRemaining.toLocaleString()} Sq.Ft Available)
+                        </span>
+                      )
                     )}
                     <span className="text-[11px] text-slate-500 font-medium">
-                      ({displaySpaces.filter((s) => getFloorNum(s) === selectedFloorNum).length} unit(s) configured)
+                      ({currentFloorSpaces.length} unit(s) configured)
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Add individual suites, offices, or shops below
-                  </span>
+                  {/* 1-Click Helper to Fill Full Floor */}
+                  {effectiveRemaining > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const floorLabel = selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum);
+                        setSpaceForm((prev) => ({
+                          ...prev,
+                          spaceName: `${floorLabel} - Full Floor`,
+                          areaSqft: String(effectiveRemaining),
+                          occupancyStatus: "vacant",
+                          unitType: "Office",
+                        }));
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-teal-50 text-teal-900 border border-teal-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto shrink-0"
+                    >
+                      <Sparkles size={13} className="text-teal-600" />
+                      <span>⚡ Use Full Floor as 1 Unit ({effectiveRemaining.toLocaleString()} Sq.Ft)</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Full Original Space Creation Form */}
