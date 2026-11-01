@@ -50,7 +50,7 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
     ? localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || localStorage.getItem("officex_active_org")
     : "";
   const landlordLegalName = brandName || invoice.billing_entity_name || "Commercial Property Asset SPV";
-  const propertyName = invoice.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_property_name") : "") || "Apex Tech Park";
+  const propertyName = invoice.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_property_name") : "") || "—";
 
   const taxableAmount = Number(invoice.subtotal || invoice.taxable || invoice.base_rent || 0);
   const gstAmount = Number(invoice.gst_amount || invoice.gst || 0);
@@ -157,12 +157,16 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                   Commercial Asset Management · {propertyName}
                 </p>
                 <div className="mt-1 space-y-0.5 font-mono text-[11px] text-slate-700">
-                  <p>
-                    <strong className="text-slate-900">GSTIN:</strong> 24AAFCO9876C1Z2 · State: Gujarat (Code: 24)
-                  </p>
-                  <p>
-                    <strong className="text-slate-900">PAN:</strong> AAFCO9876C | SAC: 997212 / 997221
-                  </p>
+                  {invoice.landlord_gstin ? (
+                    <p>
+                      <strong className="text-slate-900">GSTIN:</strong> {invoice.landlord_gstin} {invoice.state ? `· State: ${invoice.state}` : ""}
+                    </p>
+                  ) : null}
+                  {invoice.landlord_pan ? (
+                    <p>
+                      <strong className="text-slate-900">PAN:</strong> {invoice.landlord_pan} | SAC: 997212 / 997221
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -193,17 +197,19 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                 Billed To (Lessee / Tenant)
               </span>
               <h3 className="text-sm font-bold text-slate-900">
-                {invoice.occupant_name || "Cognitive Cloud Technologies Pvt Ltd"}
+                {invoice.occupant_name || "—"}
               </h3>
               <p className="text-slate-600 mt-0.5">
-                Demised Space: <strong>{invoice.space_name || "Suite 401"}</strong>
+                Demised Space: <strong>{invoice.space_name || "—"}</strong>
               </p>
               <div className="mt-1.5 space-y-0.5 font-mono text-[11px] text-slate-700">
+                {invoice.occupant_gstin ? (
+                  <p>
+                    <strong>GSTIN:</strong> {invoice.occupant_gstin}
+                  </p>
+                ) : null}
                 <p>
-                  <strong>GSTIN:</strong> {invoice.occupant_gstin || "24AAACG1234F1Z8"}
-                </p>
-                <p>
-                  <strong>Place of Supply:</strong> Gujarat (Code 24) · Intra-State
+                  <strong>Place of Supply:</strong> {invoice.place_of_supply || invoice.state || "India"}
                 </p>
               </div>
             </div>
@@ -240,9 +246,11 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
                   <td className="p-3 font-mono">01</td>
                   <td className="p-3 font-semibold text-slate-900">
                     Commercial Space Lease Rental for {period}
-                    <span className="block text-[10px] text-slate-500 font-normal">
-                      Demised: {invoice.space_name || "Suite 401"} ({invoice.area_sqft || 15000} sq.ft)
-                    </span>
+                    {invoice.space_name && (
+                      <span className="block text-[10px] text-slate-500 font-normal">
+                        Demised: {invoice.space_name} {invoice.area_sqft ? `(${Number(invoice.area_sqft).toLocaleString("en-IN")} sq.ft)` : ""}
+                      </span>
+                    )}
                   </td>
                   <td className="p-3 font-mono text-slate-600">997212</td>
                   <td className="p-3 text-right font-mono font-medium">

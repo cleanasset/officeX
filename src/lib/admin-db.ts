@@ -1,25 +1,26 @@
 import { Pool } from "pg";
 
-let pool: Pool | null = null;
+const globalForAdminDb = globalThis as unknown as { adminPool: Pool | undefined };
 
 export function getAdminPool(): Pool {
-  if (pool) return pool;
+  if (globalForAdminDb.adminPool) return globalForAdminDb.adminPool;
 
-  const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || "";
+  const rawUrl = process.env.DATABASE_URL || process.env.DIRECT_URL || "";
   const connStr = rawUrl.includes("officeX@18129001")
     ? rawUrl.replace("officeX@18129001", "officeX%4018129001")
     : rawUrl;
 
-  pool = new Pool({
+  const adminPool = new Pool({
     connectionString: connStr,
     ssl: {
       rejectUnauthorized: false
     },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    max: 2,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000
   });
 
-  return pool;
+  globalForAdminDb.adminPool = adminPool;
+  return adminPool;
 }
 

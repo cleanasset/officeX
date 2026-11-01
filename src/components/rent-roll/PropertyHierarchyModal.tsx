@@ -701,7 +701,7 @@ export default function PropertyHierarchyModal({
           area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
         }));
         setPropertiesList(pArr);
-        const targetPropId = initialPropertyId || (pArr.length > 0 ? pArr[0].id : "");
+        const targetPropId = initialPropertyId || "";
         if (targetPropId) {
           const matchedProp = pArr.find((p: any) => p.id === targetPropId);
           if (matchedProp) {
@@ -806,9 +806,6 @@ export default function PropertyHierarchyModal({
           phone: t.phone || "",
         }));
         setTenantsList(tArr);
-        if (tArr.length > 0 && !contractForm.occupantId) {
-          setContractForm((prev) => ({ ...prev, occupantId: tArr[0].id }));
-        }
       }
     } catch {
       // Non-blocking fallback
@@ -1127,6 +1124,8 @@ export default function PropertyHierarchyModal({
           propertyName: targetPropName,
           propertyId: targetPropId,
           ownerSubscribed: subActive,
+          ownerName: ownerBrand,
+          area: propForm.areaSqft || "",
         }),
       });
       const inviteJson = await inviteRes.json();
@@ -1138,7 +1137,7 @@ export default function PropertyHierarchyModal({
     }
 
     if (!link) {
-      link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner_sub=${subActive ? "1" : "0"}`;
+      link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&mgr=${encodeURIComponent(delegationForm.managerName.trim())}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${subActive ? "1" : "0"}`;
     }
 
     // Store in localStorage
@@ -1801,20 +1800,18 @@ export default function PropertyHierarchyModal({
   const displayBuildings = React.useMemo(() => {
     const activePropId = propForm.existingPropId || bldgForm.propertyId || contractForm.propertyId;
     if (activePropId) {
-      const filtered = buildingsList.filter((b) => b.propertyId === activePropId);
-      if (filtered.length > 0) return filtered;
+      return buildingsList.filter((b) => b.propertyId === activePropId);
     }
-    return buildingsList;
-  }, [buildingsList, propForm.existingPropId, bldgForm.propertyId, contractForm.propertyId]);
+    return propForm.propertyName.trim() ? [] : buildingsList;
+  }, [buildingsList, propForm.existingPropId, bldgForm.propertyId, contractForm.propertyId, propForm.propertyName]);
 
   // Spaces filtered for current property's buildings
   const displaySpaces = React.useMemo(() => {
     if (displayBuildings.length > 0) {
       const bldgIdSet = new Set(displayBuildings.map((b) => b.id));
-      const filtered = spacesList.filter((s) => s.buildingId && bldgIdSet.has(s.buildingId));
-      if (filtered.length > 0) return filtered;
+      return spacesList.filter((s) => s.buildingId && bldgIdSet.has(s.buildingId));
     }
-    return spacesList;
+    return [];
   }, [spacesList, displayBuildings]);
 
   // Total leasable area across all registered properties in portfolio
@@ -2106,7 +2103,7 @@ export default function PropertyHierarchyModal({
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
-      const targetPropertyId = contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || null;
+      const targetPropertyId = contractForm.propertyId || propForm.existingPropId || (propertiesList.length === 1 ? propertiesList[0]?.id : null);
 
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
@@ -2146,12 +2143,11 @@ export default function PropertyHierarchyModal({
             ? window.location.origin
             : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
         const activePropName =
-          propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
           (propForm.propertyName || "").trim() ||
+          propertiesList.find((p) => p.id === (contractForm.propertyId || propForm.existingPropId))?.name ||
           lastSavedPropName ||
           (typeof window !== "undefined" && localStorage.getItem("officex_active_property")) ||
-          propertiesList[0]?.name ||
-          "Apex Tech Park";
+          "";
         const ownerBrand =
           (typeof window !== "undefined" && (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
           "Commercial Asset Owner";
@@ -7923,24 +7919,29 @@ export default function PropertyHierarchyModal({
                     Select Commercial Asset <span className="text-rose-500">*</span>
                   </label>
                   <select
-                    value={delegationForm.propertyId || contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || ""}
+                    value={delegationForm.propertyId || contractForm.propertyId || propForm.existingPropId || ""}
                     onChange={(e) => {
                       const selId = e.target.value;
                       const selProp = propertiesList.find((p) => p.id === selId);
                       setDelegationForm((prev) => ({
                         ...prev,
                         propertyId: selId,
-                        propertyName: selProp?.name || prev.propertyName,
+                        propertyName: selProp?.name || (selId === propForm.existingPropId ? propForm.propertyName : prev.propertyName),
                       }));
                     }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
                   >
+                    {propForm.propertyName && !propertiesList.some(p => p.id === propForm.existingPropId || p.name === propForm.propertyName) && (
+                      <option value={propForm.existingPropId || "current_asset"}>
+                        {propForm.propertyName} (Current Asset)
+                      </option>
+                    )}
                     {propertiesList.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
                     ))}
-                    {propertiesList.length === 0 && <option value="">No properties registered</option>}
+                    {!propForm.propertyName && propertiesList.length === 0 && <option value="">No properties registered</option>}
                   </select>
                 </div>
 

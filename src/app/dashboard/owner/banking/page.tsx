@@ -166,11 +166,11 @@ export default function OwnerBankingAndERPPage() {
         }
       } catch (e) {}
 
-      // Fallback display values if completely new session
-      const finalAcc = dbBankAcc || "50200088991234";
-      const finalIfsc = dbBankIfsc || "HDFC0000060";
-      const finalBeneficiary = dbBeneficiary || "Commercial Landlord SPV Pvt Ltd";
-      const finalBankName = dbBankName || "HDFC Bank";
+      // Dynamic display values from database or active session
+      const finalAcc = dbBankAcc || "";
+      const finalIfsc = dbBankIfsc || "";
+      const finalBeneficiary = dbBeneficiary || "";
+      const finalBankName = dbBankName || "";
 
       setBankDetails({
         beneficiary_name: finalBeneficiary,
@@ -180,7 +180,7 @@ export default function OwnerBankingAndERPPage() {
         confirm_account_number: finalAcc,
         ifsc_code: finalIfsc,
         account_type: localBankType,
-        branch_name: dbBranch || "Main Commercial Branch, Bengaluru",
+        branch_name: dbBranch || "",
         pan: dbPan,
         gstin: dbGstin,
       });

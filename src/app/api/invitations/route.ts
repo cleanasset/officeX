@@ -69,7 +69,22 @@ export async function POST(req: Request) {
 
     const cleanBase = hostOrigin.replace(/\/+$/, "");
     const ownerSubscribed = Boolean(body.ownerSubscribed);
-    const inviteLink = `${cleanBase}/invite?token=${token}&role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}&owner_sub=${ownerSubscribed ? "1" : "0"}`;
+    const targetProp = (propertyName || body.propertyName || "").trim();
+    const targetMgr = (name || body.name || "").trim();
+    const ownerName = (body.ownerName || body.owner || "Commercial Asset Owner").trim();
+
+    const queryParts = [
+      `token=${token}`,
+      `role=${encodeURIComponent(role)}`,
+      `email=${encodeURIComponent(email)}`,
+      `owner_sub=${ownerSubscribed ? "1" : "0"}`,
+    ];
+    if (targetProp) queryParts.push(`prop=${encodeURIComponent(targetProp)}`);
+    if (body.propertyId) queryParts.push(`prop_id=${encodeURIComponent(body.propertyId)}`);
+    if (targetMgr) queryParts.push(`mgr=${encodeURIComponent(targetMgr)}`);
+    if (ownerName) queryParts.push(`owner=${encodeURIComponent(ownerName)}`);
+
+    const inviteLink = `${cleanBase}/invite?${queryParts.join("&")}`;
 
     return NextResponse.json({
       success: true,

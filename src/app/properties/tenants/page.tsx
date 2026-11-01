@@ -125,7 +125,25 @@ export default function TenantDirectoryPage() {
     const prop = t?.property_name || matchedProp?.property_name || storedProp || properties[0]?.property_name || "Commercial Centre";
     const name = t?.tenant_name || t?.occupant_name || "Tenant";
     const email = t?.email || "";
-    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
+    const propId = t?.property_id || matchedProp?.id || "";
+    const area = t?.area_sqft || matchedProp?.total_leasable_area_sqft || "";
+    const unit = t?.unit_number || t?.space_code || "";
+    const ownerName = typeof window !== "undefined" ? (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name") || "Commercial Asset Owner") : "Commercial Asset Owner";
+
+    const queryParts = [
+      "role=tenant",
+      `mgr=${encodeURIComponent(name)}`,
+      `prop=${encodeURIComponent(prop)}`,
+      `email=${encodeURIComponent(email)}`,
+      "owner_sub=1",
+      `invite=t_${Date.now()}`,
+    ];
+    if (propId) queryParts.push(`prop_id=${encodeURIComponent(propId)}`);
+    if (area) queryParts.push(`area=${encodeURIComponent(area)}`);
+    if (unit) queryParts.push(`unit=${encodeURIComponent(unit)}`);
+    if (ownerName) queryParts.push(`owner=${encodeURIComponent(ownerName)}`);
+
+    return `${origin}/invite?${queryParts.join("&")}`;
   };
 
   const getTenantWhatsAppUrl = (t: any) => {

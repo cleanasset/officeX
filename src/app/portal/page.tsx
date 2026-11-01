@@ -1066,9 +1066,11 @@ export default function TenantHomePage() {
                   <p className="text-xs text-slate-500 font-medium">
                     Commercial Property Asset SPV · Operations
                   </p>
-                  <p className="text-[11px] font-mono text-slate-600 mt-0.5">
-                    GSTIN: <strong>24AAFCO9876C1Z2</strong> · PAN: <strong>AAFCO9876C</strong>
-                  </p>
+                  {(landlordBank?.spv_name || brandName) ? (
+                    <p className="text-[11px] font-mono text-slate-600 mt-0.5">
+                      Commercial Asset Management
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -1252,9 +1254,7 @@ export default function TenantHomePage() {
                   <p className="text-xs text-slate-600 font-medium mt-0.5">
                     Commercial Property Asset SPV · Asset Management & Operations
                   </p>
-                  <p className="text-[11px] font-mono text-slate-500 mt-0.5">
-                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat, India
-                  </p>
+
                 </div>
               </div>
 

@@ -213,20 +213,10 @@ export async function GET(req: NextRequest) {
       console.warn("Could not query billing entities, using verified default bank details:", e);
     }
 
-    // Fallback if no billing entity bank details have been entered yet
+    // Return real landlord billing entity bank details if configured
     const primaryBank = entities.length > 0 && entities[0].bankAccountNumber
       ? entities[0]
-      : {
-          id: "default-owner-bank",
-          name: "OFFICEX Commercial Properties Private Limited",
-          gstin: "24AAFCO9876C1Z2",
-          pan: "AAFCO9876C",
-          bankName: "HDFC Bank Limited",
-          bankAccountNumber: "50200084920194",
-          bankIfscCode: "HDFC0000060",
-          bankBranch: "Fort Commercial Hub Branch, Mumbai",
-          upiId: "officexproperties@hdfcbank",
-        };
+      : null;
 
     return NextResponse.json({
       bank_details: primaryBank,

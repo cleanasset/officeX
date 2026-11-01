@@ -786,9 +786,11 @@ function TenantInvoicesContent() {
                   <p className="text-xs text-slate-500 font-medium">
                     Commercial Property Asset SPV · Operations
                   </p>
-                  <p className="text-[11px] font-mono text-slate-600 mt-0.5">
-                    GSTIN: <strong>24AAFCO9876C1Z2</strong> · PAN: <strong>AAFCO9876C</strong>
-                  </p>
+                  {((selectedInvoice as any)?.landlord_gstin || (selectedInvoice as any)?.gstin) ? (
+                    <p className="text-[11px] font-mono text-slate-600 mt-0.5">
+                      GSTIN: <strong>{(selectedInvoice as any)?.landlord_gstin || (selectedInvoice as any)?.gstin}</strong>
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -1184,16 +1186,18 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">Account Number</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-mono font-black text-slate-900 text-sm tracking-wider">
-                      {landlordBankDetails?.bankAccountNumber || "50200084920194"}
+                      {landlordBankDetails?.bankAccountNumber || "—"}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(landlordBankDetails?.bankAccountNumber || "50200084920194", "account")}
-                      className="p-1 text-slate-400 hover:text-teal-700"
-                      title="Copy"
-                    >
-                      {copiedField === "account" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
-                    </button>
+                    {landlordBankDetails?.bankAccountNumber && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(landlordBankDetails.bankAccountNumber, "account")}
+                        className="p-1 text-slate-400 hover:text-teal-700"
+                        title="Copy"
+                      >
+                        {copiedField === "account" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1201,16 +1205,18 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">IFSC Code</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-mono font-black text-teal-800 text-sm tracking-wider">
-                      {landlordBankDetails?.bankIfscCode || "HDFC0000060"}
+                      {landlordBankDetails?.bankIfscCode || "—"}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(landlordBankDetails?.bankIfscCode || "HDFC0000060", "ifsc")}
-                      className="p-1 text-slate-400 hover:text-teal-700"
-                      title="Copy"
-                    >
-                      {copiedField === "ifsc" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
-                    </button>
+                    {landlordBankDetails?.bankIfscCode && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(landlordBankDetails.bankIfscCode, "ifsc")}
+                        className="p-1 text-slate-400 hover:text-teal-700"
+                        title="Copy"
+                      >
+                        {copiedField === "ifsc" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1361,9 +1367,11 @@ function TenantInvoicesContent() {
                   <p className="text-xs text-slate-500 font-medium">
                     Commercial Property Asset SPV · Operations
                   </p>
-                  <p className="text-[10px] font-mono text-slate-400">
-                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
-                  </p>
+                  {(selectedInvoice as any)?.landlord_gstin ? (
+                    <p className="text-[10px] font-mono text-slate-400">
+                      GSTIN: {(selectedInvoice as any).landlord_gstin}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 

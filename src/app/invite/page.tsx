@@ -27,9 +27,13 @@ function InviteContent() {
   const roleParam = searchParams.get("role") || "pm_company";
   const mgrParam = searchParams.get("mgr") || "";
   const propParam = searchParams.get("prop") || "";
-  const ownerParam = searchParams.get("owner") || "Commercial Property Asset SPV";
+  const propIdParam = searchParams.get("prop_id") || "";
+  const unitParam = searchParams.get("unit") || "";
+  const areaParam = searchParams.get("area") || "";
+  const ownerParam = searchParams.get("owner") || "";
   const emailParam = searchParams.get("email") || "";
   const inviteParam = searchParams.get("invite") || "";
+  const tenantParam = searchParams.get("tenant") || searchParams.get("entity") || "";
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [managerName, setManagerName] = useState(mgrParam);
@@ -47,8 +51,8 @@ function InviteContent() {
     tenants: Array<{ name: string; space: string; monthlyRent: number; term: string; status: string }>;
   }>(() => {
     let name = propParam && propParam !== "Commercial Centre" ? propParam : "";
-    let totalArea = 0;
-    let location = "Commercial Portfolio";
+    let totalArea = Number(areaParam) > 0 ? Number(areaParam) : 0;
+    let location = "";
 
     if (typeof window !== "undefined") {
       const act = localStorage.getItem("officex_active_property");
@@ -56,7 +60,7 @@ function InviteContent() {
       try {
         const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
         if (snap?.propertyName && (!name || name === "Commercial Centre")) name = snap.propertyName;
-        if (snap?.areaSqft && Number(snap.areaSqft) > 0) totalArea = Number(snap.areaSqft);
+        if (snap?.areaSqft && totalArea === 0 && Number(snap.areaSqft) > 0) totalArea = Number(snap.areaSqft);
         if (snap?.city || snap?.state) location = `${snap.city || ""}${snap.state ? `, ${snap.state}` : ""}`;
       } catch {}
       const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
@@ -64,7 +68,7 @@ function InviteContent() {
     }
 
     return {
-      name: name || propParam || "Commercial Property",
+      name: name || propParam || "",
       location,
       totalArea: totalArea > 0 ? totalArea : 0,
       occupancyPct: 0,
@@ -111,17 +115,23 @@ function InviteContent() {
       const regRows = registerData?.rows || [];
 
       let effName = propParam && propParam !== "Commercial Centre" ? propParam : "";
-      let effArea = 0;
-      let effLocation = "Commercial Portfolio";
+      let effArea = Number(areaParam) > 0 ? Number(areaParam) : 0;
+      let effLocation = "";
 
-      // Match property from API
-      const foundProp = props.find((p: any) =>
-        effName ? p.property_name?.toLowerCase().includes(effName.toLowerCase()) : true
-      ) || props[0];
+      // Match property from API strictly — NEVER fall back to unrelated props[0]
+      const foundProp = (effName || propIdParam)
+        ? props.find((p: any) =>
+            (propIdParam && p.id === propIdParam) ||
+            (effName && p.property_name?.toLowerCase().trim() === effName.toLowerCase().trim()) ||
+            (effName && p.property_name?.toLowerCase().includes(effName.toLowerCase().trim()))
+          )
+        : null;
 
       if (foundProp) {
         effName = foundProp.property_name || effName;
-        effArea = parseFloat(foundProp.total_leasable_area_sqft || 0) || 0;
+        if (effArea === 0) {
+          effArea = parseFloat(foundProp.total_leasable_area_sqft || 0) || 0;
+        }
         if (foundProp.city || foundProp.state) {
           effLocation = `${foundProp.city || ""}${foundProp.state ? `, ${foundProp.state}` : ""}`;
         }
@@ -147,45 +157,47 @@ function InviteContent() {
         }
       }
 
-      if (effArea === 0 && spacesList.length > 0) {
-        effArea = spacesList.reduce((acc: number, s: any) => acc + (parseFloat(s.chargeable_area_sqft || s.area_sqft || 0) || 0), 0);
+      if (effArea === 0 && spacesList.length > 0 && foundProp) {
+        effArea = spacesList
+          .filter((s: any) => s.property_id === foundProp.id)
+          .reduce((acc: number, s: any) => acc + (parseFloat(s.chargeable_area_sqft || s.area_sqft || 0) || 0), 0);
       }
 
       if (!effName) {
-        effName = "Commercial Property";
+        effName = propParam || "";
       }
 
-      // Resolve tenants
-      let matchedTenants = contracts
-        .filter((c: any) => !foundProp || c.property_id === foundProp.id || c.property_name === foundProp.property_name)
-        .map((c: any) => ({
-          name: c.occupant_name || c.tenant_name || "Tenant",
-          space: c.space_name ? `${c.space_name} (${c.space_code || "Unit"})` : "Demarcated Space",
-          monthlyRent: Number(c.base_rent_rate || 0),
-          term: c.end_date ? `Lease to ${new Date(c.end_date).toLocaleDateString("en-IN")}` : "Active Term",
-          status: c.contract_status === "active" ? "Active" : (c.contract_status || "Active"),
-        }));
-
-      if (matchedTenants.length === 0 && tenantsList.length > 0) {
-        matchedTenants = tenantsList.map((t: any) => ({
-          name: t.tenant_name || t.trade_name || "Tenant",
-          space: t.unit_number || "Demarcated Space",
-          monthlyRent: Number(t.base_rent_rate || t.gross_monthly_rent || 0),
-          term: t.end_date ? `Lease to ${new Date(t.end_date).toLocaleDateString("en-IN")}` : "Active Term",
-          status: t.lease_status || "Active",
-        }));
-      }
-
-      if (matchedTenants.length === 0 && regRows.length > 0) {
-        const occRows = regRows.filter((r: any) => r.occupant_name && !r.occupant_name.includes("(Vacant"));
-        if (occRows.length > 0) {
-          matchedTenants = occRows.map((r: any) => ({
-            name: r.occupant_name,
-            space: r.space_name || "Commercial Space",
-            monthlyRent: Number(r.monthly_base_rent || 0),
-            term: r.end_date ? `Lease to ${new Date(r.end_date).toLocaleDateString("en-IN")}` : "Active Term",
-            status: r.status || "Active",
+      // Resolve tenants strictly for this invited property — NEVER leak other tenants!
+      let matchedTenants: any[] = [];
+      if (foundProp || effName) {
+        matchedTenants = contracts
+          .filter((c: any) =>
+            foundProp
+              ? (c.property_id === foundProp.id || c.property_name?.toLowerCase() === foundProp.property_name?.toLowerCase())
+              : (effName && c.property_name?.toLowerCase().includes(effName.toLowerCase()))
+          )
+          .map((c: any) => ({
+            name: c.occupant_name || c.tenant_name || "Tenant",
+            space: c.space_name ? `${c.space_name} (${c.space_code || "Unit"})` : "Demarcated Space",
+            monthlyRent: Number(c.base_rent_rate || 0),
+            term: c.end_date ? `Lease to ${new Date(c.end_date).toLocaleDateString("en-IN")}` : "Active Term",
+            status: c.contract_status === "active" ? "Active" : (c.contract_status || "Active"),
           }));
+
+        if (matchedTenants.length === 0 && tenantsList.length > 0) {
+          matchedTenants = tenantsList
+            .filter((t: any) =>
+              foundProp
+                ? (t.property_id === foundProp.id || t.property_name?.toLowerCase() === foundProp.property_name?.toLowerCase())
+                : (effName && t.property_name?.toLowerCase().includes(effName.toLowerCase()))
+            )
+            .map((t: any) => ({
+              name: t.tenant_name || t.trade_name || "Tenant",
+              space: t.unit_number || "Demarcated Space",
+              monthlyRent: Number(t.base_rent_rate || t.gross_monthly_rent || 0),
+              term: t.end_date ? `Lease to ${new Date(t.end_date).toLocaleDateString("en-IN")}` : "Active Term",
+              status: t.lease_status || "Active",
+            }));
         }
       }
 
@@ -470,7 +482,7 @@ function InviteContent() {
                     : (propParam ? `Manage ${propParam}` : "Commercial Property Management Invitation")}
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Invited by <strong className="text-slate-900">{ownerParam}</strong> {roleParam === "tenant" ? "to access your corporate tenant portal." : "to assume operational property management oversight."}
+                  Invited by <strong className="text-slate-900">{ownerParam || "Commercial Asset Owner"}</strong> {roleParam === "tenant" ? "to access your corporate tenant portal." : "to assume operational property management oversight."}
                 </p>
               </div>
             </div>
@@ -494,7 +506,7 @@ function InviteContent() {
                 </span>
               </div>
               <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
-                {ownerParam}
+                {ownerParam || "Commercial Asset Owner"}
               </span>
             </div>
 
@@ -505,16 +517,18 @@ function InviteContent() {
                   <Building2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-slate-900">{propertyDetails.name}</h3>
-                  <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                    <MapPin size={11} className="text-slate-400" />
-                    {propertyDetails.location}
-                  </p>
+                  <h3 className="text-xs font-black text-slate-900">{propertyDetails.name || propParam || "Commercial Asset"}</h3>
+                  {propertyDetails.location ? (
+                    <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                      <MapPin size={11} className="text-slate-400" />
+                      {propertyDetails.location}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-xs font-bold text-slate-900">
-                  {propertyDetails.totalArea.toLocaleString("en-IN")} sqft
+                  {propertyDetails.totalArea > 0 ? `${propertyDetails.totalArea.toLocaleString("en-IN")} sqft` : "—"}
                 </div>
                 <div className="text-[10px] font-bold text-emerald-600">
                   {propertyDetails.occupancyPct}% Leased
@@ -538,9 +552,14 @@ function InviteContent() {
                 <div className="p-3.5 bg-gradient-to-br from-teal-50/70 via-emerald-50/40 to-slate-50 rounded-xl border border-teal-200/90 space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <div className="text-xs font-black text-slate-900 flex flex-wrap items-center gap-1.5">
                         <span>Corporate Occupant:</span>
-                        <span className="text-[#0F8B7D] font-extrabold uppercase">{managerName || mgrParam || "Google"}</span>
+                        <span className="text-[#0F8B7D] font-extrabold uppercase">
+                          {tenantParam || (managerName && managerName.toLowerCase() !== "tenant" ? managerName : null) || mgrParam || "Corporate Occupant"}
+                        </span>
+                        {tenantParam && managerName && tenantParam.toLowerCase() !== managerName.toLowerCase() && (
+                          <span className="text-[10px] text-slate-500 font-medium">({managerName})</span>
+                        )}
                       </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">
                         Institutional Lease at <strong className="text-slate-800">{propertyDetails.name}</strong>
@@ -555,7 +574,7 @@ function InviteContent() {
                     <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
                       <span className="text-[9.5px] text-slate-400 font-bold uppercase block">Demised Area</span>
                       <span className="font-mono font-bold text-slate-800 text-xs">
-                        {propertyDetails.totalArea > 0 ? `${propertyDetails.totalArea.toLocaleString("en-IN")} sq.ft.` : "50,000 sq.ft."}
+                        {propertyDetails.totalArea > 0 ? `${propertyDetails.totalArea.toLocaleString("en-IN")} sq.ft.` : "—"}
                       </span>
                     </div>
                     <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">

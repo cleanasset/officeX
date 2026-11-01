@@ -211,13 +211,13 @@ export default function OwnerDashboardPage() {
       typeof window !== "undefined" && window.location.origin
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
-    const activePropName = properties[0]?.name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
+    const activePropName = (typeof window !== "undefined" ? localStorage.getItem("officex_selected_property_name") || localStorage.getItem("officex_active_property") || "" : "") || properties.find((p) => p.id === scope)?.name || properties[0]?.name || "";
     return `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&email=${encodeURIComponent(delegatedManagerEmail || "")}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
   };
 
   const getManagerWhatsAppUrl = () => {
     const link = getManagerSharableLink();
-    const activePropName = properties[0]?.name || "Commercial Assets";
+    const activePropName = (typeof window !== "undefined" ? localStorage.getItem("officex_selected_property_name") || localStorage.getItem("officex_active_property") || "" : "") || properties.find((p) => p.id === scope)?.name || properties[0]?.name || "Commercial Assets";
     const text = `Hi ${delegatedManagerName}, you have been appointed as Managing Partner for ${activePropName}. Click the link below to activate your administrative portal and manage operations:\n\n${link}`;
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };

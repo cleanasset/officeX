@@ -18,7 +18,7 @@ const pool =
   globalForDb.pool ??
   new Pool({
     connectionString: connStr,
-    max: 10,
+    max: 4,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 5000,
     ssl: {

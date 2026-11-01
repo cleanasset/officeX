@@ -343,9 +343,7 @@ export default function TenantPaymentsPage() {
                   <p className="text-xs text-slate-500 font-medium">
                     Commercial Property Asset SPV · Operations
                   </p>
-                  <p className="text-[10px] font-mono text-slate-400">
-                    GSTIN: 24AAFCO9876C1Z2 · Ahmedabad, Gujarat
-                  </p>
+
                 </div>
               </div>
 

@@ -1,12 +1,12 @@
 import { Pool } from 'pg';
 import { supabaseAdmin } from './supabase';
 
-let pgPool: Pool | null = null;
+const globalForCloudDb = globalThis as unknown as { cloudPool: Pool | undefined };
 
 function getPool(): Pool | null {
-  if (pgPool) return pgPool;
+  if (globalForCloudDb.cloudPool) return globalForCloudDb.cloudPool;
 
-  const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
+  const rawUrl = process.env.DATABASE_URL || process.env.DIRECT_URL || '';
   if (!rawUrl) return null;
 
   try {
@@ -14,14 +14,16 @@ function getPool(): Pool | null {
       ? rawUrl.replace('officeX@18129001', 'officeX%4018129001')
       : rawUrl;
 
-    pgPool = new Pool({
+    const pool = new Pool({
       connectionString: connStr,
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,
-      max: 5
+      idleTimeoutMillis: 10000,
+      max: 2,
     });
 
-    return pgPool;
+    globalForCloudDb.cloudPool = pool;
+    return pool;
   } catch (err) {
     console.warn('[CLOUD_DB] Failed to initialize Postgres pool:', err);
     return null;
