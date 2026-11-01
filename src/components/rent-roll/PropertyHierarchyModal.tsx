@@ -48,7 +48,6 @@ import {
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
-import MapPinPicker from "@/components/MapPinPicker";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import AgreementVarianceModal, {
@@ -421,7 +420,6 @@ export default function PropertyHierarchyModal({
   const [copiedManagerLink, setCopiedManagerLink] = useState(false);
   const [propLat, setPropLat] = useState<number | null>(null);
   const [propLng, setPropLng] = useState<number | null>(null);
-  const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
 
   // ──── 2. BUILDING FORM (3 Fields) ────
   const [bldgForm, setBldgForm] = useState({
@@ -1203,7 +1201,6 @@ export default function PropertyHierarchyModal({
     if (res.latitude && res.longitude) {
       setPropLat(res.latitude);
       setPropLng(res.longitude);
-      setShowMapPicker(true);
     }
     setPropForm((prev) => ({
       ...prev,
@@ -3828,52 +3825,6 @@ export default function PropertyHierarchyModal({
                       required
                       hint="Selecting an address autofills City, State, and Pincode."
                     />
-
-                    {/* Interactive Google Map Pin Toggle */}
-                    <div className="flex items-center justify-between pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowMapPicker(!showMapPicker)}
-                        className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl border border-teal-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                      >
-                        <MapPin size={13} className="text-teal-600" />
-                        <span>{showMapPicker ? "Hide Google Map" : "📍 Pinpoint & View on Google Map"}</span>
-                      </button>
-                      {propLat && propLng && (
-                        <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                          Coordinates: {propLat.toFixed(5)}, {propLng.toFixed(5)}
-                        </span>
-                      )}
-                    </div>
-
-                    {showMapPicker && (
-                      <div className="mt-2 rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-in fade-in duration-200">
-                        <MapPinPicker
-                          lat={propLat}
-                          lng={propLng}
-                          onChange={async (newLat, newLng) => {
-                            setPropLat(newLat);
-                            setPropLng(newLng);
-                            try {
-                              const rRes = await fetch(`/api/geocode?lat=${newLat}&lon=${newLng}`);
-                              if (rRes.ok) {
-                                const rJson = await rRes.json();
-                                if (rJson.results && rJson.results[0]) {
-                                  const rItem = rJson.results[0];
-                                  setPropForm((prev) => ({
-                                    ...prev,
-                                    address: rItem.fullAddress || prev.address,
-                                    city: rItem.city || prev.city,
-                                    state: rItem.state || prev.state,
-                                    pincode: rItem.pincode || prev.pincode,
-                                  }));
-                                }
-                              }
-                            } catch (_) {}
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
 
                   {/* State Dropdown */}
