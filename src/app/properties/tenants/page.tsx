@@ -499,7 +499,7 @@ export default function TenantDirectoryPage() {
                           {t.unit_number || t.space_code || "—"}
                         </td>
                         <td className="py-3.5 px-4">
-                          {t.is_activated || t.portal_status === "active" ? (
+                          {t.is_activated || t.portal_status === "active" || t.lease_status === "Active Lease" || t.status === "active" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                               Live on OfficeX

@@ -309,15 +309,16 @@ function InviteContent() {
       localStorage.setItem("officex_session_active", "1");
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
 
-      // Persist user record in database
+      // Persist user record & activation in database
       fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: displayName,
           email: displayEmail,
-          role: "property_manager",
+          role: isTenant ? "tenant" : "property_manager",
           propertyName: propToAssign,
+          status: "active",
         }),
       }).catch(() => {});
     }

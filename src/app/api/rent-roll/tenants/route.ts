@@ -178,6 +178,8 @@ export async function GET(req: Request) {
           billing_address: occ.address,
           industry_sector: occ.industry_sector,
           status: occ.occupant_status || "active",
+          portal_status: (item.contract && (item.contract.contract_status === "active" || (item.contract as any).contract_status === "pending_acceptance")) || occ.occupant_status === "active" ? "active" : "pending",
+          is_activated: Boolean(item.contract) || occ.occupant_status === "active",
           property_id: associatedPropId,
           property_name: associatedPropName,
           unit_number: item.space?.space_name || "--",
