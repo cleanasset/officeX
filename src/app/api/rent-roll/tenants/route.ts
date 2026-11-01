@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { occupant, contract, space, building, property } from "@/db/schema";
+import { occupant, contract, space, building, property, contractCharge } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
@@ -72,6 +72,27 @@ export async function GET(req: Request) {
       if (p.name) fallbackPropMap.set(p.name.toLowerCase().trim(), p.name);
     }
 
+    // Fetch all contract charges for accurate rent & CAM
+    const chargesMap: Record<string, { rent: number; cam: number }> = {};
+    const charges = await db
+      .select()
+      .from(contractCharge)
+      .where(
+        and(
+          eq(contractCharge.org_id, auth.orgId),
+          sql`${contractCharge.deleted_at} IS NULL`
+        )
+      );
+    for (const ch of charges) {
+      if (!chargesMap[ch.contract_id]) chargesMap[ch.contract_id] = { rent: 0, cam: 0 };
+      const val = parseFloat(ch.rate || "0");
+      if (ch.component === "base_rent" || ch.invoice_group === "rent") {
+        chargesMap[ch.contract_id].rent += val;
+      } else if (ch.component === "cam" || ch.invoice_group === "cam") {
+        chargesMap[ch.contract_id].cam += val;
+      }
+    }
+
     for (const item of list) {
       const occ = item.occupant;
       let associatedPropId = item.property?.id || null;
@@ -114,6 +135,27 @@ export async function GET(req: Request) {
         }
       }
 
+      let contractMeta: any = {};
+      if (item.contract?.source_row_id && item.contract.source_row_id.startsWith("{")) {
+        try {
+          contractMeta = JSON.parse(item.contract.source_row_id);
+        } catch {}
+      }
+
+      const rentRate = item.contract
+        ? chargesMap[item.contract.id]?.rent || Number((item.contract as any)?.base_rent_rate || 0)
+        : 0;
+      const camRate = item.contract ? chargesMap[item.contract.id]?.cam || 0 : 0;
+      const lockIn = item.contract?.lock_in_period_days
+        ? Math.round(item.contract.lock_in_period_days / 30)
+        : Number(contractMeta.lock_in_months || 0);
+      const noticePeriod = item.contract?.notice_period_days
+        ? Math.round(item.contract.notice_period_days / 30)
+        : Number(contractMeta.notice_period_months || 0);
+      const escalationStr = contractMeta.escalation_pct
+        ? `${contractMeta.escalation_pct}%`
+        : (item.contract as any)?.escalation_value || "5%";
+
       if (!seenOccupants.has(occ.id)) {
         seenOccupants.set(occ.id, {
           id: occ.id,
@@ -146,13 +188,13 @@ export async function GET(req: Request) {
           contract_code: item.contract?.contract_code || null,
           start_date: item.contract?.start_date || null,
           end_date: item.contract?.end_date || null,
-          base_rent_rate: Number((item.contract as any)?.base_rent_rate || 0),
-          cam_rate: 0,
-          gross_monthly_rent: Number((item.contract as any)?.base_rent_rate || 0),
-          deposit_amount_inr: Number((item.contract as any)?.deposit_amount_inr || 0),
-          escalation_value: (item.contract as any)?.escalation_value || "0%",
-          lock_in_months: item.contract ? Number((item.contract as any)?.lock_in_months || 0) : 0,
-          notice_period_months: item.contract ? Number((item.contract as any)?.notice_period_months || 0) : 0,
+          base_rent_rate: rentRate,
+          cam_rate: camRate,
+          gross_monthly_rent: rentRate,
+          deposit_amount_inr: Number(item.contract?.deposit_amount_inr || 0),
+          escalation_value: escalationStr,
+          lock_in_months: lockIn,
+          notice_period_months: noticePeriod,
         });
       }
     }

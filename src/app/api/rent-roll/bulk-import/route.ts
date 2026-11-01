@@ -8,13 +8,26 @@ import { eq, and, sql } from "drizzle-orm";
 
 interface ImportRow {
   propertyName: string;
+  propertyType?: string;
+  propertyAddress?: string;
+  address?: string;
   city?: string;
   state?: string;
-  address?: string;
+  pincode?: string;
+  landlordSpv?: string;
+  landlordPan?: string;
+  landlordGstin?: string;
   buildingName?: string;
+  floor?: string | number;
   unitNumber?: string;
   areaSqft?: number;
   tenantName: string;
+  tradeName?: string;
+  tenantPan?: string;
+  tenantGstin?: string;
+  tenantCin?: string;
+  tenantAddress?: string;
+  signatoryName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
   monthlyRent?: number;
@@ -22,7 +35,49 @@ interface ImportRow {
   securityDeposit?: number;
   startDate?: string;
   endDate?: string;
+  rentFreeDays?: number;
+  lockInMonths?: number;
+  noticePeriodMonths?: number;
   escalationPct?: number;
+}
+
+function normalizeFloorName(val: any): string | null {
+  if (val === undefined || val === null || val === "") return null;
+  const str = String(val).trim();
+  if (/^(0|ground|g)$/i.test(str)) return "Ground Floor";
+  const num = parseInt(str.replace(/[^0-9]/g, ""), 10);
+  if (!isNaN(num)) {
+    const j = num % 10;
+    const k = num % 100;
+    let suffix = "th";
+    if (j === 1 && k !== 11) suffix = "st";
+    else if (j === 2 && k !== 12) suffix = "nd";
+    else if (j === 3 && k !== 13) suffix = "rd";
+    return `${num}${suffix} Floor`;
+  }
+  return str;
+}
+
+function cleanPan(val?: string): string | null {
+  if (!val) return null;
+  const clean = val.trim().toUpperCase();
+  return clean.length >= 5 ? clean : null;
+}
+
+function cleanGstin(val?: string): string | null {
+  if (!val) return null;
+  const clean = val.trim().toUpperCase();
+  return clean.length >= 10 ? clean : null;
+}
+
+function cleanPropertyType(val?: string): any {
+  if (!val) return "office";
+  const t = val.trim().toLowerCase();
+  if (t.includes("retail")) return "retail";
+  if (t.includes("residential")) return "residential";
+  if (t.includes("flex") || t.includes("co-work")) return "flex_workspace";
+  if (t.includes("mixed")) return "mixed";
+  return "office";
 }
 
 function parseStrictDate(val: any, fieldName: string): { date: string | null; error?: string } {
@@ -156,6 +211,19 @@ export async function POST(req: Request) {
       // 1. Create Property if not existing
       if (!propId) {
         const propCode = `P-${propName.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+        const pType = cleanPropertyType(row.propertyType);
+        const landlordMetadata = JSON.stringify({
+          spv_name: (row.landlordSpv || "").trim(),
+          pan: cleanPan(row.landlordPan) || "",
+          cin: "",
+          gstin: cleanGstin(row.landlordGstin) || "",
+          ownership_type: "pvt_ltd",
+          fitout_condition: "Fully Furnished",
+          default_fitout_days: String(row.rentFreeDays || 60),
+          floors_count: 10,
+          buildings_count: 1,
+        });
+
         const [newProp] = await db
           .insert(property)
           .values({
@@ -163,11 +231,13 @@ export async function POST(req: Request) {
             client_account_id: clientAccountId,
             property_name: propName,
             property_code: propCode,
-            property_type: "office",
+            property_type: pType,
             city: row.city || "Ahmedabad",
             state: row.state || "Gujarat",
-            address: row.address || `${propName}, Commercial District`,
+            address: row.propertyAddress || row.address || `${propName}, Commercial District`,
+            postal_code: row.pincode ? String(row.pincode).trim() : null,
             total_leasable_area_sqft: String(row.areaSqft || 50000),
+            source_row_id: landlordMetadata,
           })
           .returning({ id: property.id });
         propId = newProp.id;
@@ -217,10 +287,11 @@ export async function POST(req: Request) {
       const unitNum = (row.unitNumber || "Suite 101").trim();
       const spaceKey = `${bldgId}:${unitNum.toLowerCase()}`;
       let spaceId = spaceCache.get(spaceKey);
+      const floorName = normalizeFloorName(row.floor) || "Ground Floor";
 
       if (!spaceId) {
         const existingSpaces = await db
-          .select({ id: space.id })
+          .select({ id: space.id, floor_name: space.floor_name })
           .from(space)
           .where(
             and(
@@ -232,6 +303,12 @@ export async function POST(req: Request) {
 
         if (existingSpaces.length > 0) {
           spaceId = existingSpaces[0].id;
+          if (!existingSpaces[0].floor_name && floorName) {
+            await db
+              .update(space)
+              .set({ floor_name: floorName })
+              .where(eq(space.id, spaceId));
+          }
         } else {
           const areaNum = row.areaSqft || 5000;
           const spaceCode = `S-${unitNum.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`;
@@ -243,6 +320,7 @@ export async function POST(req: Request) {
               building_id: bldgId,
               space_code: spaceCode,
               space_name: unitNum,
+              floor_name: floorName,
               chargeable_area_sqft: String(areaNum),
               carpet_area_sqft: null, // RR-32: Never invent 75%
               space_type: "suite",
@@ -303,6 +381,17 @@ export async function POST(req: Request) {
       const tenantKey = tenantName.toLowerCase();
       let occId = occupantCache.get(tenantKey);
 
+      const occupantMeta = JSON.stringify({
+        property_id: propId,
+        trade_name: (row.tradeName || tenantName).trim(),
+        legal_name: tenantName.trim(),
+        cin_number: (row.tenantCin || "").trim().toUpperCase(),
+        signatory_name: (row.signatoryName || "Authorized Signatory").trim(),
+        signatory_designation: "Authorized Signatory",
+        alt_contact_name: null,
+        alt_contact_phone: null,
+      });
+
       if (!occId) {
         const occCode = `T-${tenantName.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
         const [newOcc] = await db
@@ -313,13 +402,29 @@ export async function POST(req: Request) {
             occupant_code: occCode,
             email: row.tenantEmail || `${tenantName.toLowerCase().replace(/[^a-z0-9]/g, "")}@example.com`,
             phone: row.tenantPhone || "9876543210",
+            pan_number: cleanPan(row.tenantPan),
+            gst_number: cleanGstin(row.tenantGstin),
+            address: row.tenantAddress ? row.tenantAddress.trim() : null,
             occupant_status: "active",
             occupant_type: "company",
+            source_row_id: occupantMeta,
           })
           .returning({ id: occupant.id });
         occId = newOcc.id;
         occupantCache.set(tenantKey, occId);
         tenantsCreated++;
+      } else {
+        // Enrich existing tenant if missing PAN/GSTIN/address
+        const enrichUpdates: any = {};
+        if (row.tenantPan && cleanPan(row.tenantPan)) enrichUpdates.pan_number = cleanPan(row.tenantPan);
+        if (row.tenantGstin && cleanGstin(row.tenantGstin)) enrichUpdates.gst_number = cleanGstin(row.tenantGstin);
+        if (row.tenantAddress) enrichUpdates.address = row.tenantAddress.trim();
+        if (Object.keys(enrichUpdates).length > 0) {
+          await db
+            .update(occupant)
+            .set(enrichUpdates)
+            .where(and(eq(occupant.id, occId), eq(occupant.org_id, auth.orgId)));
+        }
       }
 
       // 5. Create Contract
@@ -363,6 +468,29 @@ export async function POST(req: Request) {
         const todayStr = new Date().toISOString().split("T")[0];
         const isCurrentlyActive = startDate <= todayStr;
         const contractCode = `LC-${Date.now().toString().slice(-6)}-${Math.floor(10 + Math.random() * 90)}`;
+
+        const lockInDays = row.lockInMonths ? Math.round(Number(row.lockInMonths) * 30) : 365;
+        const noticeDays = row.noticePeriodMonths ? Math.round(Number(row.noticePeriodMonths) * 30) : 90;
+
+        let commencementDate = startDate;
+        if (row.rentFreeDays && Number(row.rentFreeDays) > 0) {
+          const st = new Date(startDate);
+          if (!isNaN(st.getTime())) {
+            st.setDate(st.getDate() + Number(row.rentFreeDays));
+            commencementDate = st.toISOString().split("T")[0];
+          }
+        }
+
+        const remarksParts = [
+          row.rentFreeDays ? `Fit-out Period: ${row.rentFreeDays} days` : null,
+          row.lockInMonths ? `Lock-in: ${row.lockInMonths} months` : null,
+          row.noticePeriodMonths ? `Notice: ${row.noticePeriodMonths} months` : null,
+          row.escalationPct ? `Annual Escalation: ${row.escalationPct}%` : null,
+          row.landlordSpv ? `Landlord SPV: ${row.landlordSpv}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
         const [newContract] = await db
           .insert(contract)
           .values({
@@ -378,10 +506,19 @@ export async function POST(req: Request) {
             approval_status: "approved",
             start_date: startDate,
             end_date: endDate,
+            commencement_date: commencementDate,
             deposit_amount_inr: String(depositAmt),
             deposit_status: "pending",
-            lock_in_period_days: 365,
-            notice_period_days: 90,
+            lock_in_period_days: lockInDays,
+            notice_period_days: noticeDays,
+            remarks: remarksParts || null,
+            source_row_id: JSON.stringify({
+              rent_free_days: row.rentFreeDays || 0,
+              lock_in_months: row.lockInMonths || 12,
+              notice_period_months: row.noticePeriodMonths || 3,
+              escalation_pct: row.escalationPct || 5,
+              landlord_spv: row.landlordSpv || "",
+            }),
             version: 1,
             created_by: auth.userId,
             updated_by: auth.userId,

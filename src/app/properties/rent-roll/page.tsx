@@ -56,6 +56,7 @@ import EscalationCalendarView from "@/components/rent-roll/EscalationCalendarVie
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
 import MultiClientFlexView from "@/components/rent-roll/MultiClientFlexView";
@@ -70,6 +71,7 @@ export default function RentRollRegisterPage() {
   const [asOfDate, setAsOfDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">("current");
   const [importOpen, setImportOpen] = useState(false);
+  const [smartImporterOpen, setSmartImporterOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [multiClientOpen, setMultiClientOpen] = useState(false);
   const [billingRunOpen, setBillingRunOpen] = useState(false);
@@ -421,11 +423,11 @@ export default function RentRollRegisterPage() {
                 {/* Secondary: Import */}
                 <button
                   type="button"
-                  onClick={() => setImportOpen(true)}
+                  onClick={() => setSmartImporterOpen(true)}
                   className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <FileSpreadsheet size={14} className="text-teal-600" />
-                  <span>Import</span>
+                  <span>Import Excel / CSV</span>
                 </button>
 
                 {/* Operations Dropdown */}
@@ -1526,6 +1528,16 @@ export default function RentRollRegisterPage() {
             initialSpaceId={preloadSpaceId}
             initialPropertyId={propertyFilter !== "all" ? propertyFilter : undefined}
             onSuccess={fetchRegisterData}
+          />
+
+          {/* Smart Excel / CSV Bulk Importer Modal */}
+          <RentRollExcelImporterModal
+            isOpen={smartImporterOpen}
+            onClose={() => setSmartImporterOpen(false)}
+            onSuccess={() => {
+              setSmartImporterOpen(false);
+              fetchRegisterData();
+            }}
           />
 
           {/* Data Import Pipeline Modal (§S-30) */}
