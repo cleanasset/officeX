@@ -56,10 +56,30 @@ export default function ContractDetailDrawer({
 
   const getTenantSharableLink = () => {
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
-    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
     const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
     const email = data?.occupant?.billing_email || data?.occupant?.email || "";
-    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&owner_sub=1&invite=t_${Date.now()}`;
+    const propId = data?.property?.id || data?.property_id || "";
+    const occupantId = data?.occupant?.id || data?.occupant_id || "";
+    const area = data?.space?.chargeable_area_sqft || data?.area_sqft || "";
+    const unit = data?.space?.space_name || data?.unit_number || "";
+    const ownerName = typeof window !== "undefined" ? (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name") || "Commercial Asset Owner") : "Commercial Asset Owner";
+
+    const queryParts = [
+      "role=tenant",
+      `mgr=${encodeURIComponent(name)}`,
+      `prop=${encodeURIComponent(prop)}`,
+      `email=${encodeURIComponent(email)}`,
+      "owner_sub=1",
+      `invite=t_${Date.now()}`,
+    ];
+    if (propId) queryParts.push(`prop_id=${encodeURIComponent(propId)}`);
+    if (occupantId) queryParts.push(`occupant_id=${encodeURIComponent(occupantId)}`);
+    if (area) queryParts.push(`area=${encodeURIComponent(area)}`);
+    if (unit) queryParts.push(`unit=${encodeURIComponent(unit)}`);
+    if (ownerName) queryParts.push(`owner=${encodeURIComponent(ownerName)}`);
+
+    return `${origin}/invite?${queryParts.join("&")}`;
   };
 
   const formatPhoneForWhatsApp = (rawPhone?: string): string => {
@@ -72,19 +92,19 @@ export default function ContractDetailDrawer({
   const getTenantWhatsAppUrl = () => {
     const link = getTenantSharableLink();
     const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
-    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
     const phone = formatPhoneForWhatsApp(data?.occupant?.phone || data?.occupant?.mobile);
-    const message = `Hi ${name}, here is your corporate tenant self-service portal access link for ${prop}:\n\n${link}\n\nYou can log in to view GST invoices, rent schedules, payment receipts, and submit facility tickets.`;
+    const message = `Hi ${name}, here is your corporate tenant self-service portal access link${prop ? ` for ${prop}` : ""}:\n\n${link}\n\nYou can log in to view GST invoices, rent schedules, payment receipts, and submit facility tickets.`;
     return `https://api.whatsapp.com/send?${phone ? `phone=${phone}&` : ""}text=${encodeURIComponent(message)}`;
   };
 
   const getTenantMailtoUrl = () => {
     const link = getTenantSharableLink();
     const name = data?.occupant?.occupant_name || data?.occupant?.trade_name || "Tenant";
-    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "") || "divi towers";
+    const prop = data?.property?.property_name || data?.property_name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
     const email = data?.occupant?.billing_email || data?.occupant?.email || "";
-    const subject = `Corporate Tenant Portal Access - ${prop}`;
-    const body = `Dear ${name},\n\nPlease access your corporate tenant self-service portal using the secure link below:\n\n${link}\n\nVia this portal, you can:\n• View and download executed lease agreements\n• Access statutory GST invoices and rent receipts\n• Submit and track facility maintenance requests\n\nBest regards,\n${prop} Commercial Asset Management`;
+    const subject = `Corporate Tenant Portal Access${prop ? ` - ${prop}` : ""}`;
+    const body = `Dear ${name},\n\nPlease access your corporate tenant self-service portal using the secure link below:\n\n${link}\n\nVia this portal, you can:\n• View and download executed lease agreements\n• Access statutory GST invoices and rent receipts\n• Submit and track facility maintenance requests\n\nBest regards,\n${prop || "Commercial"} Asset Management`;
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 

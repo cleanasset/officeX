@@ -151,10 +151,18 @@ export default function PropertyManagerDashboardPage() {
 
         contracts.forEach((c: any) => {
           const occName = c.occupant_name || c.tenant_name || "Tenant";
-          const propName = c.property_name || "Commercial Centre";
+          const propName = c.property_name || "";
           const spaceName = c.space_name || "Unit Demarcated";
           const rentVal = Number(c.base_rent_rate || c.contract?.base_rent_rate || 0);
           const depVal = Number(c.deposit_amount_inr || c.contract?.deposit_amount_inr || 0);
+
+          // If delegated to a specific property, strictly isolate tasks to that property
+          const delegatedProp = typeof window !== "undefined"
+            ? (new URLSearchParams(window.location.search).get("prop") || localStorage.getItem("officex_active_property") || "")
+            : "";
+          if (delegatedProp && delegatedProp !== "all" && c.property_name && !c.property_name.toLowerCase().includes(delegatedProp.toLowerCase().trim())) {
+            return; // Strictly isolate: skip contracts from other properties!
+          }
 
           // If PM role is scoped to specific tenants, enforce tenant isolation
           if (scopeType === "specific_tenants" && managedTenants.length > 0) {

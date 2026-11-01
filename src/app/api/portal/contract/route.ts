@@ -18,23 +18,13 @@ export async function GET(req: NextRequest) {
     const requestedOccupantId = searchParams.get("occupant_id");
 
     let occupantId = requestedOccupantId;
-    if (!occupantId) {
+    if (!occupantId && auth.orgId) {
       const [firstOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
         .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
         .limit(1);
       occupantId = firstOcc?.id;
-    }
-
-    if (!occupantId) {
-      const [fallbackOcc] = await db
-        .select({ id: occupant.id })
-        .from(occupant)
-        .where(sql`${occupant.deleted_at} IS NULL`)
-        .orderBy(desc(occupant.created_at))
-        .limit(1);
-      occupantId = fallbackOcc?.id;
     }
 
     if (!occupantId) {

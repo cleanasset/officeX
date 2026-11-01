@@ -21,8 +21,17 @@ export async function GET(req: NextRequest) {
 
     // Allow switching occupant for demo/testing or fetch first active occupant in org
     const requestedOccupantId = searchParams.get("occupant_id");
+    const requestedEmail = searchParams.get("email");
+    const requestedProp = searchParams.get("prop") || searchParams.get("property_name");
 
-    // 1. Find all occupants/tenancies with property metadata
+    // 1. Find all occupants/tenancies with property metadata, scoped to user org when authenticated
+    const occConditions = [
+      sql`${occupant.deleted_at} IS NULL`,
+    ];
+    if (auth.orgId) {
+      occConditions.push(eq(occupant.org_id, auth.orgId));
+    }
+
     let allOccupants = await db
       .select({
         id: occupant.id,
@@ -45,32 +54,45 @@ export async function GET(req: NextRequest) {
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(sql`${occupant.deleted_at} IS NULL`);
+      .where(and(...occConditions));
 
-    if (!allOccupants.length) {
-      return NextResponse.json({
-        success: true,
-        occupant: null,
-        occupants_list: [],
-        summary: {
-          total_outstanding_inr: 0,
-          next_due_date: null,
-          overdue_count: 0,
-          overdue_amount_inr: 0,
-          due_7_days_count: 0,
-          due_7_days_amount_inr: 0,
-          open_disputes_count: 0,
-        },
-        recent_invoices: [],
-        notices: [],
-      });
+    // If org-scoped query returned empty and unauthenticated, query non-deleted occupants
+    if (!allOccupants.length && !auth.userEmail) {
+      allOccupants = await db
+        .select({
+          id: occupant.id,
+          org_id: occupant.org_id,
+          occupant_name: occupant.occupant_name,
+          occupant_code: occupant.occupant_code,
+          email: occupant.email,
+          phone: occupant.phone,
+          gst_number: occupant.gst_number,
+          pan_number: occupant.pan_number,
+          industry_sector: occupant.industry_sector,
+          is_critical_occupant: occupant.is_critical_occupant,
+          address: occupant.address,
+          city: occupant.city,
+          state: occupant.state,
+          property_name: property.property_name,
+        })
+        .from(occupant)
+        .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`))
+        .leftJoin(space, eq(contract.space_id, space.id))
+        .leftJoin(building, eq(space.building_id, building.id))
+        .leftJoin(property, eq(building.property_id, property.id))
+        .where(
+          and(
+            sql`${occupant.deleted_at} IS NULL`,
+            sql`(${property.property_name} IS NULL OR (${property.property_name} NOT ILIKE '%divi%' AND ${property.property_name} NOT ILIKE '%horizon%'))`
+          )
+        );
     }
 
-    // Select targeted occupant
-    let currentOccupant = allOccupants[0];
+    // Select targeted occupant strictly based on parameters or credentials
+    let currentOccupant: any = null;
     if (requestedOccupantId) {
-      let found = allOccupants.find((o) => o.id === requestedOccupantId);
-      if (!found) {
+      currentOccupant = allOccupants.find((o) => o.id === requestedOccupantId);
+      if (!currentOccupant) {
         const [directOcc] = await db
           .select({
             id: occupant.id,
@@ -94,15 +116,59 @@ export async function GET(req: NextRequest) {
           .leftJoin(building, eq(space.building_id, building.id))
           .leftJoin(property, eq(building.property_id, property.id))
           .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
-        if (directOcc) found = directOcc;
+        if (directOcc) currentOccupant = directOcc;
       }
-      if (found) currentOccupant = found;
+    } else if (requestedEmail) {
+      currentOccupant = allOccupants.find(
+        (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
+      );
     } else if (auth.userEmail) {
-      const matched = allOccupants.find(
+      currentOccupant = allOccupants.find(
         (o) => o.email && o.email.toLowerCase().trim() === auth.userEmail?.toLowerCase().trim()
       );
-      if (matched) currentOccupant = matched;
+    } else if (requestedProp) {
+      currentOccupant = allOccupants.find(
+        (o) => o.property_name && o.property_name.toLowerCase().includes(requestedProp.toLowerCase().trim())
+      );
     }
+
+    // If still no direct match, check if there are occupants belonging to the user's specific org
+    if (!currentOccupant && auth.orgId && allOccupants.length > 0) {
+      // Pick first occupant only if it's within their own registered org and not dummy test data
+      const nonDummy = allOccupants.filter(
+        (o) => !o.property_name?.toLowerCase().includes("divi") && !o.property_name?.toLowerCase().includes("horizon")
+      );
+      if (nonDummy.length > 0) currentOccupant = nonDummy[0];
+    }
+
+    if (!currentOccupant) {
+      return NextResponse.json({
+        success: true,
+        occupant: null,
+        occupants_list: [],
+        contracts: [],
+        summary: {
+          total_outstanding_inr: 0,
+          next_due_date: null,
+          overdue_count: 0,
+          overdue_amount_inr: 0,
+          due_7_days_count: 0,
+          due_7_days_amount_inr: 0,
+          open_disputes_count: 0,
+        },
+        recent_invoices: [],
+        notices: [],
+        reminders: [],
+      });
+    }
+
+    // Filter occupants list strictly for the active occupant's organization
+    const filteredOccupantsList = allOccupants.filter(
+      (o) =>
+        o.org_id === currentOccupant.org_id &&
+        !o.property_name?.toLowerCase().includes("divi") &&
+        !o.property_name?.toLowerCase().includes("horizon")
+    );
 
     // Mark tenant as active on OfficeX once they access their portal
     if (currentOccupant?.id) {
@@ -314,7 +380,7 @@ export async function GET(req: NextRequest) {
         ? ""
         : "Rent roll is not yet subscribed by the property owner",
       occupant: currentOccupant,
-      occupants_list: allOccupants,
+      occupants_list: filteredOccupantsList,
       contracts: contracts,
       landlord_bank_details: landlordBank,
       summary: {

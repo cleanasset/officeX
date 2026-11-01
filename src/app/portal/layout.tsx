@@ -58,9 +58,24 @@ export default function TenantPortalLayout({
 
   async function loadPortalSummary(occId?: string) {
     try {
-      const savedOccId = occId || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const urlOccId = searchParams?.get("occupant_id") || "";
+      const urlEmail = searchParams?.get("email") || "";
+      const urlProp = searchParams?.get("prop") || "";
+
+      if (urlProp && typeof window !== "undefined") {
+        localStorage.setItem("officex_active_property", urlProp);
+      }
+
+      const savedOccId = occId || urlOccId || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
       const authHeaders = getClientAuthHeaders();
-      const url = savedOccId ? `/api/portal/summary?occupant_id=${savedOccId}` : `/api/portal/summary`;
+
+      const queryParts: string[] = [];
+      if (savedOccId) queryParts.push(`occupant_id=${encodeURIComponent(savedOccId)}`);
+      if (urlEmail) queryParts.push(`email=${encodeURIComponent(urlEmail)}`);
+      if (urlProp) queryParts.push(`prop=${encodeURIComponent(urlProp)}`);
+
+      const url = queryParts.length > 0 ? `/api/portal/summary?${queryParts.join("&")}` : `/api/portal/summary`;
       const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
