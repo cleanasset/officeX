@@ -37,6 +37,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
   const [registerRows, setRegisterRows] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
   const [selectedPropertyIdForHierarchy, setSelectedPropertyIdForHierarchy] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,10 +75,11 @@ export default function SpaceAndBuildingRegistryPage() {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
 
-      const [propsRes, spacesRes, regRes] = await Promise.all([
+      const [propsRes, spacesRes, regRes, tenantsRes] = await Promise.all([
         fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),
         fetch("/api/spaces", { headers: authHeaders }).catch(() => null),
-        fetch("/api/rent-roll/register?view=current", { headers: authHeaders }).catch(() => null),
+        fetch("/api/rent-roll/register?view=contracted", { headers: authHeaders }).catch(() => null),
+        fetch("/api/rent-roll/tenants", { headers: authHeaders }).catch(() => null),
       ]);
 
       let loadedProps: any[] = [];
@@ -98,24 +100,45 @@ export default function SpaceAndBuildingRegistryPage() {
         }
       }
 
+      let loadedTenants: any[] = [];
+      if (tenantsRes && tenantsRes.ok) {
+        const json = await tenantsRes.json();
+        if (Array.isArray(json.data)) {
+          loadedTenants = json.data;
+          setTenants(json.data);
+        }
+      }
+
       if (spacesRes && spacesRes.ok) {
         const json = await spacesRes.json();
         if (Array.isArray(json.data) && json.data.length > 0) {
           setSpaces(
             json.data.map((s: any) => {
+              const matchedTenant = loadedTenants.find(
+                (t: any) =>
+                  t.space_id === s.id ||
+                  (s.space_name && t.unit_number && t.unit_number.toLowerCase().trim() === s.space_name.toLowerCase().trim()) ||
+                  (s.space_code && t.space_code && t.space_code.toLowerCase().trim() === s.space_code.toLowerCase().trim())
+              );
               const matchedRow = loadedRegRows.find(
                 (r: any) =>
                   r.space_id === s.id ||
-                  (s.space_name && r.space_name?.toLowerCase() === s.space_name.toLowerCase()) ||
-                  (s.space_code && r.space_code?.toLowerCase() === s.space_code.toLowerCase())
+                  (s.space_name && r.space_name?.toLowerCase().trim() === s.space_name.toLowerCase().trim()) ||
+                  (s.space_code && r.space_code?.toLowerCase().trim() === s.space_code.toLowerCase().trim())
               );
               const occName =
-                matchedRow?.occupant_name &&
+                matchedTenant?.tenant_name ||
+                matchedTenant?.occupant_name ||
+                (matchedRow?.occupant_name &&
                 !matchedRow.occupant_name.includes("Vacant") &&
                 matchedRow.occupant_name !== "—"
                   ? matchedRow.occupant_name
-                  : null;
-              const isOccupied = Boolean(occName) || (s.occupancy_status === "occupied" && Boolean(occName));
+                  : null);
+              const isOccupied = Boolean(occName) || s.occupancy_status === "occupied" || (matchedTenant && matchedTenant.lease_status !== "Unassigned");
+              const tenantPsf = matchedTenant?.base_rent_rate && Number(s.chargeable_area_sqft || s.area_sqft || 0) > 0
+                ? Math.round(Number(matchedTenant.base_rent_rate) / Number(s.chargeable_area_sqft || s.area_sqft || 1))
+                : 0;
+
               return {
                 id: s.id,
                 space_number: s.space_name || s.space_code,
@@ -125,8 +148,8 @@ export default function SpaceAndBuildingRegistryPage() {
                 chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
                 status: isOccupied ? "occupied" : "available",
                 occupant_name: occName,
-                contract_code: matchedRow?.contract_code || null,
-                standard_rate_psf: Number(matchedRow?.rate_per_sqft || s.standard_rate_psf || s.rate_per_sqft || 0),
+                contract_code: matchedTenant?.contract_code || matchedRow?.contract_code || null,
+                standard_rate_psf: Number(matchedRow?.rate_per_sqft || tenantPsf || s.standard_rate_psf || s.rate_per_sqft || 0),
                 workstations: s.workstations_count || null,
                 fitout: s.fitout_condition || null,
                 space_type: s.space_type || "Office",
@@ -444,15 +467,21 @@ export default function SpaceAndBuildingRegistryPage() {
                         const propRegRows = registerRows.filter(
                           (r) =>
                             r.property_id === p.id ||
-                            (r.property_name && r.property_name.toLowerCase() === p.property_name.toLowerCase())
+                            (r.property_name && r.property_name.toLowerCase().trim() === p.property_name.toLowerCase().trim())
                         );
                         const propSpaces = spaces.filter(
                           (s) =>
                             s.property_id === p.id ||
-                            (s.building_name && s.building_name.toLowerCase().includes(p.property_name.toLowerCase()))
+                            (s.building_name && s.building_name.toLowerCase().includes(p.property_name.toLowerCase().trim()))
+                        );
+                        const propTenants = tenants.filter(
+                          (t) =>
+                            t.property_id === p.id ||
+                            (t.property_name && t.property_name.toLowerCase().trim() === p.property_name.toLowerCase().trim())
                         );
 
                         const rawOccupants = [
+                          ...propTenants.map((t) => t.tenant_name || t.occupant_name),
                           ...propRegRows.map((r) => r.occupant_name),
                           ...propSpaces.map((s) => s.occupant_name),
                         ].filter((name) => name && !name.includes("Vacant") && name !== "—");
@@ -461,6 +490,7 @@ export default function SpaceAndBuildingRegistryPage() {
 
                         const occupiedSqft = uniqueOccupants.length > 0
                           ? (
+                              propTenants.reduce((sum, t) => sum + (Number(t.area_sqft) || 0), 0) ||
                               propRegRows
                                 .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
                                 .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
@@ -480,12 +510,15 @@ export default function SpaceAndBuildingRegistryPage() {
                         const isFullyLeased = uniqueOccupants.length > 0 && occupancyPct >= 99;
 
                         // Effective Base Rate PSF
+                        const tenantWithRate = propTenants.find((t) => Number(t.base_rent_rate) > 0);
                         const effectivePsf =
                           Number(p.price_per_sqft) > 0
                             ? Number(p.price_per_sqft)
-                            : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
-                              propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
-                              null;
+                            : tenantWithRate && Number(tenantWithRate.area_sqft) > 0
+                              ? Math.round(Number(tenantWithRate.base_rent_rate) / Number(tenantWithRate.area_sqft))
+                              : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
+                                propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
+                                null;
 
                         return (
                           <tr
