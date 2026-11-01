@@ -13,9 +13,25 @@ export async function GET(req: NextRequest) {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const requestedOccupantId = searchParams.get("occupant_id");
+    const requestedEmail = searchParams.get("email");
 
     let occupantId = requestedOccupantId;
-    if (!occupantId) {
+
+    if (!occupantId && requestedEmail) {
+      const [occByEmail] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            ilike(occupant.email, requestedEmail.trim()),
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        )
+        .limit(1);
+      if (occByEmail) occupantId = occByEmail.id;
+    }
+
+    if (!occupantId && auth.orgId) {
       const [firstOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
@@ -30,7 +46,13 @@ export async function GET(req: NextRequest) {
 
     // Find contracts for this occupant
     const occupantContracts = await db
-      .select({ id: contract.id })
+      .select({
+        id: contract.id,
+        contract_code: contract.contract_code,
+        created_at: contract.created_at,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+      })
       .from(contract)
       .where(
         and(
@@ -72,12 +94,35 @@ export async function GET(req: NextRequest) {
       )
       .orderBy(desc(contract_document.created_at));
 
+    // If no custom documents uploaded yet, synthesize the primary Master Lease Agreement entry
+    let finalDocs = docs.map((d) => ({
+      ...d,
+      file_url: d.storage_path || "/portal/contract",
+    }));
+
+    if (finalDocs.length === 0 && occupantContracts.length > 0) {
+      const primaryC = occupantContracts[0];
+      finalDocs = [
+        {
+          id: `doc_${primaryC.id}`,
+          contract_id: primaryC.id,
+          doc_type: "lease_agreement",
+          file_name: `Master Commercial Lease Agreement (${primaryC.contract_code}).pdf`,
+          storage_path: "/portal/contract",
+          file_url: "/portal/contract",
+          version: 1,
+          is_current: true,
+          status: "active",
+          effective_date: primaryC.start_date ? new Date(primaryC.start_date).toISOString() : new Date().toISOString(),
+          expiry_date: primaryC.end_date ? new Date(primaryC.end_date).toISOString() : null,
+          created_at: primaryC.created_at ? new Date(primaryC.created_at) : new Date(),
+        },
+      ];
+    }
+
     return NextResponse.json({
       success: true,
-      documents: docs.map((d) => ({
-        ...d,
-        file_url: d.storage_path,
-      })),
+      documents: finalDocs,
     });
   } catch (err: any) {
     console.error("GET /api/portal/documents error:", err);

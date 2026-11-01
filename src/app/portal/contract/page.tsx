@@ -34,7 +34,19 @@ export default function TenantContractPage() {
   async function loadContract() {
     try {
       setLoading(true);
-      const res = await fetch("/api/portal/contract");
+      let query = "";
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search);
+        const occId = sp.get("occupant_id") || localStorage.getItem("officex_tenant_occupant_id") || "";
+        const email = sp.get("email") || localStorage.getItem("officex_user_email") || "";
+        const prop = sp.get("prop") || localStorage.getItem("officex_active_property") || "";
+        const params = new URLSearchParams();
+        if (occId) params.set("occupant_id", occId);
+        if (email) params.set("email", email);
+        if (prop) params.set("prop", prop);
+        if (params.toString()) query = `?${params.toString()}`;
+      }
+      const res = await fetch(`/api/portal/contract${query}`);
       const json = await res.json();
       if (json.success) {
         setContractData(json.contract);

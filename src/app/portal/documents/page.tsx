@@ -39,7 +39,19 @@ export default function TenantDocumentsPage() {
   async function loadDocuments() {
     try {
       setLoading(true);
-      const res = await fetch("/api/portal/documents");
+      let query = "";
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search);
+        const occId = sp.get("occupant_id") || localStorage.getItem("officex_tenant_occupant_id") || "";
+        const email = sp.get("email") || localStorage.getItem("officex_user_email") || "";
+        const prop = sp.get("prop") || localStorage.getItem("officex_active_property") || "";
+        const params = new URLSearchParams();
+        if (occId) params.set("occupant_id", occId);
+        if (email) params.set("email", email);
+        if (prop) params.set("prop", prop);
+        if (params.toString()) query = `?${params.toString()}`;
+      }
+      const res = await fetch(`/api/portal/documents${query}`);
       const json = await res.json();
       if (json.success) {
         setDocuments(json.documents || []);
@@ -60,8 +72,20 @@ export default function TenantDocumentsPage() {
 
     try {
       setUploading(true);
-      // Fetch contract id to link
-      const cRes = await fetch("/api/portal/contract");
+      // Fetch contract id to link with tenant query
+      let query = "";
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search);
+        const occId = sp.get("occupant_id") || localStorage.getItem("officex_tenant_occupant_id") || "";
+        const email = sp.get("email") || localStorage.getItem("officex_user_email") || "";
+        const prop = sp.get("prop") || localStorage.getItem("officex_active_property") || "";
+        const params = new URLSearchParams();
+        if (occId) params.set("occupant_id", occId);
+        if (email) params.set("email", email);
+        if (prop) params.set("prop", prop);
+        if (params.toString()) query = `?${params.toString()}`;
+      }
+      const cRes = await fetch(`/api/portal/contract${query}`);
       const cJson = await cRes.json();
       const contractId = cJson.contract?.id;
 

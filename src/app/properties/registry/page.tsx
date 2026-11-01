@@ -477,16 +477,25 @@ export default function SpaceAndBuildingRegistryPage() {
                         const propTenants = tenants.filter(
                           (t) =>
                             t.property_id === p.id ||
-                            (t.property_name && t.property_name.toLowerCase().trim() === p.property_name.toLowerCase().trim())
+                            (t.property_name && t.property_name.toLowerCase().trim() === p.property_name.toLowerCase().trim()) ||
+                            (t.property_name && p.property_name && (
+                              t.property_name.toLowerCase().includes(p.property_name.toLowerCase().trim()) ||
+                              p.property_name.toLowerCase().includes(t.property_name.toLowerCase().trim())
+                            ))
                         );
 
                         const rawOccupants = [
-                          ...propTenants.map((t) => t.tenant_name || t.occupant_name),
+                          ...propTenants.map((t) => t.tenant_name || t.occupant_name || t.trade_name),
                           ...propRegRows.map((r) => r.occupant_name),
                           ...propSpaces.map((s) => s.occupant_name),
                         ].filter((name) => name && !name.includes("Vacant") && name !== "—");
 
                         const uniqueOccupants = Array.from(new Set(rawOccupants));
+                        const hasPendingLease = propTenants.some(
+                          (t) =>
+                            String(t.lease_status || "").toLowerCase().includes("pending") ||
+                            String(t.status || "").toLowerCase().includes("pending")
+                        );
 
                         const occupiedSqft = uniqueOccupants.length > 0
                           ? (
@@ -564,8 +573,12 @@ export default function SpaceAndBuildingRegistryPage() {
                                     <Users size={12} className="text-[#0F8B7D] shrink-0" />
                                     <span>{uniqueOccupants.join(", ")}</span>
                                   </div>
-                                  <span className="text-[10px] text-slate-500 font-medium">
-                                    {occupiedSqft > 0 ? `${occupiedSqft.toLocaleString("en-IN")} sq.ft leased` : "Contract active"}
+                                  <span className={`text-[10px] font-medium ${hasPendingLease ? "text-amber-700 font-bold" : "text-slate-500"}`}>
+                                    {hasPendingLease
+                                      ? "Lease Pending Acceptance"
+                                      : occupiedSqft > 0
+                                        ? `${occupiedSqft.toLocaleString("en-IN")} sq.ft leased`
+                                        : "Contract active"}
                                   </span>
                                 </div>
                               ) : (
@@ -582,6 +595,11 @@ export default function SpaceAndBuildingRegistryPage() {
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-300 uppercase tracking-wider">
                                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                                   {occupancyPct}% Leased
+                                </span>
+                              ) : uniqueOccupants.length > 0 || hasPendingLease ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                  LEASE PENDING
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">

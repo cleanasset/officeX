@@ -16,8 +16,25 @@ export async function GET(req: NextRequest) {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const requestedOccupantId = searchParams.get("occupant_id");
+    const requestedEmail = searchParams.get("email");
+    const requestedProp = searchParams.get("prop");
 
     let occupantId = requestedOccupantId;
+
+    if (!occupantId && requestedEmail) {
+      const [occByEmail] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            ilike(occupant.email, requestedEmail.trim()),
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        )
+        .limit(1);
+      if (occByEmail) occupantId = occByEmail.id;
+    }
+
     if (!occupantId && auth.orgId) {
       const [firstOcc] = await db
         .select({ id: occupant.id })

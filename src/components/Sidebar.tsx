@@ -378,7 +378,6 @@ function SidebarInner() {
   // Synchronously compute active portal from URL first
   const findPortalKey = (path: string): string | undefined => {
     if (path === "/dashboard/owner" || path.startsWith("/dashboard/owner/")) return "owner";
-    if (path.startsWith("/properties") || path.startsWith("/contracts") || path.startsWith("/settings/delegation")) return "owner";
     if (path === "/dashboard/pm" || path.startsWith("/dashboard/pm/")) return "property_manager";
     if (path === "/dashboard/fm" || path.startsWith("/dashboard/fm/")) return "facility_manager";
     if (path === "/dashboard/leasing" || path.startsWith("/dashboard/leasing/")) return "leasing_manager";
@@ -390,11 +389,20 @@ function SidebarInner() {
     if (path.startsWith("/vendor")) return "vendor";
     if (path.startsWith("/admin")) return "admin";
     if (path.startsWith("/public")) return "public";
+    if (path.startsWith("/settings/delegation")) return "owner";
     return undefined;
   };
 
   const matchedFromPath = findPortalKey(pathname);
-  const currentPortalKey = matchedFromPath || (selectedRole === "properties" ? "owner" : selectedRole) || "owner";
+  // Strictly honor selectedRole from user session (e.g. property_manager, facility_manager, tenant)
+  const isDelegatedSession =
+    selectedRole === "property_manager" ||
+    selectedRole === "facility_manager" ||
+    selectedRole === "finance_manager" ||
+    selectedRole === "tenant";
+  const currentPortalKey = isDelegatedSession
+    ? selectedRole
+    : (matchedFromPath || (selectedRole === "properties" ? "owner" : selectedRole) || "owner");
 
   useEffect(() => {
     setIsMounted(true);

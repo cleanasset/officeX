@@ -273,10 +273,19 @@ export default function PropertyHierarchyModal({
     managerPhone: "",
     managerUserRole: "property_manager" as "property_manager" | "org_admin",
     managerRights: {
+      canEnrollTenants: true,
+      canDraftContracts: true,
       contractExecution: false,
+      canTerminateLeases: false,
+      billingRuns: false,
       concessions: false,
-      billingRuns: false, // Default unchecked for least privilege
+      canRecordOfflinePayments: false,
       depositRefunds: false,
+      canDemarcateSpaces: false,
+      canLogCAM: true,
+      canManageTickets: true,
+      canExportRentRoll: false,
+      canViewBankAccounts: false,
       maxMaintenanceSpend: 25000,
     },
   });
@@ -8051,69 +8060,221 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-                {/* 5. Granular Permissions */}
-                <div className="pt-2 border-t border-slate-200">
-                  <label className="font-bold text-slate-700 block mb-2">Operational Permissions &amp; Delegation Guardrails</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={delegationForm.managerRights.billingRuns}
-                        onChange={(e) =>
-                          setDelegationForm({
-                            ...delegationForm,
-                            managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
-                          })
-                        }
-                        className="rounded accent-[#0F8B7D]"
-                      />
-                      <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
+                {/* 5. Granular Permissions & Rights Matrix */}
+                <div className="pt-3 border-t border-slate-200 space-y-3">
+                  <div>
+                    <label className="font-black text-slate-800 text-xs uppercase tracking-wider block">
+                      Enforceable Delegation Rights &amp; Operational Guardrails
                     </label>
+                    <p className="text-[11px] text-slate-500">
+                      Authorise specific commercial rights. Actions not checked here are strictly locked and prohibited in the manager console.
+                    </p>
+                  </div>
 
-                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={delegationForm.managerRights.contractExecution}
-                        onChange={(e) =>
-                          setDelegationForm({
-                            ...delegationForm,
-                            managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
-                          })
-                        }
-                        className="rounded accent-[#0F8B7D]"
-                      />
-                      <span className="text-slate-800 font-medium">Execute &amp; Modify Lease Agreements</span>
-                    </label>
+                  <div className="space-y-2.5">
+                    {/* Category A: Lease & Tenant Authority */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Lease &amp; Tenant Authority
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canEnrollTenants)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canEnrollTenants: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Onboard &amp; Register Corporate Tenants</span>
+                        </label>
 
-                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={delegationForm.managerRights.concessions}
-                        onChange={(e) =>
-                          setDelegationForm({
-                            ...delegationForm,
-                            managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
-                          })
-                        }
-                        className="rounded accent-[#0F8B7D]"
-                      />
-                      <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers</span>
-                    </label>
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDraftContracts)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDraftContracts: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Draft Lease Agreements &amp; Proposals</span>
+                        </label>
 
-                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={delegationForm.managerRights.depositRefunds}
-                        onChange={(e) =>
-                          setDelegationForm({
-                            ...delegationForm,
-                            managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
-                          })
-                        }
-                        className="rounded accent-[#0F8B7D]"
-                      />
-                      <span className="text-slate-800 font-medium">Approve Security Deposit Refunds</span>
-                    </label>
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.contractExecution}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Execute &amp; Modify Binding Leases</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canTerminateLeases)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canTerminateLeases: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Issue Lease Eviction / Termination Notices</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category B: Commercial Billing & Financial Rights */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Billing &amp; Financial Operations
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.billingRuns}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.concessions}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers / Credit Notes</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canRecordOfflinePayments)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canRecordOfflinePayments: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Record Manual Offline Payments (NEFT / RTGS)</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.depositRefunds}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Approve Security Deposit Refunds &amp; Deductions</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category C: Facility Operations & Asset Layout */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Facility Operations &amp; Space Layout
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDemarcateSpaces)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDemarcateSpaces: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Demarcate, Merge &amp; Split Suites</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canLogCAM)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canLogCAM: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Log CAM Meters &amp; Utility Expenses</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canManageTickets)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canManageTickets: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Resolve Tenant Helpdesk &amp; Work Orders</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canExportRentRoll)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canExportRentRoll: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Export Rent Roll &amp; Tax Registers</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

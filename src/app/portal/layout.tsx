@@ -287,10 +287,12 @@ export default function TenantPortalLayout({
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href;
+            const searchStr = typeof window !== "undefined" ? window.location.search : "";
+            const dynamicHref = `${link.href}${searchStr}`;
             return (
               <Link
                 key={link.href}
-                href={link.href}
+                href={dynamicHref}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-md font-black"
@@ -432,10 +434,12 @@ export default function TenantPortalLayout({
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href;
+                const searchStr = typeof window !== "undefined" ? window.location.search : "";
+                const dynamicHref = `${link.href}${searchStr}`;
                 return (
                   <Link
                     key={link.href}
-                    href={link.href}
+                    href={dynamicHref}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold ${
                       isActive ? "bg-indigo-600 text-white" : "text-slate-300 hover:bg-slate-800"
