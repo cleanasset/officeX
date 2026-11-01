@@ -9,7 +9,7 @@ import {
   contract_charge,
 } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {

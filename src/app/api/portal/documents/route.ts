@@ -6,7 +6,7 @@ import {
   contract_document,
 } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc, or } from "drizzle-orm";
+import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
