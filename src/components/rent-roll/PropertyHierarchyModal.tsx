@@ -313,6 +313,10 @@ export default function PropertyHierarchyModal({
       floorName?: string;
       unitType?: string;
       occupancyStatus?: string;
+      fitoutCondition?: string;
+      workstationsCount?: number | null;
+      cabinsCount?: number | null;
+      meetingRoomsCount?: number | null;
     }>
   >([]);
   const [tenantsList, setTenantsList] = useState<
@@ -437,6 +441,8 @@ export default function PropertyHierarchyModal({
     occupancyStatus: "vacant" as "vacant" | "occupied",
     fitoutCondition: "Fully Furnished",
     workstationsCount: "",
+    cabinsCount: "",
+    meetingRoomsCount: "",
   });
   const [showAddSpaceForm, setShowAddSpaceForm] = useState(false);
   const [addingUnitToFloor, setAddingUnitToFloor] = useState<number | null>(null);
@@ -447,6 +453,8 @@ export default function PropertyHierarchyModal({
     occupancyStatus: "vacant" as "vacant" | "occupied",
     fitoutCondition: "Fully Furnished",
     workstationsCount: "",
+    cabinsCount: "",
+    meetingRoomsCount: "",
   });
 
   // ──── 4. TENANT FORM (Corporate & Signatory Master) ────
@@ -737,6 +745,10 @@ export default function PropertyHierarchyModal({
           floorName: s.floor_name || s.floor_label || "",
           unitType: s.space_type || "office",
           occupancyStatus: s.occupancy_status || "vacant",
+          fitoutCondition: s.fitout_condition || "Fully Furnished",
+          workstationsCount: s.workstations_count !== undefined && s.workstations_count !== null ? Number(s.workstations_count) : null,
+          cabinsCount: s.cabins_count !== undefined && s.cabins_count !== null ? Number(s.cabins_count) : null,
+          meetingRoomsCount: s.meeting_rooms_count !== undefined && s.meeting_rooms_count !== null ? Number(s.meeting_rooms_count) : null,
         }));
         setSpacesList(sArr);
         if (initialSpaceId) {
@@ -1616,7 +1628,10 @@ export default function PropertyHierarchyModal({
   };
 
   // ──── SUBMIT 3: SPACE / UNIT MASTER ────
-  const handleSaveSpace = async (e?: React.FormEvent, proceedToNext: boolean = true) => {
+  const handleSaveSpace = async (
+    e?: React.FormEvent,
+    proceedAction: boolean | "keep_adding" | "next_floor" | "finish" = "next_floor"
+  ) => {
     if (e) e.preventDefault();
     if (!spaceForm.spaceName.trim()) {
       showToast("Space / Unit Name is required", "error");
@@ -1671,8 +1686,9 @@ export default function PropertyHierarchyModal({
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
-      const rawFloor = spaceForm.floorNumber || (allFloorNumbers[0] ? String(allFloorNumbers[0]) : "1");
-      const floorStr = rawFloor.toLowerCase().startsWith("floor") ? rawFloor : `Floor ${rawFloor}`;
+      const rawFloor = spaceForm.floorNumber || (allFloorNumbers[0] !== undefined ? String(allFloorNumbers[0]) : "0");
+      const isG = Number(rawFloor) === 0;
+      const floorStr = isG ? "Ground Floor" : formatFloorName(Number(rawFloor));
 
       // If replacing an unleased full-floor placeholder, remove it so user's subdivided unit takes over cleanly
       if (isSolePlaceholder && floorSpaces[0]) {
@@ -1697,11 +1713,15 @@ export default function PropertyHierarchyModal({
           floor_name: floorStr,
           space_type: spaceForm.unitType.toLowerCase() === "office" ? "suite" : spaceForm.unitType.toLowerCase(),
           occupancy_status: spaceForm.occupancyStatus || "vacant",
+          fitout_condition: spaceForm.fitoutCondition,
+          workstations_count: spaceForm.workstationsCount ? Number(spaceForm.workstationsCount) : null,
+          cabins_count: spaceForm.cabinsCount ? Number(spaceForm.cabinsCount) : null,
+          meeting_rooms_count: spaceForm.meetingRoomsCount ? Number(spaceForm.meetingRoomsCount) : null,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(`✓ Space "${spaceForm.spaceName}" created successfully!`);
+        showToast(`✓ Space "${spaceForm.spaceName}" created on ${floorStr}!`);
         if (data.data?.id) {
           setContractForm((prev) => ({
             ...prev,
@@ -1710,20 +1730,202 @@ export default function PropertyHierarchyModal({
           }));
         }
         await loadHierarchyDropdowns();
-        setSpaceForm((prev) => ({
-          ...prev,
-          spaceName: "",
-          areaSqft: "",
-          occupancyStatus: "vacant",
-          fitoutCondition: "Fully Furnished",
-          workstationsCount: "",
-        }));
-        if (proceedToNext) {
+
+        if (proceedAction === false || proceedAction === "keep_adding") {
+          // Keep current floor, reset unit name & area
+          setSpaceForm((prev) => ({
+            ...prev,
+            spaceName: "",
+            areaSqft: "",
+            occupancyStatus: "vacant",
+            cabinsCount: "",
+            meetingRoomsCount: "",
+          }));
+        } else if (proceedAction === "finish") {
           setActiveTab("tenant");
+        } else {
+          // Linear advancement to next floor
+          const currentIdx = allFloorNumbers.indexOf(rawFloorNum);
+          const nextFloors = allFloorNumbers.slice(currentIdx + 1);
+          if (nextFloors.length > 0) {
+            const nextFl = nextFloors[0];
+            const nextFlLabel = nextFl === 0 ? "Ground Floor" : formatFloorName(nextFl);
+            const nextFlPlanned = Number(floorBreakdown.find((f) => f.floorNumber === nextFl)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(propTotalArea / allFloorNumbers.length) : 0);
+
+            setActiveStudioFloor(String(nextFl));
+            setSpaceForm((prev) => ({
+              ...prev,
+              floorNumber: String(nextFl),
+              spaceName: `${nextFlLabel} - Full Floor`,
+              areaSqft: nextFlPlanned > 0 ? String(nextFlPlanned) : "",
+              occupancyStatus: "vacant",
+              fitoutCondition: propForm.fitoutCondition || "Fully Furnished",
+              cabinsCount: "",
+              meetingRoomsCount: "",
+            }));
+            showToast(`✓ Saved! Now configuring ${nextFlLabel}.`);
+          } else {
+            showToast("✓ All floors configured! Proceeding to Step 3 (Tenants).");
+            setActiveTab("tenant");
+          }
         }
         onSuccess?.();
       } else {
         showToast(data.message || data.error || "Failed to create space", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ──── 1-CLICK AUTO-DEMARCATE ALL FLOORS ────
+  const handleAutoDemarcateAllFloors = async () => {
+    const bldgId = spaceForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id;
+    if (!bldgId) {
+      showToast("Please select a building first", "error");
+      return;
+    }
+    const propTotalArea = Number(propForm.areaSqft) || Number(activePropertyObj?.area) || 0;
+    const numFloors = allFloorNumbers.length || 1;
+    const defaultPerFloor = propTotalArea > 0 ? Math.floor(propTotalArea / numFloors) : 0;
+
+    const spacesToCreate: any[] = [];
+
+    for (const fl of allFloorNumbers) {
+      const flSpaces = displaySpaces.filter((s) => extractFloorNumberFromSpace(s) === fl);
+      const flAllocated = flSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+      const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || defaultPerFloor;
+      const remaining = Math.max(0, flPlanned - flAllocated);
+
+      if (remaining > 0 || flSpaces.length === 0) {
+        const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
+        const isG = fl === 0;
+        const codeSuffix = isG ? "G" : `F${fl}`;
+
+        // Proportional fitout allocation if entered in Step 1
+        const totalW = Number(propForm.workstationsCount) || 0;
+        const totalC = Number(propForm.cabinsCount) || 0;
+        const totalM = Number(propForm.meetingRoomsCount) || 0;
+
+        const flWorkstations = totalW > 0 ? Math.floor(totalW / numFloors) : null;
+        const flCabins = totalC > 0 ? Math.floor(totalC / numFloors) : null;
+        const flMeeting = totalM > 0 ? Math.floor(totalM / numFloors) : null;
+
+        spacesToCreate.push({
+          space_name: `${flLabel} - Full Floor`,
+          space_code: `SP-${codeSuffix}-${Date.now().toString().slice(-4)}`,
+          building_id: bldgId,
+          chargeable_area_sqft: remaining > 0 ? remaining : (flPlanned || 1000),
+          floor_name: flLabel,
+          space_type: "suite",
+          occupancy_status: "vacant",
+          fitout_condition: propForm.fitoutCondition || "Fully Furnished",
+          workstations_count: flWorkstations,
+          cabins_count: flCabins,
+          meeting_rooms_count: flMeeting,
+        });
+      }
+    }
+
+    if (spacesToCreate.length === 0) {
+      showToast("All floors already have units configured!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ spaces: spacesToCreate }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`⚡ Successfully auto-created full-floor units for ${spacesToCreate.length} floor(s)!`);
+        await loadHierarchyDropdowns();
+        onSuccess?.();
+      } else {
+        showToast(data.message || data.error || "Failed to auto-demarcate floors", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ──── 1-CLICK AUTO-DEMARCATE ALL FLOORS ────
+  const handleAutoDemarcateAllFloors = async () => {
+    const bldgId = spaceForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id;
+    if (!bldgId) {
+      showToast("Please select a building first", "error");
+      return;
+    }
+    const propTotalArea = Number(propForm.areaSqft) || Number(activePropertyObj?.area) || 0;
+    const numFloors = allFloorNumbers.length || 1;
+    const defaultPerFloor = propTotalArea > 0 ? Math.floor(propTotalArea / numFloors) : 0;
+
+    const spacesToCreate: any[] = [];
+
+    for (const fl of allFloorNumbers) {
+      const flSpaces = displaySpaces.filter((s) => extractFloorNumberFromSpace(s) === fl);
+      const flAllocated = flSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
+      const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || defaultPerFloor;
+      const remaining = Math.max(0, flPlanned - flAllocated);
+
+      if (remaining > 0 || flSpaces.length === 0) {
+        const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
+        const isG = fl === 0;
+        const codeSuffix = isG ? "G" : `F${fl}`;
+
+        // Proportional fitout allocation if entered in Step 1
+        const totalW = Number(propForm.workstationsCount) || 0;
+        const totalC = Number(propForm.cabinsCount) || 0;
+        const totalM = Number(propForm.meetingRoomsCount) || 0;
+
+        const flWorkstations = totalW > 0 ? Math.floor(totalW / numFloors) : null;
+        const flCabins = totalC > 0 ? Math.floor(totalC / numFloors) : null;
+        const flMeeting = totalM > 0 ? Math.floor(totalM / numFloors) : null;
+
+        spacesToCreate.push({
+          space_name: `${flLabel} - Full Floor`,
+          space_code: `SP-${codeSuffix}-${Date.now().toString().slice(-4)}`,
+          building_id: bldgId,
+          chargeable_area_sqft: remaining > 0 ? remaining : (flPlanned || 1000),
+          floor_name: flLabel,
+          space_type: "suite",
+          occupancy_status: "vacant",
+          fitout_condition: propForm.fitoutCondition || "Fully Furnished",
+          workstations_count: flWorkstations,
+          cabins_count: flCabins,
+          meeting_rooms_count: flMeeting,
+        });
+      }
+    }
+
+    if (spacesToCreate.length === 0) {
+      showToast("All floors already have units configured!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ spaces: spacesToCreate }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`⚡ Successfully auto-created full-floor units for ${spacesToCreate.length} floor(s)!`);
+        await loadHierarchyDropdowns();
+        onSuccess?.();
+      } else {
+        showToast(data.message || data.error || "Failed to auto-demarcate floors", "error");
       }
     } catch (err: any) {
       showToast(err.message || "Network error", "error");
@@ -1911,6 +2113,10 @@ export default function PropertyHierarchyModal({
           floor_name: flName,
           space_type: newUnitForm.unitType.toLowerCase() === "office" ? "suite" : newUnitForm.unitType.toLowerCase(),
           occupancy_status: newUnitForm.occupancyStatus || "vacant",
+          fitout_condition: newUnitForm.fitoutCondition,
+          workstations_count: newUnitForm.workstationsCount ? Number(newUnitForm.workstationsCount) : null,
+          cabins_count: newUnitForm.cabinsCount ? Number(newUnitForm.cabinsCount) : null,
+          meeting_rooms_count: newUnitForm.meetingRoomsCount ? Number(newUnitForm.meetingRoomsCount) : null,
         }),
       });
       const data = await res.json();
@@ -1925,6 +2131,8 @@ export default function PropertyHierarchyModal({
           occupancyStatus: "vacant",
           fitoutCondition: "Fully Furnished",
           workstationsCount: "",
+          cabinsCount: "",
+          meetingRoomsCount: "",
         });
       } else {
         showToast(data.message || data.error || "Failed to create unit", "error");
@@ -4342,6 +4550,24 @@ export default function PropertyHierarchyModal({
             const remainingBldgAdjusted = isSolePlaceholderOnCurrentFloor ? remainingBuildingArea + (currentFloorSpaces[0]?.area || 0) : remainingBuildingArea;
             const effectiveRemaining = currentFloorPlanned > 0 ? Math.min(currentFloorRemaining, remainingBldgAdjusted) : remainingBldgAdjusted;
 
+            const totalPlannedCabins = Number(propForm.cabinsCount) || 0;
+            const totalPlannedRooms = Number(propForm.meetingRoomsCount) || 0;
+            const totalPlannedDesks = Number(propForm.workstationsCount) || 0;
+
+            const allocatedCabins = displaySpaces.reduce((acc, s) => acc + (Number(s.cabinsCount) || 0), 0);
+            const allocatedRooms = displaySpaces.reduce((acc, s) => acc + (Number(s.meetingRoomsCount) || 0), 0);
+            const allocatedDesks = displaySpaces.reduce((acc, s) => acc + (Number(s.workstationsCount) || 0), 0);
+
+            const remainingCabins = Math.max(0, totalPlannedCabins - allocatedCabins);
+            const remainingRooms = Math.max(0, totalPlannedRooms - allocatedRooms);
+            const remainingDesks = Math.max(0, totalPlannedDesks - allocatedDesks);
+
+            const hasAnyPlannedFitout = totalPlannedCabins > 0 || totalPlannedRooms > 0 || totalPlannedDesks > 0;
+
+            const currentFloorIdx = allFloorNumbers.indexOf(selectedFloorNum);
+            const nextFloorNum = allFloorNumbers[currentFloorIdx + 1];
+            const nextFloorLabel = nextFloorNum !== undefined ? (nextFloorNum === 0 ? "Ground Floor" : formatFloorName(nextFloorNum)) : null;
+
             return (
               <div className="space-y-4">
                 {/* Header */}
@@ -4390,7 +4616,7 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-                {/* Progress Bar (Only shown if total building area is defined) */}
+                {/* Demarcation Progress Bar */}
                 {buildingTotalArea > 0 && (
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                     <div className="flex items-center justify-between text-xs font-bold">
@@ -4414,6 +4640,75 @@ export default function PropertyHierarchyModal({
                   </div>
                 )}
 
+                {/* 1-Click Fast-Track: Auto-Demarcate All Floors as 1 Unit Each */}
+                {allFloorNumbers.length > 1 && remainingBuildingArea > 0 && (
+                  <div className="p-3.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 rounded-2xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-teal-600 text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1">
+                          <Zap size={11} className="fill-white" /> 1-Click Fast Track
+                        </span>
+                        <span className="font-extrabold text-slate-800 text-xs">
+                          Auto-Demarcate All {allFloorNumbers.length} Floors
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 font-medium">
+                        Have 1 tenant or unit per floor? Generate full-floor units for all floors automatically in 1 click without repetitive typing.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAutoDemarcateAllFloors}
+                      disabled={loading}
+                      className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-black text-xs transition shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      <Sparkles size={13} />
+                      <span>⚡ Auto-Demarcate All Floors ({remainingBuildingArea.toLocaleString()} Sq.Ft)</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Property Fitout Budget Tracker (Visible when Step 1 has fitout numbers) */}
+                {hasAnyPlannedFitout && (
+                  <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                        <CheckCircle2 size={13} className="text-blue-600" />
+                        <span>Property Fitout Budget (from Step 1):</span>
+                      </span>
+                      <span className="text-[11px] text-blue-700 font-medium">
+                        Capacity tracker across all units
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      {totalPlannedDesks > 0 && (
+                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
+                          <span className="font-bold text-slate-700">Workstations / Desks:</span>
+                          <span className="font-mono font-bold text-blue-800">
+                            {allocatedDesks} / {totalPlannedDesks} allocated ({remainingDesks} left)
+                          </span>
+                        </div>
+                      )}
+                      {totalPlannedCabins > 0 && (
+                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
+                          <span className="font-bold text-slate-700">Private Cabins:</span>
+                          <span className="font-mono font-bold text-blue-800">
+                            {allocatedCabins} / {totalPlannedCabins} allocated ({remainingCabins} left)
+                          </span>
+                        </div>
+                      )}
+                      {totalPlannedRooms > 0 && (
+                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
+                          <span className="font-bold text-slate-700">Meeting Rooms:</span>
+                          <span className="font-mono font-bold text-blue-800">
+                            {allocatedRooms} / {totalPlannedRooms} allocated ({remainingRooms} left)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Floor Navigation Tab Strip for Step 2 */}
                 <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
@@ -4422,7 +4717,7 @@ export default function PropertyHierarchyModal({
                       <span>Select Floor to View &amp; Configure Units:</span>
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      Filter units or add new spaces floor-by-floor
+                      Click a floor to configure its units
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
@@ -4441,6 +4736,8 @@ export default function PropertyHierarchyModal({
                       const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
                       const unitsOnFloor = displaySpaces.filter((s) => getFloorNum(s) === fl);
                       const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : 0);
+                      const flAllocated = unitsOnFloor.reduce((acc, s) => acc + (s.area || 0), 0);
+                      const isComplete = flPlanned > 0 && flAllocated >= flPlanned;
                       const isSelected = activeStudioFloor === String(fl);
                       return (
                         <button
@@ -4448,11 +4745,20 @@ export default function PropertyHierarchyModal({
                           type="button"
                           onClick={() => {
                             setActiveStudioFloor(String(fl));
-                            setSpaceForm((prev) => ({ ...prev, floorNumber: String(fl) }));
+                            setSpaceForm((prev) => ({
+                              ...prev,
+                              floorNumber: String(fl),
+                              spaceName: prev.spaceName || (flAllocated === 0 ? `${flLabel} - Full Floor` : ""),
+                              areaSqft: flPlanned > flAllocated ? String(flPlanned - flAllocated) : prev.areaSqft,
+                            }));
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
                             isSelected
                               ? "bg-[#0F8B7D] text-white shadow-xs"
+                              : isComplete
+                              ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-300"
+                              : unitsOnFloor.length === 0
+                              ? "bg-amber-50/70 text-slate-700 hover:bg-amber-100/70 border border-amber-200"
                               : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
                           }`}
                         >
@@ -4463,9 +4769,15 @@ export default function PropertyHierarchyModal({
                             </span>
                           )}
                           <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                            isSelected ? "bg-white/20 text-white" : "bg-teal-50 text-teal-800 border border-teal-200"
+                            isSelected
+                              ? "bg-white/20 text-white"
+                              : isComplete
+                              ? "bg-emerald-200 text-emerald-900"
+                              : unitsOnFloor.length === 0
+                              ? "bg-amber-200 text-amber-900"
+                              : "bg-teal-50 text-teal-800 border border-teal-200"
                           }`}>
-                            {unitsOnFloor.length}
+                            {isComplete ? "✓ Full" : unitsOnFloor.length === 0 ? "Pending" : `${unitsOnFloor.length} unit(s)`}
                           </span>
                         </button>
                       );
@@ -4820,13 +5132,60 @@ export default function PropertyHierarchyModal({
 
                       {/* 8. Workstations / Desks */}
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">Workstations / Desks</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Workstations / Desks</label>
+                          {totalPlannedDesks > 0 && (
+                            <span className="text-[10px] text-blue-700 font-mono">
+                              ({remainingDesks} unallocated)
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           min="0"
-                          placeholder="e.g. 25"
+                          placeholder={remainingDesks > 0 ? `Max ~${remainingDesks}` : "e.g. 25"}
                           value={spaceForm.workstationsCount}
                           onChange={(e) => setSpaceForm({ ...spaceForm, workstationsCount: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
+                        />
+                      </div>
+
+                      {/* 9. Private Cabins */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Private Cabins</label>
+                          {totalPlannedCabins > 0 && (
+                            <span className="text-[10px] text-blue-700 font-mono">
+                              ({remainingCabins} unallocated)
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={remainingCabins > 0 ? `Max ~${remainingCabins}` : "e.g. 4"}
+                          value={spaceForm.cabinsCount}
+                          onChange={(e) => setSpaceForm({ ...spaceForm, cabinsCount: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
+                        />
+                      </div>
+
+                      {/* 10. Meeting Rooms */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Meeting Rooms</label>
+                          {totalPlannedRooms > 0 && (
+                            <span className="text-[10px] text-blue-700 font-mono">
+                              ({remainingRooms} unallocated)
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={remainingRooms > 0 ? `Max ~${remainingRooms}` : "e.g. 2"}
+                          value={spaceForm.meetingRoomsCount}
+                          onChange={(e) => setSpaceForm({ ...spaceForm, meetingRoomsCount: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
                         />
                       </div>
@@ -4842,24 +5201,36 @@ export default function PropertyHierarchyModal({
                     >
                       Skip to Tenants (Step 3) →
                     </button>
-                    <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2">
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2 flex-wrap">
                       <button
                         type="button"
-                        onClick={(e) => handleSaveSpace(e, false)}
+                        onClick={(e) => handleSaveSpace(e, "keep_adding")}
                         disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
                         className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
-                        <span>Add Unit &amp; Keep Adding</span>
+                        <span>+ Add Another Unit on {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}</span>
                       </button>
-                      <button
-                        type="submit"
-                        disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
-                        className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
-                        <span>Save Space &amp; Next (Add Tenants) →</span>
-                      </button>
+                      {nextFloorLabel ? (
+                        <button
+                          type="submit"
+                          disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
+                          className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+                          <span>Save &amp; Proceed to {nextFloorLabel} →</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveSpace(e, "finish")}
+                          disabled={loading || (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) || (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)}
+                          className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                          <span>Save &amp; Proceed to Step 3: Tenants →</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </form>

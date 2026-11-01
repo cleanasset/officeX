@@ -128,7 +128,7 @@ export default function GoogleAddressAutocomplete({
     inputRef.current?.focus();
   };
 
-  const handleSelect = (item: any) => {
+  const handleSelect = async (item: any) => {
     // Extract clean street address vs complete display name
     const bName = item.buildingName || "";
     const fAddress = item.fullAddress || item.displayName || "";
@@ -139,6 +139,27 @@ export default function GoogleAddressAutocomplete({
       streetAddress = `${bName}, ${fAddress}`;
     }
 
+    let finalLat = item.latitude ?? null;
+    let finalLng = item.longitude ?? null;
+
+    if (!finalLat || !finalLng) {
+      try {
+        const queryTerm = item.fullAddress || item.displayName || streetAddress;
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(queryTerm)}`);
+        if (res.ok) {
+          const d = await res.json();
+          const found = (d.results || []).find((r: any) => r.latitude && r.longitude);
+          if (found) {
+            finalLat = found.latitude;
+            finalLng = found.longitude;
+            if (!item.city && found.city) item.city = found.city;
+            if (!item.state && found.state) item.state = found.state;
+            if (!item.pincode && found.pincode) item.pincode = found.pincode;
+          }
+        }
+      } catch (_) {}
+    }
+
     const payload: AddressAutofillResult = {
       fullAddress: fAddress,
       streetAddress: streetAddress,
@@ -147,8 +168,8 @@ export default function GoogleAddressAutocomplete({
       state: item.state || "",
       country: item.country || "India",
       microMarket: item.area || bName || "",
-      latitude: item.latitude ?? null,
-      longitude: item.longitude ?? null,
+      latitude: finalLat,
+      longitude: finalLng,
     };
 
     setQuery(streetAddress);

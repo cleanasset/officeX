@@ -55,6 +55,7 @@ export async function GET(req: Request) {
           fitout_condition: meta.fitout_condition || "Fully Furnished",
           workstations_count: meta.workstations_count || null,
           cabins_count: meta.cabins_count || null,
+          meeting_rooms_count: meta.meeting_rooms_count || null,
           standard_rate_psf: meta.standard_rate_psf || null,
         };
       }),
@@ -188,6 +189,7 @@ export async function POST(req: Request) {
             fitout_condition: item.fitout_condition || item.fitout || "Fully Furnished",
             workstations_count: item.workstations_count ?? item.workstations ?? null,
             cabins_count: item.cabins_count ?? item.cabins ?? null,
+            meeting_rooms_count: item.meeting_rooms_count ?? item.meeting_rooms ?? null,
             standard_rate_psf: item.standard_rate_psf ?? item.rate_per_sqft ?? item.rate_psf ?? null,
           }),
           created_by: auth.userId,
