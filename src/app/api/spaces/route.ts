@@ -143,6 +143,32 @@ export async function POST(req: Request) {
           ? String(payload.chargeable_area_sqft).trim()
           : "1000";
 
+      // Strict Hierarchy Capacity Check: Single space cannot exceed total building/property leasable area
+      if (payload.building_id) {
+        const [bldRecord] = await db
+          .select({
+            bldArea: building.total_area_sqft,
+            propArea: property.total_leasable_area_sqft,
+          })
+          .from(building)
+          .leftJoin(property, eq(building.property_id, property.id))
+          .where(eq(building.id, payload.building_id))
+          .limit(1);
+
+        if (bldRecord) {
+          const maxCapacity = Number(bldRecord.bldArea) || Number(bldRecord.propArea) || 0;
+          const requestedSpaceArea = Number(cleanChargeable) || 0;
+          if (maxCapacity > 0 && requestedSpaceArea > maxCapacity) {
+            return NextResponse.json(
+              {
+                error: `Area capacity exceeded: Space area (${requestedSpaceArea.toLocaleString()} Sq.Ft) cannot exceed total property leasable capacity (${maxCapacity.toLocaleString()} Sq.Ft).`,
+              },
+              { status: 422 }
+            );
+          }
+        }
+      }
+
       const [inserted] = await db
         .insert(space)
         .values({

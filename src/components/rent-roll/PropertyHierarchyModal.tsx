@@ -1219,6 +1219,22 @@ export default function PropertyHierarchyModal({
       generateUniquePropertyCode(propForm.propertyName.trim(), propertiesList.map((p) => p.name));
 
     const enteredArea = Number(propForm.areaSqft) || 0;
+    if (enteredArea <= 0) {
+      showToast("Please enter a valid Total Leasable Area for the property", "error");
+      return;
+    }
+
+    // Capacity Sanity: Floor schedule cannot exceed total property leasable area
+    if (floorBreakdown.length > 0) {
+      const sumFloorArea = floorBreakdown.reduce((sum, fl) => sum + (Number(fl.areaSqft) || 0), 0);
+      if (sumFloorArea > enteredArea) {
+        showToast(
+          `Area mismatch: Sum of floor spaces (${sumFloorArea.toLocaleString()} Sq.Ft) exceeds Total Property Area (${enteredArea.toLocaleString()} Sq.Ft). Please adjust floor breakdown.`,
+          "error"
+        );
+        return;
+      }
+    }
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
@@ -2766,6 +2782,18 @@ export default function PropertyHierarchyModal({
     const enteredRent = Number(contractForm.monthlyRent) || 0;
     if (enteredRent <= 0) {
       showToast("Please provide or calculate Monthly Rent Amount", "error");
+      return;
+    }
+
+    // Capacity Sanity: Leased area cannot exceed unit/space capacity
+    const activeSpaceObj = displaySpaces.find((s) => s.id === contractForm.spaceId);
+    const contractedArea = Number(contractForm.areaSqft) || 0;
+    const spaceMaxArea = Number(activeSpaceObj?.area) || 0;
+    if (spaceMaxArea > 0 && contractedArea > spaceMaxArea * 1.05) {
+      showToast(
+        `Area error: Contracted area (${contractedArea.toLocaleString()} Sq.Ft) exceeds demised unit capacity (${spaceMaxArea.toLocaleString()} Sq.Ft).`,
+        "error"
+      );
       return;
     }
 

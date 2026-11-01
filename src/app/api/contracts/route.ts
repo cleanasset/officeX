@@ -277,6 +277,35 @@ export async function POST(req: Request) {
       updated_by: auth.userId,
     };
 
+    // Area Capacity Sanity Check: Leased area cannot exceed property leasable capacity
+    if (finalSpaceId && body.area_sqft) {
+      const [spcRow] = await db
+        .select({
+          spaceArea: space.chargeable_area_sqft,
+          bldArea: building.total_area_sqft,
+          propArea: property.total_leasable_area_sqft,
+          propName: property.property_name,
+        })
+        .from(space)
+        .leftJoin(building, eq(space.building_id, building.id))
+        .leftJoin(property, eq(building.property_id, property.id))
+        .where(eq(space.id, finalSpaceId))
+        .limit(1);
+
+      if (spcRow) {
+        const propCap = Number(spcRow.propArea) || Number(spcRow.bldArea) || 0;
+        const reqArea = Number(body.area_sqft) || 0;
+        if (propCap > 0 && reqArea > propCap * 1.1) {
+          return NextResponse.json(
+            {
+              error: `Contract area (${reqArea.toLocaleString()} Sq.Ft) cannot exceed total property capacity (${propCap.toLocaleString()} Sq.Ft).`,
+            },
+            { status: 422 }
+          );
+        }
+      }
+    }
+
     // 1. Validate required fields
     const reqValidation = validateRequiredFields("contract", payload);
     if (!reqValidation.isValid) {
