@@ -496,6 +496,13 @@ export default function PropertyHierarchyModal({
     camType: "Per Sq.Ft", // "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals"
     camRate: "",
     camMonthly: "",
+    // Electricity & Utilities Billing
+    electricityBillingType: "sub_metered", // "sub_metered" | "direct_discom" | "included_in_cam" | "fixed_monthly"
+    gridRatePerKwh: "11.00",
+    dgBackupRatePerKwh: "22.00",
+    fixedMonthlyUtility: "",
+    hvacOperatingHours: "8:00 AM - 8:00 PM (Included in CAM)",
+    overtimeHvacRatePerHour: "1500",
     // Parking Allocations (Free vs Paid)
     carParkingFreeSlots: "0",
     carParkingPaidSlots: "0",
@@ -2916,6 +2923,13 @@ export default function PropertyHierarchyModal({
         contractForm.ratePerSqft ? `Rate PSF: ₹${contractForm.ratePerSqft}/sqft` : null,
         contractForm.ratePerSeat ? `Rate Seat: ₹${contractForm.ratePerSeat}/seat (${contractForm.seatCount} seats)` : null,
         contractForm.camType === "Included" ? "CAM: Included in Base Rent" : (camAmount > 0 ? `CAM: ₹${camAmount.toLocaleString()}/mo (${contractForm.camType})` : null),
+        contractForm.electricityBillingType === "sub_metered"
+          ? `Electricity: Sub-Metered (Grid: ₹${contractForm.gridRatePerKwh}/unit, DG: ₹${contractForm.dgBackupRatePerKwh}/unit)`
+          : contractForm.electricityBillingType === "fixed_monthly"
+          ? `Electricity: Fixed ₹${contractForm.fixedMonthlyUtility}/month`
+          : `Electricity: ${contractForm.electricityBillingType === "included_in_cam" ? "Included in CAM" : "Direct Discom"}`,
+        contractForm.hvacOperatingHours ? `HVAC: ${contractForm.hvacOperatingHours}` : null,
+        contractForm.overtimeHvacRatePerHour ? `Overtime HVAC: ₹${contractForm.overtimeHvacRatePerHour}/hr` : null,
         parkingAmount > 0 ? `Parking: ₹${parkingAmount.toLocaleString()}/mo (${carFree + carPaid} Cars [${carFree} Free, ${carPaid} Paid], ${bikeFree + bikePaid} Bikes [${bikeFree} Free, ${bikePaid} Paid])` : null,
         contractForm.fitoutDays ? `Fit-out Period: ${contractForm.fitoutDays} days` : null,
         contractForm.stampDutySharing ? `Stamp Duty: ${contractForm.stampDutySharing}` : null,
@@ -6924,6 +6938,135 @@ export default function PropertyHierarchyModal({
                   )}
                 </div>
 
+                {/* Electricity & Utilities Billing Card */}
+                <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200/80 space-y-3">
+                  <div className="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                      <Zap size={14} className="text-amber-600" />
+                      <span>Electricity &amp; Utilities Billing</span>
+                    </div>
+                    <span className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded font-semibold border border-amber-300/60">
+                      Power &amp; HVAC Terms
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        Electricity Billing Method *
+                      </label>
+                      <select
+                        value={contractForm.electricityBillingType}
+                        onChange={(e) =>
+                          setContractForm({ ...contractForm, electricityBillingType: e.target.value })
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-medium outline-none focus:border-teal-600"
+                      >
+                        <option value="sub_metered">⚡ Sub-Metered (Actuals: Check Meter Units)</option>
+                        <option value="direct_discom">🏢 Direct Discom Meter (Tenant pays Board)</option>
+                        <option value="fixed_monthly">💵 Fixed Monthly Utility Fee</option>
+                        <option value="included_in_cam">📦 Included in CAM / Base Rent</option>
+                      </select>
+                    </div>
+
+                    {contractForm.electricityBillingType === "sub_metered" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                            Grid Tariff (₹/kWh)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder="e.g. 11.00"
+                            value={contractForm.gridRatePerKwh}
+                            onChange={(e) =>
+                              setContractForm({ ...contractForm, gridRatePerKwh: e.target.value })
+                            }
+                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                            DG Backup (₹/kWh)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder="e.g. 22.00"
+                            value={contractForm.dgBackupRatePerKwh}
+                            onChange={(e) =>
+                              setContractForm({ ...contractForm, dgBackupRatePerKwh: e.target.value })
+                            }
+                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {contractForm.electricityBillingType === "fixed_monthly" && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                          Fixed Monthly Utility (₹)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 15000"
+                          value={contractForm.fixedMonthlyUtility}
+                          onChange={(e) =>
+                            setContractForm({ ...contractForm, fixedMonthlyUtility: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                        />
+                      </div>
+                    )}
+
+                    {contractForm.electricityBillingType === "direct_discom" && (
+                      <div className="flex items-center text-[11px] text-slate-600 bg-white/80 p-2 rounded-xl border border-slate-200">
+                        Tenant has independent Discom connection / consumer account number. Billed directly by utility provider.
+                      </div>
+                    )}
+
+                    {contractForm.electricityBillingType === "included_in_cam" && (
+                      <div className="flex items-center text-[11px] text-teal-800 bg-teal-50 p-2 rounded-xl border border-teal-200">
+                        Electricity &amp; normal HVAC running are bundled inside Common Area Maintenance (CAM).
+                      </div>
+                    )}
+                  </div>
+
+                  {/* HVAC Operating Hours & Overtime Rate */}
+                  <div className="pt-2 border-t border-amber-200/60 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                        Standard HVAC Operating Hours
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 8:00 AM - 8:00 PM (Mon-Sat)"
+                        value={contractForm.hvacOperatingHours}
+                        onChange={(e) =>
+                          setContractForm({ ...contractForm, hvacOperatingHours: e.target.value })
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-teal-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                        Overtime HVAC Rate (₹/Hour)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 1500"
+                        value={contractForm.overtimeHvacRatePerHour}
+                        onChange={(e) =>
+                          setContractForm({ ...contractForm, overtimeHvacRatePerHour: e.target.value })
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Requirement 8: Granular Parking Allocations (Free vs Paid for 4W & 2W) */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between border-b border-slate-200/70 pb-1.5">
@@ -7441,7 +7584,11 @@ export default function PropertyHierarchyModal({
                 const carParkMonthly = carPaidCount * (Number(contractForm.carParkingRate) || 0);
                 const twoWheelParkMonthly = bikePaidCount * (Number(contractForm.twoWheelerRate) || 0);
                 const totalParking = carParkMonthly + twoWheelParkMonthly;
-                const subtotal = rent + camMonthly + totalParking;
+                const fixedUtil =
+                  contractForm.electricityBillingType === "fixed_monthly"
+                    ? Number(contractForm.fixedMonthlyUtility) || 0
+                    : 0;
+                const subtotal = rent + camMonthly + totalParking + fixedUtil;
                 const gst18 = Math.round(subtotal * 0.18);
 
                 // Requirement 10: Sole Proprietorship / Individual Statutory TDS Rules
@@ -7529,6 +7676,27 @@ export default function PropertyHierarchyModal({
                         <span className="text-sm font-mono font-black text-white">₹{deposit.toLocaleString()}</span>
                       </div>
                     </div>
+
+                    {contractForm.electricityBillingType === "sub_metered" && (
+                      <div className="pt-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between text-[11px] text-amber-300">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Zap size={12} className="text-amber-400" />
+                          <span>Electricity: Sub-Metered on Actuals</span>
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-300">
+                          Grid: ₹{contractForm.gridRatePerKwh || "11"}/kWh • DG Backup: ₹{contractForm.dgBackupRatePerKwh || "22"}/kWh
+                        </span>
+                      </div>
+                    )}
+                    {contractForm.electricityBillingType === "fixed_monthly" && fixedUtil > 0 && (
+                      <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[11px] text-amber-300">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Zap size={12} className="text-amber-400" />
+                          <span>Fixed Monthly Utility</span>
+                        </span>
+                        <span className="font-mono text-xs text-emerald-300">₹{fixedUtil.toLocaleString()}/mo</span>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
