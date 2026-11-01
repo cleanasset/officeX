@@ -1777,83 +1777,6 @@ export default function PropertyHierarchyModal({
     }
   };
 
-  // ──── 1-CLICK AUTO-DEMARCATE ALL FLOORS ────
-  const handleAutoDemarcateAllFloors = async () => {
-    const bldgId = spaceForm.buildingId || displayBuildings[0]?.id || buildingsList[0]?.id;
-    if (!bldgId) {
-      showToast("Please select a building first", "error");
-      return;
-    }
-    const propTotalArea = Number(propForm.areaSqft) || Number(activePropertyObj?.area) || 0;
-    const numFloors = allFloorNumbers.length || 1;
-    const defaultPerFloor = propTotalArea > 0 ? Math.floor(propTotalArea / numFloors) : 0;
-
-    const spacesToCreate: any[] = [];
-
-    for (const fl of allFloorNumbers) {
-      const flSpaces = displaySpaces.filter((s) => extractFloorNumberFromSpace(s) === fl);
-      const flAllocated = flSpaces.reduce((acc, s) => acc + (s.area || 0), 0);
-      const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || defaultPerFloor;
-      const remaining = Math.max(0, flPlanned - flAllocated);
-
-      if (remaining > 0 || flSpaces.length === 0) {
-        const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
-        const isG = fl === 0;
-        const codeSuffix = isG ? "G" : `F${fl}`;
-
-        // Proportional fitout allocation if entered in Step 1
-        const totalW = Number(propForm.workstationsCount) || 0;
-        const totalC = Number(propForm.cabinsCount) || 0;
-        const totalM = Number(propForm.meetingRoomsCount) || 0;
-
-        const flWorkstations = totalW > 0 ? Math.floor(totalW / numFloors) : null;
-        const flCabins = totalC > 0 ? Math.floor(totalC / numFloors) : null;
-        const flMeeting = totalM > 0 ? Math.floor(totalM / numFloors) : null;
-
-        spacesToCreate.push({
-          space_name: `${flLabel} - Full Floor`,
-          space_code: `SP-${codeSuffix}-${Date.now().toString().slice(-4)}`,
-          building_id: bldgId,
-          chargeable_area_sqft: remaining > 0 ? remaining : (flPlanned || 1000),
-          floor_name: flLabel,
-          space_type: "suite",
-          occupancy_status: "vacant",
-          fitout_condition: propForm.fitoutCondition || "Fully Furnished",
-          workstations_count: flWorkstations,
-          cabins_count: flCabins,
-          meeting_rooms_count: flMeeting,
-        });
-      }
-    }
-
-    if (spacesToCreate.length === 0) {
-      showToast("All floors already have units configured!");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const authHeaders = getClientAuthHeaders();
-      const res = await fetch("/api/spaces", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ spaces: spacesToCreate }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(`⚡ Successfully auto-created full-floor units for ${spacesToCreate.length} floor(s)!`);
-        await loadHierarchyDropdowns();
-        onSuccess?.();
-      } else {
-        showToast(data.message || data.error || "Failed to auto-demarcate floors", "error");
-      }
-    } catch (err: any) {
-      showToast(err.message || "Network error", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Active property object currently in the wizard
   const activePropertyObj = React.useMemo(() => {
     const targetId = propForm.existingPropId || contractForm.propertyId || bldgForm.propertyId;
@@ -4442,6 +4365,16 @@ export default function PropertyHierarchyModal({
             const nextFloorNum = allFloorNumbers[currentFloorIdx + 1];
             const nextFloorLabel = nextFloorNum !== undefined ? (nextFloorNum === 0 ? "Ground Floor" : formatFloorName(nextFloorNum)) : null;
 
+            const inputArea = Number(spaceForm.areaSqft) || 0;
+            const inputDesks = Number(spaceForm.workstationsCount) || 0;
+            const inputCabins = Number(spaceForm.cabinsCount) || 0;
+            const inputRooms = Number(spaceForm.meetingRoomsCount) || 0;
+
+            const floorRemainingAfterInput = effectiveRemaining - inputArea;
+            const desksLeftAfterInput = remainingDesks - inputDesks;
+            const cabinsLeftAfterInput = remainingCabins - inputCabins;
+            const roomsLeftAfterInput = remainingRooms - inputRooms;
+
             return (
               <div className="space-y-4">
                 {/* Header */}
@@ -4466,153 +4399,52 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-                {/* Summary KPI Strip */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Floors</span>
-                    <span className="text-sm font-black text-slate-800">{allFloorNumbers.length} Floors</span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Created Units</span>
-                    <span className="text-sm font-black text-teal-700">{displaySpaces.length} Units</span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Demarcated in Units</span>
-                    <span className="text-sm font-black text-slate-800">
-                      {allocatedUnitsArea > 0 ? `${allocatedUnitsArea.toLocaleString()} Sq.Ft` : "0 Sq.Ft"}
+                {/* Clean Compact Header Bar */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-800">
+                      Total: <strong className="font-mono text-teal-800">{buildingTotalArea.toLocaleString()} Sq.Ft</strong> ({allFloorNumbers.length} Floors)
                     </span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Property Total Area</span>
-                    <span className="text-sm font-black text-slate-600">
-                      {buildingTotalArea > 0 ? `${buildingTotalArea.toLocaleString()} Sq.Ft` : "Flexible / Open"}
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs text-slate-600">
+                      Demarcated: <strong className="font-mono text-slate-800">{allocatedUnitsArea.toLocaleString()} Sq.Ft</strong> ({pctBuildingAllocated}%)
                     </span>
+                    {hasAnyPlannedFitout && (
+                      <>
+                        <span className="text-slate-300 hidden sm:inline">•</span>
+                        <span className="text-xs text-blue-700 font-medium hidden sm:inline">
+                          {allocatedDesks}/{totalPlannedDesks} Desks • {allocatedCabins}/{totalPlannedCabins} Cabins • {allocatedRooms}/{totalPlannedRooms} Rooms
+                        </span>
+                      </>
+                    )}
                   </div>
-                </div>
-
-                {/* Demarcation Progress Bar */}
-                {buildingTotalArea > 0 && (
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-700">Demarcation Progress</span>
-                      <span className="text-teal-800 font-mono">
-                        {allocatedUnitsArea.toLocaleString()} / {buildingTotalArea.toLocaleString()} Sq.Ft ({pctBuildingAllocated}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden flex">
+                  {buildingTotalArea > 0 && (
+                    <div className="w-full sm:w-48 h-2 bg-slate-200 rounded-full overflow-hidden shrink-0">
                       <div
                         className={`h-full transition-all duration-300 ${
-                          isExceededBuilding
-                            ? "bg-rose-500"
-                            : pctBuildingAllocated === 100
-                            ? "bg-emerald-500"
-                            : "bg-[#0F8B7D]"
+                          isExceededBuilding ? "bg-rose-500" : pctBuildingAllocated === 100 ? "bg-emerald-500" : "bg-[#0F8B7D]"
                         }`}
                         style={{ width: `${Math.min(100, pctBuildingAllocated)}%` }}
                       />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* 1-Click Fast-Track: Auto-Demarcate All Floors as 1 Unit Each */}
-                {allFloorNumbers.length > 1 && remainingBuildingArea > 0 && (
-                  <div className="p-3.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 rounded-2xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-teal-600 text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1">
-                          <Zap size={11} className="fill-white" /> 1-Click Fast Track
-                        </span>
-                        <span className="font-extrabold text-slate-800 text-xs">
-                          Auto-Demarcate All {allFloorNumbers.length} Floors
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium">
-                        Have 1 tenant or unit per floor? Generate full-floor units for all floors automatically in 1 click without repetitive typing.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAutoDemarcateAllFloors}
-                      disabled={loading}
-                      className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-black text-xs transition shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
-                    >
-                      <Sparkles size={13} />
-                      <span>⚡ Auto-Demarcate All Floors ({remainingBuildingArea.toLocaleString()} Sq.Ft)</span>
-                    </button>
+                {/* Floor Tabs */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Select Floor:</span>
+                    <span className="text-[11px] text-slate-400">Click a floor to configure its units</span>
                   </div>
-                )}
-
-                {/* Property Fitout Budget Tracker (Visible when Step 1 has fitout numbers) */}
-                {hasAnyPlannedFitout && (
-                  <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
-                        <CheckCircle2 size={13} className="text-blue-600" />
-                        <span>Property Fitout Budget (from Step 1):</span>
-                      </span>
-                      <span className="text-[11px] text-blue-700 font-medium">
-                        Capacity tracker across all units
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      {totalPlannedDesks > 0 && (
-                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
-                          <span className="font-bold text-slate-700">Workstations / Desks:</span>
-                          <span className="font-mono font-bold text-blue-800">
-                            {allocatedDesks} / {totalPlannedDesks} allocated ({remainingDesks} left)
-                          </span>
-                        </div>
-                      )}
-                      {totalPlannedCabins > 0 && (
-                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
-                          <span className="font-bold text-slate-700">Private Cabins:</span>
-                          <span className="font-mono font-bold text-blue-800">
-                            {allocatedCabins} / {totalPlannedCabins} allocated ({remainingCabins} left)
-                          </span>
-                        </div>
-                      )}
-                      {totalPlannedRooms > 0 && (
-                        <div className="p-2 bg-white rounded-lg border border-blue-200 flex items-center justify-between">
-                          <span className="font-bold text-slate-700">Meeting Rooms:</span>
-                          <span className="font-mono font-bold text-blue-800">
-                            {allocatedRooms} / {totalPlannedRooms} allocated ({remainingRooms} left)
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Floor Navigation Tab Strip for Step 2 */}
-                <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <Layers size={13} className="text-[#0F8B7D]" />
-                      <span>Select Floor to View &amp; Configure Units:</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Click a floor to configure its units
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                    <button
-                      type="button"
-                      onClick={() => setActiveStudioFloor("all")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
-                        activeStudioFloor === "all"
-                          ? "bg-slate-900 text-white shadow-xs"
-                          : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-                      }`}
-                    >
-                      All Floors ({displaySpaces.length} Units)
-                    </button>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-slate-200">
                     {allFloorNumbers.map((fl) => {
                       const flLabel = fl === 0 ? "Ground Floor" : formatFloorName(fl);
                       const unitsOnFloor = displaySpaces.filter((s) => getFloorNum(s) === fl);
                       const flPlanned = Number(floorBreakdown.find((f) => f.floorNumber === fl)?.areaSqft) || (allFloorNumbers.length > 0 ? Math.floor(buildingTotalArea / allFloorNumbers.length) : 0);
                       const flAllocated = unitsOnFloor.reduce((acc, s) => acc + (s.area || 0), 0);
-                      const isComplete = flPlanned > 0 && flAllocated >= flPlanned;
                       const isSelected = activeStudioFloor === String(fl);
+                      const isComplete = flPlanned > 0 && flAllocated >= flPlanned;
+
                       return (
                         <button
                           key={fl}
@@ -4626,182 +4458,68 @@ export default function PropertyHierarchyModal({
                               areaSqft: flPlanned > flAllocated ? String(flPlanned - flAllocated) : prev.areaSqft,
                             }));
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                          className={`px-3.5 py-2 rounded-t-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 border-b-2 ${
                             isSelected
-                              ? "bg-[#0F8B7D] text-white shadow-xs"
-                              : isComplete
-                              ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-300"
-                              : unitsOnFloor.length === 0
-                              ? "bg-amber-50/70 text-slate-700 hover:bg-amber-100/70 border border-amber-200"
-                              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                              ? "border-[#0F8B7D] text-[#0F8B7D] bg-teal-50/60 font-black shadow-2xs"
+                              : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                           }`}
                         >
                           <span>{flLabel}</span>
                           {flPlanned > 0 && (
-                            <span className="text-[10px] font-mono opacity-80 font-normal">
+                            <span className="text-[10px] font-mono opacity-70">
                               ({flPlanned.toLocaleString()} Sq.Ft)
                             </span>
                           )}
-                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : isComplete
-                              ? "bg-emerald-200 text-emerald-900"
-                              : unitsOnFloor.length === 0
-                              ? "bg-amber-200 text-amber-900"
-                              : "bg-teal-50 text-teal-800 border border-teal-200"
-                          }`}>
-                            {isComplete ? "✓ Full" : unitsOnFloor.length === 0 ? "Pending" : `${unitsOnFloor.length} unit(s)`}
-                          </span>
+                          {unitsOnFloor.length > 0 && (
+                            <span className={`w-2 h-2 rounded-full ${isComplete ? "bg-emerald-500" : "bg-teal-500"}`} />
+                          )}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Already Configured Spaces Strip (if any exist) */}
-                {displaySpaces.length > 0 && (
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                          Registered Spaces ({activeStudioFloor === "all" ? displaySpaces.length : displaySpaces.filter((sp) => getFloorNum(sp) === Number(activeStudioFloor)).length})
-                        </span>
-                        <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
-                          {(activeStudioFloor === "all" ? displaySpaces : displaySpaces.filter((sp) => getFloorNum(sp) === Number(activeStudioFloor))).reduce((acc, s) => acc + (s.area || 0), 0).toLocaleString()} Sq.Ft Total
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 font-medium">
-                        Click status badge to toggle Vacant / Occupied
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1">
-                      {(activeStudioFloor === "all" ? displaySpaces : displaySpaces.filter((sp) => getFloorNum(sp) === Number(activeStudioFloor))).map((sp) => {
-                        const spBldg = buildingsList.find((b) => b.id === sp.buildingId);
-                        return (
-                          <div
-                            key={sp.id}
-                            className="px-3 py-2 bg-white border border-slate-200 hover:border-teal-300 rounded-xl flex items-center justify-between gap-2 shadow-2xs transition"
-                          >
-                            <div className="min-w-0 flex items-center gap-2">
-                              {displayBuildings.length > 1 && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 font-black text-[10px] text-slate-700 shrink-0">
-                                  {spBldg?.name || "Tower"}
-                                </span>
-                              )}
-                              <span className="px-1.5 py-0.5 rounded-md bg-teal-50 border border-teal-200 font-black text-[10px] text-teal-800 shrink-0">
-                                {sp.floorName || "Floor 1"}
-                              </span>
-                              <div className="truncate">
-                                <span className="font-bold text-slate-800 text-xs block truncate">{sp.name}</span>
-                                <span className="text-[11px] text-slate-500 font-medium">
-                                  {sp.area > 0 ? `${sp.area.toLocaleString()} Sq.Ft` : "Full Floor"} • {sp.unitType || "Office"}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleToggleOccupancy(sp.id, sp.occupancyStatus)}
-                                title="Click to toggle Vacant / Occupied"
-                                className={`px-2 py-0.5 rounded-md font-bold text-[10px] border transition cursor-pointer flex items-center gap-1.5 ${
-                                  sp.occupancyStatus === "occupied"
-                                    ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
-                                    : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                                }`}
-                              >
-                                <span
-                                  className={`w-1.5 h-1.5 rounded-full ${
-                                    sp.occupancyStatus === "occupied" ? "bg-blue-600" : "bg-emerald-600"
-                                  }`}
-                                />
-                                <span>{sp.occupancyStatus === "occupied" ? "Occupied (Tenant)" : "Vacant (Available)"}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSpace(sp.id, sp.name)}
-                                title="Delete this unit"
-                                className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                {/* Existing Units on Selected Floor (if any) */}
+                {currentFloorSpaces.length > 0 && (
+                  <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-xs font-bold text-slate-700 block">
+                      Configured Units on {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)} ({currentFloorSpaces.length}):
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {currentFloorSpaces.map((sp) => (
+                        <div key={sp.id} className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-2xs">
+                          <div className="truncate">
+                            <span className="font-bold text-xs text-slate-800 block truncate">{sp.name}</span>
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              {sp.area.toLocaleString()} Sq.Ft • {sp.unitType}
+                            </span>
                           </div>
-                        );
-                      })}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleOccupancy(sp.id, sp.occupancyStatus)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                sp.occupancyStatus === "occupied" ? "bg-blue-50 text-blue-800 border-blue-200" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              }`}
+                            >
+                              {sp.occupancyStatus === "occupied" ? "Occupied" : "Vacant"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSpace(sp.id, sp.name)}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Selected Floor Context Banner */}
-                <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-black uppercase text-teal-800 tracking-wider">
-                      Selected Floor:
-                    </span>
-                    <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
-                      {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
-                    </span>
-                    {isSolePlaceholderOnCurrentFloor ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300 font-mono">
-                          Capacity: {currentFloorPlanned.toLocaleString()} Sq.Ft (Full Floor Ready to Subdivide)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const target = currentFloorSpaces[0];
-                            if (target) {
-                              setSpacesList((prev) => prev.filter((s) => s.id !== target.id));
-                              const authHeaders = getClientAuthHeaders();
-                              await fetch(`/api/spaces/${target.id}`, { method: "DELETE", headers: authHeaders }).catch(() => {});
-                              await loadHierarchyDropdowns();
-                              showToast("Floor opened for subdivision! You can now add individual units.");
-                            }
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-1"
-                        >
-                          <Scissors size={12} />
-                          <span>Subdivide Floor into Units</span>
-                        </button>
-                      </div>
-                    ) : (
-                      currentFloorPlanned > 0 && (
-                        <span className="text-xs font-bold text-teal-900 bg-teal-100/70 px-2 py-0.5 rounded-md border border-teal-200 font-mono">
-                          Floor Capacity: {currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft ({currentFloorRemaining.toLocaleString()} Sq.Ft Available)
-                        </span>
-                      )
-                    )}
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      ({currentFloorSpaces.length} unit(s) configured)
-                    </span>
-                  </div>
-                  {/* 1-Click Helper to Fill Full Floor */}
-                  {effectiveRemaining > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const floorLabel = selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum);
-                        setSpaceForm((prev) => ({
-                          ...prev,
-                          spaceName: `${floorLabel} - Full Floor`,
-                          areaSqft: String(effectiveRemaining),
-                          occupancyStatus: "vacant",
-                          unitType: "Office",
-                        }));
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-teal-50 text-teal-900 border border-teal-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto shrink-0"
-                    >
-                      <Sparkles size={13} className="text-teal-600" />
-                      <span>⚡ Use Full Floor as 1 Unit ({effectiveRemaining.toLocaleString()} Sq.Ft)</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Full Original Space Creation Form */}
-                <form onSubmit={(e) => handleSaveSpace(e, true)} className="space-y-4">
+                {/* Unit Creation Form */}
+                <form onSubmit={(e) => handleSaveSpace(e, "next_floor")} className="space-y-4">
                   <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3.5">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <div className="flex items-center gap-2">
@@ -4809,11 +4527,11 @@ export default function PropertyHierarchyModal({
                           +
                         </span>
                         <span className="font-extrabold text-slate-800 text-xs">
-                          Add Leasable Unit / Space
+                          Configure Unit for {selectedFloorNum === 0 ? "Ground Floor" : formatFloorName(selectedFloorNum)}
                         </span>
                       </div>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        Fill in unit details below
+                        Floor Capacity: {currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft ({effectiveRemaining.toLocaleString()} Sq.Ft Available)
                       </span>
                     </div>
 
@@ -4887,59 +4605,44 @@ export default function PropertyHierarchyModal({
                           </label>
                           {currentFloorPlanned > 0 && (
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${
-                              effectiveRemaining === 0
-                                ? "bg-amber-50 text-amber-800 border-amber-300"
+                              floorRemainingAfterInput < 0
+                                ? "bg-rose-50 text-rose-700 border-rose-300"
+                                : inputArea > 0
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                                 : "bg-teal-50 text-teal-700 border-teal-200"
                             }`}>
-                              {effectiveRemaining === 0 ? "Floor Full: 0 Sq.Ft Avail" : `Floor Avail: ${effectiveRemaining.toLocaleString()} Sq.Ft`}
+                              {floorRemainingAfterInput < 0
+                                ? `⛔ Exceeds by ${Math.abs(floorRemainingAfterInput).toLocaleString()} Sq.Ft`
+                                : inputArea > 0
+                                ? `${floorRemainingAfterInput.toLocaleString()} Sq.Ft left on floor`
+                                : `${effectiveRemaining.toLocaleString()} Sq.Ft floor capacity`}
                             </span>
                           )}
                         </div>
                         <input
                           type="number"
                           min="1"
-                          max={effectiveRemaining > 0 ? effectiveRemaining : undefined}
                           required
-                          placeholder={effectiveRemaining > 0 ? `Max: ${effectiveRemaining.toLocaleString()} Sq.Ft` : "Floor capacity full"}
+                          placeholder="e.g. 10000"
                           value={spaceForm.areaSqft}
                           onChange={(e) => setSpaceForm({ ...spaceForm, areaSqft: e.target.value })}
                           className={`w-full px-3 py-2 rounded-xl border font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white text-slate-900 ${
-                            (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) ||
-                            (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0)
+                            floorRemainingAfterInput < 0
                               ? "border-rose-400 bg-rose-50/40 text-rose-900"
                               : "border-slate-300"
                           }`}
                         />
-                        {currentFloorPlanned > 0 ? (
-                          (effectiveRemaining > 0 && Number(spaceForm.areaSqft) > effectiveRemaining) ||
-                          (effectiveRemaining === 0 && Number(spaceForm.areaSqft) > 0) ? (
-                            <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-                              <span className="text-rose-600 font-bold">
-                                ⛔ Exceeds floor limit ({effectiveRemaining.toLocaleString()} Sq.Ft available on this floor).
-                              </span>
-                              {effectiveRemaining === 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const defaultSpace = displaySpaces.find((s) => getFloorNum(s) === selectedFloorNum) || displaySpaces[0];
-                                    if (defaultSpace) {
-                                      handleDeleteSpace(defaultSpace.id, defaultSpace.name);
-                                    }
-                                  }}
-                                  className="text-[11px] text-rose-700 underline hover:text-rose-900 font-bold cursor-pointer shrink-0"
-                                >
-                                  Delete unit above to subdivide
-                                </button>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                              Floor capacity: <strong className="font-mono text-slate-800">{currentFloorAllocated.toLocaleString()} / {currentFloorPlanned.toLocaleString()} Sq.Ft</strong> ({effectiveRemaining.toLocaleString()} Sq.Ft available)
-                            </span>
-                          )
+                        {floorRemainingAfterInput < 0 ? (
+                          <span className="text-[11px] text-rose-600 font-bold block mt-1">
+                            ⛔ Unit size exceeds available floor space ({effectiveRemaining.toLocaleString()} Sq.Ft available).
+                          </span>
+                        ) : inputArea > 0 ? (
+                          <span className="text-[11px] text-emerald-700 font-medium block mt-1 font-mono">
+                            ✓ {inputArea.toLocaleString()} Sq.Ft allocated • {floorRemainingAfterInput.toLocaleString()} Sq.Ft remaining on this floor
+                          </span>
                         ) : (
                           <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                            Size of this unit/suite in Sq.Ft (e.g. 5,000)
+                            Floor capacity: <strong className="font-mono text-slate-800">{effectiveRemaining.toLocaleString()} Sq.Ft</strong> available
                           </span>
                         )}
                       </div>
@@ -5009,15 +4712,21 @@ export default function PropertyHierarchyModal({
                         <div className="flex items-center justify-between mb-1">
                           <label className="font-bold text-slate-700">Workstations / Desks</label>
                           {totalPlannedDesks > 0 && (
-                            <span className="text-[10px] text-blue-700 font-mono">
-                              ({remainingDesks} unallocated)
+                            <span className={`text-[10px] font-mono font-bold ${
+                              desksLeftAfterInput < 0 ? "text-rose-600" : inputDesks > 0 ? "text-emerald-700" : "text-slate-500"
+                            }`}>
+                              {desksLeftAfterInput < 0
+                                ? `⛔ Exceeds by ${Math.abs(desksLeftAfterInput)}`
+                                : inputDesks > 0
+                                ? `(${desksLeftAfterInput} left after this unit)`
+                                : `(${remainingDesks} total available)`}
                             </span>
                           )}
                         </div>
                         <input
                           type="number"
                           min="0"
-                          placeholder={remainingDesks > 0 ? `Max ~${remainingDesks}` : "e.g. 25"}
+                          placeholder="e.g. 50"
                           value={spaceForm.workstationsCount}
                           onChange={(e) => setSpaceForm({ ...spaceForm, workstationsCount: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
@@ -5029,15 +4738,21 @@ export default function PropertyHierarchyModal({
                         <div className="flex items-center justify-between mb-1">
                           <label className="font-bold text-slate-700">Private Cabins</label>
                           {totalPlannedCabins > 0 && (
-                            <span className="text-[10px] text-blue-700 font-mono">
-                              ({remainingCabins} unallocated)
+                            <span className={`text-[10px] font-mono font-bold ${
+                              cabinsLeftAfterInput < 0 ? "text-rose-600" : inputCabins > 0 ? "text-emerald-700" : "text-slate-500"
+                            }`}>
+                              {cabinsLeftAfterInput < 0
+                                ? `⛔ Exceeds by ${Math.abs(cabinsLeftAfterInput)}`
+                                : inputCabins > 0
+                                ? `(${cabinsLeftAfterInput} left after this unit)`
+                                : `(${remainingCabins} total available)`}
                             </span>
                           )}
                         </div>
                         <input
                           type="number"
                           min="0"
-                          placeholder={remainingCabins > 0 ? `Max ~${remainingCabins}` : "e.g. 4"}
+                          placeholder="e.g. 5"
                           value={spaceForm.cabinsCount}
                           onChange={(e) => setSpaceForm({ ...spaceForm, cabinsCount: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
@@ -5049,15 +4764,21 @@ export default function PropertyHierarchyModal({
                         <div className="flex items-center justify-between mb-1">
                           <label className="font-bold text-slate-700">Meeting Rooms</label>
                           {totalPlannedRooms > 0 && (
-                            <span className="text-[10px] text-blue-700 font-mono">
-                              ({remainingRooms} unallocated)
+                            <span className={`text-[10px] font-mono font-bold ${
+                              roomsLeftAfterInput < 0 ? "text-rose-600" : inputRooms > 0 ? "text-emerald-700" : "text-slate-500"
+                            }`}>
+                              {roomsLeftAfterInput < 0
+                                ? `⛔ Exceeds by ${Math.abs(roomsLeftAfterInput)}`
+                                : inputRooms > 0
+                                ? `(${roomsLeftAfterInput} left after this unit)`
+                                : `(${remainingRooms} total available)`}
                             </span>
                           )}
                         </div>
                         <input
                           type="number"
                           min="0"
-                          placeholder={remainingRooms > 0 ? `Max ~${remainingRooms}` : "e.g. 2"}
+                          placeholder="e.g. 2"
                           value={spaceForm.meetingRoomsCount}
                           onChange={(e) => setSpaceForm({ ...spaceForm, meetingRoomsCount: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
