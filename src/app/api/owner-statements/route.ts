@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const period = searchParams.get("period") || "Oct-2026";
     const clientAccountId = searchParams.get("client_account_id");
 
-    // 1. Fetch managed client accounts
+    // 1. Fetch managed client accounts strictly for this organization (RR-01, RR-02)
     const clients = await db
       .select({
         id: clientAccounts.id,
@@ -21,13 +21,25 @@ export async function GET(req: Request) {
         code: clientAccounts.accountCode,
       })
       .from(clientAccounts)
-      .where(sql`${clientAccounts.status} = 'active'`);
+      .where(
+        and(
+          eq(clientAccounts.orgId, auth.orgId),
+          sql`${clientAccounts.status} = 'active'`
+        )
+      );
 
     const activeClient = clientAccountId
       ? clients.find((c) => c.id === clientAccountId)
       : clients.length > 0
       ? clients[0]
       : null;
+
+    // Fetch real billing entity if configured for this org/client
+    const [realBillingEntity] = await db
+      .select()
+      .from(billingEntities)
+      .where(eq(billingEntities.orgId, auth.orgId))
+      .limit(1);
 
     // 2. Check if a statement already exists for this client & period
     let existingStatement: any = null;
@@ -38,6 +50,7 @@ export async function GET(req: Request) {
           .from(ownerStatements)
           .where(
             and(
+              eq(ownerStatements.orgId, auth.orgId),
               eq(ownerStatements.periodMonth, period),
               eq(ownerStatements.clientAccountId, activeClient.id)
             )
@@ -51,9 +64,17 @@ export async function GET(req: Request) {
       } catch (e) {}
     }
 
-    // 3. Query actual invoices from DB for this period
+    // 3. Query actual invoices from DB for this period (RR-02, RR-13: Scoped to org, drafts excluded)
     let realInvoices: any[] = [];
     try {
+      const invWhere = [
+        eq(invoice.org_id, auth.orgId),
+        sql`${invoice.status} IN ('issued', 'partially_paid', 'paid', 'overdue')`,
+      ];
+      if (activeClient?.id) {
+        invWhere.push(eq(invoice.client_account_id, activeClient.id));
+      }
+
       realInvoices = await db
         .select({
           number: invoice.invoice_number,
@@ -66,7 +87,7 @@ export async function GET(req: Request) {
         })
         .from(invoice)
         .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
-        .where(sql`${invoice.status} IS NOT NULL`)
+        .where(and(...invWhere))
         .limit(50);
     } catch (e) {}
 
@@ -104,20 +125,20 @@ export async function GET(req: Request) {
       statement_id: existingStatement?.id || (activeClient ? `stmt-${period}-${activeClient.code}` : "no-statement"),
       statement_number: existingStatement?.statementNumber || `STMT-${period}-001`,
       client_account_id: activeClient?.id || "",
-      client_name: activeClient?.name || "No Client Account Selected",
+      client_name: activeClient?.name || "Portfolio Workspace",
       client_code: activeClient?.code || "NONE",
       period_month: period,
       status: existingStatement?.remittanceStatus ? "issued" : "draft",
       is_locked: !!existingStatement,
       billing_entity: {
-        legal_name: activeClient ? `${activeClient.name} SPV` : "Default Entity",
-        pan: "AABCS1429B",
-        gstin: "27AABCS1429B1Z1",
-        state: "Maharashtra (27)",
+        legal_name: realBillingEntity?.legalName || (activeClient ? `${activeClient.name} SPV` : "Commercial Property SPV"),
+        pan: realBillingEntity?.pan || "—",
+        gstin: realBillingEntity?.gstin || "—",
+        state: realBillingEntity?.stateCode || "—",
       },
       operator_billing_entity: {
-        legal_name: "OFFICEX Operator Management Services Ltd",
-        gstin: "27AAFCO8899C1Z4",
+        legal_name: "OFFICEX Property Operations Management Services",
+        gstin: realBillingEntity?.gstin || "—",
       },
       financials: {
         gross_billed: Math.round(grossBilled),
@@ -131,10 +152,10 @@ export async function GET(req: Request) {
         net_remittance_to_owner: Math.max(0, netRemittance), // Formula F-21
       },
       bank_account: {
-        bank_name: "HDFC Bank Ltd",
-        account_number: "50200088991234",
-        ifsc_code: "HDFC0000060",
-        branch: "Fort Branch, Mumbai",
+        bank_name: realBillingEntity?.bankName || "Commercial Escrow Bank",
+        account_number: realBillingEntity?.bankAccountNumber ? `••••${realBillingEntity.bankAccountNumber.slice(-4)}` : "—",
+        ifsc_code: realBillingEntity?.bankIfsc || "—",
+        branch: realBillingEntity?.bankBranch || "Corporate Banking",
       },
       remittance: {
         status: existingStatement?.remittanceStatus || "pending",

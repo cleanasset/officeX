@@ -41,7 +41,31 @@ export async function GET(req: Request) {
       .where(and(...conditions))
       .orderBy(desc(property.created_at));
 
-    return NextResponse.json({ success: true, data: list });
+    return NextResponse.json({
+      success: true,
+      data: list.map((p) => {
+        let meta: any = {};
+        if (p.source_row_id && typeof p.source_row_id === "string" && p.source_row_id.startsWith("{")) {
+          try {
+            meta = JSON.parse(p.source_row_id);
+          } catch {}
+        }
+        return {
+          ...p,
+          ownership_type: meta.ownership_type || null,
+          spv_name: meta.spv_name || null,
+          pan: meta.pan || null,
+          cin: meta.cin || null,
+          gstin: meta.gstin || null,
+          primary_contact_name: meta.contact_name || null,
+          primary_contact_phone: meta.contact_phone || null,
+          fitout_condition: meta.fitout_condition || "Warm Shell",
+          default_fitout_days: meta.default_fitout_days || "60",
+          workstations_count: meta.workstations_count || null,
+          cabins_count: meta.cabins_count || null,
+        };
+      }),
+    });
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to fetch properties", message: err.message }, { status: 500 });
   }
@@ -170,6 +194,20 @@ export async function POST(req: Request) {
 
     await ensureTenantOrgRecord(orgId, clientAccountId, auth.userEmail);
 
+    const metaObj = {
+      ownership_type: body.ownership_type || null,
+      spv_name: body.spv_name || null,
+      pan: body.pan || null,
+      cin: body.cin || null,
+      gstin: body.gstin || null,
+      contact_name: body.primary_contact_name || body.contact_name || null,
+      contact_phone: body.primary_contact_phone || body.contact_phone || null,
+      fitout_condition: body.fitout_condition || "Warm Shell",
+      default_fitout_days: body.default_fitout_days || "60",
+      workstations_count: body.workstations_count || null,
+      cabins_count: body.cabins_count || null,
+    };
+
     const [inserted] = await db
       .insert(property)
       .values({
@@ -185,6 +223,7 @@ export async function POST(req: Request) {
         total_leasable_area_sqft: String(payload.total_leasable_area_sqft),
         total_leasable_seats: parsedSeats,
         property_type: payload.property_type as any,
+        source_row_id: JSON.stringify(metaObj),
         created_by: auth.userId,
         updated_by: auth.userId,
       })
@@ -200,6 +239,7 @@ export async function POST(req: Request) {
           total_leasable_area_sqft: String(payload.total_leasable_area_sqft),
           total_leasable_seats: parsedSeats,
           property_type: payload.property_type as any,
+          source_row_id: JSON.stringify(metaObj),
           updated_by: auth.userId,
           updated_at: new Date(),
         },
@@ -225,7 +265,10 @@ export async function POST(req: Request) {
               property_id: inserted.id,
               building_name: `${inserted.property_name} Tower 1`,
               building_code: `BLD-${inserted.property_code}-01`,
+              floors: Math.max(1, Number(body.floors_count) || Number(body.floors) || 1),
               total_area_sqft: String(payload.total_leasable_area_sqft),
+              created_by: auth.userId,
+              updated_by: auth.userId,
             })
             .returning();
           targetBuildingId = newBld.id;

@@ -157,7 +157,7 @@ export async function GET(req: Request) {
 
     for (const ch of allCharges) {
       const rate = parseFloat(ch.rate || "0");
-      const qty = parseFloat(ch.quantity_basis || "1");
+      let qty = parseFloat(ch.quantity_basis || "1");
       const monthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
 
       if (ch.component === "base_rent" || ch.invoice_group === "rent") {
@@ -166,6 +166,7 @@ export async function GET(req: Request) {
           contractRateMap[ch.contract_id] = rate;
         }
       } else if (ch.component === "cam" || ch.invoice_group === "cam") {
+        // RR-06: Store CAM rate or monthly total
         contractCamMap[ch.contract_id] = (contractCamMap[ch.contract_id] || 0) + monthly;
       }
     }
@@ -258,10 +259,10 @@ export async function GET(req: Request) {
         if (cEnd < asOfDateObj || cEnd > maxExp) continue;
       }
 
-      // Determine inclusion based on View Type
+      // Determine inclusion based on View Type (RR-18: Future leases excluded from "current" view)
       let include = false;
       if (viewType === "current") {
-        include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
+        include = ["active", "notice_served", "holding_over"].includes(effectiveStatus) && !isFuture;
       } else if (viewType === "contracted") {
         include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
       } else if (viewType === "forecast") {
@@ -289,9 +290,16 @@ export async function GET(req: Request) {
         const endDateObj = new Date(end);
         const daysToExpiry = Math.ceil((endDateObj.getTime() - asOfDateObj.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Lock-in & Notice
-        const lockInEnd = (c.contract as any)?.lock_in_end_date || null;
-        const noticeMonths = (c.contract as any)?.notice_period_months || 3;
+        // Lock-in & Notice (RR-37)
+        let lockInEnd = (c.contract as any)?.lock_in_end_date || null;
+        if (!lockInEnd && c.contract.lock_in_period_days && c.contract.start_date) {
+          const st = new Date(c.contract.start_date);
+          st.setDate(st.getDate() + c.contract.lock_in_period_days);
+          lockInEnd = st.toISOString().split("T")[0];
+        }
+        const noticeMonths = c.contract.notice_period_days
+          ? Math.round(c.contract.notice_period_days / 30)
+          : ((c.contract as any)?.notice_period_months || 3);
 
         // Arrears
         const arrearsData = contractArrearsMap[c.contract.id];
@@ -311,9 +319,10 @@ export async function GET(req: Request) {
         // Escalation
         const escData = contractNextEscalationMap[c.contract.id];
 
-        // Deposits
+        // Deposits (RR-19: Deposit held is 0 while pending receipt)
         const depRequired = parseFloat(c.contract.deposit_amount_inr || "0") || monthlyBase * 3;
-        const depHeld = parseFloat(c.contract.deposit_amount_inr || "0");
+        const isDepHeld = (c.contract.deposit_status as string) === "held" || (c.contract.deposit_status as string) === "received";
+        const depHeld = isDepHeld ? parseFloat(c.contract.deposit_amount_inr || "0") : 0;
         const depShortfall = Math.max(0, depRequired - depHeld);
 
         const spacesToEmit = linkedSpaceIds.length > 0 ? linkedSpaceIds : [c.contract.space_id].filter(Boolean) as string[];
@@ -336,13 +345,20 @@ export async function GET(req: Request) {
           }
 
           const areaSqft = spData?.chargeable_area_sqft ? parseFloat(spData.chargeable_area_sqft) : primaryArea;
-          const carpetAreaSqft = spData?.carpet_area_sqft ? parseFloat(spData.carpet_area_sqft) : Math.round(areaSqft * 0.75);
+          // RR-32: Only show real carpet area if saved, never invent 75%
+          const carpetAreaSqft = spData?.carpet_area_sqft ? parseFloat(spData.carpet_area_sqft) : 0;
           const allocatedMonthlyBase = spacesToEmit.length > 1
             ? (currentRate > 0 ? Math.round(areaSqft * currentRate) : Math.round(monthlyBase / spacesToEmit.length))
             : monthlyBase;
+          
+          // RR-06: Use actual CAM charge, never invent ₹25/sqft
+          let rawContractCam = contractCamMap[c.contract.id] || 0;
+          if (rawContractCam > 0 && rawContractCam < 100 && areaSqft > 0) {
+            rawContractCam = Math.round(rawContractCam * areaSqft);
+          }
           const camMonthly = spacesToEmit.length > 1
-            ? Math.round(areaSqft * 25)
-            : (contractCamMap[c.contract.id] || Math.round(areaSqft * 25));
+            ? (rawContractCam > 0 ? Math.round(rawContractCam / spacesToEmit.length) : 0)
+            : rawContractCam;
           const grossMonthly = allocatedMonthlyBase + camMonthly;
 
           rows.push({
@@ -370,7 +386,7 @@ export async function GET(req: Request) {
             occupant_name: c.occupant?.occupant_name || "—",
             occupant_code: c.occupant?.occupant_code || "—",
             occupant_trade_name: (c.occupant as any)?.trade_name || c.occupant?.occupant_name || "—",
-            industry: (c.occupant as any)?.industry || "Information Technology",
+            industry: (c.occupant as any)?.industry || "—",
             is_critical: (c.occupant as any)?.is_critical ?? false,
             area_sqft: areaSqft,
             carpet_area_sqft: carpetAreaSqft,
@@ -385,7 +401,7 @@ export async function GET(req: Request) {
             notice_period_months: noticeMonths,
             status: effectiveStatus,
             approval_status: c.contract.approval_status || "approved",
-            escalation_summary: escData?.summary || "15% / 36m",
+            escalation_summary: escData?.summary || "—",
             next_escalation_date: escData?.date || null,
             next_escalation_uplift_inr: escData?.uplift || 0,
             data_quality_status: (c.contract as any)?.data_quality_status || "verified",
@@ -393,7 +409,7 @@ export async function GET(req: Request) {
 
             // FINANCIAL FIELDS — ROLE MASKING APPLIED HERE (§3.3 & §7.3)
             is_financial_masked: isLeasing,
-            gstin: isLeasing ? null : (c.occupant as any)?.gst_number || "27AAAAA0000A1Z5",
+            gstin: isLeasing ? null : (c.occupant as any)?.gst_number || null,
             current_rate_per_sqft: isLeasing ? null : Math.round(currentRate * 100) / 100,
             monthly_base_rent: isLeasing ? null : allocatedMonthlyBase,
             cam_monthly_inr: isLeasing ? null : camMonthly,
@@ -415,8 +431,9 @@ export async function GET(req: Request) {
     for (const sp of propertyFilteredSpaces) {
       if (!occupiedSpaceIds.has(sp.space.id)) {
         const area = sp.space.chargeable_area_sqft ? parseFloat(sp.space.chargeable_area_sqft) : 0;
-        const askingRate = 85; // Asking rate per sqft
-        const askingRent = area * askingRate;
+        // RR-33: Only use actual asking rate if saved, never invent ₹85/sqft
+        const askingRate = (sp.space as any)?.asking_rate_sqft ? parseFloat((sp.space as any).asking_rate_sqft) : null;
+        const askingRent = askingRate ? area * askingRate : null;
         const isSpaceMarkedOccupied = (sp.space.occupancy_status as string) === "occupied" || (sp.space.occupancy_status as string) === "leased";
 
         rows.push({
@@ -437,7 +454,7 @@ export async function GET(req: Request) {
           industry: "—",
           is_critical: false,
           area_sqft: area,
-          carpet_area_sqft: Math.round(area * 0.75),
+          carpet_area_sqft: (sp.space as any)?.carpet_area_sqft ? parseFloat((sp.space as any).carpet_area_sqft) : 0,
           seats: sp.building?.total_seats || 0,
           billing_model: "area",
           contract_type: "—",
@@ -535,6 +552,14 @@ export async function GET(req: Request) {
         });
       }
     }
+
+    // RR-49: Sort rows ascending by floor (Ground Floor 0 -> 1st -> 2nd -> ... -> 9th)
+    rows.sort((a, b) => {
+      const floorA = typeof a.floor === "number" ? a.floor : parseInt(String(a.floor), 10) || 0;
+      const floorB = typeof b.floor === "number" ? b.floor : parseInt(String(b.floor), 10) || 0;
+      if (floorA !== floorB) return floorA - floorB;
+      return (a.space_name || "").localeCompare(b.space_name || "");
+    });
 
     // 9. Calculate Totals (S-10 Strict Rule: Deals NEVER add to "Monthly base" total!)
     const contractRows = rows.filter((r) => r.type === "contract");

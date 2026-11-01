@@ -193,7 +193,7 @@ export default function GoogleAddressAutocomplete({
         <div className="flex items-center justify-between mb-1.5">
           <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <MapPin size={13} className="text-red-500 shrink-0" />
-            <span>{label}</span>
+            <span>{label.replace(/\s*\*+$/, "")}</span>
             {required && <span className="text-rose-500 font-bold">*</span>}
           </label>
         </div>

@@ -58,13 +58,20 @@ export function validateImportRow(
     });
   }
 
-  // 2. Area validation (> 0)
+  // 2. Area validation (> 0 and <= 500,000 sqft)
   if (space.chargeable_area_sqft === null || space.chargeable_area_sqft === undefined || space.chargeable_area_sqft <= 0) {
     errors.push({
       field: "chargeable_area_sqft",
       expected: "> 0 sq ft",
       actual: String(space.chargeable_area_sqft),
       message: "Chargeable area must be greater than zero.",
+    });
+  } else if (space.chargeable_area_sqft > 500000) {
+    errors.push({
+      field: "chargeable_area_sqft",
+      expected: "<= 500,000 sq ft",
+      actual: String(space.chargeable_area_sqft),
+      message: "Chargeable area exceeds maximum commercial threshold (500,000 sq ft).",
     });
   } else if (space.chargeable_area_sqft > 100000) {
     // Exception queue trigger (Warning)
@@ -151,7 +158,37 @@ export function validateImportRow(
     });
   }
 
-  // 6. Space code uniqueness in batch
+  // 6. Escalation rate range validation (0 - 50%) (RR-39)
+  if (entities.rent_step && entities.rent_step.escalation_type === "percentage" && entities.rent_step.escalation_value > 50) {
+    errors.push({
+      field: "escalation_value",
+      expected: "<= 50%",
+      actual: `${entities.rent_step.escalation_value}%`,
+      message: "Escalation rate exceeds commercial threshold (50%).",
+    });
+  }
+
+  // 7. Contact format validation (RR-39)
+  const emailVal = rawRow.email || rawRow.tenant_email || rawRow.tenantEmail;
+  if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(emailVal).trim())) {
+    errors.push({
+      field: "email",
+      expected: "Valid email address (e.g., name@company.com)",
+      actual: String(emailVal),
+      message: "Invalid email format.",
+    });
+  }
+  const phoneVal = rawRow.phone || rawRow.tenant_phone || rawRow.tenantPhone;
+  if (phoneVal && !/^[+0-9\s\-()]{7,15}$/.test(String(phoneVal).trim())) {
+    errors.push({
+      field: "phone",
+      expected: "Valid phone number (7-15 digits)",
+      actual: String(phoneVal),
+      message: "Invalid phone number format.",
+    });
+  }
+
+  // 8. Space code uniqueness in batch
   const normalizedSpace = space.space_code.toLowerCase().trim();
   if (seenSpaceCodes.has(normalizedSpace)) {
     exceptions.push({

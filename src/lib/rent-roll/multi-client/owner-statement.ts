@@ -86,7 +86,21 @@ export async function generateOwnerStatement(
     )
     .orderBy(desc(management_mandate.created_at));
 
-  // 4. Query invoices in this client account
+  // 4. Query invoices in this client account (RR-13: Scoped to issued/paid only, drafts excluded)
+  const invoiceConditions = [
+    eq(invoice.client_account_id, clientAccountId),
+    sql`${invoice.status} IN ('issued', 'partially_paid', 'paid', 'overdue')`,
+  ];
+  if (orgId) {
+    invoiceConditions.push(eq(invoice.org_id, orgId));
+  }
+  if (periodStart) {
+    invoiceConditions.push(sql`${invoice.period_start} >= ${periodStart}`);
+  }
+  if (periodEnd) {
+    invoiceConditions.push(sql`${invoice.period_end} <= ${periodEnd}`);
+  }
+
   const invoicesList = await db
     .select({
       id: invoice.id,
@@ -101,9 +115,7 @@ export async function generateOwnerStatement(
     })
     .from(invoice)
     .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
-    .where(
-      eq(invoice.client_account_id, clientAccountId)
-    );
+    .where(and(...invoiceConditions));
 
   const grossInvoiced = invoicesList.reduce(
     (sum, inv) => sum + (parseFloat(inv.gross_total || "0") || 0),

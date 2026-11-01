@@ -1,22 +1,40 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { invoice, invoiceLine, occupant, contract } from "@/db/schema";
+import { invoice, occupant, property, building, space } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
+function parsePeriodToYyyyMm(periodStr: string): string {
+  const monthMap: Record<string, string> = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+  const parts = (periodStr || "").toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(/\s+/);
+  let year = "2026";
+  let month = "10";
+  for (const part of parts) {
+    if (/^\d{4}$/.test(part)) year = part;
+    const prefix = part.slice(0, 3);
+    if (monthMap[prefix]) month = monthMap[prefix];
+  }
+  return `${year}-${month}`;
+}
+
 /**
  * §S-48 & §5.16: Tally XML / ERP Integration Export API
  * Generates Tally Prime compliant XML vouchers for Sales Invoices and Party Ledgers.
+ * RR-26: Strictly queries real issued invoices from the active organization.
  */
 export async function GET(req: Request) {
   try {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
+    const yyyyMm = parsePeriodToYyyyMm(period);
 
-    // 1. Fetch invoices for this period
+    // 1. Fetch real issued invoices for this period and organization (RR-26: No fake data)
     const invoiceRecords = await db
       .select({
         id: invoice.id,
@@ -26,56 +44,38 @@ export async function GET(req: Request) {
         totalAmount: invoice.gross_total,
         taxAmount: invoice.gst_amount,
         netAmount: invoice.subtotal,
+        status: invoice.status,
         occupantName: occupant.occupant_name,
         occupantGstin: occupant.gst_number,
         occupantPan: occupant.pan_number,
+        propertyName: property.property_name,
+        propertyState: property.state,
       })
       .from(invoice)
       .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
+      .leftJoin(property, eq(invoice.property_id, property.id))
       .where(
-        eq(invoice.org_id, auth.orgId)
+        and(
+          eq(invoice.org_id, auth.orgId),
+          sql`${invoice.status} IN ('issued', 'partially_paid', 'paid')`,
+          sql`to_char(COALESCE(${invoice.period_start}, ${invoice.invoice_date}), 'YYYY-MM') = ${yyyyMm}`
+        )
       )
-      .limit(50);
+      .limit(100);
 
-    const safeInvoices =
-      invoiceRecords.length > 0
-        ? invoiceRecords
-        : [
-            {
-              id: "inv-demo-1",
-              invoiceNumber: "INV-2026-10-001",
-              invoiceDate: "2026-10-01",
-              dueDate: "2026-10-07",
-              totalAmount: "450000.00",
-              taxAmount: "68644.07",
-              netAmount: "381355.93",
-              occupantName: "Zomato Media Pvt Ltd",
-              occupantGstin: "24AAACZ1234B1Z2",
-              occupantPan: "AAACZ1234B",
-            },
-            {
-              id: "inv-demo-2",
-              invoiceNumber: "INV-2026-10-002",
-              invoiceDate: "2026-10-01",
-              dueDate: "2026-10-07",
-              totalAmount: "285000.00",
-              taxAmount: "43474.58",
-              netAmount: "241525.42",
-              occupantName: "Signzy Technologies",
-              occupantGstin: "24AAACS5678C1Z4",
-              occupantPan: "AAACS5678C",
-            },
-          ];
+    const companyName = invoiceRecords[0]?.propertyName || "Commercial Property Portfolio";
 
     // 2. Build Tally XML Schema
     let vouchersXml = "";
-    safeInvoices.forEach((inv) => {
+    invoiceRecords.forEach((inv) => {
       const gross = Number(inv.totalAmount || 0);
-      const net = Number(inv.netAmount || gross / 1.18);
+      const net = Number(inv.netAmount || (gross / 1.18));
       const tax = gross - net;
-      const cgst = Math.round(tax / 2);
-      const sgst = tax - cgst;
+      const halfTax = Math.round((tax / 2) * 100) / 100;
+      const cgst = halfTax;
+      const sgst = halfTax; // RR-26: CGST and SGST must match exactly!
       const cleanDate = (inv.invoiceDate || "2026-10-01").replace(/-/g, "");
+      const stateName = inv.propertyState || "Delhi";
 
       vouchersXml += `
         <TALLYMESSAGE xmlns:UDF="TallyUDF">
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
             <PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW>
             <BASICBUYERNAME>${escapeXml(inv.occupantName || "Commercial Tenant")}</BASICBUYERNAME>
             <PARTYGSTIN>${inv.occupantGstin || ""}</PARTYGSTIN>
-            <STATENAME>Gujarat</STATENAME>
+            <STATENAME>${escapeXml(stateName)}</STATENAME>
 
             <!-- Debit: Tenant Ledger (Full Invoice Total) -->
             <ALLLEDGERENTRIES.LIST>
@@ -132,7 +132,7 @@ export async function GET(req: Request) {
       <REQUESTDESC>
         <REPORTNAME>Vouchers</REPORTNAME>
         <STATICVARIABLES>
-          <SVCURRENTCOMPANY>OfficeX Commercial Portfolio</SVCURRENTCOMPANY>
+          <SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>
         </STATICVARIABLES>
       </REQUESTDESC>
       <REQUESTDATA>

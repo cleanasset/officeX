@@ -65,18 +65,26 @@ export function parseImportDate(val: any): DateParseResult {
 
   const str = String(val).trim();
 
+  function isValidCalendarDate(y: number, m: number, d: number): boolean {
+    if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > 2200) return false;
+    const testDate = new Date(Date.UTC(y, m - 1, d));
+    return testDate.getUTCFullYear() === y && testDate.getUTCMonth() === m - 1 && testDate.getUTCDate() === d;
+  }
+
   // Pattern 1: ISO YYYY-MM-DD
   const isoMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (isoMatch) {
     const y = parseInt(isoMatch[1], 10);
     const m = parseInt(isoMatch[2], 10);
     const d = parseInt(isoMatch[3], 10);
-    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+    if (isValidCalendarDate(y, m, d)) {
       return {
         isoDate: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
         formatDetected: "YYYY-MM-DD",
         isAmbiguous: false,
       };
+    } else {
+      return { isoDate: null, formatDetected: null, isAmbiguous: false };
     }
   }
 
@@ -91,12 +99,14 @@ export function parseImportDate(val: any): DateParseResult {
     const mStr = dmmmyMatch[2].slice(0, 3).toLowerCase();
     const y = parseInt(dmmmyMatch[3], 10);
     const m = monthNames[mStr];
-    if (m && d >= 1 && d <= 31) {
+    if (m && isValidCalendarDate(y, m, d)) {
       return {
         isoDate: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
         formatDetected: "DD-MMM-YYYY",
         isAmbiguous: false,
       };
+    } else {
+      return { isoDate: null, formatDetected: null, isAmbiguous: false };
     }
   }
 
@@ -109,28 +119,37 @@ export function parseImportDate(val: any): DateParseResult {
 
     // If first > 12, it must be DD-MM-YYYY
     if (first > 12 && second <= 12) {
-      return {
-        isoDate: `${y}-${String(second).padStart(2, "0")}-${String(first).padStart(2, "0")}`,
-        formatDetected: "DD-MM-YYYY",
-        isAmbiguous: false,
-      };
+      if (isValidCalendarDate(y, second, first)) {
+        return {
+          isoDate: `${y}-${String(second).padStart(2, "0")}-${String(first).padStart(2, "0")}`,
+          formatDetected: "DD-MM-YYYY",
+          isAmbiguous: false,
+        };
+      }
+      return { isoDate: null, formatDetected: null, isAmbiguous: false };
     }
 
     // If second > 12, it must be MM-DD-YYYY
     if (second > 12 && first <= 12) {
-      return {
-        isoDate: `${y}-${String(first).padStart(2, "0")}-${String(second).padStart(2, "0")}`,
-        formatDetected: "MM-DD-YYYY",
-        isAmbiguous: false,
-      };
+      if (isValidCalendarDate(y, first, second)) {
+        return {
+          isoDate: `${y}-${String(first).padStart(2, "0")}-${String(second).padStart(2, "0")}`,
+          formatDetected: "MM-DD-YYYY",
+          isAmbiguous: false,
+        };
+      }
+      return { isoDate: null, formatDetected: null, isAmbiguous: false };
     }
 
-    // If both <= 12, it is ambiguous! Default to standard Indian DD-MM-YYYY and flag
-    return {
-      isoDate: `${y}-${String(second).padStart(2, "0")}-${String(first).padStart(2, "0")}`,
-      formatDetected: "DD-MM-YYYY",
-      isAmbiguous: true,
-    };
+    // If both <= 12, default to Indian DD-MM-YYYY
+    if (isValidCalendarDate(y, second, first)) {
+      return {
+        isoDate: `${y}-${String(second).padStart(2, "0")}-${String(first).padStart(2, "0")}`,
+        formatDetected: "DD-MM-YYYY",
+        isAmbiguous: true,
+      };
+    }
+    return { isoDate: null, formatDetected: null, isAmbiguous: false };
   }
 
   // Attempt standard JS Date parse as fallback

@@ -46,60 +46,8 @@ export async function GET(req: Request) {
     let readings = meterReadingsStore[orgKey] || [];
     readings = readings.filter((r) => r.period === period);
 
-    // If no readings recorded for this period yet, auto-populate from active spaces
-    if (readings.length === 0) {
-      const activeSpaces = await db
-        .select({
-          spaceId: space.id,
-          spaceName: space.space_name,
-          floorNumber: space.floor_name,
-          propertyName: property.property_name,
-          propertyId: property.id,
-          occupantName: occupant.occupant_name,
-        })
-        .from(space)
-        .leftJoin(building, eq(space.building_id, building.id))
-        .leftJoin(property, eq(building.property_id, property.id))
-        .leftJoin(contract, eq(contract.space_id, space.id))
-        .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
-        .where(
-          and(
-            eq(space.org_id, auth.orgId),
-            sql`${space.deleted_at} IS NULL`
-          )
-        )
-        .limit(20);
-
-      const generated: MeterReadingRecord[] = activeSpaces.map((s, idx) => {
-        const prev = 1200 + idx * 450;
-        const curr = prev + Math.floor(350 + (idx % 5) * 80);
-        const kwh = curr - prev;
-        const tariff = 11.5; // Commercial DISCOM pass-through rate per kWh
-        return {
-          id: `mtr-${idx + 1}-${Date.now()}`,
-          orgId: orgKey,
-          period,
-          meterNumber: `EM-T1-${s.floorNumber || 1}-${idx + 101}`,
-          utilityType: "electricity",
-          spaceId: s.spaceId,
-          spaceName: s.spaceName || `Unit ${idx + 101}`,
-          occupantName: s.occupantName || "Vacant / Common Area",
-          propertyName: s.propertyName || "Commercial Tower",
-          previousReading: prev,
-          currentReading: curr,
-          multiplier: 1.0,
-          consumptionKwh: kwh,
-          tariffPerUnit: tariff,
-          totalAmount: Math.round(kwh * tariff),
-          status: "submitted",
-          recordedAt: new Date().toISOString(),
-          recordedBy: auth.userEmail || "Property Manager",
-        };
-      });
-
-      meterReadingsStore[orgKey] = generated;
-      readings = generated;
-    }
+    // RR-08: NEVER invent or auto-generate fake meter readings.
+    // Return empty list until readings are actually captured or uploaded.
 
     if (propertyId && propertyId !== "all") {
       readings = readings.filter((r) => r.spaceId === propertyId);

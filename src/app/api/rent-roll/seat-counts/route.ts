@@ -35,11 +35,11 @@ export async function GET(req: Request) {
     const period = searchParams.get("period") || "Oct-2026";
     const orgKey = auth.orgId || "default-org";
 
-    let records = memberSeatsStore[orgKey]?.[period];
+    let records = memberSeatsStore[orgKey]?.[period] || [];
 
-    if (!records || records.length === 0) {
-      // Auto-populate from active flex / managed members
-      const activeMembers = await db
+    // RR-10: Only list contracts that actually use seat-based billing (no fake sample plans or area leases)
+    if (records.length === 0) {
+      const activeSeatContracts = await db
         .select({
           occupantId: occupant.id,
           occupantName: occupant.occupant_name,
@@ -52,44 +52,26 @@ export async function GET(req: Request) {
         .where(
           and(
             eq(contract.org_id, auth.orgId),
-            sql`${contract.deleted_at} IS NULL`
+            sql`${contract.deleted_at} IS NULL`,
+            sql`${contract.billing_model} IN ('seat', 'seats')`
           )
         )
-        .limit(15);
+        .limit(20);
 
-      const samplePlans = [
-        { plan: "Enterprise Private Suite", contracted: 45, min: 40, rate: 12500 },
-        { plan: "Dedicated Team Cabin", contracted: 20, min: 18, rate: 11000 },
-        { plan: "Managed Wing Dedicated Desks", contracted: 80, min: 70, rate: 9500 },
-        { plan: "Scale-up Flex Workstations", contracted: 15, min: 12, rate: 10500 },
-      ];
-
-      records = (activeMembers.length > 0 ? activeMembers : [
-        { occupantId: "occ-1", occupantName: "Zomato Media Pvt Ltd", contractCode: "FLX-ZM-01", spaceName: "Floor 4, Wing A" },
-        { occupantId: "occ-2", occupantName: "Signzy Technologies", contractCode: "FLX-SG-02", spaceName: "Floor 3, Cabin 12" },
-        { occupantId: "occ-3", occupantName: "Flipkart Internet Pvt Ltd", contractCode: "FLX-FK-03", spaceName: "Floor 2, Enterprise Hub" },
-      ]).map((m, idx) => {
-        const p = samplePlans[idx % samplePlans.length];
-        const occupied = p.min + Math.floor((idx % 4) * 3);
-        const billable = Math.max(occupied, p.min);
-        return {
-          memberId: m.occupantId || `mem-${idx}`,
-          memberName: m.occupantName || `Flex Member ${idx + 1}`,
-          contractCode: m.contractCode || `CTR-FLX-${idx + 101}`,
-          planName: p.plan,
-          spaceName: m.spaceName || `Floor ${idx + 1}`,
-          contractedSeats: p.contracted,
-          minimumCommitment: p.min,
-          actualOccupiedSeats: occupied,
-          billableSeats: billable,
-          ratePerSeatMonthly: p.rate,
-          monthlyBilledInr: billable * p.rate,
-          submissionStatus: "approved",
-        };
-      });
-
-      if (!memberSeatsStore[orgKey]) memberSeatsStore[orgKey] = {};
-      memberSeatsStore[orgKey][period] = records;
+      records = activeSeatContracts.map((m, idx) => ({
+        memberId: m.occupantId || `mem-${idx}`,
+        memberName: m.occupantName || "Flex Member",
+        contractCode: m.contractCode || `CTR-FLX-${idx + 1}`,
+        planName: "Dedicated Desks",
+        spaceName: m.spaceName || "Flex Suite",
+        contractedSeats: 0,
+        minimumCommitment: 0,
+        actualOccupiedSeats: 0,
+        billableSeats: 0,
+        ratePerSeatMonthly: 0,
+        monthlyBilledInr: 0,
+        submissionStatus: "pending_submission" as const,
+      }));
     }
 
     const totalContracted = records.reduce((s, r) => s + r.contractedSeats, 0);

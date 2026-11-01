@@ -163,8 +163,9 @@ export async function GET(
       }
     }
 
-    // 5. Fetch Supplier / Billing Entity
+    // 5. Fetch Supplier / Billing Entity & Org details
     let supplier: any = null;
+    let orgRecord: any = null;
     if (inv.org_id) {
       const [be] = await db
         .select()
@@ -172,27 +173,38 @@ export async function GET(
         .where(eq(billingEntities.orgId, inv.org_id))
         .limit(1);
       supplier = be;
+
+      const [o] = await db
+        .select()
+        .from(organization)
+        .where(eq(organization.id, inv.org_id))
+        .limit(1);
+      orgRecord = o;
     }
 
+    const supplierLegalName =
+      supplier?.legalName ||
+      (prop?.property_name ? `${prop.property_name} Operations SPV` : orgRecord?.name || "Commercial Property Asset SPV");
+    const supplierAddress =
+      supplier?.registeredAddress ||
+      (prop?.address ? `${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}${prop.postal_code ? ` - ${prop.postal_code}` : ""}` : "Commercial Tech District");
     const supplierGstin = supplier?.gstin || "27AABCU9603R1ZM";
-    const supplierStateCode = supplier?.stateCode || supplierGstin.slice(0, 2) || "27";
-    const supplierState = getStateName(supplierStateCode);
-    const supplierLegalName = supplier?.legalName || "OFFICEX COMMERCIAL REAL ESTATE TECHNOLOGIES PRIVATE LIMITED";
-    const supplierPan = supplier?.pan || supplierGstin.slice(2, 12) || "AABCU9603R";
-    const supplierAddress = supplier?.registeredAddress || "9th Floor, Horizon Tech Park, Outer Ring Road, Bengaluru, Karnataka - 560103";
-    const bankName = supplier?.bankName || "HDFC Bank Ltd";
-    const bankAccount = supplier?.bankAccountNumber || "50200088192031";
-    const bankIfsc = supplier?.bankIfsc || "HDFC0000240";
-    const bankBranch = supplier?.bankBranch || "Koramangala 4th Block, Bengaluru";
+    const supplierStateCode = supplier?.stateCode || (supplierGstin && supplierGstin.length >= 2 ? supplierGstin.slice(0, 2) : "07");
+    const supplierState = prop?.state || supplier?.state || getStateName(supplierStateCode);
+    const supplierPan = supplier?.pan || (supplierGstin && supplierGstin.length >= 12 ? supplierGstin.slice(2, 12) : "AABCU9603R");
+    const bankName = supplier?.bankName || "Designated Property Escrow Account";
+    const bankAccount = supplier?.bankAccountNumber || "To be remitted via CMS / RTGS";
+    const bankIfsc = supplier?.bankIfsc || "—";
+    const bankBranch = supplier?.bankBranch || prop?.city || "Central Processing";
 
-    const buyerGstin = occ?.gst_number || "27AABCT3920K1Z9";
-    const buyerStateCode = buyerGstin ? buyerGstin.slice(0, 2) : supplierStateCode;
-    const buyerState = getStateName(buyerStateCode);
-    const buyerLegalName = occ?.occupant_name || "Enterprise Commercial Occupant Pvt. Ltd.";
-    const buyerPan = occ?.pan_number || (buyerGstin ? buyerGstin.slice(2, 12) : "AABCT3920K");
+    const buyerLegalName = occ?.occupant_name || occ?.trade_name || "Commercial Occupant";
+    const buyerGstin = occ?.gst_number || "";
+    const buyerStateCode = buyerGstin && buyerGstin.length >= 2 ? buyerGstin.slice(0, 2) : supplierStateCode;
+    const buyerState = occ?.state || getStateName(buyerStateCode);
+    const buyerPan = occ?.pan_number || (buyerGstin && buyerGstin.length >= 12 ? buyerGstin.slice(2, 12) : "—");
     const buyerAddress = occ?.address
-      ? `${occ.address}, ${occ.city || ""}, ${occ.state || ""} - ${occ.postal_code || ""}`
-      : "Unit 402, 4th Floor, Tech Hub Towers, Mumbai, Maharashtra - 400051";
+      ? `${occ.address}${occ.city ? `, ${occ.city}` : ""}${occ.state ? `, ${occ.state}` : ""}${occ.postal_code ? ` - ${occ.postal_code}` : ""}`
+      : (sp?.space_name ? `${sp.space_name}, ${prop?.property_name || "Commercial Center"}` : "Demised Premises");
 
     const isIntraState = supplierStateCode === buyerStateCode;
     const grossTotal = parseFloat(inv.gross_total || "0");
@@ -520,8 +532,8 @@ export async function GET(
     <!-- Header -->
     <div class="invoice-header">
       <div>
-        <div class="brand-title">OFFICEX</div>
-        <p style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">Institutional Commercial Real Estate Assets</p>
+        <div class="brand-title">${prop?.property_name || supplierLegalName}</div>
+        <p style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">${prop?.property_name ? `Commercial Real Estate Asset &middot; ${prop.property_name}` : "Institutional Commercial Real Estate Assets"}</p>
       </div>
       <div>
         <div class="tax-invoice-tag">TAX INVOICE</div>

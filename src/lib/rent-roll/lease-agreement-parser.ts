@@ -148,6 +148,22 @@ function parseCleanDate(val: string | null | undefined): string {
   return "";
 }
 
+function cleanEntityName(name: string): string {
+  if (!name) return "";
+  let cleaned = name.replace(/[\r\n\t]+/g, " ").trim();
+  cleaned = cleaned.replace(/^(?:the\s+|m\/s\.?\s*|mr\.?\s*|ms\.?\s*)/i, "");
+  if (
+    /(\bagrees\s+to\b|\btake\s+on\s+lease\b|\bwarm\s+shell\b|\bbare\s+shell\b|\badmeasuring\b|\bsituated\s+at\b|\bwhereas\b|\bwitnesseth\b|\bhereinafter\b|\bentire\s+\d)/i.test(cleaned)
+  ) {
+    const legalMatch = cleaned.match(/([A-Z][A-Za-z0-9\s&.,'\-]{2,40}?\s*(?:Private Limited|Pvt\.?\s*Ltd\.?|LLP|Limited|Ltd\.?))/i);
+    if (legalMatch && legalMatch[1]) {
+      return legalMatch[1].trim();
+    }
+    return "";
+  }
+  return cleaned.trim();
+}
+
 /**
  * Main parser for commercial lease agreement text
  */
@@ -266,19 +282,25 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
         if (!billingEntity) {
           const p1NameMatch = party1Chunk.match(/(?:M\/[Ss]\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:\s*\(PAN|\s*\(CIN|,\s*having|,\s*a\s+|[\r\n]+having|[\r\n]+is\s+having)/i);
           if (p1NameMatch && p1NameMatch[1]) {
-            billingEntity = p1NameMatch[1].replace(/[\r\n]+/g, " ").trim();
-            fieldCount++;
-            highlights.push(`Lessor/SPV: ${billingEntity}`);
+            const cleaned = cleanEntityName(p1NameMatch[1]);
+            if (cleaned) {
+              billingEntity = cleaned;
+              fieldCount++;
+              highlights.push(`Lessor/SPV: ${billingEntity}`);
+            }
           }
         }
 
         if (!occupantName) {
           const p2NameMatch = party2Chunk.match(/(?:M\/[Ss]\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:\s*\(PAN|\s*\(CIN|,\s*having|,\s*a\s+|[\r\n]+having|[\r\n]+is\s+having)/i);
           if (p2NameMatch && p2NameMatch[1]) {
-            occupantName = p2NameMatch[1].replace(/[\r\n]+/g, " ").trim();
-            companyName = occupantName;
-            fieldCount++;
-            highlights.push(`Tenant: ${occupantName}`);
+            const cleaned = cleanEntityName(p2NameMatch[1]);
+            if (cleaned) {
+              occupantName = cleaned;
+              companyName = occupantName;
+              fieldCount++;
+              highlights.push(`Tenant: ${occupantName}`);
+            }
           }
         }
       }
@@ -754,11 +776,11 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     }
   }
 
-  // 10b. ELECTRICITY & UTILITY CLAUSES
+  // 10b. ELECTRICITY & UTILITY CLAUSES (RR-16: Never fabricate 20 kVA, 100% DG, ₹25/kWh)
   let electricityBilling: "Submeter Actuals" | "Fixed Monthly" | "Included in Rent" | "Proportionate Share" = "Submeter Actuals";
-  let electricityLoadKva = 20;
-  let powerBackupType: "100% DG Power Backup" | "Partial DG Backup" | "No DG Backup" = "100% DG Power Backup";
-  let dgRatePerKwh = 25;
+  let electricityLoadKva = 0;
+  let powerBackupType: "100% DG Power Backup" | "Partial DG Backup" | "No DG Backup" = "No DG Backup";
+  let dgRatePerKwh = 0;
   let waterCharges: "Included in CAM" | "Actuals" | "Fixed Monthly" = "Included in CAM";
 
   if (text.match(/electricity.*?(?:included|inclusive)/i)) {
@@ -787,9 +809,13 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
 
   if (text.match(/water.*?(?:actuals|meter|reading)/i)) {
     waterCharges = "Actuals";
+  } else if (text.match(/water.*?(?:fixed|monthly)/i)) {
+    waterCharges = "Fixed Monthly";
   }
 
-  highlights.push(`Power: ${electricityLoadKva} KVA (${powerBackupType}, ${electricityBilling})`);
+  if (electricityLoadKva > 0 || powerBackupType !== "No DG Backup") {
+    highlights.push(`Power: ${electricityLoadKva > 0 ? `${electricityLoadKva} KVA` : "DG Backup"} (${powerBackupType}, ${electricityBilling})`);
+  }
 
   // 11. CAR & TWO-WHEELER PARKING
   let carParkingSlots = 0;
@@ -994,27 +1020,27 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     highlights.push(`Notice: ${noticeDays} Days`);
   }
 
-  // 18. ESCALATION TERMS
+  // 18. ESCALATION TERMS (RR-17)
   let escalationPct = 5;
   let escalationFrequency: "Annual" | "Biannual" | "Quarterly" | "Triennial" = "Annual";
 
-  const escMatch = text.match(/(?:increase|escalation)[^\n.]*?([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:in\s+rent\s+and\s+maintenance\s+)?(?:after|every)\s*(?:every\s*)?([a-z0-9\s()]*?)(?:year|years)/i) ||
+  const escMatch = text.match(/(?:increase|escalation)[^\n.]*?([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:in\s+rent\s+and\s+maintenance\s+)?(?:after|every)\s*(?:every\s*)?([a-z0-9\s()]*?)(?:year|years|months?)/i) ||
                    text.match(/([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:escalation|increase\s*in\s*rent|every\s*year)/i) ||
                    text.match(/(?:escalation|rent\s*(?:increase|revision)|escalated?)\s*(?:of|by|at)?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
   if (escMatch && escMatch[1]) {
     escalationPct = parseFloat(escMatch[1]);
     fieldCount++;
-    if (escMatch[2] && (escMatch[2].includes("two") || escMatch[2].includes("2"))) {
-      escalationFrequency = "Biannual";
-    }
   }
 
-  if (text.match(/(?:after\s*every|every)\s*3\s*years/i) || text.match(/36\s*months/i)) {
+  // RR-17: Accurate frequency mapping. Never check .includes("2") which matches 12!
+  if (text.match(/\b(?:3\s*years?|36\s*months?|triennial(?:ly)?)\b/i)) {
     escalationFrequency = "Triennial";
-  } else if (!escalationFrequency || escalationFrequency === "Annual") {
-    if (text.match(/(?:after\s*every|every)\s*2\s*years/i) || text.match(/24\s*months/i)) {
-      escalationFrequency = "Biannual";
-    }
+  } else if (text.match(/\b(?:2\s*years?|24\s*months?|biennial(?:ly)?)\b/i)) {
+    escalationFrequency = "Biannual";
+  } else if (text.match(/\b(?:1\s*year|12\s*months?|annual(?:ly)?|every\s*year|per\s*annum)\b/i)) {
+    escalationFrequency = "Annual";
+  } else if (text.match(/\b(?:quarterly|3\s*months?)\b/i)) {
+    escalationFrequency = "Quarterly";
   }
   highlights.push(`Escalation: ${escalationPct}% (${escalationFrequency})`);
 
@@ -1035,10 +1061,11 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     escalationStartDate = `${yyyy}-${mm}-${dd}`;
   }
 
-  // 19. PAYMENT TERMS & DUE DATE
-  let paymentDueDay = 5;
-  let paymentTerms = "Due on 5th of month";
-  const dueDayMatch = text.match(/(?:payable\s*on\s*or\s*before\s*(?:the)?|due\s*on\s*(?:the)?)\s*([0-9]{1,2})(?:st|nd|rd|th)?\s*(?:day\s*of\s*each\s*(?:calendar\s*)?month)/i);
+  // 19. PAYMENT TERMS & DUE DATE (RR-38)
+  let paymentDueDay = 7;
+  let paymentTerms = "Due on 7th of month";
+  const dueDayMatch = text.match(/(?:payable\s*(?:on\s*or\s*before|by)?\s*(?:the)?|due\s*(?:on|by)?\s*(?:the)?|by\s*(?:the)?)\s*([0-9]{1,2})(?:st|nd|rd|th)?\s*(?:day\s*of|of\s*each|of\s*every|\s*day\b|of\s*the\s*month)/i) ||
+                      text.match(/([0-9]{1,2})(?:st|nd|rd|th)?\s+day\s+of\s+each\s+calendar\s+month/i);
   if (dueDayMatch && dueDayMatch[1]) {
     paymentDueDay = parseInt(dueDayMatch[1], 10);
     paymentTerms = `Due on ${paymentDueDay}th of month`;

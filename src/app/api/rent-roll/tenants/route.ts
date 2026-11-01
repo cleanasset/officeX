@@ -77,15 +77,24 @@ export async function GET(req: Request) {
       let associatedPropId = item.property?.id || null;
       let associatedPropName = item.property?.property_name || null;
 
-      if (!associatedPropName && occ.source_row_id) {
-        if (propMap.has(occ.source_row_id)) {
-          associatedPropId = occ.source_row_id;
-          associatedPropName = propMap.get(occ.source_row_id)!;
-        } else if (propMap.has(occ.source_row_id.toLowerCase().trim())) {
-          associatedPropName = propMap.get(occ.source_row_id.toLowerCase().trim())!;
-        } else if (fallbackPropMap.has(occ.source_row_id)) {
-          associatedPropId = occ.source_row_id;
-          associatedPropName = fallbackPropMap.get(occ.source_row_id)!;
+      let occMeta: any = {};
+      let propLookupKey = occ.source_row_id;
+      if (occ.source_row_id && occ.source_row_id.startsWith("{")) {
+        try {
+          occMeta = JSON.parse(occ.source_row_id);
+          propLookupKey = occMeta.property_id || null;
+        } catch {}
+      }
+
+      if (!associatedPropName && propLookupKey) {
+        if (propMap.has(propLookupKey)) {
+          associatedPropId = propLookupKey;
+          associatedPropName = propMap.get(propLookupKey)!;
+        } else if (propMap.has(propLookupKey.toLowerCase().trim())) {
+          associatedPropName = propMap.get(propLookupKey.toLowerCase().trim())!;
+        } else if (fallbackPropMap.has(propLookupKey)) {
+          associatedPropId = propLookupKey;
+          associatedPropName = fallbackPropMap.get(propLookupKey)!;
         }
       }
 
@@ -108,13 +117,19 @@ export async function GET(req: Request) {
       if (!seenOccupants.has(occ.id)) {
         seenOccupants.set(occ.id, {
           id: occ.id,
-          tenant_name: occ.occupant_name,
-          trade_name: occ.occupant_name,
+          tenant_name: occMeta.legal_name || occ.occupant_name,
+          trade_name: occMeta.trade_name || occ.occupant_name,
           occupant_code: occ.occupant_code,
           occupant_type: occ.occupant_type,
           company_type: occ.occupant_type === "individual" ? "sole_proprietorship" : "pvt_ltd",
           pan: occ.pan_number,
           gstin: occ.gst_number,
+          cin: occMeta.cin_number || "",
+          cin_number: occMeta.cin_number || "",
+          signatory_name: occMeta.signatory_name || "",
+          signatory_designation: occMeta.signatory_designation || "",
+          alt_contact_name: occMeta.alt_contact_name || "",
+          alt_contact_phone: occMeta.alt_contact_phone || "",
           email: occ.email,
           phone: occ.phone,
           address: occ.address,
@@ -164,6 +179,37 @@ export async function POST(req: Request) {
     await ensureTenantOrgRecord(orgId, clientAccountId, auth.userEmail);
 
     const name = body.tenant_name || body.occupant_name || "New Commercial Tenant";
+    const panToTest = (body.pan || body.pan_number || "").trim().toUpperCase();
+    const gstToTest = (body.gstin || body.gst_number || "").trim().toUpperCase();
+
+    // RR-21: Check for duplicate tenant by PAN or GSTIN within the organization
+    if (panToTest || gstToTest) {
+      const dupConditions = [];
+      if (panToTest) dupConditions.push(eq(occupant.pan_number, panToTest));
+      if (gstToTest) dupConditions.push(eq(occupant.gst_number, gstToTest));
+
+      const existingDups = await db
+        .select({ id: occupant.id, name: occupant.occupant_name, code: occupant.occupant_code })
+        .from(occupant)
+        .where(
+          and(
+            eq(occupant.org_id, orgId),
+            sql`${occupant.deleted_at} IS NULL`,
+            or(...dupConditions)!
+          )
+        );
+
+      if (existingDups.length > 0) {
+        return NextResponse.json(
+          {
+            error: `A tenant with the same ${panToTest ? `PAN (${panToTest})` : `GSTIN (${gstToTest})`} already exists: '${existingDups[0].name}' (${existingDups[0].code}).`,
+            existingTenant: existingDups[0],
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const code =
       body.occupant_code ||
       body.tenant_code ||
@@ -177,14 +223,23 @@ export async function POST(req: Request) {
         occupant_code: code,
         occupant_name: name,
         occupant_type: body.occupant_type || "company",
-        pan_number: body.pan || body.pan_number || null,
-        gst_number: body.gstin || body.gst_number || null,
+        pan_number: panToTest || null,
+        gst_number: gstToTest || null,
         email: body.email || null,
         phone: body.phone || null,
         address: body.billing_address || body.address || null,
-        industry_sector: body.industry_sector || null,
+        industry_sector: body.industry_sector || body.industry || body.industryType || null,
         occupant_status: "active",
-        source_row_id: body.property_id || null,
+        source_row_id: JSON.stringify({
+          property_id: body.property_id || null,
+          trade_name: body.trade_name || body.tenant_name || name,
+          legal_name: body.company_name || body.legal_name || name,
+          cin_number: body.cin_number || body.cin || null,
+          signatory_name: body.signatory_name || body.signatory || null,
+          signatory_designation: body.signatory_designation || null,
+          alt_contact_name: body.alt_contact_name || null,
+          alt_contact_phone: body.alt_contact_phone || null,
+        }),
         created_by: auth.userId,
         updated_by: auth.userId,
       })

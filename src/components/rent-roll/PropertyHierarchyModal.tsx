@@ -10,6 +10,7 @@ import {
   FileText,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Plus,
   UserPlus,
   ArrowRight,
@@ -260,7 +261,7 @@ export default function PropertyHierarchyModal({
     { id: "2", name: "Tower B", floorsCount: "5", areaSqft: "", gateOrAddress: "" },
   ]);
 
-  // Step 6: Third-Party Management Delegation state
+  // Step 6: Third-Party Management Delegation state (RR-40: Default to least privilege)
   const [delegationForm, setDelegationForm] = useState({
     propertyId: "",
     propertyName: "",
@@ -272,7 +273,7 @@ export default function PropertyHierarchyModal({
     managerRights: {
       contractExecution: false,
       concessions: false,
-      billingRuns: true,
+      billingRuns: false, // Default unchecked for least privilege
       depositRefunds: false,
       maxMaintenanceSpend: 25000,
     },
@@ -359,14 +360,14 @@ export default function PropertyHierarchyModal({
     return baseClass;
   };
 
-  // ──── 1. PROPERTY FORM (Enhanced Commercial Master & Delegation) ────
+  // ──── 1. PROPERTY FORM (Enhanced Commercial Master & Delegation) (RR-41: Default to Delhi NCR) ────
   const [propForm, setPropForm] = useState({
     existingPropId: "",
     propertyName: "",
     propertyCode: "",
     address: "",
-    city: "Bengaluru",
-    state: "Karnataka",
+    city: "New Delhi",
+    state: "Delhi",
     pincode: "",
     microMarket: "",
     areaSqft: "",
@@ -525,8 +526,8 @@ export default function PropertyHierarchyModal({
       propertyName: "",
       propertyCode: "",
       address: "",
-      city: "Bengaluru",
-      state: "Karnataka",
+      city: "New Delhi",
+      state: "Delhi",
       pincode: "",
       microMarket: "",
       areaSqft: "",
@@ -1086,7 +1087,36 @@ export default function PropertyHierarchyModal({
         (localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name"))) ||
       "Commercial Asset Owner";
     const subActive = checkIsOwnerSubscribed();
-    const link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&mgr=${encodeURIComponent(delegationForm.managerName.trim())}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${subActive ? "1" : "0"}&invite=act_${Date.now()}`;
+
+    // RR-12, RR-27: Save delegation to server via /api/invitations
+    const authHeaders = getClientAuthHeaders();
+    let link = "";
+    try {
+      const inviteRes = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          name: delegationForm.managerName.trim(),
+          email: delegationForm.managerEmail.trim(),
+          role: delegationForm.managerUserRole,
+          entityType: delegationForm.managerType,
+          rights: delegationForm.managerRights,
+          propertyName: targetPropName,
+          propertyId: targetPropId,
+          ownerSubscribed: subActive,
+        }),
+      });
+      const inviteJson = await inviteRes.json();
+      if (inviteJson.data?.inviteLink) {
+        link = inviteJson.data.inviteLink;
+      }
+    } catch (e) {
+      console.warn("Server delegation API notice:", e);
+    }
+
+    if (!link) {
+      link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner_sub=${subActive ? "1" : "0"}`;
+    }
 
     // Store in localStorage
     if (typeof window !== "undefined") {
@@ -1203,8 +1233,8 @@ export default function PropertyHierarchyModal({
           property_name: propForm.propertyName.trim(),
           property_code: uniqueCodeToUse,
           address_line1: propForm.address.trim(),
-          city: propForm.city.trim() || "Bengaluru",
-          state: propForm.state.trim() || "Karnataka",
+          city: propForm.city.trim() || "New Delhi",
+          state: propForm.state.trim() || "Delhi",
           postal_code: propForm.pincode.trim() || undefined,
           property_type: propForm.propertyType.toLowerCase().replace(/\s+/g, "_"),
           total_leasable_area_sqft: enteredArea || 50000,
@@ -1212,6 +1242,15 @@ export default function PropertyHierarchyModal({
           buildings_count: Number(propForm.buildingsCount) || 1,
           primary_contact_name: propForm.contactName.trim(),
           primary_contact_phone: propForm.contactPhone.trim(),
+          ownership_type: propForm.ownershipStructure,
+          spv_name: propForm.spvName.trim(),
+          pan: propForm.panNumber.trim().toUpperCase(),
+          cin: propForm.cinNumber.trim().toUpperCase(),
+          gstin: propForm.gstin.trim().toUpperCase(),
+          fitout_condition: propForm.fitoutCondition,
+          default_fitout_days: propForm.defaultFitoutDays,
+          workstations_count: propForm.workstationsCount ? Number(propForm.workstationsCount) : null,
+          cabins_count: propForm.cabinsCount ? Number(propForm.cabinsCount) : null,
         }),
       });
       const data = await res.json();
@@ -1301,6 +1340,8 @@ export default function PropertyHierarchyModal({
                           floor_name: flName,
                           space_type: "suite",
                           occupancy_status: "vacant",
+                          fitout_condition: propForm.fitoutCondition || "Warm Shell",
+                          default_fitout_days: propForm.defaultFitoutDays || "60",
                         }),
                       }).catch(() => {});
                     }
@@ -1354,6 +1395,8 @@ export default function PropertyHierarchyModal({
                           floor_name: floorName,
                           space_type: isSingle ? "entire_building" : "suite",
                           occupancy_status: "vacant",
+                          fitout_condition: propForm.fitoutCondition || "Warm Shell",
+                          default_fitout_days: propForm.defaultFitoutDays || "60",
                         }),
                       }).catch(() => {});
                     }
@@ -2014,16 +2057,7 @@ export default function PropertyHierarchyModal({
         showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled! Now complete Step 4 (Lease Contract) below to activate on the Rent Roll table.`);
         await loadHierarchyDropdowns();
 
-        // Mark all selected suites as occupied in database
-        if (selectedTenantSuites.length > 0) {
-          for (const sId of selectedTenantSuites) {
-            await fetch(`/api/spaces/${sId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", ...authHeaders },
-              body: JSON.stringify({ occupancy_status: "occupied" }),
-            }).catch(() => {});
-          }
-        }
+        // RR-22: Do NOT mark space occupied here. Spaces only become occupied upon active contract creation.
 
         // Auto-select newly created tenant and demised suites in Step 5 (Contract)
         if (data.data?.id) {
@@ -2500,14 +2534,19 @@ export default function PropertyHierarchyModal({
   };
 
   // ──── APPLY AGREEMENT PARTICULARS WITH TEMPORARY YELLOW HIGHLIGHT ────
-  const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[]) => {
+  const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[], allowedFieldKeys?: string[]) => {
     if (!d) return;
+
+    const shouldApply = (fieldKey: string) => {
+      if (!allowedFieldKeys) return true;
+      return allowedFieldKeys.includes(fieldKey);
+    };
 
     const authHeaders = getClientAuthHeaders();
 
     // 1. Auto-match or detect occupant
     let targetOccupantId = contractForm.occupantId || (tenantsList.length > 0 ? tenantsList[0].id : "");
-    const targetTenantName = d.companyName || d.occupantName;
+    const targetTenantName = (shouldApply("occupantName") || shouldApply("companyName")) ? (d.companyName || d.occupantName) : null;
 
     if (targetTenantName) {
       const matchedTenant = tenantsList.find(
@@ -2818,7 +2857,10 @@ export default function PropertyHierarchyModal({
           }, 1200);
         }
       } else {
-        showToast(data.message || data.error || "Failed to create lease contract", "error");
+        const errorDetail = data.details
+          ? (Array.isArray(data.details) ? data.details.map((d: any) => d.message || d.error || JSON.stringify(d)).join(". ") : JSON.stringify(data.details))
+          : (data.message || data.error || "Failed to create lease contract");
+        showToast(errorDetail, "error");
       }
     } catch (err: any) {
       showToast(err.message || "Network error", "error");
@@ -3002,7 +3044,7 @@ export default function PropertyHierarchyModal({
                       Property &amp; Towers Setup
                     </h3>
                     <span className="inline-flex items-center text-[10px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/70">
-                      Step 1 of 5
+                      Step 1 of {shouldSkipSpaceStep ? 4 : 5}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -3079,7 +3121,6 @@ export default function PropertyHierarchyModal({
                       <input
                         type="text"
                         readOnly
-                        required
                         placeholder="Auto-generated once name is entered"
                         value={propForm.propertyCode}
                         className="w-full pl-3 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800 outline-none uppercase select-all placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
@@ -3585,8 +3626,8 @@ export default function PropertyHierarchyModal({
                       value={propForm.address}
                       onChange={(val) => setPropForm((prev) => ({ ...prev, address: val }))}
                       onAddressSelect={handleAddressSelect}
-                      label="Property Full Street Address *"
-                      placeholder="Search tech park, landmark, building, or road on Google Maps..."
+                      label="Property Full Street Address"
+                      placeholder="Search tech park, landmark, commercial building, or street address..."
                       required
                       hint="Selecting an address autofills City, State, and Pincode."
                     />
@@ -6344,21 +6385,38 @@ export default function PropertyHierarchyModal({
                         });
                         const displayList = filteredSpaces.length > 0 ? filteredSpaces : spacesList;
                         return (
-                          <select
-                            value={contractForm.spaceId}
-                            onChange={(e) => handleSpaceSelect(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
-                          >
-                            {displayList.map((s) => {
-                              const sBldg = buildingsList.find((b) => b.id === s.buildingId);
-                              return (
-                                <option key={s.id} value={s.id}>
-                                  {displayBuildings.length > 1 && sBldg ? `[${sBldg.name}] ` : ""}{s.name} ({s.area > 0 ? `${s.area.toLocaleString()} Sq.Ft` : "Standard Area"}) • {s.occupancyStatus === "occupied" ? "Occupied" : "Vacant"}
-                                </option>
-                              );
-                            })}
-                            {displayList.length === 0 && <option value="">No spaces created</option>}
-                          </select>
+                          <>
+                            <select
+                              value={contractForm.spaceId}
+                              onChange={(e) => handleSpaceSelect(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
+                            >
+                              {displayList.map((s) => {
+                                const sBldg = buildingsList.find((b) => b.id === s.buildingId);
+                                const isOcc = s.occupancyStatus === "occupied";
+                                return (
+                                  <option key={s.id} value={s.id} className={isOcc ? "text-amber-700 bg-amber-50/50" : ""}>
+                                    {displayBuildings.length > 1 && sBldg ? `[${sBldg.name}] ` : ""}{s.name} ({s.area > 0 ? `${s.area.toLocaleString()} Sq.Ft` : "Standard Area"}) • {isOcc ? "⚠️ Occupied" : "Vacant"}
+                                  </option>
+                                );
+                              })}
+                              {displayList.length === 0 && <option value="">No spaces created</option>}
+                            </select>
+                            {(() => {
+                              const curSelected = displayList.find((s) => s.id === contractForm.spaceId);
+                              if (curSelected && curSelected.occupancyStatus === "occupied") {
+                                return (
+                                  <div className="mt-2 p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center gap-2 animate-in fade-in">
+                                    <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+                                    <span>
+                                      <strong>Occupancy Warning:</strong> Space <strong>{curSelected.name}</strong> is currently marked as <strong>Occupied</strong>. Creating an overlapping lease will conflict with existing occupancy.
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </>
                         );
                       })()}
                     </div>
@@ -7465,7 +7523,7 @@ export default function PropertyHierarchyModal({
                   </p>
                 </div>
                 <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 self-start sm:self-auto">
-                  Step 5 of 5
+                  Step {shouldSkipSpaceStep ? 4 : 5} of {shouldSkipSpaceStep ? 4 : 5}
                 </span>
               </div>
 
@@ -7834,10 +7892,10 @@ export default function PropertyHierarchyModal({
             setVarianceModalOpen(false);
             showToast("Kept user-entered details unchanged without modifying form.");
           }}
-          onApplyAgreement={() => {
+          onApplyAgreement={(selectedKeys) => {
             setVarianceModalOpen(false);
             if (pendingAgreementData) {
-              applyAgreementTerms(pendingAgreementData, agreementDifferences);
+              applyAgreementTerms(pendingAgreementData, agreementDifferences, selectedKeys);
             }
           }}
         />

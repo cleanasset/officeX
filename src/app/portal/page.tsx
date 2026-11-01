@@ -297,7 +297,7 @@ export default function TenantHomePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className={`space-y-6 max-w-6xl mx-auto pb-12 ${paymentSuccess ? "portal-main-content" : ""}`}>
       {/* 1. Welcome & Space Identity Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -1183,29 +1183,45 @@ export default function TenantHomePage() {
 
       {/* 7. Executive Certified Rent Settlement Receipt Modal */}
       {paymentSuccess && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto receipt-modal-backdrop">
           {/* Print Isolation Stylesheet */}
           <style dangerouslySetInnerHTML={{ __html: `
             @media print {
+              body {
+                background: white !important;
+                color: #0f172a !important;
+              }
               body * {
                 visibility: hidden !important;
+              }
+              .portal-main-content {
+                display: none !important;
+              }
+              .receipt-modal-backdrop {
+                position: static !important;
+                background: none !important;
+                backdrop-filter: none !important;
+                padding: 0 !important;
+                inset: auto !important;
               }
               #official-rent-receipt, #official-rent-receipt * {
                 visibility: visible !important;
               }
               #official-rent-receipt {
-                position: fixed !important;
-                left: 0 !important;
-                top: 0 !important;
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
                 width: 100% !important;
+                max-width: 100% !important;
                 margin: 0 !important;
-                padding: 28px !important;
+                padding: 24px !important;
                 background: white !important;
                 color: #0f172a !important;
                 box-shadow: none !important;
-                border: 2px solid #0f172a !important;
-                border-radius: 0 !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 8px !important;
                 z-index: 999999 !important;
+                page-break-inside: avoid !important;
               }
               .no-print {
                 display: none !important;

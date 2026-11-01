@@ -31,7 +31,7 @@ interface AgreementVarianceModalProps {
   isOpen: boolean;
   fileName: string;
   differences: AgreementDiffItem[];
-  onApplyAgreement: () => void;
+  onApplyAgreement: (selectedKeys?: string[]) => void;
   onKeepCurrent: () => void;
   onClose: () => void;
 }
@@ -44,10 +44,35 @@ export default function AgreementVarianceModal({
   onKeepCurrent,
   onClose,
 }: AgreementVarianceModalProps) {
-  if (!isOpen) return null;
-
   const variancesOnly = differences.filter((d) => d.hasVariance);
   const matchingItems = differences.filter((d) => !d.hasVariance);
+
+  const [selectedKeys, setSelectedKeys] = React.useState<Set<string>>(
+    () => new Set(variancesOnly.map((d) => d.fieldKey))
+  );
+
+  React.useEffect(() => {
+    setSelectedKeys(new Set(differences.filter((d) => d.hasVariance).map((d) => d.fieldKey)));
+  }, [differences]);
+
+  if (!isOpen) return null;
+
+  const toggleField = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedKeys(new Set(variancesOnly.map((d) => d.fieldKey)));
+  };
+
+  const deselectAll = () => {
+    setSelectedKeys(new Set());
+  };
 
   const getFieldIcon = (key: string) => {
     switch (key) {
@@ -133,14 +158,36 @@ export default function AgreementVarianceModal({
         {/* Differences Table / Cards Scrollable Body */}
         <div className="overflow-y-auto px-5 sm:px-7 py-4 flex-1 space-y-3.5">
           <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
-            <span>
-              Variances Found:{" "}
-              <strong className="text-amber-700 font-black">{variancesOnly.length}</strong>
-            </span>
-            <span>
-              Matching Terms:{" "}
-              <strong className="text-emerald-700 font-black">{matchingItems.length}</strong>
-            </span>
+            <div className="flex items-center gap-3">
+              <span>
+                Variances Found:{" "}
+                <strong className="text-amber-700 font-black">{variancesOnly.length}</strong>
+              </span>
+              <span>•</span>
+              <span>
+                Selected to Apply:{" "}
+                <strong className="text-indigo-700 font-black">{selectedKeys.size}</strong>
+              </span>
+            </div>
+            {variancesOnly.length > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-[11px] text-amber-700 hover:text-amber-900 font-bold hover:underline cursor-pointer"
+                >
+                  Select All
+                </button>
+                <span>|</span>
+                <button
+                  type="button"
+                  onClick={deselectAll}
+                  className="text-[11px] text-slate-500 hover:text-slate-800 font-bold hover:underline cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            )}
           </div>
 
           {variancesOnly.length === 0 ? (
@@ -153,49 +200,68 @@ export default function AgreementVarianceModal({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {variancesOnly.map((diff) => (
-                <div
-                  key={diff.fieldKey}
-                  className="p-3.5 rounded-2xl border-2 border-amber-200/90 bg-amber-50/30 hover:bg-amber-50/70 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs"
-                >
-                  <div className="flex items-center gap-2.5 sm:w-1/3">
-                    <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      {getFieldIcon(diff.fieldKey)}
+              {variancesOnly.map((diff) => {
+                const isSelected = selectedKeys.has(diff.fieldKey);
+                return (
+                  <div
+                    key={diff.fieldKey}
+                    onClick={() => toggleField(diff.fieldKey)}
+                    className={`p-3.5 rounded-2xl border-2 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs cursor-pointer ${
+                      isSelected
+                        ? "border-amber-400 bg-amber-50/70"
+                        : "border-slate-200 bg-slate-50/50 opacity-80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 sm:w-1/3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleField(diff.fieldKey);
+                        }}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300 cursor-pointer shrink-0"
+                      />
+                      <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                        {getFieldIcon(diff.fieldKey)}
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-slate-800 block text-xs">
+                          {diff.label}
+                        </span>
+                        <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded inline-block mt-0.5 ${
+                          isSelected ? "text-amber-800 bg-amber-200/80" : "text-slate-600 bg-slate-200"
+                        }`}>
+                          {isSelected ? "Will Update" : "Keep Original"}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-extrabold text-slate-800 block text-xs">
-                        {diff.label}
-                      </span>
-                      <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded inline-block mt-0.5">
-                        Difference
-                      </span>
+
+                    <div className="flex-1 grid grid-cols-2 gap-2 sm:gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                      {/* Current Value */}
+                      <div className="border-r border-slate-100 pr-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Your Entered Value
+                        </span>
+                        <span className={`font-bold text-xs break-words ${isSelected ? "text-slate-500 line-through decoration-rose-500/80 decoration-2" : "text-slate-800"}`}>
+                          {diff.currentValue || "(Empty)"}
+                        </span>
+                      </div>
+
+                      {/* Agreement Value */}
+                      <div className="pl-1">
+                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block flex items-center gap-1">
+                          <span>In Agreement</span>
+                          <ArrowRight size={10} className="text-amber-500" />
+                        </span>
+                        <span className={`font-black text-xs break-words px-1.5 py-0.5 rounded ${isSelected ? "text-amber-950 bg-amber-100/90" : "text-slate-600 bg-slate-100"}`}>
+                          {diff.agreementValue || "(Not specified)"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex-1 grid grid-cols-2 gap-2 sm:gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                    {/* Current Value */}
-                    <div className="border-r border-slate-100 pr-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Your Entered Value
-                      </span>
-                      <span className="font-bold text-slate-700 text-xs break-words line-through decoration-rose-500/80 decoration-2">
-                        {diff.currentValue || "(Empty)"}
-                      </span>
-                    </div>
-
-                    {/* Agreement Value */}
-                    <div className="pl-1">
-                      <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block flex items-center gap-1">
-                        <span>In Agreement</span>
-                        <ArrowRight size={10} className="text-amber-500" />
-                      </span>
-                      <span className="font-black text-amber-900 text-xs break-words bg-amber-100/60 px-1.5 py-0.5 rounded">
-                        {diff.agreementValue || "(Not specified)"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -244,14 +310,14 @@ export default function AgreementVarianceModal({
               <span>Continue Without Changing</span>
             </button>
 
-            {/* Option 2: Change According to Rent Agreement */}
+            {/* Option 2: Apply Selected Changes */}
             <button
               type="button"
-              onClick={onApplyAgreement}
+              onClick={() => onApplyAgreement(Array.from(selectedKeys))}
               className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/20"
             >
               <Sparkles size={14} className="text-slate-950" />
-              <span>Change According to Rent Agreement</span>
+              <span>Apply Selected Changes ({selectedKeys.size})</span>
             </button>
           </div>
         </div>

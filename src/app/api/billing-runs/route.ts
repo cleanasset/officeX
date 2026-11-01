@@ -66,15 +66,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
     const propertyId = searchParams.get("property_id");
-    const { yyyyMm } = parsePeriodDates(period);
+    const { yyyyMm, pStart, pEnd } = parsePeriodDates(period);
 
-    // 1. Run Pre-checks
+    // 1. Run Pre-checks (Scoped strictly to this organization: RR-01)
     // Pre-check 1: Flex contracts without approved seat count (AL-14)
     const unapprovedSeatCounts = await db
       .select()
       .from(seatCounts)
       .where(
         and(
+          eq(seatCounts.org_id, auth.orgId),
           eq(seatCounts.period, period),
           sql`${seatCounts.status} != 'approved'`
         )
@@ -86,6 +87,7 @@ export async function GET(req: Request) {
       .from(occupant)
       .where(
         and(
+          eq(occupant.org_id, auth.orgId),
           sql`${occupant.deleted_at} IS NULL`,
           or(sql`${occupant.gst_number} IS NULL`, sql`trim(${occupant.gst_number}) = ''`)
         )
@@ -95,12 +97,22 @@ export async function GET(req: Request) {
     const allActiveMeters = await db
       .select()
       .from(meters)
-      .where(eq(meters.status, "active"));
+      .where(
+        and(
+          eq(meters.org_id, auth.orgId),
+          eq(meters.status, "active")
+        )
+      );
 
     const readingsInPeriod = await db
       .select()
       .from(meterReadings)
-      .where(eq(meterReadings.period, period));
+      .where(
+        and(
+          eq(meterReadings.org_id, auth.orgId),
+          eq(meterReadings.period, period)
+        )
+      );
 
     const loggedMeterIds = new Set(readingsInPeriod.map((r) => r.meter_id));
     const missingMetersCount = allActiveMeters.filter((m) => !loggedMeterIds.has(m.id)).length;
@@ -111,6 +123,7 @@ export async function GET(req: Request) {
       .from(rentStep)
       .where(
         and(
+          eq(rentStep.org_id, auth.orgId),
           sql`${rentStep.deleted_at} IS NULL`,
           ne(rentStep.status, "applied"),
           sql`${rentStep.effective_date} <= CURRENT_DATE`
@@ -142,6 +155,17 @@ export async function GET(req: Request) {
       .orderBy(desc(invoice.created_at));
 
     // 3. Fetch active contracts to build the tenant-by-tenant billing verification grid
+    // RR-01: Scoped strictly to auth.orgId
+    // RR-03: Exclude contracts whose start_date is AFTER this billing period
+    const contractWhere = [
+      eq(contract.org_id, auth.orgId),
+      sql`${contract.deleted_at} IS NULL`,
+      sql`${contract.start_date} <= ${pEnd}`,
+    ];
+    if (propertyId && propertyId !== "all") {
+      contractWhere.push(eq(property.id, propertyId));
+    }
+
     const activeContracts = await db
       .select({
         id: contract.id,
@@ -149,6 +173,7 @@ export async function GET(req: Request) {
         contract_status: contract.contract_status,
         start_date: contract.start_date,
         end_date: contract.end_date,
+        commencement_date: contract.commencement_date,
         occupant_id: contract.occupant_id,
         occupant_name: occupant.occupant_name,
         occupant_gst: occupant.gst_number,
@@ -165,7 +190,7 @@ export async function GET(req: Request) {
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(sql`${contract.deleted_at} IS NULL`)
+      .where(and(...contractWhere))
       .limit(50);
 
     const tenantBillings: any[] = [];
@@ -174,6 +199,12 @@ export async function GET(req: Request) {
     let calculatedGross = 0;
 
     for (const c of activeContracts) {
+      // RR-03: Double check contract hasn't started yet
+      if (c.start_date && c.start_date > pEnd) {
+        continue;
+      }
+
+      const area = parseFloat(c.area_sqft || "0");
       const charges = await db
         .select()
         .from(contractCharge)
@@ -186,25 +217,35 @@ export async function GET(req: Request) {
 
       let baseRentAmt = 0;
       let camAmt = 0;
+      let utilAmt = 0;
+
       for (const ch of charges) {
         const rate = parseFloat(ch.rate || "0");
-        const qty = parseFloat(ch.quantity_basis || "1");
+        // RR-06: If calc_basis is per_area or rate looks like a PSF rate (< 500) and quantity_basis is empty or 1, multiply by area!
+        let qty = parseFloat(ch.quantity_basis || "0");
+        if ((ch.calc_basis as string) === "per_area" || (ch.calc_basis as string) === "per_sqft" || (rate > 0 && rate < 1000 && qty <= 1 && area > 0)) {
+          qty = area;
+        } else if (qty <= 0) {
+          qty = 1;
+        }
+
         const monthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
         if (ch.component === "base_rent" || ch.invoice_group === "rent") {
           baseRentAmt += monthly;
         } else if (ch.component === "cam" || ch.invoice_group === "cam") {
           camAmt += monthly;
+        } else if (ch.component === "electricity" || ch.component === "utility" || ch.invoice_group === "utility") {
+          utilAmt += monthly;
         }
       }
 
-      const area = parseFloat(c.area_sqft || "0");
-      if (baseRentAmt === 0 && area > 0) baseRentAmt = area * 65;
-      if (camAmt === 0 && area > 0) camAmt = area * 9;
-      if (baseRentAmt === 0) baseRentAmt = 975000;
-      if (camAmt === 0) camAmt = 135000;
+      // RR-04: If contract has a rent commencement date in the future (rent-free fitout period), base rent is 0
+      if (c.commencement_date && c.commencement_date > pEnd) {
+        baseRentAmt = 0;
+      }
 
-      const utilAmt = area > 0 ? Math.round(area * 2) : 25000;
-      const subtotal = baseRentAmt + camAmt + utilAmt;
+      // RR-01/RR-06: NEVER invent fabricated numbers. If no charges entered, amounts remain 0!
+      const subtotal = Math.round(baseRentAmt + camAmt + utilAmt);
       const gst = Math.round(subtotal * 0.18);
       const gross = subtotal + gst;
 
@@ -475,10 +516,15 @@ export async function POST(req: Request) {
     }
 
     // 1. Fetch active contracts to bill along with property location and occupant GSTIN
+    // RR-01: Scoped strictly to auth.orgId
+    // RR-03: Exclude contracts whose start_date is AFTER this billing period
     const activeContracts = await db
       .select({
         id: contract.id,
         contract_code: contract.contract_code,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+        commencement_date: contract.commencement_date,
         occupant_id: contract.occupant_id,
         occupant_name: occupant.occupant_name,
         occupant_gst: occupant.gst_number,
@@ -493,8 +539,14 @@ export async function POST(req: Request) {
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(sql`${contract.deleted_at} IS NULL`)
-      .limit(30);
+      .where(
+        and(
+          eq(contract.org_id, auth.orgId),
+          sql`${contract.deleted_at} IS NULL`,
+          sql`${contract.start_date} <= ${pEnd}`
+        )
+      )
+      .limit(50);
 
     const generatedInvoices = [];
     
@@ -535,11 +587,18 @@ export async function POST(req: Request) {
     }
 
     for (const c of activeContracts) {
+      // RR-03: Skip contracts that have not started yet
+      if (c.start_date && c.start_date > pEnd) {
+        continue;
+      }
+
       // Determine GST Place of Supply (POS)
       const propStateCode = resolveStateCode(c.property_state);
       const occupantGst = (c.occupant_gst || "").trim();
       const occStateCode = occupantGst.length >= 2 ? occupantGst.slice(0, 2) : propStateCode;
       const isInterState = occStateCode !== propStateCode;
+
+      const area = parseFloat(c.area_sqft || "0");
 
       // 1. Fetch real contract charges for this contract
       const charges = await db
@@ -554,31 +613,47 @@ export async function POST(req: Request) {
 
       let baseRentAmt = 0;
       let camAmt = 0;
+      let utilAmt = 0;
+
       for (const ch of charges) {
         const rate = parseFloat(ch.rate || "0");
-        const qty = parseFloat(ch.quantity_basis || "1");
+        // RR-06: For CAM or area-based charges, multiply rate by area when quantity basis is empty or 1
+        let qty = parseFloat(ch.quantity_basis || "0");
+        if ((ch.calc_basis as string) === "per_area" || (ch.calc_basis as string) === "per_sqft" || (rate > 0 && rate < 1000 && qty <= 1 && area > 0)) {
+          qty = area;
+        } else if (qty <= 0) {
+          qty = 1;
+        }
+
         const monthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
         if (ch.component === "base_rent" || ch.invoice_group === "rent") {
           baseRentAmt += monthly;
         } else if (ch.component === "cam" || ch.invoice_group === "cam") {
           camAmt += monthly;
+        } else if (ch.component === "electricity" || ch.component === "utility" || ch.invoice_group === "utility") {
+          utilAmt += monthly;
         }
       }
 
-      // Derive contractual amounts if charges were not recorded separately
-      const area = parseFloat(c.area_sqft || "0");
-      if (baseRentAmt === 0 && area > 0) baseRentAmt = area * 65;
-      if (camAmt === 0 && area > 0) camAmt = area * 9;
-      if (baseRentAmt === 0) baseRentAmt = 975000;
-      if (camAmt === 0) camAmt = 135000;
+      // RR-04: If contract has rent commencement date after this period (rent-free fit-out), base rent is 0
+      if (c.commencement_date && c.commencement_date > pEnd) {
+        baseRentAmt = 0;
+      }
 
-      // 2. Fetch real meter readings for utilities (or proportional utility recovery)
+      // RR-08: Real meter readings for utilities only (no invented defaults!)
       const [latestReading] = await db
         .select()
         .from(meterReadings)
-        .where(eq(meterReadings.period, period))
+        .where(
+          and(
+            eq(meterReadings.org_id, auth.orgId),
+            eq(meterReadings.period, period)
+          )
+        )
         .limit(1);
-      const utilAmt = latestReading?.amount ? parseFloat(latestReading.amount) : (area > 0 ? Math.round(area * 2) : 25000);
+      if (latestReading?.amount) {
+        utilAmt = parseFloat(latestReading.amount);
+      }
 
       // Check for user-specified manual adjustments / concessions for this tenant
       const adjustmentObj = adjustments && adjustments[c.id] ? adjustments[c.id] : null;

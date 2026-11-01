@@ -25,24 +25,64 @@ interface ImportRow {
   escalationPct?: number;
 }
 
-function parseDateOrFallback(val: any, fallbackDate: Date): string {
-  if (!val) return fallbackDate.toISOString().split("T")[0];
+function parseStrictDate(val: any, fieldName: string): { date: string | null; error?: string } {
+  if (!val) return { date: null, error: `${fieldName} is required` };
   if (val instanceof Date && !isNaN(val.getTime())) {
-    return val.toISOString().split("T")[0];
+    return { date: val.toISOString().split("T")[0] };
   }
   const str = String(val).trim();
-  // Don't treat text words like 'Tower A' or non-dates as dates
   if (str.length < 4 || /^[a-zA-Z\s]+$/.test(str)) {
-    return fallbackDate.toISOString().split("T")[0];
+    return { date: null, error: `Invalid date '${str}' for ${fieldName}` };
   }
-  const parsed = Date.parse(str);
-  if (!isNaN(parsed)) {
-    const d = new Date(parsed);
-    if (d.getFullYear() >= 1990 && d.getFullYear() <= 2100) {
-      return d.toISOString().split("T")[0];
+
+  function isValidCalendar(y: number, m: number, d: number): boolean {
+    if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > 2200) return false;
+    const testDate = new Date(Date.UTC(y, m - 1, d));
+    return testDate.getUTCFullYear() === y && testDate.getUTCMonth() === m - 1 && testDate.getUTCDate() === d;
+  }
+
+  // ISO YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (isoMatch) {
+    const y = parseInt(isoMatch[1], 10);
+    const m = parseInt(isoMatch[2], 10);
+    const d = parseInt(isoMatch[3], 10);
+    if (isValidCalendar(y, m, d)) {
+      return { date: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}` };
     }
+    return { date: null, error: `Invalid calendar date '${str}' for ${fieldName}` };
   }
-  return fallbackDate.toISOString().split("T")[0];
+
+  // DD/MM/YYYY or DD-MM-YYYY (Indian Standard)
+  const dmyMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (dmyMatch) {
+    const d = parseInt(dmyMatch[1], 10);
+    const m = parseInt(dmyMatch[2], 10);
+    const y = parseInt(dmyMatch[3], 10);
+    if (isValidCalendar(y, m, d)) {
+      return { date: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}` };
+    }
+    return { date: null, error: `Invalid calendar date '${str}' for ${fieldName}` };
+  }
+
+  // DD-MMM-YYYY (e.g. 01-Nov-2026)
+  const monthNames: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+  };
+  const dmmmyMatch = str.match(/^(\d{1,2})[-/.\s]([A-Za-z]{3,9})[-/.\s](\d{4})$/);
+  if (dmmmyMatch) {
+    const d = parseInt(dmmmyMatch[1], 10);
+    const mStr = dmmmyMatch[2].slice(0, 3).toLowerCase();
+    const y = parseInt(dmmmyMatch[3], 10);
+    const m = monthNames[mStr];
+    if (m && isValidCalendar(y, m, d)) {
+      return { date: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}` };
+    }
+    return { date: null, error: `Invalid calendar date '${str}' for ${fieldName}` };
+  }
+
+  return { date: null, error: `Unrecognized date format '${str}' for ${fieldName}. Please use DD/MM/YYYY or YYYY-MM-DD.` };
 }
 
 export async function POST(req: Request) {
@@ -204,10 +244,10 @@ export async function POST(req: Request) {
               space_code: spaceCode,
               space_name: unitNum,
               chargeable_area_sqft: String(areaNum),
-              carpet_area_sqft: String(Math.round(areaNum * 0.75)),
+              carpet_area_sqft: null, // RR-32: Never invent 75%
               space_type: "suite",
               is_leasable: true,
-              occupancy_status: "occupied",
+              occupancy_status: "vacant",
             })
             .returning({ id: space.id });
           spaceId = newSpace.id;
@@ -219,6 +259,46 @@ export async function POST(req: Request) {
       // 4. Find or Create Tenant / Occupant
       const tenantName = (row.tenantName || "").trim();
       if (!tenantName) continue;
+
+      // RR-39: Field & Format Validations
+      if (row.areaSqft !== undefined && (Number(row.areaSqft) <= 0 || Number(row.areaSqft) > 500000)) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Area (${row.areaSqft} sqft) must be between 1 and 500,000 sqft.`);
+        continue;
+      }
+      if (row.monthlyRent !== undefined && Number(row.monthlyRent) < 0) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Monthly rent cannot be negative (${row.monthlyRent}).`);
+        continue;
+      }
+      if (row.securityDeposit !== undefined && Number(row.securityDeposit) < 0) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Security deposit cannot be negative (${row.securityDeposit}).`);
+        continue;
+      }
+      if (row.escalationPct !== undefined && (Number(row.escalationPct) < 0 || Number(row.escalationPct) > 50)) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Escalation rate (${row.escalationPct}%) must be between 0% and 50%.`);
+        continue;
+      }
+      if (row.tenantEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.tenantEmail.trim())) {
+        rowErrors.push(`Row for '${tenantName}' rejected: Invalid tenant email '${row.tenantEmail}'.`);
+        continue;
+      }
+
+      // RR-23, RR-25: Strict Date Validation
+      const startRes = parseStrictDate(row.startDate, "start_date");
+      if (startRes.error || !startRes.date) {
+        rowErrors.push(`Row for '${tenantName}' rejected: ${startRes.error}`);
+        continue;
+      }
+      const endRes = parseStrictDate(row.endDate, "end_date");
+      if (endRes.error || !endRes.date) {
+        rowErrors.push(`Row for '${tenantName}' rejected: ${endRes.error}`);
+        continue;
+      }
+      if (endRes.date <= startRes.date) {
+        rowErrors.push(`Row for '${tenantName}' rejected: End date (${endRes.date}) must be strictly after start date (${startRes.date}).`);
+        continue;
+      }
+      const startDate = startRes.date;
+      const endDate = endRes.date;
 
       const tenantKey = tenantName.toLowerCase();
       let occId = occupantCache.get(tenantKey);
@@ -243,17 +323,31 @@ export async function POST(req: Request) {
       }
 
       // 5. Create Contract
-      const numArea = Number(row.areaSqft) > 0 ? Number(row.areaSqft) : 5000;
-      const rentAmt = Number(row.monthlyRent) > 0 ? Number(row.monthlyRent) : (numArea * 65);
-      const depositAmt = Number(row.securityDeposit) > 0 ? Number(row.securityDeposit) : (rentAmt * 6);
-      
-      const now = new Date();
-      const defaultStart = now;
-      const defaultEnd = new Date(now.getTime() + 3 * 365 * 24 * 60 * 60 * 1000);
-      const startDate = parseDateOrFallback(row.startDate, defaultStart);
-      const endDate = parseDateOrFallback(row.endDate, defaultEnd);
+      // RR-24: Never invent rent as area * 65 or deposit as rent * 6
+      const rentAmt = Number(row.monthlyRent) >= 0 ? Number(row.monthlyRent) : 0;
+      const depositAmt = Number(row.securityDeposit) >= 0 ? Number(row.securityDeposit) : 0;
 
-      // Check if contract already exists for this space and occupant
+      // RR-11: Check for overlapping contracts on this space
+      const overlapping = await db
+        .select({ id: contract.id, contract_code: contract.contract_code, start_date: contract.start_date, end_date: contract.end_date })
+        .from(contract)
+        .where(
+          and(
+            eq(contract.space_id, spaceId),
+            eq(contract.org_id, auth.orgId),
+            sql`${contract.deleted_at} IS NULL`,
+            sql`${contract.contract_status} IN ('active', 'future')`,
+            sql`${contract.start_date} <= ${endDate}`,
+            sql`${contract.end_date} >= ${startDate}`
+          )
+        );
+
+      if (overlapping.length > 0) {
+        rowErrors.push(`Row for '${tenantName}' in '${unitNum}' rejected: Overlaps with existing lease ${overlapping[0].contract_code} (${overlapping[0].start_date} to ${overlapping[0].end_date}).`);
+        continue;
+      }
+
+      // Check if exact contract already exists for this space and occupant
       const existingContracts = await db
         .select({ id: contract.id })
         .from(contract)
@@ -266,6 +360,8 @@ export async function POST(req: Request) {
         );
 
       if (existingContracts.length === 0) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const isCurrentlyActive = startDate <= todayStr;
         const contractCode = `LC-${Date.now().toString().slice(-6)}-${Math.floor(10 + Math.random() * 90)}`;
         const [newContract] = await db
           .insert(contract)
@@ -278,7 +374,7 @@ export async function POST(req: Request) {
             contract_type: "lease",
             direction: "receivable",
             billing_model: "fixed",
-            contract_status: "active",
+            contract_status: isCurrentlyActive ? "active" : "future",
             approval_status: "approved",
             start_date: startDate,
             end_date: endDate,
@@ -342,11 +438,13 @@ export async function POST(req: Request) {
           });
         }
 
-        // Set space occupancy status to occupied
-        await db
-          .update(space)
-          .set({ occupancy_status: "occupied" })
-          .where(eq(space.id, spaceId));
+        // Set space occupancy status only if lease is currently active
+        if (isCurrentlyActive) {
+          await db
+            .update(space)
+            .set({ occupancy_status: "occupied" })
+            .where(eq(space.id, spaceId));
+        }
 
         contractsCreated++;
       }

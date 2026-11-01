@@ -37,23 +37,41 @@ export async function GET(req: Request) {
     const fiscalYear = searchParams.get("fy") || "FY 2025-26";
     const propertyId = searchParams.get("property_id");
 
-    // Standard Commercial CAM Budget vs Audited Expenditure Pools
-    const expensePools: CamExpenseCategory[] = [
-      { category: "Building Security & Access Control", budgetInr: 1800000, actualInr: 1950000 },
-      { category: "Housekeeping & Waste Management", budgetInr: 1200000, actualInr: 1280000 },
-      { category: "BMS, Fire Fighting & Technical AMC", budgetInr: 900000, actualInr: 850000 },
-      { category: "Elevator / Escalator Comprehensive AMC", budgetInr: 650000, actualInr: 650000 },
-      { category: "Common Area Electricity & Diesel DG", budgetInr: 2200000, actualInr: 2450000 },
-      { category: "Water Supply, STP & Landscaping", budgetInr: 450000, actualInr: 420000 },
-      { category: "Facade Cleaning & Pest Control", budgetInr: 300000, actualInr: 310000 },
-      { category: "Statutory Property Insurance & Licenses", budgetInr: 500000, actualInr: 490000 },
-    ];
+    // RR-09: Only return expense pools if recorded for this organization/property.
+    // Never invent fake audited budgets or actuals for newly created properties.
+    const expensePools: CamExpenseCategory[] = [];
 
     const totalBudget = expensePools.reduce((s, e) => s + e.budgetInr, 0);
     const totalActual = expensePools.reduce((s, e) => s + e.actualInr, 0);
     const totalVariance = totalActual - totalBudget;
 
+    // Fetch property total leasable area so landlord bears vacant share (RR-09)
+    const propertyRecords = await db
+      .select({
+        id: property.id,
+        totalArea: property.total_leasable_area_sqft,
+      })
+      .from(property)
+      .where(
+        and(
+          eq(property.org_id, auth.orgId),
+          sql`${property.deleted_at} IS NULL`,
+          propertyId && propertyId !== "all" ? eq(property.id, propertyId) : sql`true`
+        )
+      );
+
+    const totalPropertyArea = propertyRecords.reduce(
+      (sum, p) => sum + (Number(p.totalArea) || 0),
+      0
+    ) || 0;
+
     // Fetch active tenants and their chargeable area
+    const contractWhere = [
+      eq(contract.org_id, auth.orgId),
+      sql`${contract.deleted_at} IS NULL`,
+      sql`${contract.contract_status} = 'active'`,
+    ];
+
     const activeContracts = await db
       .select({
         contractId: contract.id,
@@ -70,42 +88,37 @@ export async function GET(req: Request) {
         contractCharge,
         and(
           eq(contractCharge.contract_id, contract.id),
-          eq(contractCharge.component, "cam")
+          eq(contractCharge.component, "cam"),
+          sql`${contractCharge.deleted_at} IS NULL`
         )
       )
-      .where(
-        and(
-          eq(contract.org_id, auth.orgId),
-          sql`${contract.deleted_at} IS NULL`
-        )
-      )
+      .where(and(...contractWhere))
       .limit(30);
 
-    const totalPortfolioArea = activeContracts.reduce(
-      (sum, c) => sum + (Number(c.areaSqft) || 5000),
-      0
-    ) || 50000;
+    const baseDenominatorArea = totalPropertyArea > 0 ? totalPropertyArea : (
+      activeContracts.reduce((sum, c) => sum + (Number(c.areaSqft) || 0), 0) || 1
+    );
 
-    const tenantReconciliation: CamTenantReconciliation[] = activeContracts.map((c, idx) => {
-      const area = Number(c.areaSqft) || (10000 - idx * 1200);
-      const sharePct = (area / totalPortfolioArea) * 100;
-      const billedAnnual = Math.round(area * (Number(c.ratePerSqft) || 18) * 12);
+    const tenantReconciliation: CamTenantReconciliation[] = activeContracts.map((c) => {
+      const area = Number(c.areaSqft) || 0;
+      const sharePct = (area / baseDenominatorArea) * 100;
+      const billedAnnual = Math.round(area * (Number(c.ratePerSqft) || 0) * 12);
       const actualShare = Math.round((totalActual * sharePct) / 100);
       const variance = actualShare - billedAnnual;
 
       return {
-        occupantId: c.occupantId || `occ-${idx}`,
-        occupantName: c.occupantName || `Enterprise Tenant ${idx + 1}`,
-        spaceName: c.spaceName || `Floor ${idx + 1} Suite A`,
+        occupantId: c.occupantId || "",
+        occupantName: c.occupantName || "Commercial Tenant",
+        spaceName: c.spaceName || "Unit",
         chargeableAreaSqft: area,
         areaSharePercent: Number(sharePct.toFixed(2)),
         billedCamInr: billedAnnual,
         auditedCamShareInr: actualShare,
         varianceInr: variance,
         recommendedAction:
-          variance > 1000
+          variance > 100
             ? "issue_debit_note"
-            : variance < -1000
+            : variance < -100
             ? "issue_credit_note"
             : "balanced",
       };
@@ -121,7 +134,7 @@ export async function GET(req: Request) {
         netVarianceInr: totalVariance,
         varianceType: totalVariance > 0 ? "Under-recovery (Recovery required)" : "Over-recovery (Refund due)",
         auditedAt: new Date().toISOString(),
-        auditor: "BSR & Co. Statutory Auditors",
+        auditor: totalActual > 0 ? "Statutory Property Auditor" : "—",
       },
       tenantReconciliation,
     });

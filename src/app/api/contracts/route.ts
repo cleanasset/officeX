@@ -422,11 +422,14 @@ export async function POST(req: Request) {
         console.warn(`[contract_space] Could not link space ${spId}:`, linkErr);
       }
 
-      await db
-        .update(space)
-        .set({ occupancy_status: "occupied" })
-        .where(eq(space.id, spId))
-        .catch(() => {});
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (payload.start_date <= todayStr) {
+        await db
+          .update(space)
+          .set({ occupancy_status: "occupied" })
+          .where(eq(space.id, spId))
+          .catch(() => {});
+      }
     }
 
     // Insert Charges & Rent Steps

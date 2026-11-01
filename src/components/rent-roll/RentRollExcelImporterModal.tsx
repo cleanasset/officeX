@@ -134,8 +134,8 @@ export default function RentRollExcelImporterModal({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary", cellDates: true });
+        const buffer = evt.target?.result;
+        const wb = XLSX.read(buffer, { type: "array", cellDates: true });
         const firstSheetName = wb.SheetNames[0];
         const ws = wb.Sheets[firstSheetName];
         const data: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -154,7 +154,7 @@ export default function RentRollExcelImporterModal({
         setErrorMsg("Failed to read Excel file: " + err.message);
       }
     };
-    reader.readAsBinaryString(selectedFile);
+    reader.readAsArrayBuffer(selectedFile);
   };
 
   const handleDownloadTemplate = () => {
@@ -162,9 +162,12 @@ export default function RentRollExcelImporterModal({
       {
         "Property Name": "Apex Tech Park",
         "Tower / Wing": "Tower A",
+        "Floor": "4",
         "Unit / Space": "Suite 401",
         "Chargeable Area (Sq.Ft)": 15000,
         "Tenant Company Name": "Cognitive Cloud Technologies Pvt Ltd",
+        "Tenant PAN": "AAACC1234F",
+        "Tenant GSTIN": "24AAACC1234F1Z5",
         "Contact Email": "facilities@cognitivecloud.com",
         "Contact Mobile": "9825012345",
         "Monthly Rent (₹)": 975000,
@@ -172,6 +175,9 @@ export default function RentRollExcelImporterModal({
         "Security Deposit (₹)": 5850000,
         "Lease Start Date": "2026-04-01",
         "Lease End Date": "2031-03-31",
+        "Rent Free Days": 60,
+        "Lock-in Period (Months)": 24,
+        "Notice Period (Months)": 3,
         "Annual Escalation (%)": 5,
         City: "Ahmedabad",
         State: "Gujarat",
@@ -179,9 +185,12 @@ export default function RentRollExcelImporterModal({
       {
         "Property Name": "Apex Tech Park",
         "Tower / Wing": "Tower A",
+        "Floor": "5",
         "Unit / Space": "Suite 501",
         "Chargeable Area (Sq.Ft)": 20000,
         "Tenant Company Name": "Global Infotech India LLP",
+        "Tenant PAN": "AABBG9876K",
+        "Tenant GSTIN": "24AABBG9876K1Z3",
         "Contact Email": "admin@globalinfotech.in",
         "Contact Mobile": "9898098765",
         "Monthly Rent (₹)": 1300000,
@@ -189,24 +198,10 @@ export default function RentRollExcelImporterModal({
         "Security Deposit (₹)": 7800000,
         "Lease Start Date": "2026-05-01",
         "Lease End Date": "2031-04-30",
+        "Rent Free Days": 30,
+        "Lock-in Period (Months)": 36,
+        "Notice Period (Months)": 3,
         "Annual Escalation (%)": 5,
-        City: "Ahmedabad",
-        State: "Gujarat",
-      },
-      {
-        "Property Name": "Horizon Heights Commercial",
-        "Tower / Wing": "North Wing",
-        "Unit / Space": "Floor 2 Entire",
-        "Chargeable Area (Sq.Ft)": 12500,
-        "Tenant Company Name": "Premier Financial Advisory Services",
-        "Contact Email": "operations@premieradvisory.com",
-        "Contact Mobile": "9723045678",
-        "Monthly Rent (₹)": 812500,
-        "CAM Rate (₹/sqft)": 7.0,
-        "Security Deposit (₹)": 4875000,
-        "Lease Start Date": "2026-06-01",
-        "Lease End Date": "2029-05-31",
-        "Annual Escalation (%)": 6,
         City: "Ahmedabad",
         State: "Gujarat",
       },
@@ -217,9 +212,12 @@ export default function RentRollExcelImporterModal({
     ws["!cols"] = [
       { wch: 28 }, // Property Name
       { wch: 15 }, // Tower
+      { wch: 10 }, // Floor
       { wch: 16 }, // Unit
       { wch: 22 }, // Area
       { wch: 38 }, // Tenant Company Name
+      { wch: 16 }, // PAN
+      { wch: 20 }, // GSTIN
       { wch: 30 }, // Contact Email
       { wch: 18 }, // Mobile
       { wch: 18 }, // Monthly Rent
@@ -227,6 +225,9 @@ export default function RentRollExcelImporterModal({
       { wch: 20 }, // Security Deposit
       { wch: 16 }, // Start Date
       { wch: 16 }, // End Date
+      { wch: 16 }, // Rent Free Days
+      { wch: 22 }, // Lock-in Period
+      { wch: 20 }, // Notice Period
       { wch: 20 }, // Escalation
       { wch: 16 }, // City
       { wch: 16 }, // State

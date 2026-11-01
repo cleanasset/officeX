@@ -492,10 +492,10 @@ export function validateDepositBounds(
   transactionAmount?: number
 ): ValidationResult {
   const errors: Array<{ field: string; message: string }> = [];
-  if (depositAmountInr <= 0) {
+  if (depositAmountInr < 0) {
     errors.push({
       field: "deposit_amount_inr",
-      message: "Rule 5 violated: deposit_amount_inr must be greater than 0.",
+      message: "Rule 5 violated: deposit_amount_inr cannot be negative.",
     });
   }
   if (transactionAmount !== undefined) {
@@ -637,4 +637,56 @@ export function validateContractTransition(
   }
 
   return { isValid: errors.length === 0, errors };
+}
+
+/**
+ * Statutory Identifiers Validation (RR-14)
+ */
+export function validatePanFormat(pan: string): { isValid: boolean; message?: string } {
+  if (!pan) return { isValid: true };
+  const clean = pan.trim().toUpperCase();
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+  if (!panRegex.test(clean)) {
+    return {
+      isValid: false,
+      message: `Invalid PAN format '${pan}'. Must be 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).`,
+    };
+  }
+  return { isValid: true };
+}
+
+export function validateCinFormat(cin: string): { isValid: boolean; message?: string } {
+  if (!cin) return { isValid: true };
+  const clean = cin.trim().toUpperCase();
+  const cinRegex = /^([LUu][0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}|[A-Za-z]{3}-[0-9]{4})$/;
+  if (!cinRegex.test(clean) && clean.length !== 21) {
+    return {
+      isValid: false,
+      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be a valid 21-character alphanumeric identifier.`,
+    };
+  }
+  return { isValid: true };
+}
+
+export function validateGstinFormat(gstin: string, pan?: string): { isValid: boolean; message?: string } {
+  if (!gstin) return { isValid: true };
+  const clean = gstin.trim().toUpperCase();
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+  if (!gstRegex.test(clean)) {
+    return {
+      isValid: false,
+      message: `Invalid GSTIN format '${gstin}'. Must be 15 characters (2 digits state code, 10-char PAN, 1 entity code, 'Z', 1 checksum).`,
+    };
+  }
+  if (pan) {
+    const cleanPan = pan.trim().toUpperCase();
+    const embeddedPan = clean.slice(2, 12);
+    if (cleanPan && cleanPan.length === 10 && embeddedPan !== cleanPan) {
+      return {
+        isValid: false,
+        message: `GSTIN embedded PAN (${embeddedPan}) does not match entered PAN (${cleanPan}).`,
+      };
+    }
+  }
+  return { isValid: true };
 }

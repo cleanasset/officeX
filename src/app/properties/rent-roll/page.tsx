@@ -298,7 +298,7 @@ export default function RentRollRegisterPage() {
     return groups;
   }, [visibleRows]);
 
-  // Export CSV Handler with Role Masking (RR-VW-06)
+  // Export CSV Handler with Role Masking (RR-VW-06, RR-29)
   function handleExportCSV() {
     if (!visibleRows.length) return;
     const headers = [
@@ -309,19 +309,25 @@ export default function RentRollRegisterPage() {
       "Building",
       "Floor",
       "Occupant",
+      "GSTIN",
       "Area (sqft)",
-      "Current Rate",
+      "Current Rate (INR/sqft)",
       "Monthly Base Rent (INR)",
       "CAM (INR)",
       "Gross Monthly (INR)",
+      "Security Deposit Held (INR)",
+      "Deposit Status",
       "Start Date",
+      "Lock-in End Date",
       "Expiry Date",
+      "Escalation Summary",
       "Status",
       "Arrears Status",
     ];
 
     const csvLines = [headers.join(",")];
     visibleRows.forEach((r: any) => {
+      const floorLabel = r.floor === 0 ? "Ground Floor" : (r.floor !== undefined && r.floor !== null ? `Floor ${r.floor}` : "—");
       csvLines.push(
         [
           `"${r.type}"`,
@@ -329,15 +335,20 @@ export default function RentRollRegisterPage() {
           `"${r.space_code}"`,
           `"${r.space_name}"`,
           `"${r.building_name || "—"}"`,
-          `"${r.floor || 1}"`,
+          `"${floorLabel}"`,
           `"${r.occupant_name}"`,
+          `"${r.gstin || "—"}"`,
           r.area_sqft || 0,
-          isLeasing ? '"Confidential"' : r.current_rate_per_sqft || 0,
-          isLeasing ? '"Confidential"' : r.monthly_base_rent || 0,
-          isLeasing ? '"Confidential"' : r.cam_monthly_inr || 0,
-          isLeasing ? '"Confidential"' : r.gross_monthly_recurring_inr || 0,
+          isLeasing ? '"Confidential"' : (r.current_rate_per_sqft || 0),
+          isLeasing ? '"Confidential"' : (r.monthly_base_rent || 0),
+          isLeasing ? '"Confidential"' : (r.cam_monthly_inr || 0),
+          isLeasing ? '"Confidential"' : (r.gross_monthly_recurring_inr || 0),
+          isLeasing ? '"Confidential"' : (r.deposit_held_amount || 0),
+          `"${r.deposit_status || "—"}"`,
           `"${r.start_date}"`,
+          `"${r.lock_in_end_date || "—"}"`,
           `"${r.expiry_date}"`,
+          `"${r.escalation_summary || "—"}"`,
           `"${r.status}"`,
           `"${r.arrears_status || "No"}"`,
         ].join(",")
