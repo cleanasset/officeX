@@ -17,7 +17,13 @@ export interface SendEmailResult {
 /**
  * Configure Nodemailer Transporter from standard environment variables
  */
+let cachedTransporter: nodemailer.Transporter | null = null;
+
 function getTransporter() {
+  if (cachedTransporter) {
+    return cachedTransporter;
+  }
+
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
   const secure = process.env.SMTP_SECURE === "true" || port === 465;
@@ -28,7 +34,7 @@ function getTransporter() {
     return null;
   }
 
-  return nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     host,
     port,
     secure,
@@ -36,7 +42,12 @@ function getTransporter() {
       user,
       pass,
     },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   });
+
+  return cachedTransporter;
 }
 
 /**

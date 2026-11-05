@@ -1166,14 +1166,16 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="hover:text-blue-600 flex items-center gap-1 cursor-pointer font-medium"
+                    className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition-all"
                   >
                     <ArrowLeft size={12} />
-                    <span>Change details</span>
+                    <span>Edit email / fix typo</span>
                   </button>
 
                   {resendCountdown > 0 ? (
-                    <span className="text-slate-400">Resend in 0:{resendCountdown < 10 ? `0${resendCountdown}` : resendCountdown}</span>
+                    <span className="text-slate-500 font-medium bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                      Resend in 0:{resendCountdown < 10 ? `0${resendCountdown}` : resendCountdown}
+                    </span>
                   ) : (
                     <button
                       type="button"
