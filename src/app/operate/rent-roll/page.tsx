@@ -201,14 +201,17 @@ export default function RentRollProductPage() {
                   <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
                   <ArrowRight size={15} />
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setEnquiryOpen(true)}
+                <a
+                  href="https://calendly.com/admin-cleanasset/30min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-calendly="true"
+                  data-calendly-url="https://calendly.com/admin-cleanasset/30min"
                   className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                 >
                   <Calendar size={15} className="text-[#0D7B6C]" />
                   <span>Book a Demo with Us</span>
-                </button>
+                </a>
               </div>
 
               {/* Direct Institutional Value Ribbon */}
@@ -493,14 +496,17 @@ export default function RentRollProductPage() {
               <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
               <ArrowRight size={15} />
             </Link>
-            <button
-              type="button"
-              onClick={() => setEnquiryOpen(true)}
+            <a
+              href="https://calendly.com/admin-cleanasset/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-calendly="true"
+              data-calendly-url="https://calendly.com/admin-cleanasset/30min"
               className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center gap-2 cursor-pointer hover:border-teal-300"
             >
               <Calendar size={15} className="text-[#0D7B6C]" />
               <span>Book a Demo with Us</span>
-            </button>
+            </a>
           </div>
         </div>
       </section>
@@ -525,14 +531,17 @@ export default function RentRollProductPage() {
               <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
               <ArrowRight size={14} />
             </Link>
-            <button
-              type="button"
-              onClick={() => setEnquiryOpen(true)}
+            <a
+              href="https://calendly.com/admin-cleanasset/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-calendly="true"
+              data-calendly-url="https://calendly.com/admin-cleanasset/30min"
               className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all cursor-pointer flex items-center gap-2"
             >
               <Calendar size={15} className="text-teal-200" />
               <span>Book a Demo with Us</span>
-            </button>
+            </a>
           </div>
         </div>
       </section>

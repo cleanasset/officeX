@@ -806,7 +806,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
           <div className="mb-3 flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
               {step === 1 && "Step 01 of 04: Account Credentials (S02)"}
-              {step === 2 && "Step 02 of 04: Contact Verification (S03)"}
+              {step === 2 && "Step 02 of 04: Email Verification"}
               {step === 3 && "Step 03 of 04: Organisation Master (S05/S06)"}
               {step === 4 && "Step 04 of 04: Role Business Profile (S07/S08)"}
               {step === 5 && "Review & Verification (S10-S12)"}
@@ -837,7 +837,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   ? "Create FM Contractor Account"
                   : "Create Marketplace Account"
               )}
-              {step === 2 && "Verify Email & Mobile"}
+              {step === 2 && "Verify Your Email Address"}
               {step === 3 && (isRentRoll ? "Set Up Your Business Entity" : "Establish Your Business Entity")}
               {step === 4 && (selectedRole === "owner" ? (isRentRoll ? "Commercial Asset & Rent Roll Setup" : "Commercial Property Portfolio") : "Role Business Profile")}
               {step === 5 && "Review & Complete Onboarding"}
@@ -852,7 +852,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   ? "Register your facility management firm to bid on contracts and manage building work orders."
                   : "Discover commercial office spaces across India, list vacant properties, or connect as a leasing broker."
               )}
-              {step === 2 && `We've sent a real 6-digit verification code to ${email || "your work email"}.`}
+              {step === 2 && `We've sent a 6-digit verification code to your email inbox (${email || "your email"}).`}
               {step === 3 && (isRentRoll ? "Set up your commercial asset ownership entity to link properties, active leases, and collections." : "Create your organization master to link commercial properties, leases, and contracts.")}
               {step === 4 && (selectedRole === "owner" 
                 ? "Configure your primary building parameters to initialize your workspace." 
@@ -1135,8 +1135,8 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   Enter 6-Digit Verification Code
                 </span>
                 <p className="text-[11px] text-slate-600">
-                  Dispatched via SMTP to <strong className="text-blue-900">{email}</strong> and{" "}
-                  <strong className="text-blue-900">{mobileNumber.startsWith("+") ? mobileNumber : `+91 ${mobileNumber}`}</strong>
+                  Verification code sent to: <strong className="text-blue-900">{email}</strong>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">(Codes are only sent via email, never via SMS)</span>
                 </p>
               </div>
 

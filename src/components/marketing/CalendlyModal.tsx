@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Calendar, Sparkles, Loader2, ExternalLink } from "lucide-react";
 
 export const DEFAULT_CALENDLY_URL =
-  process.env.NEXT_PUBLIC_CALENDLY_URL || "https://calendly.com/officex-commercial/30min";
+  process.env.NEXT_PUBLIC_CALENDLY_URL || "https://calendly.com/admin-cleanasset/30min";
 
 /**
  * Trigger the global Calendly popup modal from anywhere in the application.

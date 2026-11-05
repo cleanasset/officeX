@@ -2047,13 +2047,16 @@ export default function LandingPage() {
 
         <div className="mt-5 text-center text-xs text-slate-500 font-medium">
           Prefer an immediate consultation?{" "}
-          <button
-            type="button"
-            onClick={() => setIsContactModalOpen(true)}
+          <a
+            href="https://calendly.com/admin-cleanasset/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-calendly="true"
+            data-calendly-url="https://calendly.com/admin-cleanasset/30min"
             className="font-bold text-[#0F8B7D] hover:underline cursor-pointer"
           >
-            Schedule a 30-minute consultation &rarr;
-          </button>
+            Schedule a 30-minute demo &amp; consultation &rarr;
+          </a>
         </div>
       </div>
     </section>
