@@ -53,11 +53,11 @@ export async function POST(req: Request) {
         // Strict Mobile Uniqueness: Ensure phone number cannot be reused under another name
         const existingMobile = usersData?.users?.find((u) => {
           const userMobile = (u.user_metadata?.mobile || "").replace(/\D/g, "");
-          return userMobile.length >= 10 && userMobile.endsWith(cleanMobile);
+          return userMobile.length >= 10 && userMobile.endsWith(cleanMobile) && u.email?.toLowerCase() !== cleanEmail;
         });
         if (existingMobile) {
           return NextResponse.json(
-            { error: "Mobile number +91 " + cleanMobile + " is already registered to an existing user. Duplicate accounts with the same phone number are not permitted." },
+            { error: "Mobile number +91 " + cleanMobile + " is already registered to another account (" + existingMobile.email + "). Please sign in or use a different phone number." },
             { status: 409 }
           );
         }

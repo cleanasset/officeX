@@ -399,8 +399,15 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         }
 
         if (res.status === 409 || data.error?.toLowerCase().includes("already exist")) {
+          const isMobileConflict = data.error?.toLowerCase().includes("mobile") || data.error?.toLowerCase().includes("phone");
+          if (isMobileConflict) {
+            setError(data.error || "This mobile number is already registered to another account. Please use a different mobile number or sign in.");
+            setIsLoading(false);
+            return;
+          }
+
           setUserAlreadyExists(true);
-          setError("User already exists. An account with this email/mobile is already registered. Redirecting to Login page...");
+          setError("An account with this email is already registered. Redirecting to Login page...");
           setIsLoading(false);
           const loginTarget = isRentRoll
             ? `/login?context=rent-roll&redirect=${encodeURIComponent(initialRedirect || "/properties/rent-roll")}&identifier=${encodeURIComponent(email.trim().toLowerCase())}`
