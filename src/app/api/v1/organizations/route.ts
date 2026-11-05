@@ -45,23 +45,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate PAN format if supplied
+    // Validate PAN format if supplied (up to 10 alphanumeric characters)
     if (pan) {
       const cleanPan = pan.trim().toUpperCase();
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      if (!/^[A-Z0-9]{1,10}$/.test(cleanPan)) {
         return NextResponse.json(
-          { error: "Invalid PAN format. Must be 10 characters (e.g. ABCDE1234F)." },
+          { error: "Invalid PAN format. Must be up to 10 alphanumeric characters." },
           { status: 400 }
         );
       }
     }
 
-    // Validate GSTIN format if supplied
+    // Validate GSTIN format if supplied (up to 15 alphanumeric characters)
     if (gstin) {
       const cleanGstin = gstin.trim().toUpperCase();
-      if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGstin)) {
+      if (!/^[A-Z0-9]{1,15}$/.test(cleanGstin)) {
         return NextResponse.json(
-          { error: "Invalid GSTIN format. Must be 15 alphanumeric characters." },
+          { error: "Invalid GSTIN format. Must be up to 15 alphanumeric characters." },
           { status: 400 }
         );
       }

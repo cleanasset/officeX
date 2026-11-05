@@ -8,6 +8,7 @@ import {
   TrendingUp,
   FileText,
   Users,
+  User,
   Settings,
   ShieldCheck,
   Calendar,
@@ -497,7 +498,19 @@ function SidebarInner() {
       } catch (e) {}
 
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
-      if (storedName) setUserName(storedName);
+      if (storedName && !/^\d+$/.test(storedName.replace(/\D/g, ""))) {
+        setUserName(storedName);
+      }
+
+      fetch("/api/users/me")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.user?.fullName && !/^\d+$/.test(d.user.fullName.replace(/\D/g, ""))) {
+            setUserName(d.user.fullName);
+            localStorage.setItem("officex_user_name", d.user.fullName);
+          }
+        })
+        .catch(() => {});
 
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
       if (storedEmail) setUserEmail(storedEmail);
@@ -654,14 +667,16 @@ function SidebarInner() {
           </button>
         </div>
 
-        {/* Active Workspace Persona Card */}
+        {/* Active Workspace User Card */}
         <div className="mx-3 mt-2.5 mb-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center gap-2.5 shrink-0 shadow-2xs">
           <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
-            <ShieldCheck size={13} />
+            <User size={13} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</span>
-            <span className="text-[11px] font-black text-slate-900 truncate">{activeRole.roleName || activeRole.label}</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">User</span>
+            <span className="text-[11px] font-black text-slate-900 truncate">
+              {userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : "Commercial Member"}
+            </span>
           </div>
         </div>
 

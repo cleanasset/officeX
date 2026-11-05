@@ -220,6 +220,10 @@ export async function GET(req: Request) {
       let utilAmt = 0;
 
       for (const ch of charges) {
+        // Exclude charges whose start_date is in the future or end_date has expired
+        if (ch.start_date && ch.start_date > pEnd) continue;
+        if (ch.end_date && ch.end_date < pStart) continue;
+
         const rate = parseFloat(ch.rate || "0");
         // RR-06: If calc_basis is per_area or rate looks like a PSF rate (< 500) and quantity_basis is empty or 1, multiply by area!
         let qty = parseFloat(ch.quantity_basis || "0");
@@ -616,6 +620,10 @@ export async function POST(req: Request) {
       let utilAmt = 0;
 
       for (const ch of charges) {
+        // Exclude charges whose start_date is in the future or end_date has expired
+        if (ch.start_date && ch.start_date > pEnd) continue;
+        if (ch.end_date && ch.end_date < pStart) continue;
+
         const rate = parseFloat(ch.rate || "0");
         // RR-06: For CAM or area-based charges, multiply rate by area when quantity basis is empty or 1
         let qty = parseFloat(ch.quantity_basis || "0");

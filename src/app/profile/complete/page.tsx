@@ -4209,14 +4209,31 @@ function CompleteProfileContent() {
                 {/* Parsed Highlights Banner */}
                 {parsedAgreementMeta && (
                   <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2 font-bold">
                         <FileCheck2 size={16} className="text-emerald-700" />
                         <span>Parsed: {parsedAgreementMeta.fileName}</span>
                       </div>
-                      <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
-                        {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                          {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParsedAgreementMeta(null);
+                            setPendingAgreementData(null);
+                            setPendingAgreementFile("");
+                            setAgreementDifferences([]);
+                            showToast("Lease agreement removed.");
+                          }}
+                          className="px-2 py-0.5 text-[11px] font-bold text-rose-700 bg-white hover:bg-rose-50 border border-rose-300 rounded-lg flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                          title="Remove parsed agreement"
+                        >
+                          <Trash2 size={12} />
+                          <span>Remove</span>
+                        </button>
+                      </div>
                     </div>
 
                     {parsedAgreementMeta.summaryHighlights.length > 0 && (

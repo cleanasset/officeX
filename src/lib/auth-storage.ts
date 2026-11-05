@@ -23,25 +23,7 @@ export function clearAuthCookie(name: string) {
   }
 }
 
-const PURGED_TEST_ACCOUNTS = new Set([
-  "jiya.scalezix@gmail.com",
-  "jeel@gmail.com",
-  "jiya@scalezix.com",
-  "admin.cleanasset@gmail.com",
-  "jiya.d.patel@tsuniv.edu.in",
-  "jiyapatel181224@gmail.com",
-  "jiya@gmail.com",
-  "scalezix@gmail.com",
-  "tanmay@gmail.com",
-  "kashvi@gmail.com",
-  "patel@gmail.com",
-  "jp@gmail.com",
-  "jps@management.in",
-  "jp@management.in",
-  "manager@gmail.com",
-  "tenant@gmail.com",
-  "cbre.mgr@example.com"
-]);
+const PURGED_TEST_ACCOUNTS = new Set<string>([]);
 
 /**
  * Universal client-side resolver for user email across all sessions, cookies and localStorage.
@@ -52,8 +34,13 @@ export function getClientUserEmail(): string {
   if (typeof window === "undefined") return "";
 
   const sanitizeStaleUserCache = (email: string) => {
-    if (!email) return;
+    if (!email) return "";
     const cleanEmail = email.trim().toLowerCase();
+    
+    // Disallow synthetic @officex.pro or pure numbers as user emails
+    if (cleanEmail.endsWith("@officex.pro") || !cleanEmail.includes("@")) {
+      return "";
+    }
     
     // If the browser holds session data from a purged test account, wipe it completely
     if (PURGED_TEST_ACCOUNTS.has(cleanEmail)) {
@@ -78,7 +65,7 @@ export function getClientUserEmail(): string {
 
     // Check if user email switched in active session
     const lastActive = (localStorage.getItem("officex_active_session_owner") || "").trim().toLowerCase();
-    if (lastActive && lastActive !== cleanEmail) {
+    if (lastActive && lastActive !== cleanEmail && !lastActive.endsWith("@officex.pro")) {
       const keysToWipe = [
         "officex_user_properties",
         "officex_active_leases",
@@ -104,6 +91,9 @@ export function getClientUserEmail(): string {
   if (fromLocal) {
     const cleaned = sanitizeStaleUserCache(fromLocal);
     if (cleaned) return cleaned;
+    else {
+      try { localStorage.removeItem("officex_user_email"); } catch {}
+    }
   }
 
   const fromSession = (sessionStorage.getItem("officex_user_email") || "").trim().toLowerCase();
@@ -112,6 +102,8 @@ export function getClientUserEmail(): string {
     if (cleaned) {
       try { localStorage.setItem("officex_user_email", cleaned); } catch {}
       return cleaned;
+    } else {
+      try { sessionStorage.removeItem("officex_user_email"); } catch {}
     }
   }
 
@@ -121,6 +113,8 @@ export function getClientUserEmail(): string {
     if (cleaned) {
       try { localStorage.setItem("officex_user_email", cleaned); } catch {}
       return cleaned;
+    } else {
+      clearAuthCookie("officex_user_email");
     }
   }
 
@@ -147,17 +141,6 @@ export function getClientUserEmail(): string {
       }
     }
   } catch {}
-
-  // 5. Mobile login fallback
-  const fromMobile = (localStorage.getItem("officex_user_mobile") || sessionStorage.getItem("officex_user_mobile") || "").trim();
-  if (fromMobile) {
-    const mobileEmail = `${fromMobile.replace(/\D/g, "")}@officex.pro`;
-    try {
-      localStorage.setItem("officex_user_email", mobileEmail);
-      setAuthCookie("officex_user_email", mobileEmail);
-    } catch {}
-    return mobileEmail;
-  }
 
   return "";
 }

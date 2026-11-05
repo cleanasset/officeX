@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // Check if user already exists in Postgres
     try {
       const existingUser = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
       if (existingUser.length > 0) {
@@ -105,17 +106,8 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
-
-      // Insert into Postgres users table
-      await db.insert(users).values({
-        id: supaUserId || undefined,
-        email: cleanEmail,
-        fullName: fullName.trim(),
-        role: "property_manager",
-        passwordHash: password || "SUPABASE_AUTH_MANAGED"
-      });
     } catch (e) {
-      console.warn("DB user insert fallback:", e);
+      console.warn("DB user check notice:", e);
     }
 
     // Generate real 6-digit cryptographic verification code
@@ -124,7 +116,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: otpError }, { status: 429 });
     }
 
-    // Try sending real email via SMTP
+    // Dispatch OTP email via SMTP
     let emailSent = false;
     try {
       const mailRes = await sendOtpEmail({
@@ -142,16 +134,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Registration successful.",
+      message: "Verification code sent to your email.",
       userId: userId,
       user: {
         id: userId,
         fullName: fullName.trim(),
         email: cleanEmail,
         mobileNumber: `${mobileCountryCode}${cleanMobile}`,
-        emailVerified: true,
-        mobileVerified: true,
-        status: "ACTIVE",
+        emailVerified: false,
+        mobileVerified: false,
+        status: "PENDING_VERIFICATION",
       },
     });
   } catch (err: any) {

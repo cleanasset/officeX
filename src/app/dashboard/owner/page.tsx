@@ -385,6 +385,15 @@ export default function OwnerDashboardPage() {
 
       setProperties(liveProps);
 
+      // Universal Portfolio Floor: sync cumulative sq.ft across all properties
+      if (liveProps.length > 0) {
+        const cumulativeSqft = liveProps.reduce((sum, p) => sum + (p.areaSqft || 0), 0);
+        if (cumulativeSqft > 0 && typeof window !== "undefined") {
+          localStorage.setItem("officex_total_portfolio_sqft", String(cumulativeSqft));
+          sessionStorage.setItem("officex_total_portfolio_sqft", String(cumulativeSqft));
+        }
+      }
+
       // Auto-dismiss the "Add Buildings, Spaces & Tenants" banner if portfolio already has properties
       if (liveProps.length > 0) {
         setShowNextStepBanner(false);

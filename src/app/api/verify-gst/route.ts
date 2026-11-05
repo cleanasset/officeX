@@ -13,19 +13,16 @@ export async function POST(request: Request) {
 
     const gstinUpper = gstin.toUpperCase().trim();
 
-    // Standard GSTIN Regex (15 Characters)
-    // 2 digits (state code), 10 char PAN format, 1 alphanumeric (entity code), 1 character (blank/check digit), 1 alphanumeric
-    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    
-    if (!gstinRegex.test(gstinUpper)) {
+    // Relaxed GSTIN check (up to 15 alphanumeric characters)
+    if (!/^[A-Z0-9]{1,15}$/.test(gstinUpper)) {
       return NextResponse.json({ 
         valid: false, 
-        message: "Invalid GSTIN format. Must be 15 characters matching the GSTIN state/PAN format guidelines." 
+        message: "Invalid GSTIN format. Must be up to 15 alphanumeric characters." 
       }, { status: 200 });
     }
 
     const stateCode = gstinUpper.substring(0, 2);
-    const pan = gstinUpper.substring(2, 12);
+    const pan = gstinUpper.length >= 12 ? gstinUpper.substring(2, 12) : gstinUpper;
 
     // Check if matching registered entity exists in DB
     let legalName = "";

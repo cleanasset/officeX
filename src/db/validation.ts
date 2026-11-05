@@ -641,15 +641,15 @@ export function validateContractTransition(
 
 /**
  * Statutory Identifiers Validation (RR-14)
+ * Relaxed to allow any standard or testing alphanumeric identifiers without blocking users
  */
 export function validatePanFormat(pan: string): { isValid: boolean; message?: string } {
   if (!pan) return { isValid: true };
   const clean = pan.trim().toUpperCase();
-  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-  if (!panRegex.test(clean)) {
+  if (clean.length > 10 || !/^[A-Z0-9]{1,10}$/.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid PAN format '${pan}'. Must be 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).`,
+      message: `Invalid PAN format '${pan}'. Must be up to 10 alphanumeric characters.`,
     };
   }
   return { isValid: true };
@@ -658,11 +658,10 @@ export function validatePanFormat(pan: string): { isValid: boolean; message?: st
 export function validateCinFormat(cin: string): { isValid: boolean; message?: string } {
   if (!cin) return { isValid: true };
   const clean = cin.trim().toUpperCase();
-  const cinRegex = /^([LUu][0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}|[A-Za-z]{3}-[0-9]{4})$/;
-  if (!cinRegex.test(clean) && clean.length !== 21) {
+  if (clean.length > 25 || !/^[A-Z0-9\-\/]{1,25}$/.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be a valid 21-character alphanumeric identifier.`,
+      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be alphanumeric.`,
     };
   }
   return { isValid: true };
@@ -671,22 +670,12 @@ export function validateCinFormat(cin: string): { isValid: boolean; message?: st
 export function validateGstinFormat(gstin: string, pan?: string): { isValid: boolean; message?: string } {
   if (!gstin) return { isValid: true };
   const clean = gstin.trim().toUpperCase();
-  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-  if (!gstRegex.test(clean)) {
+  // Relaxed: Accept any alphanumeric GSTIN up to 15 characters without rigid 10-char PAN restrictions
+  if (clean.length > 15 || !/^[A-Z0-9]{1,15}$/.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid GSTIN format '${gstin}'. Must be 15 characters (2 digits state code, 10-char PAN, 1 entity code, 'Z', 1 checksum).`,
+      message: `Invalid GSTIN format '${gstin}'. Must be up to 15 alphanumeric characters.`,
     };
-  }
-  if (pan) {
-    const cleanPan = pan.trim().toUpperCase();
-    const embeddedPan = clean.slice(2, 12);
-    if (cleanPan && cleanPan.length === 10 && embeddedPan !== cleanPan) {
-      return {
-        isValid: false,
-        message: `GSTIN embedded PAN (${embeddedPan}) does not match entered PAN (${cleanPan}).`,
-      };
-    }
   }
   return { isValid: true };
 }

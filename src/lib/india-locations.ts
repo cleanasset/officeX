@@ -24,6 +24,11 @@ export const INDIAN_STATES_CITIES: StateCitiesMap = {
     "West Delhi", "South West Delhi", "South East Delhi", "North West Delhi",
     "North East Delhi", "Shahdara", "Connaught Place", "Aerocity", "Okhla", "Nehru Place"
   ],
+  "Delhi": [
+    "New Delhi", "Central Delhi", "South Delhi", "North Delhi", "East Delhi",
+    "West Delhi", "South West Delhi", "South East Delhi", "North West Delhi",
+    "North East Delhi", "Shahdara", "Connaught Place", "Aerocity", "Okhla", "Nehru Place"
+  ],
   "Haryana": [
     "Gurugram", "Faridabad", "Panipat", "Ambala", "Yamunanagar", "Rohtak",
     "Hisar", "Karnal", "Sonipat", "Panchkula", "Bhiwani", "Sirsa",
@@ -362,7 +367,8 @@ export function matchCanonicalIndianState(rawState: string): string | null {
  */
 export function matchCanonicalIndianCity(stateName: string, rawCity: string): string | null {
   if (!rawCity) return null;
-  const cities = INDIAN_STATES_CITIES[stateName] || [];
+  const canonicalState = matchCanonicalIndianState(stateName) || stateName;
+  const cities = INDIAN_STATES_CITIES[canonicalState] || INDIAN_STATES_CITIES[stateName] || [];
   const c = rawCity.trim().toLowerCase();
 
   for (const city of cities) {
@@ -376,4 +382,266 @@ export function matchCanonicalIndianCity(stateName: string, rawCity: string): st
   }
 
   return null;
+}
+
+export interface ParsedIndianAddress {
+  state: string | null;
+  city: string | null;
+  pincode: string | null;
+  microMarket: string | null;
+}
+
+export const KNOWN_LOCALITY_MAP: Record<string, { city: string; state: string }> = {
+  // Gujarat / Ahmedabad & Gandhinagar
+  "devasya gold": { city: "Ahmedabad", state: "Gujarat" },
+  "devasya international": { city: "Ahmedabad", state: "Gujarat" },
+  "devasya": { city: "Ahmedabad", state: "Gujarat" },
+  "hill town circle road": { city: "Ahmedabad", state: "Gujarat" },
+  "hill town circle": { city: "Ahmedabad", state: "Gujarat" },
+  "hill town": { city: "Ahmedabad", state: "Gujarat" },
+  "narodaahmeda": { city: "Ahmedabad", state: "Gujarat" },
+  "narodaahmedabad": { city: "Ahmedabad", state: "Gujarat" },
+  "naroda": { city: "Ahmedabad", state: "Gujarat" },
+  "new india colony": { city: "Ahmedabad", state: "Gujarat" },
+  "sg highway": { city: "Ahmedabad", state: "Gujarat" },
+  "s.g. highway": { city: "Ahmedabad", state: "Gujarat" },
+  "sindhubhavan": { city: "Ahmedabad", state: "Gujarat" },
+  "sbr": { city: "Ahmedabad", state: "Gujarat" },
+  "science city": { city: "Ahmedabad", state: "Gujarat" },
+  "sola": { city: "Ahmedabad", state: "Gujarat" },
+  "prahlad nagar": { city: "Ahmedabad", state: "Gujarat" },
+  "bopal": { city: "Ahmedabad", state: "Gujarat" },
+  "bodakdev": { city: "Ahmedabad", state: "Gujarat" },
+  "satellite": { city: "Ahmedabad", state: "Gujarat" },
+  "thaltej": { city: "Ahmedabad", state: "Gujarat" },
+  "vastrapur": { city: "Ahmedabad", state: "Gujarat" },
+  "maninagar": { city: "Ahmedabad", state: "Gujarat" },
+  "sanand": { city: "Ahmedabad", state: "Gujarat" },
+  "nikol": { city: "Ahmedabad", state: "Gujarat" },
+  "odhav": { city: "Ahmedabad", state: "Gujarat" },
+  "vatva": { city: "Ahmedabad", state: "Gujarat" },
+  "bapunagar": { city: "Ahmedabad", state: "Gujarat" },
+  "vastral": { city: "Ahmedabad", state: "Gujarat" },
+  "kathwada": { city: "Ahmedabad", state: "Gujarat" },
+  "gift city": { city: "GIFT City", state: "Gujarat" },
+  "infocity": { city: "Gandhinagar", state: "Gujarat" },
+  "gandhinagar": { city: "Gandhinagar", state: "Gujarat" },
+  "chharodi": { city: "Ahmedabad", state: "Gujarat" },
+  "gota": { city: "Ahmedabad", state: "Gujarat" },
+  "chandkheda": { city: "Ahmedabad", state: "Gujarat" },
+  "motera": { city: "Ahmedabad", state: "Gujarat" },
+  "navrangpura": { city: "Ahmedabad", state: "Gujarat" },
+  "ashram road": { city: "Ahmedabad", state: "Gujarat" },
+  "ahmedabad": { city: "Ahmedabad", state: "Gujarat" },
+  "ahmeda": { city: "Ahmedabad", state: "Gujarat" },
+  "ahemdabad": { city: "Ahmedabad", state: "Gujarat" },
+
+  // Karnataka / Bengaluru
+  "whitefield": { city: "Bengaluru", state: "Karnataka" },
+  "koramangala": { city: "Bengaluru", state: "Karnataka" },
+  "bellandur": { city: "Bengaluru", state: "Karnataka" },
+  "electronic city": { city: "Bengaluru", state: "Karnataka" },
+  "marathahalli": { city: "Bengaluru", state: "Karnataka" },
+  "indiranagar": { city: "Bengaluru", state: "Karnataka" },
+  "hebbal": { city: "Bengaluru", state: "Karnataka" },
+  "sarjapur": { city: "Bengaluru", state: "Karnataka" },
+  "outer ring road": { city: "Bengaluru", state: "Karnataka" },
+  "domlur": { city: "Bengaluru", state: "Karnataka" },
+  "manyata": { city: "Bengaluru", state: "Karnataka" },
+  "hsr layout": { city: "Bengaluru", state: "Karnataka" },
+  "rajajinagar": { city: "Bengaluru", state: "Karnataka" },
+  "bannerghatta": { city: "Bengaluru", state: "Karnataka" },
+  "yeshwanthpur": { city: "Bengaluru", state: "Karnataka" },
+  "malleshwaram": { city: "Bengaluru", state: "Karnataka" },
+  "bengaluru": { city: "Bengaluru", state: "Karnataka" },
+  "bangalore": { city: "Bengaluru", state: "Karnataka" },
+
+  // Maharashtra / Mumbai & Pune
+  "bkc": { city: "Mumbai", state: "Maharashtra" },
+  "bandra kurla complex": { city: "Mumbai", state: "Maharashtra" },
+  "bandra": { city: "Mumbai", state: "Maharashtra" },
+  "andheri": { city: "Mumbai", state: "Maharashtra" },
+  "nariman point": { city: "Mumbai", state: "Maharashtra" },
+  "lower parel": { city: "Mumbai", state: "Maharashtra" },
+  "worli": { city: "Mumbai", state: "Maharashtra" },
+  "powai": { city: "Mumbai", state: "Maharashtra" },
+  "malad": { city: "Mumbai", state: "Maharashtra" },
+  "goregaon": { city: "Mumbai", state: "Maharashtra" },
+  "kurla": { city: "Mumbai", state: "Maharashtra" },
+  "vashi": { city: "Navi Mumbai", state: "Maharashtra" },
+  "navi mumbai": { city: "Navi Mumbai", state: "Maharashtra" },
+  "thane": { city: "Thane", state: "Maharashtra" },
+  "airoli": { city: "Navi Mumbai", state: "Maharashtra" },
+  "mumbai": { city: "Mumbai", state: "Maharashtra" },
+  "bombay": { city: "Mumbai", state: "Maharashtra" },
+  "hinjewadi": { city: "Pune", state: "Maharashtra" },
+  "baner": { city: "Pune", state: "Maharashtra" },
+  "wakad": { city: "Pune", state: "Maharashtra" },
+  "kharadi": { city: "Pune", state: "Maharashtra" },
+  "magarpatta": { city: "Pune", state: "Maharashtra" },
+  "viman nagar": { city: "Pune", state: "Maharashtra" },
+  "hadapsar": { city: "Pune", state: "Maharashtra" },
+  "pune": { city: "Pune", state: "Maharashtra" },
+
+  // Haryana / Gurugram
+  "cyber city": { city: "Gurugram", state: "Haryana" },
+  "cyber hub": { city: "Gurugram", state: "Haryana" },
+  "udyog vihar": { city: "Gurugram", state: "Haryana" },
+  "golf course road": { city: "Gurugram", state: "Haryana" },
+  "golf course extension": { city: "Gurugram", state: "Haryana" },
+  "sohna road": { city: "Gurugram", state: "Haryana" },
+  "manesar": { city: "Gurugram", state: "Haryana" },
+  "gurugram": { city: "Gurugram", state: "Haryana" },
+  "gurgaon": { city: "Gurugram", state: "Haryana" },
+
+  // Uttar Pradesh / Noida
+  "sector 62": { city: "Noida", state: "Uttar Pradesh" },
+  "sector 16": { city: "Noida", state: "Uttar Pradesh" },
+  "sector 18": { city: "Noida", state: "Uttar Pradesh" },
+  "sector 125": { city: "Noida", state: "Uttar Pradesh" },
+  "sector 132": { city: "Noida", state: "Uttar Pradesh" },
+  "expressway noida": { city: "Noida", state: "Uttar Pradesh" },
+  "noida": { city: "Noida", state: "Uttar Pradesh" },
+  "greater noida": { city: "Greater Noida", state: "Uttar Pradesh" },
+
+  // Telangana / Hyderabad
+  "hitec city": { city: "Hyderabad", state: "Telangana" },
+  "gachibowli": { city: "Hyderabad", state: "Telangana" },
+  "madhapur": { city: "Hyderabad", state: "Telangana" },
+  "kondapur": { city: "Hyderabad", state: "Telangana" },
+  "financial district": { city: "Hyderabad", state: "Telangana" },
+  "nanakramguda": { city: "Hyderabad", state: "Telangana" },
+  "hyderabad": { city: "Hyderabad", state: "Telangana" },
+  "cyberabad": { city: "Hyderabad", state: "Telangana" },
+
+  // Tamil Nadu / Chennai
+  "omr": { city: "Chennai", state: "Tamil Nadu" },
+  "guindy": { city: "Chennai", state: "Tamil Nadu" },
+  "t nagar": { city: "Chennai", state: "Tamil Nadu" },
+  "perungudi": { city: "Chennai", state: "Tamil Nadu" },
+  "velachery": { city: "Chennai", state: "Tamil Nadu" },
+  "chennai": { city: "Chennai", state: "Tamil Nadu" },
+  "madras": { city: "Chennai", state: "Tamil Nadu" },
+
+  // Delhi (NCT)
+  "aerocity": { city: "New Delhi", state: "Delhi (NCT)" },
+  "connaught place": { city: "New Delhi", state: "Delhi (NCT)" },
+  "nehru place": { city: "New Delhi", state: "Delhi (NCT)" },
+  "barakhamba": { city: "New Delhi", state: "Delhi (NCT)" },
+  "saket": { city: "New Delhi", state: "Delhi (NCT)" },
+  "okhla": { city: "New Delhi", state: "Delhi (NCT)" },
+  "delhi": { city: "New Delhi", state: "Delhi (NCT)" },
+  "new delhi": { city: "New Delhi", state: "Delhi (NCT)" },
+
+  // West Bengal / Kolkata
+  "salt lake": { city: "Kolkata", state: "West Bengal" },
+  "new town": { city: "Kolkata", state: "West Bengal" },
+  "rajarhat": { city: "Kolkata", state: "West Bengal" },
+  "kolkata": { city: "Kolkata", state: "West Bengal" },
+  "calcutta": { city: "Kolkata", state: "West Bengal" },
+};
+
+/**
+ * Intelligent parser that extracts Indian State, City, Pincode and Micro-Market
+ * directly from any freeform address string (typed, pasted, or selected).
+ */
+export function parseLocationFromAddress(rawAddress: string): ParsedIndianAddress {
+  if (!rawAddress || !rawAddress.trim()) {
+    return { state: null, city: null, pincode: null, microMarket: null };
+  }
+
+  const text = rawAddress.trim();
+  const lower = text.toLowerCase();
+
+  // 1. Pincode Extraction (6 digits)
+  let pincode: string | null = null;
+  const pinMatch = text.match(/\b([1-9][0-9]{5})\b/);
+  if (pinMatch) {
+    pincode = pinMatch[1];
+  }
+
+  let state: string | null = null;
+  let city: string | null = null;
+  let microMarket: string | null = null;
+
+  // 2. Localities & Major Hubs check (Highest accuracy for commercial properties)
+  for (const [locKey, info] of Object.entries(KNOWN_LOCALITY_MAP)) {
+    const escaped = locKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`\\b${escaped}`, "i");
+    if (regex.test(lower) || lower.includes(locKey)) {
+      city = info.city;
+      state = info.state;
+      if (locKey !== info.city.toLowerCase() && locKey !== info.state.toLowerCase()) {
+        microMarket = locKey
+          .split(" ")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+      }
+      break;
+    }
+  }
+
+  // 3. Fallback: Search all canonical cities across all Indian states
+  if (!city) {
+    for (const [stName, cityList] of Object.entries(INDIAN_STATES_CITIES)) {
+      for (const c of cityList) {
+        const cLower = c.toLowerCase();
+        // Match whole word or clean substring
+        if (new RegExp(`\\b${cLower}\\b`, "i").test(lower)) {
+          city = c;
+          state = stName;
+          break;
+        }
+      }
+      if (city) break;
+    }
+  }
+
+  // 4. Fallback: Search all Indian states if state is still unresolved
+  if (!state) {
+    state = matchCanonicalIndianState(text);
+  }
+
+  // 5. If state resolved but city not found, default to top city of that state
+  if (state && !city) {
+    const stateCities = INDIAN_STATES_CITIES[state] || [];
+    if (stateCities.length > 0) {
+      city = stateCities[0];
+    }
+  }
+
+  // 6. Infer state from pincode prefix if state still missing
+  if (!state && pincode) {
+    const prefix2 = parseInt(pincode.slice(0, 2), 10);
+    if (prefix2 === 11) { state = "Delhi (NCT)"; if (!city) city = "New Delhi"; }
+    else if (prefix2 >= 12 && prefix2 <= 13) { state = "Haryana"; if (!city) city = "Gurugram"; }
+    else if (prefix2 >= 20 && prefix2 <= 28) { state = "Uttar Pradesh"; if (!city) city = "Noida"; }
+    else if (prefix2 >= 30 && prefix2 <= 34) { state = "Rajasthan"; if (!city) city = "Jaipur"; }
+    else if (prefix2 >= 36 && prefix2 <= 39) { state = "Gujarat"; if (!city) city = "Ahmedabad"; }
+    else if (prefix2 >= 40 && prefix2 <= 44) { state = "Maharashtra"; if (!city) city = "Mumbai"; }
+    else if (prefix2 >= 50 && prefix2 <= 53) { state = "Telangana"; if (!city) city = "Hyderabad"; }
+    else if (prefix2 >= 56 && prefix2 <= 59) { state = "Karnataka"; if (!city) city = "Bengaluru"; }
+    else if (prefix2 >= 60 && prefix2 <= 64) { state = "Tamil Nadu"; if (!city) city = "Chennai"; }
+    else if (prefix2 >= 67 && prefix2 <= 69) { state = "Kerala"; if (!city) city = "Kochi"; }
+    else if (prefix2 >= 70 && prefix2 <= 74) { state = "West Bengal"; if (!city) city = "Kolkata"; }
+  }
+
+  // 7. Micro-Market extraction from address segments if not set
+  if (!microMarket) {
+    const segments = text.split(",").map((s) => s.trim()).filter(Boolean);
+    if (segments.length > 1) {
+      // Often the 2nd segment is the locality or sub-market (e.g. Hill Town Circle Road / New India Colony)
+      const cand = segments[1];
+      if (
+        cand &&
+        (!state || !cand.toLowerCase().includes(state.toLowerCase())) &&
+        (!city || !cand.toLowerCase().includes(city.toLowerCase())) &&
+        !/\b[1-9][0-9]{5}\b/.test(cand)
+      ) {
+        microMarket = cand;
+      }
+    }
+  }
+
+  return { state, city, pincode, microMarket };
 }

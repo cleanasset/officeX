@@ -48,11 +48,13 @@ export async function POST(req: Request) {
           }
         }
 
+        const finalName = (body.fullName || existing?.user_metadata?.full_name || email.split('@')[0]).trim();
+
         // Also insert into Postgres users table
         await db.insert(users).values({
           id: supaId || undefined,
           email: email.trim().toLowerCase(),
-          fullName: email.split('@')[0],
+          fullName: finalName,
           role: "property_manager",
           passwordHash: "SUPABASE_AUTH_MANAGED"
         }).onConflictDoNothing();

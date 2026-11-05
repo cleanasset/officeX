@@ -23,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
+import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
 import { supabase } from "@/lib/supabase";
 
 function getCookie(name: string): string | null {
@@ -136,11 +137,24 @@ export default function RentRollPricingTable({
   };
 
   // Area Scope State (User enters / selects their property sq.ft)
+  const { minAllowedSqft, totalPortfolioSqft } = useUniversalPortfolioSqft(10000);
   const [customSqft, setCustomSqft] = useState<number>(50000);
   const [sliderSqft, setSliderSqft] = useState<number>(50000);
 
+  // Sync with universal portfolio floor
+  useEffect(() => {
+    if (minAllowedSqft > 0) {
+      setCustomSqft((prev) => (prev < minAllowedSqft ? minAllowedSqft : prev));
+      setSliderSqft((prev) => (prev < minAllowedSqft ? minAllowedSqft : prev));
+    }
+  }, [minAllowedSqft]);
+
   // Quick Preset Sq.Ft Chips
-  const SQFT_PRESETS = [10000, 25000, 50000, 100000, 250000, 500000];
+  const dynamicPresets = React.useMemo(() => {
+    const base = [10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+    const higher = base.filter((p) => p > minAllowedSqft);
+    return [minAllowedSqft, ...higher].slice(0, 6);
+  }, [minAllowedSqft]);
 
   // Checkout Modal State
   const [checkoutPlan, setCheckoutPlan] = useState<SelectedPlanInfo | null>(null);
@@ -151,7 +165,7 @@ export default function RentRollPricingTable({
   const [processingActivation, setProcessingActivation] = useState(false);
 
   const handleSqftChange = (val: number) => {
-    const clamped = Math.max(1, Math.round(val) || 0);
+    const clamped = Math.max(minAllowedSqft, Math.round(val) || 0);
     setCustomSqft(clamped);
     setSliderSqft(clamped);
     if (checkoutPlan) {
@@ -498,6 +512,19 @@ export default function RentRollPricingTable({
       )}
 
       {/* ──── 1. MASTER PROPERTY AREA (SQ.FT) SELECTOR ──── */}
+      {/* Universal Minimum Floor Notice if properties registered */}
+      {minAllowedSqft > 10000 && (
+        <div className="max-w-6xl mx-auto mb-4 p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+          <div className="flex items-center gap-2 font-bold text-teal-900 text-xs sm:text-sm">
+            <Building2 size={18} className="text-[#0D7B6C] shrink-0" />
+            <span>Cumulative Portfolio Size: <strong className="font-mono text-slate-900 font-black">{minAllowedSqft.toLocaleString("en-IN")} Sq.Ft</strong> across registered properties.</span>
+          </div>
+          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#0D7B6C] text-white tracking-wider self-start sm:self-auto">
+            Compulsory Minimum Floor
+          </span>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto mb-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 text-left">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex-1 space-y-3">
@@ -519,10 +546,10 @@ export default function RentRollPricingTable({
             <div className="space-y-1 pt-1">
               <input
                 type="range"
-                min="1000"
-                max="1000000"
+                min={minAllowedSqft}
+                max={Math.max(1000000, minAllowedSqft * 2)}
                 step="1000"
-                value={sliderSqft}
+                value={Math.max(minAllowedSqft, sliderSqft)}
                 onChange={handleSliderChange}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0D7B6C]"
               />
@@ -533,7 +560,7 @@ export default function RentRollPricingTable({
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">
                 Quick Select:
               </span>
-              {SQFT_PRESETS.map((preset) => (
+              {dynamicPresets.map((preset) => (
                 <button
                   key={preset}
                   type="button"
@@ -544,7 +571,7 @@ export default function RentRollPricingTable({
                       : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
                   }`}
                 >
-                  {preset >= 100000 ? `${preset / 100000} Lakh sq.ft` : `${(preset / 1000).toLocaleString("en-IN")}k sq.ft`}
+                  {preset === minAllowedSqft && minAllowedSqft > 10000 ? "Min: " : ""}{preset >= 100000 ? `${preset / 100000} Lakh sq.ft` : `${(preset / 1000).toLocaleString("en-IN")}k sq.ft`}
                 </button>
               ))}
             </div>
@@ -569,6 +596,11 @@ export default function RentRollPricingTable({
             <p className="text-[10px] text-slate-400 font-medium">
               Type any exact commercial square footage you manage.
             </p>
+            {customSqft < minAllowedSqft && (
+              <p className="text-[10px] font-bold text-rose-600 pt-1">
+                ⚠️ Compulsory Minimum: Cannot subscribe below {minAllowedSqft.toLocaleString("en-IN")} Sq.Ft.
+              </p>
+            )}
           </div>
         </div>
       </div>

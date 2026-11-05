@@ -45,10 +45,10 @@ export interface ExtractedLeaseAgreement {
   camMonthly: number;
 
   // Parking Terms
-  carParkingSlots: number;
-  carParkingRate: number;
-  twoWheelerSlots: number;
-  twoWheelerRate: number;
+  carParkingSlots?: number;
+  carParkingRate?: number;
+  twoWheelerSlots?: number;
+  twoWheelerRate?: number;
   carParkingFreeSlots?: number;
   carParkingPaidSlots?: number;
   twoWheelerFreeSlots?: number;
@@ -818,10 +818,10 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   }
 
   // 11. CAR & TWO-WHEELER PARKING
-  let carParkingSlots = 0;
-  let carParkingRate = 0;
-  let twoWheelerSlots = 0;
-  let twoWheelerRate = 0;
+  let carParkingSlots: number | undefined = undefined;
+  let carParkingRate: number | undefined = undefined;
+  let twoWheelerSlots: number | undefined = undefined;
+  let twoWheelerRate: number | undefined = undefined;
 
   const carMatch = text.match(/([0-9]+)\s*(?:car\s*parking|four[- ]wheeler|car\s*bays?|car\s*slots?)/i) ||
                    text.match(/(?:car\s*parking|car\s*bays?|car\s*slots?)\s*[:\-–]?\s*([0-9]+)/i);
@@ -845,34 +845,44 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     twoWheelerRate = parseCleanNumber(bikeRateMatch[1]);
   }
 
-  let carParkingFreeSlots = 0;
-  let carParkingPaidSlots = carParkingSlots;
-  let twoWheelerFreeSlots = 0;
-  let twoWheelerPaidSlots = twoWheelerSlots;
+  let carParkingFreeSlots: number | undefined = undefined;
+  let carParkingPaidSlots: number | undefined = undefined;
+  let twoWheelerFreeSlots: number | undefined = undefined;
+  let twoWheelerPaidSlots: number | undefined = undefined;
 
   const freeCarMatch = text.match(/([0-9]+)\s*(?:free|complimentary)\s*(?:car|four[- ]wheeler)/i);
   if (freeCarMatch && freeCarMatch[1]) {
     carParkingFreeSlots = parseInt(freeCarMatch[1], 10);
-    carParkingPaidSlots = Math.max(0, carParkingSlots - carParkingFreeSlots);
-  } else if (carParkingRate === 0 && carParkingSlots > 0) {
-    carParkingFreeSlots = carParkingSlots;
-    carParkingPaidSlots = 0;
+    carParkingPaidSlots = Math.max(0, (carParkingSlots || 0) - carParkingFreeSlots);
+  } else if (carParkingSlots !== undefined) {
+    if ((carParkingRate || 0) === 0) {
+      carParkingFreeSlots = carParkingSlots;
+      carParkingPaidSlots = 0;
+    } else {
+      carParkingFreeSlots = 0;
+      carParkingPaidSlots = carParkingSlots;
+    }
   }
 
   const freeBikeMatch = text.match(/([0-9]+)\s*(?:free|complimentary)\s*(?:two[- ]wheeler|bike)/i);
   if (freeBikeMatch && freeBikeMatch[1]) {
     twoWheelerFreeSlots = parseInt(freeBikeMatch[1], 10);
-    twoWheelerPaidSlots = Math.max(0, twoWheelerSlots - twoWheelerFreeSlots);
-  } else if (twoWheelerRate === 0 && twoWheelerSlots > 0) {
-    twoWheelerFreeSlots = twoWheelerSlots;
-    twoWheelerPaidSlots = 0;
+    twoWheelerPaidSlots = Math.max(0, (twoWheelerSlots || 0) - twoWheelerFreeSlots);
+  } else if (twoWheelerSlots !== undefined) {
+    if ((twoWheelerRate || 0) === 0) {
+      twoWheelerFreeSlots = twoWheelerSlots;
+      twoWheelerPaidSlots = 0;
+    } else {
+      twoWheelerFreeSlots = 0;
+      twoWheelerPaidSlots = twoWheelerSlots;
+    }
   }
 
-  const parkingMonthly = (carParkingPaidSlots * carParkingRate) + (twoWheelerPaidSlots * twoWheelerRate);
-  if (carParkingSlots > 0 || twoWheelerSlots > 0) {
+  const parkingMonthly = ((carParkingPaidSlots || 0) * (carParkingRate || 0)) + ((twoWheelerPaidSlots || 0) * (twoWheelerRate || 0));
+  if (carParkingSlots !== undefined || twoWheelerSlots !== undefined) {
     fieldCount++;
     highlights.push(
-      `Parking: ${carParkingSlots} Cars (${carParkingFreeSlots} Free, ${carParkingPaidSlots} Paid), ${twoWheelerSlots} Bikes (${twoWheelerFreeSlots} Free, ${twoWheelerPaidSlots} Paid)`
+      `Parking: ${carParkingSlots || 0} Cars (${carParkingFreeSlots || 0} Free, ${carParkingPaidSlots || 0} Paid), ${twoWheelerSlots || 0} Bikes (${twoWheelerFreeSlots || 0} Free, ${twoWheelerPaidSlots || 0} Paid)`
     );
   }
 

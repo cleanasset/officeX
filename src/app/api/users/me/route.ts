@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const revalidate = 0;
 
@@ -124,28 +125,16 @@ export async function GET(req: NextRequest) {
       .split(";")
       .find((c) => c.trim().startsWith("officex_user_email="));
     const headerEmail = req.headers.get("x-user-email");
-    const effectiveEmail = emailCookie
+    let effectiveEmail = emailCookie
       ? decodeURIComponent(emailCookie.split("=")[1].trim())
       : headerEmail || null;
 
-    let matchedUser: any = null;
-
-    if (effectiveEmail) {
-      try {
-        const found = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, effectiveEmail.toLowerCase()))
-          .limit(1);
-        if (found.length > 0) {
-          matchedUser = found[0];
-        }
-      } catch (dbErr) {
-        // Fallback gracefully
-      }
+    // Disallow synthetic @officex.pro or invalid email
+    if (effectiveEmail && (effectiveEmail.endsWith("@officex.pro") || !effectiveEmail.includes("@"))) {
+      effectiveEmail = null;
     }
 
-    if (!effectiveEmail && !matchedUser) {
+    if (!effectiveEmail) {
       return NextResponse.json({
         success: true,
         user: null,
@@ -154,19 +143,69 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const email = matchedUser?.email || effectiveEmail;
-    const fullName = matchedUser?.fullName || (email ? email.split("@")[0] : "");
+    let matchedUser: any = null;
+
+    try {
+      const found = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, effectiveEmail.toLowerCase()))
+        .limit(1);
+      if (found.length > 0) {
+        matchedUser = found[0];
+      }
+    } catch (dbErr) {
+      // Fallback gracefully
+    }
+
+    // Try finding via Supabase Admin if not yet in Postgres table
+    if (!matchedUser && supabaseAdmin) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        if (usersData?.users) {
+          const match = usersData.users.find(
+            (u) => u.email?.toLowerCase().trim() === effectiveEmail?.toLowerCase().trim()
+          );
+          if (match && match.email) {
+            matchedUser = {
+              id: match.id,
+              email: match.email,
+              fullName: match.user_metadata?.full_name || match.user_metadata?.name || match.email.split("@")[0],
+              role: match.user_metadata?.role || "property_manager"
+            };
+          }
+        }
+      } catch (authErr) {
+        // Fallback gracefully
+      }
+    }
+
+    if (!matchedUser) {
+      return NextResponse.json({
+        success: true,
+        user: null,
+        roles: SPEC_ROLES,
+        count: SPEC_ROLES.length,
+      });
+    }
+
+    const email = matchedUser.email;
+    let fullName = matchedUser.fullName || email.split("@")[0] || "User";
+    if (/^\d+$/.test(fullName.replace(/\D/g, "")) || !fullName) {
+      fullName = email.split("@")[0] || "User";
+    }
+
     const currentStoredRole = cookieHeader
       .split(";")
       .find((c) => c.trim().startsWith("officex_user_role="));
     const activeRoleLabel = currentStoredRole
       ? decodeURIComponent(currentStoredRole.split("=")[1].trim())
-      : (matchedUser?.role || "Owner / Client Principal");
+      : (matchedUser.role || "Owner / Client Principal");
 
     return NextResponse.json({
       success: true,
       user: {
-        id: matchedUser?.id || "usr_session_default",
+        id: matchedUser.id || "usr_session_default",
         email: email,
         fullName: fullName,
         currentRole: activeRoleLabel,

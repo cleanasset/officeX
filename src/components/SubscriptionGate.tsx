@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { isAuthenticated, getCookie, performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
 import { getClientUserEmail } from "@/lib/auth-storage";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
+import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
 
 export interface SubscriptionPlanTier {
   id: "starter" | "techpark" | "reit-mega";
@@ -109,6 +110,8 @@ export default function SubscriptionGate({
 
   // Selected Pricing Plan state (default: "techpark" ₹2, user can pick "starter" ₹1 or "reit-mega" ₹3)
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
+  const { minAllowedSqft: universalFloor, totalPortfolioSqft } = useUniversalPortfolioSqft(10000);
+
   const [minAllowedSqft, setMinAllowedSqft] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
@@ -132,8 +135,16 @@ export default function SubscriptionGate({
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) return stored;
     }
-    return 0;
+    return 10000;
   });
+
+  // Keep minAllowedSqft synchronized with universal portfolio floor
+  useEffect(() => {
+    if (universalFloor > 0) {
+      setMinAllowedSqft(universalFloor);
+      setCustomSqft((prev) => (prev < universalFloor ? universalFloor : prev));
+    }
+  }, [universalFloor]);
 
   // Coupon state (Initially null; user must click apply to activate 100% Free access)
   const [couponInput, setCouponInput] = useState("");
@@ -752,7 +763,20 @@ export default function SubscriptionGate({
           </div>
 
           {/* ──── INTERACTIVE SQUARE FOOTAGE CHOOSER ──── */}
-          <div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
+                    {/* Universal Minimum Floor Notice if properties registered */}
+          {minAllowedSqft > 10000 && (
+            <div className="mb-3 p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2 font-bold">
+                <Building2 size={16} className="text-[#0F8B7D] shrink-0" />
+                <span>Total Properties Registered: <strong className="font-mono text-slate-900 font-black">{minAllowedSqft.toLocaleString("en-IN")} Sq.Ft</strong></span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-700 text-white tracking-wider self-start sm:self-auto">
+                Compulsory Minimum Floor
+              </span>
+            </div>
+          )}
+
+<div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
               <div>
                 <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block">
@@ -765,11 +789,12 @@ export default function SubscriptionGate({
               <div className="relative w-full sm:w-44">
                 <input
                   type="number"
-                  min="1000"
+                  min={minAllowedSqft}
                   step="5000"
                   value={customSqft}
                   onChange={(e) => {
-                    const val = Math.max(1000, Number(e.target.value) || 0);
+                    const raw = Number(e.target.value) || 0;
+                    const val = Math.max(minAllowedSqft, raw);
                     setCustomSqft(val);
                     if (typeof window !== "undefined") {
                       localStorage.setItem("officex_subscribed_sqft", String(val));
@@ -784,25 +809,32 @@ export default function SubscriptionGate({
             {/* Quick Presets */}
             <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-200/60">
               <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
-              {[25000, 50000, 100000, 250000, 500000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    setCustomSqft(preset);
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("officex_subscribed_sqft", String(preset));
-                    }
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    customSqft === preset
-                      ? "bg-[#0F8B7D] text-white shadow-2xs"
-                      : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  {preset >= 100000 ? `${(preset / 100000).toFixed(preset % 100000 === 0 ? 0 : 1)}L sq.ft` : `${(preset / 1000).toFixed(0)}k sq.ft`}
-                </button>
-              ))}
+              {(() => {
+                const standard = [25000, 50000, 100000, 250000, 500000, 1000000];
+                const higher = standard.filter((p) => p > minAllowedSqft);
+                const presetsToRender = [minAllowedSqft, ...higher].slice(0, 5);
+                return presetsToRender.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      const val = Math.max(minAllowedSqft, preset);
+                      setCustomSqft(val);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_subscribed_sqft", String(val));
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      customSqft === preset
+                        ? "bg-[#0F8B7D] text-white shadow-2xs"
+                        : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    {preset === minAllowedSqft && minAllowedSqft > 10000 ? "Min: " : ""}
+                    {preset >= 100000 ? `${(preset / 100000).toFixed(preset % 100000 === 0 ? 0 : 1)}L sq.ft` : `${(preset / 1000).toFixed(0)}k sq.ft`}
+                  </button>
+                ));
+              })()}
             </div>
           </div>
 
@@ -854,7 +886,7 @@ export default function SubscriptionGate({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
             {SUBSCRIPTION_PLAN_OPTIONS.map((plan) => {
               const isSelected = selectedPlan.id === plan.id;
-              const planTotal = customSqft * plan.price;
+              const planTotal = effectiveSqft * plan.price;
               return (
                 <button
                   key={plan.id}

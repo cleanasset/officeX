@@ -493,6 +493,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
+          fullName: fullName.trim(),
           mobileNumber: cleanMobile,
           otp: code.trim()
         })
@@ -563,18 +564,18 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       return;
     }
 
-    if (panNumber.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.trim().toUpperCase())) {
-      setError("Please enter a valid 10-character Indian PAN (e.g. AAACA1234A).");
+    if (panNumber.trim() && !/^[A-Z0-9]{1,10}$/.test(panNumber.trim().toUpperCase())) {
+      setError("Please enter a valid PAN (up to 10 alphanumeric characters).");
       return;
     }
 
-    if (gstin.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin.trim().toUpperCase())) {
-      setError("Please enter a valid 15-character Indian GSTIN (e.g. 27AAACA1234A1Z5).");
+    if (gstin.trim() && !/^[A-Z0-9]{1,15}$/.test(gstin.trim().toUpperCase())) {
+      setError("Please enter a valid GSTIN (up to 15 alphanumeric characters).");
       return;
     }
 
-    if (cinNumber.trim() && cinNumber.trim().length !== 21) {
-      setError("Corporate Identification Number (CIN) must be exactly 21 alphanumeric characters (e.g. U72900DL2020PTC123456).");
+    if (cinNumber.trim() && !/^[A-Z0-9\-\/]{1,25}$/.test(cinNumber.trim().toUpperCase())) {
+      setError("Please enter a valid Corporate Identification Number (CIN).");
       return;
     }
 

@@ -134,11 +134,18 @@ export default function Topbar() {
       let storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
       const storedRoleKey = localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key");
 
-      // Strictly purge any legacy synthetic subscriber email
-      if (storedEmail && (storedEmail.includes("subscriber@officex.in") || storedEmail.includes("google-subscriber"))) {
+      // Strictly purge any legacy synthetic subscriber or @officex.pro email
+      if (storedEmail && (storedEmail.includes("officex.pro") || storedEmail.includes("subscriber@officex.in") || storedEmail.includes("google-subscriber") || !storedEmail.includes("@"))) {
         localStorage.removeItem("officex_user_email");
         sessionStorage.removeItem("officex_user_email");
         storedEmail = "";
+      }
+
+      // Purge digits-only stored name (like phone number)
+      if (storedName && (/^\d+$/.test(storedName.replace(/\D/g, "")) || storedName.toLowerCase().includes("subscriber"))) {
+        localStorage.removeItem("officex_user_name");
+        sessionStorage.removeItem("officex_user_name");
+        storedName = "";
       }
 
       const storedLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
@@ -146,7 +153,7 @@ export default function Topbar() {
       if (storedLogo) setBrandLogo(storedLogo);
       if (storedBrand) setBrandName(storedBrand);
 
-      if (storedName && !storedName.toLowerCase().includes("subscriber")) {
+      if (storedName) {
         setUserName(storedName);
       }
       if (storedEmail) setUserEmail(storedEmail);
@@ -169,9 +176,13 @@ export default function Topbar() {
     fetch("/api/users/me", { headers: getClientAuthHeaders() })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.user?.email && !data.user.email.includes("subscriber@officex.in") && !data.user.email.includes("director@officex.pro")) {
+        if (data?.user?.email && !data.user.email.includes("officex.pro") && !data.user.email.includes("subscriber@officex.in")) {
           setUserEmail(data.user.email);
-          if (data.user.fullName) setUserName(data.user.fullName);
+          localStorage.setItem("officex_user_email", data.user.email);
+          if (data.user.fullName && !/^\d+$/.test(data.user.fullName.replace(/\D/g, ""))) {
+            setUserName(data.user.fullName);
+            localStorage.setItem("officex_user_name", data.user.fullName);
+          }
         } else if (!data?.user) {
           if (typeof window !== "undefined" && !localStorage.getItem("officex_user_email")) {
             setUserEmail("");
@@ -474,7 +485,7 @@ export default function Topbar() {
             {brandLogo ? (
               <img src={brandLogo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              (userName || userEmail || "O")[0].toUpperCase()
+              ((userName && !/^\d+$/.test(userName.replace(/\D/g, ""))) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()
             )}
           </button>
 
@@ -486,14 +497,14 @@ export default function Topbar() {
                   <img src={brandLogo} alt="Logo" className="w-9 h-9 object-contain rounded-xl border border-slate-200 bg-white p-0.5 shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                    {(userName || userEmail || "O")[0].toUpperCase()}
+                    {((userName && !/^\d+$/.test(userName.replace(/\D/g, ""))) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
-                    {brandName || userName || userEmail || "Account Overview"}
+                    {brandName || (userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : userEmail || "Account Overview")}
                   </span>
-                  {userEmail && (
+                  {(userEmail && !userEmail.endsWith("@officex.pro")) && (
                     <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>
                   )}
                   <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">

@@ -464,7 +464,12 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Commercial Member", data.memberships);
+      handleAuthSuccess(
+        data.user?.identifier || identifier,
+        data.user?.role || "Commercial Member",
+        data.memberships,
+        data.user?.name || successUserName
+      );
     } catch (err) {
       setError("Connection error during sign-in. Please retry.");
     } finally {
@@ -608,7 +613,12 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Commercial Member", data.memberships);
+      handleAuthSuccess(
+        data.user?.identifier || identifier,
+        data.user?.role || "Commercial Member",
+        data.memberships,
+        data.user?.name || successUserName
+      );
     } catch (err) {
       setError("Failed to verify code. Please check your network.");
     } finally {
@@ -703,20 +713,25 @@ export default function SignInForm({
   const handleAuthSuccess = (
     userEmailOrPhone: string,
     roleName: string,
-    availableMemberships?: WorkspaceMembership[]
+    availableMemberships?: WorkspaceMembership[],
+    userNameParam?: string
   ) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_user_role", roleName);
-      // Subscription is NOT auto-activated — requires Razorpay payment
 
       localStorage.setItem("officex_session_active", "1");
       localStorage.setItem("officex_user_role", roleName);
-      // Subscription is NOT auto-activated — requires Razorpay payment
+
+      const rawName = userNameParam || successUserName;
+      if (rawName && !/^\d+$/.test(rawName.replace(/\D/g, ""))) {
+        localStorage.setItem("officex_user_name", rawName.trim());
+        sessionStorage.setItem("officex_user_name", rawName.trim());
+      }
 
       const cleanVal = userEmailOrPhone.trim().toLowerCase();
       const previousEmail = (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "").toLowerCase().trim();
-      if (previousEmail && previousEmail !== cleanVal) {
+      if (previousEmail && previousEmail !== cleanVal && !previousEmail.endsWith("@officex.pro")) {
         // Clear previous user's cached onboarding and properties for a fresh new account login
         localStorage.removeItem("officex_onboarding_completed");
         sessionStorage.removeItem("officex_onboarding_completed");
@@ -726,10 +741,11 @@ export default function SignInForm({
         document.cookie = "officex_onboarding_completed=0; path=/; max-age=0";
       }
 
-      if (cleanVal.includes("@")) {
+      if (cleanVal.includes("@") && !cleanVal.endsWith("@officex.pro")) {
         sessionStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_email_verified", "1");
+        document.cookie = `officex_user_email=${encodeURIComponent(cleanVal)}; path=/; max-age=86400; SameSite=Lax`;
 
         // Verify if user already has an active subscription or valid coupon
         fetch(`/api/subscription/status?email=${encodeURIComponent(cleanVal)}`)
@@ -758,14 +774,10 @@ export default function SignInForm({
         sessionStorage.setItem("officex_user_phone", cleanVal);
         localStorage.setItem("officex_user_phone", cleanVal);
         localStorage.setItem("officex_phone_verified", "1");
-      } else {
-        sessionStorage.setItem("officex_user_email", cleanVal);
-        localStorage.setItem("officex_user_email", cleanVal);
       }
 
       // officex_auth is managed as a secure HttpOnly cookie set by the server API
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-      document.cookie = `officex_user_email=${encodeURIComponent(cleanVal)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_user_role=${encodeURIComponent(roleName)}; path=/; max-age=86400; SameSite=Lax`;
     }
 

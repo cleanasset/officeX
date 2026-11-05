@@ -2,6 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
+  parseLocationFromAddress,
+  INDIAN_STATES_CITIES,
+  matchCanonicalIndianState,
+  matchCanonicalIndianCity,
+} from "@/lib/india-locations";
+import {
   MapPin,
   Search,
   Loader2,
@@ -141,47 +147,95 @@ export default function GoogleAddressAutocomplete({
 
     let finalLat = item.latitude ?? null;
     let finalLng = item.longitude ?? null;
+    let resolvedCity = item.city || "";
+    let resolvedState = item.state || "";
+    let resolvedPin = item.pincode || "";
 
-    if (!finalLat || !finalLng) {
-      try {
-        const queryTerm = item.fullAddress || item.displayName || streetAddress;
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(queryTerm)}`);
-        if (res.ok) {
-          const d = await res.json();
-          const found = (d.results || []).find((r: any) => r.latitude && r.longitude);
-          if (found) {
-            finalLat = found.latitude;
-            finalLng = found.longitude;
-            if (!item.city && found.city) item.city = found.city;
-            if (!item.state && found.state) item.state = found.state;
-            if (!item.pincode && found.pincode) item.pincode = found.pincode;
+    // 1. If city or state is missing, query geocode endpoint
+    if (!resolvedCity || !resolvedState) {
+      if (finalLat && finalLng) {
+        try {
+          const revRes = await fetch(`/api/geocode?lat=${finalLat}&lon=${finalLng}`);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            const first = revData.results?.[0];
+            if (first) {
+              if (!resolvedCity && first.city) resolvedCity = first.city;
+              if (!resolvedState && first.state) resolvedState = first.state;
+              if (!resolvedPin && first.pincode) resolvedPin = first.pincode;
+            }
           }
+        } catch (_) {}
+      } else {
+        try {
+          const queryTerm = item.fullAddress || item.displayName || streetAddress;
+          const res = await fetch(`/api/geocode?q=${encodeURIComponent(queryTerm)}`);
+          if (res.ok) {
+            const d = await res.json();
+            const found = (d.results || []).find((r: any) => r.latitude && r.longitude) || d.results?.[0];
+            if (found) {
+              if (finalLat === null) finalLat = found.latitude;
+              if (finalLng === null) finalLng = found.longitude;
+              if (!resolvedCity && found.city) resolvedCity = found.city;
+              if (!resolvedState && found.state) resolvedState = found.state;
+              if (!resolvedPin && found.pincode) resolvedPin = found.pincode;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 2. High-precision address parser fallback
+    const fullSearchStr = [streetAddress, fAddress, item.displayName, item.buildingName, item.area].filter(Boolean).join(", ");
+    const parsedLoc = parseLocationFromAddress(fullSearchStr);
+    if (!resolvedCity && parsedLoc.city) resolvedCity = parsedLoc.city;
+    if (!resolvedState && parsedLoc.state) resolvedState = parsedLoc.state;
+    if (!resolvedPin && parsedLoc.pincode) resolvedPin = parsedLoc.pincode;
+    const resolvedMicroMarket = item.area || parsedLoc.microMarket || bName || "";
+
+    // 3. Canonically normalize State
+    if (resolvedState) {
+      resolvedState = matchCanonicalIndianState(resolvedState) || resolvedState;
+    }
+
+    // 4. State & City cross-inference
+    if (resolvedState && !resolvedCity) {
+      const stateCities = INDIAN_STATES_CITIES[resolvedState] || [];
+      if (stateCities.length > 0) resolvedCity = stateCities[0];
+    } else if (resolvedCity && !resolvedState) {
+      for (const [st, cList] of Object.entries(INDIAN_STATES_CITIES)) {
+        if (cList.some((c) => c.toLowerCase() === resolvedCity.toLowerCase())) {
+          resolvedState = st;
+          break;
         }
-      } catch (_) {}
+      }
+    }
+
+    if (resolvedCity && resolvedState) {
+      resolvedCity = matchCanonicalIndianCity(resolvedState, resolvedCity) || resolvedCity;
     }
 
     const payload: AddressAutofillResult = {
       fullAddress: fAddress,
       streetAddress: streetAddress,
-      pincode: item.pincode || "",
-      city: item.city || "",
-      state: item.state || "",
+      pincode: resolvedPin,
+      city: resolvedCity,
+      state: resolvedState,
       country: item.country || "India",
-      microMarket: item.area || bName || "",
+      microMarket: resolvedMicroMarket,
       latitude: finalLat,
       longitude: finalLng,
     };
 
     setQuery(streetAddress);
-    onChange(streetAddress);
     setIsOpen(false);
     setSuggestions([]);
     setSelectedIndex(-1);
 
-    // Call parent autofill
+    // Call parent autofill directly with the fully resolved address payload
     onAddressSelect(payload);
 
-    // Show nice confirmation badge
+    // Show confirmation badge
     const detailParts = [payload.city, payload.state, payload.pincode ? `PIN: ${payload.pincode}` : ""]
       .filter(Boolean)
       .join(", ");
@@ -238,9 +292,41 @@ export default function GoogleAddressAutocomplete({
           onFocus={() => {
             if (suggestions.length > 0) setIsOpen(true);
           }}
+          onBlur={() => {
+            setTimeout(() => {
+              setIsOpen(false);
+              if (query && query.trim().length > 3) {
+                const parsed = parseLocationFromAddress(query);
+                if (parsed.city || parsed.state || parsed.pincode) {
+                  onAddressSelect({
+                    fullAddress: query,
+                    streetAddress: query,
+                    pincode: parsed.pincode || "",
+                    city: parsed.city || "",
+                    state: parsed.state || "",
+                    country: "India",
+                    microMarket: parsed.microMarket || "",
+                    latitude: null,
+                    longitude: null,
+                  });
+                  const detailParts = [parsed.city, parsed.state, parsed.pincode ? `PIN: ${parsed.pincode}` : ""]
+                    .filter(Boolean)
+                    .join(", ");
+                  if (detailParts) {
+                    setAutofilledBadge(`Autofilled: ${detailParts}`);
+                  }
+                }
+              }
+            }, 250);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           required={required}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-form-type="other"
           className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#0D7B6C] focus:ring-2 focus:ring-[#0D7B6C]/10 outline-none transition shadow-2xs"
         />
 

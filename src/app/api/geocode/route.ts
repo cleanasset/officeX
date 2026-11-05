@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseLocationFromAddress } from "@/lib/india-locations";
 
 // Clean administrative words from addresses for clean Google Maps-style output
 function cleanAddressSegment(str: string): string {
@@ -143,6 +144,14 @@ export async function GET(request: Request) {
   const seenPlaceKeys = new Set<string>();
 
   function addResult(item: any) {
+    if (!item.city || !item.state || !item.pincode) {
+      const parsed = parseLocationFromAddress(`${item.buildingName || ""} ${item.area || ""} ${item.displayName || ""} ${item.fullAddress || ""} ${cleanQ}`);
+      if (!item.city && parsed.city) item.city = parsed.city;
+      if (!item.state && parsed.state) item.state = parsed.state;
+      if (!item.pincode && parsed.pincode) item.pincode = parsed.pincode;
+      if (!item.area && parsed.microMarket) item.area = parsed.microMarket;
+    }
+
     const normName = (item.buildingName || item.displayName.split(",")[0] || "").toLowerCase().trim();
     const normCity = (item.city || "").toLowerCase().trim();
     const normArea = (item.area || "").toLowerCase().trim();
@@ -159,74 +168,175 @@ export async function GET(request: Request) {
   // 2. Official Google Places Autocomplete API (When API Key is configured)
   if (googleApiKey) {
     try {
-      const gPlacesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(cleanQ)}&key=${googleApiKey}`;
-      const gRes = await fetch(gPlacesUrl);
-      if (gRes.ok) {
-        const gData = await gRes.json();
-        if (gData.status === "OK" && Array.isArray(gData.predictions)) {
-          // Fetch place details for top predictions in parallel
-          const detailTasks = gData.predictions.slice(0, 10).map(async (pred: any) => {
-            try {
-              const dUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${pred.place_id}&fields=name,formatted_address,geometry,address_components&key=${googleApiKey}`;
-              const dRes = await fetch(dUrl);
-              if (dRes.ok) {
-                const dData = await dRes.json();
-                if (dData.result) {
-                  const r = dData.result;
-                  let city = "";
-                  let state = "";
-                  let pincode = "";
-                  let locality = "";
+      const searchInput = cleanQ;
 
-                  for (const comp of r.address_components || []) {
-                    const types = comp.types || [];
-                    if (types.includes("locality")) city = comp.long_name;
-                    else if (!city && types.includes("administrative_area_level_2")) city = comp.long_name;
-                    if (types.includes("sublocality") || types.includes("neighborhood")) locality = comp.long_name;
-                    if (types.includes("administrative_area_level_1")) state = comp.long_name;
-                    if (types.includes("postal_code")) pincode = comp.long_name;
+      // 2A. Primary: Places API (New) (official Google Cloud v1 API)
+      try {
+        const newPlacesRes = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleApiKey,
+          },
+          body: JSON.stringify({
+            input: searchInput,
+            includedRegionCodes: ["in"],
+          }),
+        });
+
+        if (newPlacesRes.ok) {
+          const newPlacesData = await newPlacesRes.json();
+          const suggestions = newPlacesData.suggestions || [];
+
+          if (suggestions.length > 0) {
+            // Fetch place details in parallel for each suggestion
+            const detailPromises = suggestions.slice(0, 10).map(async (s: any) => {
+              const p = s.placePrediction;
+              if (!p) return null;
+              const placeId = p.placeId || (p.place ? p.place.replace("places/", "") : "");
+              const fullText = p.text?.text || "";
+              const mainText = p.structuredFormat?.mainText?.text || fullText.split(",")[0];
+              const secondaryText = p.structuredFormat?.secondaryText?.text || "";
+
+              let city = targetCity || "";
+              let state = targetState || "";
+              let pincode = "";
+              let locality = secondaryText.split(",")[0]?.trim() || "";
+              let lat: number | null = null;
+              let lng: number | null = null;
+              let formattedAddress = fullText;
+
+              if (placeId) {
+                try {
+                  const dUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,addressComponents,location&key=${googleApiKey}`;
+                  const dRes = await fetch(dUrl);
+                  if (dRes.ok) {
+                    const dData = await dRes.json();
+                    if (dData.formattedAddress) formattedAddress = dData.formattedAddress;
+                    if (dData.location) {
+                      lat = dData.location.latitude ?? null;
+                      lng = dData.location.longitude ?? null;
+                    }
+                    if (Array.isArray(dData.addressComponents)) {
+                      for (const comp of dData.addressComponents) {
+                        const types = comp.types || [];
+                        if (types.includes("locality")) city = comp.longText || comp.shortText || city;
+                        else if (!city && types.includes("administrative_area_level_2")) city = comp.longText || city;
+                        if (types.includes("sublocality") || types.includes("sublocality_level_1") || types.includes("neighborhood")) {
+                          if (!locality || locality === secondaryText.split(",")[0]?.trim()) {
+                            locality = comp.longText || locality;
+                          }
+                        }
+                        if (types.includes("administrative_area_level_1")) state = comp.longText || state;
+                        if (types.includes("postal_code")) pincode = comp.longText || pincode;
+                      }
+                    }
                   }
-
-                  return {
-                    id: `g-${pred.place_id}`,
-                    buildingName: r.name || pred.structured_formatting?.main_text || cleanQ,
-                    displayName: r.formatted_address || pred.description,
-                    fullAddress: r.formatted_address || pred.description,
-                    area: locality || "",
-                    city: city,
-                    state: state,
-                    pincode: pincode,
-                    metroDistance: "",
-                    latitude: r.geometry?.location?.lat ?? null,
-                    longitude: r.geometry?.location?.lng ?? null
-                  };
+                } catch (dErr) {
+                  console.warn("Place details fetch exception:", dErr);
                 }
               }
-            } catch (err) {
-              console.warn("Place detail fetch failed:", err);
+
+              return {
+                id: `g-new-${placeId}`,
+                buildingName: mainText,
+                displayName: formattedAddress || fullText,
+                fullAddress: formattedAddress || fullText,
+                area: locality,
+                city: cleanCityName(city, state),
+                state: state,
+                pincode: pincode,
+                metroDistance: "",
+                latitude: lat,
+                longitude: lng,
+              };
+            });
+
+            const resolvedResults = await Promise.all(detailPromises);
+            for (const r of resolvedResults) {
+              if (r) addResult(r);
             }
-            return {
-              id: `g-${pred.place_id}`,
-              buildingName: pred.structured_formatting?.main_text || pred.description.split(",")[0],
-              displayName: pred.description,
-              fullAddress: pred.description,
-              area: pred.structured_formatting?.secondary_text?.split(",")[0] || "",
-              city: "",
-              state: "",
-              pincode: "",
-              metroDistance: "",
-              latitude: null,
-              longitude: null
-            };
-          });
 
-          const placeResults = await Promise.all(detailTasks);
-          for (const pr of placeResults) {
-            if (pr) addResult(pr);
+            if (results.length > 0) {
+              return NextResponse.json({ results: results.slice(0, 15) });
+            }
           }
+        }
+      } catch (newApiErr) {
+        console.warn("Places API (New) notice:", newApiErr);
+      }
 
-          if (results.length > 0) {
-            return NextResponse.json({ results: results.slice(0, 15) });
+      // 2B. Legacy Places API Fallback
+      if (results.length === 0) {
+        const countryFilter = "&components=country:in";
+        const gPlacesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(searchInput)}${countryFilter}&key=${googleApiKey}`;
+        const gRes = await fetch(gPlacesUrl);
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData.status === "OK" && Array.isArray(gData.predictions)) {
+            const detailTasks = gData.predictions.slice(0, 10).map(async (pred: any) => {
+              try {
+                const dUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${pred.place_id}&fields=name,formatted_address,geometry,address_components&key=${googleApiKey}`;
+                const dRes = await fetch(dUrl);
+                if (dRes.ok) {
+                  const dData = await dRes.json();
+                  if (dData.result) {
+                    const r = dData.result;
+                    let city = "";
+                    let state = "";
+                    let pincode = "";
+                    let locality = "";
+
+                    for (const comp of r.address_components || []) {
+                      const types = comp.types || [];
+                      if (types.includes("locality")) city = comp.long_name;
+                      else if (!city && types.includes("administrative_area_level_2")) city = comp.long_name;
+                      if (types.includes("sublocality") || types.includes("neighborhood")) locality = comp.long_name;
+                      if (types.includes("administrative_area_level_1")) state = comp.long_name;
+                      if (types.includes("postal_code")) pincode = comp.long_name;
+                    }
+
+                    return {
+                      id: `g-${pred.place_id}`,
+                      buildingName: r.name || pred.structured_formatting?.main_text || cleanQ,
+                      displayName: r.formatted_address || pred.description,
+                      fullAddress: r.formatted_address || pred.description,
+                      area: locality || "",
+                      city: city,
+                      state: state,
+                      pincode: pincode,
+                      metroDistance: "",
+                      latitude: r.geometry?.location?.lat ?? null,
+                      longitude: r.geometry?.location?.lng ?? null
+                    };
+                  }
+                }
+              } catch (err) {
+                console.warn("Place detail fetch failed:", err);
+              }
+              return {
+                id: `g-${pred.place_id}`,
+                buildingName: pred.structured_formatting?.main_text || pred.description.split(",")[0],
+                displayName: pred.description,
+                fullAddress: pred.description,
+                area: pred.structured_formatting?.secondary_text?.split(",")[0] || "",
+                city: "",
+                state: "",
+                pincode: "",
+                metroDistance: "",
+                latitude: null,
+                longitude: null
+              };
+            });
+
+            const placeResults = await Promise.all(detailTasks);
+            for (const pr of placeResults) {
+              if (pr) addResult(pr);
+            }
+
+            if (results.length > 0) {
+              return NextResponse.json({ results: results.slice(0, 15) });
+            }
           }
         }
       }
@@ -436,15 +546,16 @@ export async function GET(request: Request) {
           .map(w => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
 
+        const loc = parseLocationFromAddress(cleaned);
         addResult({
           id: `g-${cleaned.replace(/\s+/g, "-").toLowerCase()}`,
           buildingName: formattedTitle,
           displayName: formattedTitle,
           fullAddress: formattedTitle,
-          area: "",
-          city: "",
-          state: "",
-          pincode: "",
+          area: loc.microMarket || "",
+          city: loc.city || "",
+          state: loc.state || "",
+          pincode: loc.pincode || "",
           metroDistance: "",
           latitude: null,
           longitude: null
@@ -561,15 +672,17 @@ export async function GET(request: Request) {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
 
+    const loc = parseLocationFromAddress(cleanQ);
+
     sortedFinal.push({
       id: "custom-manual-1",
       buildingName: formattedTitle,
       displayName: formattedTitle,
       fullAddress: cleanQ,
-      area: "",
-      city: "",
-      state: "",
-      pincode: "",
+      area: loc.microMarket || "",
+      city: loc.city || "",
+      state: loc.state || "",
+      pincode: loc.pincode || "",
       metroDistance: "",
       latitude: null,
       longitude: null

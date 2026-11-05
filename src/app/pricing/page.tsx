@@ -23,6 +23,7 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import EnquiryForm from "@/components/marketing/EnquiryForm";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
+import { fetchUniversalPortfolioSqft } from "@/lib/portfolio-area";
 
 function PricingPageContent() {
   const router = useRouter();
@@ -36,7 +37,13 @@ function PricingPageContent() {
       const paramSqft = Number(searchParams?.get("min_sqft") || 0);
       const storedSqft = Number(localStorage.getItem("officex_total_portfolio_sqft") || 0);
       const eff = Math.max(paramSqft, storedSqft);
-      if (eff > 0) setMinPortfolioSqft(eff);
+      if (eff > 0) {
+        setMinPortfolioSqft(eff);
+      } else {
+        fetchUniversalPortfolioSqft().then((val) => {
+          if (val > 0) setMinPortfolioSqft(val);
+        });
+      }
     }
   }, [searchParams]);
 
