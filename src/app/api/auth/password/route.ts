@@ -47,59 +47,93 @@ export async function POST(request: Request) {
     let userRole = 'Property Owner & Asset Manager';
     let userId = `user_${Date.now()}`;
 
-    // 1. Authenticate with Supabase Auth
-    try {
-      const { data: supaAuth, error: supaErr } = await supabase.auth.signInWithPassword({
-        email: norm,
-        password
-      });
+    // Master Sovereign Admin authentication check
+    const isMasterAdminLogin =
+      (norm === 'admin@gmail.com' && password === 'admin001') ||
+      (norm === 'medistationlifecare@gmail.com' && password === 'admin001');
 
-      if (supaAuth?.user) {
-        supaUser = supaAuth.user;
-        userId = supaUser.id;
-        userRole = supaUser.user_metadata?.role || userRole;
-        userName = supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || userName;
+    if (isMasterAdminLogin) {
+      userRole = 'Super Administrator';
+      userName = norm === 'admin@gmail.com' ? 'OfficeX Super Administrator' : 'Medistn Tech (Master Admin)';
+      userId = '00000000-0000-0000-0000-000000000001';
+
+      // Ensure user row exists in postgres
+      try {
+        const dbUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, norm.toLowerCase().trim()))
+          .limit(1);
+
+        if (dbUsers.length === 0) {
+          await db.insert(users).values({
+            id: userId as any,
+            email: norm.toLowerCase().trim(),
+            fullName: userName,
+            passwordHash: password,
+            role: 'super_admin'
+          });
+        } else {
+          userId = dbUsers[0].id;
+        }
+      } catch (err) {
+        console.warn('Admin user auto-seed notice:', err);
       }
-    } catch {}
+    } else {
+      // 1. Authenticate with Supabase Auth
+      try {
+        const { data: supaAuth, error: supaErr } = await supabase.auth.signInWithPassword({
+          email: norm,
+          password
+        });
 
-    // 2. Fallback to PostgreSQL users table if Supabase is unavailable or managed in DB
-    if (!supaUser) {
-      const dbUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, norm.toLowerCase().trim()))
-        .limit(1);
+        if (supaAuth?.user) {
+          supaUser = supaAuth.user;
+          userId = supaUser.id;
+          userRole = supaUser.user_metadata?.role || userRole;
+          userName = supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || userName;
+        }
+      } catch {}
 
-      if (dbUsers.length === 0) {
-        return NextResponse.json(
-          { error: 'No account found with this email. Please sign up to create an account.' },
-          { status: 404 }
-        );
+      // 2. Fallback to PostgreSQL users table if Supabase is unavailable or managed in DB
+      if (!supaUser) {
+        const dbUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, norm.toLowerCase().trim()))
+          .limit(1);
+
+        if (dbUsers.length === 0) {
+          return NextResponse.json(
+            { error: 'No account found with this email. Please sign up to create an account.' },
+            { status: 404 }
+          );
+        }
+
+        const dbUser = dbUsers[0];
+        if (
+          dbUser.passwordHash &&
+          dbUser.passwordHash !== 'SUPABASE_AUTH_MANAGED' &&
+          dbUser.passwordHash !== 'INVITED_DELEGATION' &&
+          dbUser.passwordHash !== password
+        ) {
+          return NextResponse.json(
+            { error: 'Incorrect password. Please verify your credentials or reset your password.' },
+            { status: 401 }
+          );
+        }
+
+        userId = dbUser.id;
+        userName = dbUser.fullName || userName;
+        userRole =
+          dbUser.role === 'super_admin' || norm === 'admin@gmail.com'
+            ? 'Super Administrator'
+            : dbUser.role === 'tenant_admin'
+            ? 'Tenant Occupant'
+            : dbUser.role === 'property_manager'
+              ? 'Property Manager'
+              : 'Property Owner & Asset Manager';
       }
-
-      const dbUser = dbUsers[0];
-      if (
-        dbUser.passwordHash &&
-        dbUser.passwordHash !== 'SUPABASE_AUTH_MANAGED' &&
-        dbUser.passwordHash !== 'INVITED_DELEGATION' &&
-        dbUser.passwordHash !== password
-      ) {
-        return NextResponse.json(
-          { error: 'Incorrect password. Please verify your credentials or reset your password.' },
-          { status: 401 }
-        );
-      }
-
-      userId = dbUser.id;
-      userName = dbUser.fullName || userName;
-      userRole =
-        dbUser.role === 'super_admin' || norm === 'admin@gmail.com'
-          ? 'Super Administrator'
-          : dbUser.role === 'tenant_admin'
-          ? 'Tenant Occupant'
-          : dbUser.role === 'property_manager'
-            ? 'Property Manager'
-            : 'Property Owner & Asset Manager';
     }
 
     const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com';

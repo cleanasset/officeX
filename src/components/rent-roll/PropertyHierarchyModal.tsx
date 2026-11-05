@@ -1273,6 +1273,35 @@ export default function PropertyHierarchyModal({
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
+
+      // Pre-validate legal tax identifiers (PAN, GSTIN, CIN)
+      if (propForm.panNumber.trim() || propForm.gstin.trim() || propForm.cinNumber.trim()) {
+        try {
+          const valRes = await fetch("/api/auth/validate-tax-id", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders,
+            },
+            body: JSON.stringify({
+              pan: propForm.panNumber.trim(),
+              gstin: propForm.gstin.trim(),
+              cin: propForm.cinNumber.trim(),
+              targetType: "organization",
+              orgId: authHeaders["x-org-id"] || undefined,
+            }),
+          });
+          const valData = await valRes.json();
+          if (!valRes.ok || !valData.valid) {
+            showToast(valData.error || "Tax identifier validation failed", "error");
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If network issue, allow route handler to perform primary check
+        }
+      }
+
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
         headers: {
@@ -2112,6 +2141,35 @@ export default function PropertyHierarchyModal({
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
+
+      // Pre-validate Tenant Tax Identifiers (Org-scoped PAN & GSTIN uniqueness)
+      if (tenantForm.pan.trim() || tenantForm.gst.trim() || tenantForm.cinNumber.trim()) {
+        try {
+          const valRes = await fetch("/api/auth/validate-tax-id", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders,
+            },
+            body: JSON.stringify({
+              pan: tenantForm.pan.trim(),
+              gstin: tenantForm.gst.trim(),
+              cin: tenantForm.cinNumber.trim(),
+              targetType: "tenant",
+              orgId: authHeaders["x-org-id"] || undefined,
+            }),
+          });
+          const valData = await valRes.json();
+          if (!valRes.ok || !valData.valid) {
+            showToast(valData.error || "Tenant tax ID validation failed", "error");
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Fallback to route handler
+        }
+      }
+
       const targetPropertyId = contractForm.propertyId || propForm.existingPropId || (propertiesList.length === 1 ? propertiesList[0]?.id : null);
 
       const res = await fetch("/api/rent-roll/tenants", {

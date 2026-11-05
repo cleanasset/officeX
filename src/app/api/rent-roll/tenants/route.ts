@@ -246,7 +246,7 @@ export async function POST(req: Request) {
       if (existingDups.length > 0) {
         return NextResponse.json(
           {
-            error: `A tenant with the same ${panToTest ? `PAN (${panToTest})` : `GSTIN (${gstToTest})`} already exists: '${existingDups[0].name}' (${existingDups[0].code}).`,
+            error: `A tenant with the same ${panToTest ? `PAN (${panToTest})` : `GSTIN (${gstToTest})`} already exists: '${existingDups[0].name}' (${existingDups[0].code}). Duplicate corporate tax identifiers are not permitted.`,
             existingTenant: existingDups[0],
           },
           { status: 409 }

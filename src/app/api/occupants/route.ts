@@ -64,6 +64,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Validation failed", details: reqVal.errors }, { status: 422 });
     }
 
+    const panToTest = (body.pan_number || body.pan || "").trim().toUpperCase();
+    const gstToTest = (body.gst_number || body.gstin || "").trim().toUpperCase();
+
+    // Enforce Corporate Tax Identifier Uniqueness
+    if (panToTest || gstToTest) {
+      const dupConditions: any[] = [];
+      if (panToTest) dupConditions.push(sql`UPPER(pan_number) = ${panToTest}`);
+      if (gstToTest) dupConditions.push(sql`UPPER(gst_number) = ${gstToTest}`);
+
+      try {
+        const existingDups = await db.execute(sql`
+          SELECT id, occupant_name, occupant_code FROM occupant
+          WHERE org_id = ${payload.org_id}
+            AND deleted_at IS NULL
+            AND (${sql.join(dupConditions, sql` OR `)})
+          LIMIT 1
+        `);
+        if (existingDups.rows && existingDups.rows.length > 0) {
+          const match = existingDups.rows[0] as any;
+          return NextResponse.json(
+            {
+              error: `A tenant with the same ${panToTest ? `PAN (${panToTest})` : `GSTIN (${gstToTest})`} already exists: '${match.occupant_name}' (${match.occupant_code}). Duplicate tax identifiers are not permitted.`,
+            },
+            { status: 409 }
+          );
+        }
+      } catch (e) {}
+    }
+
     const [inserted] = await db
       .insert(occupant)
       .values({

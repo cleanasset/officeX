@@ -50,6 +50,18 @@ export async function POST(req: Request) {
           );
         }
 
+        // Strict Mobile Uniqueness: Ensure phone number cannot be reused under another name
+        const existingMobile = usersData?.users?.find((u) => {
+          const userMobile = (u.user_metadata?.mobile || "").replace(/\D/g, "");
+          return userMobile.length >= 10 && userMobile.endsWith(cleanMobile);
+        });
+        if (existingMobile) {
+          return NextResponse.json(
+            { error: "Mobile number +91 " + cleanMobile + " is already registered to an existing user. Duplicate accounts with the same phone number are not permitted." },
+            { status: 409 }
+          );
+        }
+
         // Create user in Supabase Auth immediately with their password
         const { data: newAuthUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
           email: cleanEmail,

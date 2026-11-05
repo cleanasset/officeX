@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { property, building, space } from "@/db/schema";
-import { validateRequiredFields } from "@/db/validation";
+import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
@@ -104,6 +104,60 @@ export async function POST(req: Request) {
       seatsRaw !== null && seatsRaw !== undefined && seatsRaw !== "" && !isNaN(Number(seatsRaw))
         ? Number(seatsRaw)
         : null;
+
+    // Legal Tax ID Compliance & Cross-Org Guard
+    const rawPan = (body.pan || "").trim().toUpperCase();
+    const rawGstin = (body.gstin || "").trim().toUpperCase();
+    const rawCin = (body.cin || "").trim().toUpperCase();
+
+    if (rawPan) {
+      const panRes = validatePanFormat(rawPan);
+      if (!panRes.isValid) {
+        return NextResponse.json({ error: panRes.message || "Invalid PAN format." }, { status: 400 });
+      }
+      try {
+        const existingPan = await db.execute(sql`
+          SELECT id, name FROM organizations 
+          WHERE UPPER(pan) = ${rawPan} AND id != ${orgId}
+          LIMIT 1
+        `);
+        if (existingPan.rows && existingPan.rows.length > 0) {
+          const matchedName = (existingPan.rows[0] as any).name || "another organization";
+          return NextResponse.json(
+            { error: `PAN ${rawPan} is already registered to legal entity '${matchedName}'. Duplicate PANs are strictly prohibited.` },
+            { status: 409 }
+          );
+        }
+      } catch (e) {}
+    }
+
+    if (rawCin) {
+      const cinRes = validateCinFormat(rawCin);
+      if (!cinRes.isValid) {
+        return NextResponse.json({ error: cinRes.message || "Invalid CIN format." }, { status: 400 });
+      }
+    }
+
+    if (rawGstin) {
+      const gstRes = validateGstinFormat(rawGstin, rawPan || undefined);
+      if (!gstRes.isValid) {
+        return NextResponse.json({ error: gstRes.message || "Invalid GSTIN format." }, { status: 400 });
+      }
+      try {
+        const existingGst = await db.execute(sql`
+          SELECT id, entity_name FROM billing_entity 
+          WHERE UPPER(gst_number) = ${rawGstin} AND org_id != ${orgId}
+          LIMIT 1
+        `);
+        if (existingGst.rows && existingGst.rows.length > 0) {
+          const matchedEntity = (existingGst.rows[0] as any).entity_name || "another landlord entity";
+          return NextResponse.json(
+            { error: `GSTIN ${rawGstin} is registered to billing entity '${matchedEntity}'. Duplicate GSTINs across accounts are not permitted.` },
+            { status: 409 }
+          );
+        }
+      } catch (e) {}
+    }
 
     // 1. Check if property already exists for this org (by ID, matching code, or matching name)
     const matchConditions = [];

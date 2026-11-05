@@ -41,7 +41,11 @@ import {
   Menu,
   Plus,
   ExternalLink,
-  X
+  X,
+  Building2,
+  Coins,
+  Store,
+  CheckCircle2
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -301,15 +305,95 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Sign In / Register", href: "/login", icon: Users }
   ],
 
-  // EXECUTIVE CONTROL / GOVERNANCE
+  // EXECUTIVE CONTROL / GOVERNANCE (MASTER PLATFORM CONSOLE)
   admin: [
-    { name: "Executive Portfolio", href: "/dashboard/owner", icon: Layers },
-    { name: "Governance Console", href: "/admin", icon: Shield },
-    { name: "KYC & Vetting", href: "/admin/kyc", icon: ShieldCheck },
-    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
-    { name: "Razorpay Escrow Control", href: "/admin/escrow", icon: DollarSign },
-    { name: "Platform Users", href: "/admin/users", icon: Users },
-    { name: "System Audit Logs", href: "/admin/audit", icon: FileText }
+    {
+      name: "Office Marketplace",
+      href: "/admin?tab=marketplace",
+      icon: Building2,
+      section: "Commercial Marketplaces",
+      subItems: [
+        { name: "Spaces & Inventory", href: "/admin?tab=marketplace&sub=listings", tabKey: "listings", icon: Building2 },
+        { name: "Space Approvals", href: "/admin?tab=marketplace&sub=approvals", tabKey: "approvals", icon: CheckCircle2 },
+        { name: "Pricing & Tariffs", href: "/admin?tab=marketplace&sub=pricing", tabKey: "pricing", icon: Coins },
+        { name: "Seeker Leads CRM", href: "/admin?tab=marketplace&sub=enquiries", tabKey: "enquiries", icon: Users },
+        { name: "Site Visits & Tours", href: "/admin?tab=marketplace&sub=visits", tabKey: "visits", icon: Calendar },
+        { name: "Deals & Commissions", href: "/admin?tab=marketplace&sub=deals", tabKey: "deals", icon: DollarSign },
+        { name: "Space Operators", href: "/admin?tab=marketplace&sub=owners", tabKey: "owners", icon: Briefcase },
+        { name: "Launch Cities & Rules", href: "/admin?tab=marketplace&sub=settings", tabKey: "settings", icon: Settings }
+      ]
+    },
+    {
+      name: "FM Marketplace",
+      href: "/admin?tab=fm",
+      icon: Briefcase,
+      subItems: [
+        { name: "Active RFQs & Bidding", href: "/admin?tab=fm&sub=rfqs", tabKey: "rfqs", icon: ClipboardList },
+        { name: "Vendor Commission & Rates", href: "/admin?tab=pricing&sub=fm", tabKey: "rate_cards", icon: Coins }
+      ]
+    },
+    {
+      name: "All Marketplaces",
+      href: "/admin?tab=all_marketplaces",
+      icon: Store
+    },
+    {
+      name: "Rent Roll & SaaS",
+      href: "/admin?tab=saas",
+      icon: Layers,
+      section: "SaaS & Asset Portfolios",
+      subItems: [
+        { name: "Properties & Verification", href: "/admin?tab=saas&sub=properties", tabKey: "properties", icon: Building },
+        { name: "Active Lease Contracts", href: "/admin?tab=saas&sub=contracts", tabKey: "contracts", icon: FileText },
+        { name: "Tenant Directory", href: "/admin?tab=saas&sub=tenants", tabKey: "tenants", icon: Users },
+        { name: "Property Delegations", href: "/admin?tab=saas&sub=delegations", tabKey: "delegations", icon: Briefcase },
+        { name: "Invoices & Billing Audit", href: "/admin?tab=saas&sub=invoices", tabKey: "invoices", icon: DollarSign },
+        { name: "Enterprise Organizations", href: "/admin?tab=saas&sub=orgs", tabKey: "orgs", icon: ShieldCheck }
+      ]
+    },
+    {
+      name: "Finances & Escrow",
+      href: "/admin?tab=finances",
+      icon: DollarSign,
+      section: "Finance & Governance",
+      subItems: [
+        { name: "Brokerage Revenue & GTV", href: "/admin?tab=finances", tabKey: "finances", icon: DollarSign },
+        { name: "Razorpay Escrow Control", href: "/admin/escrow", tabKey: "escrow", icon: CreditCard }
+      ]
+    },
+    {
+      name: "Request Approvals",
+      href: "/admin?tab=approvals",
+      icon: CheckCircle2,
+      badge: "Pending"
+    },
+    {
+      name: "Master Pricing & Tariffs",
+      href: "/admin?tab=pricing",
+      icon: Coins
+    },
+    {
+      name: "Platform Users & Roles",
+      href: "/admin?tab=users",
+      icon: Users,
+      section: "Platform System Core"
+    },
+    {
+      name: "Database Explorer",
+      href: "/admin?tab=db",
+      icon: Database,
+      badge: "133"
+    },
+    {
+      name: "Bulk Property Engine",
+      href: "/admin?tab=bulk",
+      icon: Zap
+    },
+    {
+      name: "System Audit Logs",
+      href: "/admin/audit",
+      icon: ShieldCheck
+    }
   ],
 
   // AUDITOR / ANALYST
@@ -586,18 +670,42 @@ function SidebarInner() {
           {activeMenu.map((item, idx) => {
             const hasSubItems = Boolean(item.subItems && item.subItems.length > 0);
             const itemPath = item.href.split("?")[0];
+            const itemTab = new URLSearchParams(item.href.split("?")[1] || "").get("tab");
+
             const isSubItemActive = Boolean(item.subItems?.some((sub) => {
               const subBase = sub.href.split("?")[0];
-              return pathname === subBase || (subBase !== "/" && pathname.startsWith(subBase));
+              const subQuery = sub.href.split("?")[1] || "";
+              const subParams = new URLSearchParams(subQuery);
+              const subTab = subParams.get("tab");
+              const subSub = subParams.get("sub");
+              if (pathname !== subBase) return false;
+              if (subTab) {
+                const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
+                if (curTab !== subTab) return false;
+              }
+              if (subSub) {
+                const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");
+                if (curSub !== subSub) return false;
+              }
+              return true;
             }));
+
             const isItemActive = hasSubItems
-              ? (pathname.startsWith(itemPath) || isSubItemActive)
-              : pathname === item.href || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && pathname.startsWith(item.href));
+              ? (pathname === itemPath && (
+                  !itemTab || 
+                  searchParams.get("tab") === itemTab || 
+                  (!searchParams.get("tab") && itemTab === "marketplace" && pathname === "/admin")
+                )) || isSubItemActive
+              : (pathname === itemPath && (
+                  !itemTab || 
+                  searchParams.get("tab") === itemTab
+                )) || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && item.href !== "/admin" && pathname.startsWith(item.href));
+
             const Icon = item.icon;
-            // Respect user toggle state stored in localStorage; otherwise auto-expand if active or Rent Roll suite
+            // Respect user toggle state stored in localStorage; otherwise auto-expand if active, Rent Roll, or Office Marketplace on admin
             const isExpanded = expandedSubMenus[item.name] !== undefined
               ? expandedSubMenus[item.name]
-              : (isItemActive || item.name === "Rent Roll & Financials");
+              : (isItemActive || item.name === "Rent Roll & Financials" || (item.name === "Office Marketplace" && pathname === "/admin"));
 
             return (
               <React.Fragment key={item.name}>
@@ -675,9 +783,23 @@ function SidebarInner() {
                         {item.subItems.map((sub) => {
                           const SubIcon = sub.icon || ChevronRight;
                           const subPath = sub.href.split("?")[0];
-                          const subTab = new URLSearchParams(sub.href.split("?")[1] || "").get("tab");
-                          const isSubActive =
-                            pathname === subPath && (!subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard" && subPath === "/properties/rent-roll") || (!searchParams.get("tab") && subTab === "banking" && subPath === "/properties/banking"));
+                          const subQuery = sub.href.split("?")[1] || "";
+                          const subParams = new URLSearchParams(subQuery);
+                          const subTab = subParams.get("tab");
+                          const subSub = subParams.get("sub");
+
+                          let isSubActive = pathname === subPath;
+                          if (subTab) {
+                            const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
+                            if (curTab !== subTab) isSubActive = false;
+                          }
+                          if (subSub) {
+                            const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");
+                            if (curSub !== subSub) isSubActive = false;
+                          }
+                          if (pathname === "/properties/rent-roll") {
+                            isSubActive = !subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard");
+                          }
 
                           return (
                             <Link

@@ -60,14 +60,15 @@ export default function PropertyMarketplacePage() {
     const lower = newCity.toLowerCase();
     if (lower.includes("faridabad")) {
       setDistrictFilter("faridabad");
-    } else if (lower.includes("gurgaon") || lower.includes("gurugram")) {
+    } else if (lower.includes("gurgaon") || lower.includes("gurugram") || lower.includes("manesar")) {
       setDistrictFilter("gurgaon");
-    } else if (lower.includes("noida")) {
+    } else if (lower.includes("noida") || lower.includes("greater noida")) {
       setDistrictFilter("noida");
-    } else if (lower.includes("delhi")) {
+    } else if (lower.includes("delhi") || lower.includes("ghaziabad")) {
       setDistrictFilter("delhi-ncr");
     } else {
-      setDistrictFilter("coming-soon");
+      // Dynamic fallback for any newly added city across India (never blank)
+      setDistrictFilter("all");
     }
   };
 
@@ -110,17 +111,29 @@ export default function PropertyMarketplacePage() {
         if (clientGeoRes.ok) {
           const clientGeo = await clientGeoRes.json();
           const rawCity = (clientGeo.cityName || "").toLowerCase();
-          if (rawCity.includes("pune") || rawCity.includes("poona")) {
-            handleCityChange("Pune", false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          } else if (rawCity.includes("delhi") || rawCity.includes("gurgaon") || rawCity.includes("noida")) {
+          if (rawCity.includes("faridabad")) {
+            handleCityChange("Faridabad", false);
+            setDetectedLocationBadge(clientGeo.cityName || "Faridabad");
+          } else if (rawCity.includes("noida") || rawCity.includes("greater noida")) {
+            handleCityChange("Noida", false);
+            setDetectedLocationBadge(clientGeo.cityName || "Noida");
+          } else if (rawCity.includes("gurgaon") || rawCity.includes("gurugram") || rawCity.includes("manesar")) {
+            handleCityChange("Gurgaon", false);
+            setDetectedLocationBadge(clientGeo.cityName || "Gurgaon");
+          } else if (rawCity.includes("delhi") || rawCity.includes("ghaziabad") || rawCity.includes("ncr")) {
             handleCityChange("Delhi NCR", false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          } else if (rawCity.includes("mumbai")) {
+            setDetectedLocationBadge(clientGeo.cityName || "Delhi NCR");
+          } else if (rawCity.includes("mumbai") || rawCity.includes("bombay")) {
             handleCityChange("Mumbai", false);
             setDetectedLocationBadge(clientGeo.cityName);
           } else if (rawCity.includes("bangalore") || rawCity.includes("bengaluru")) {
             handleCityChange("Bengaluru", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          } else if (rawCity.includes("pune") || rawCity.includes("poona")) {
+            handleCityChange("Pune", false);
+            setDetectedLocationBadge(clientGeo.cityName);
+          } else if (rawCity) {
+            handleCityChange(clientGeo.cityName, false);
             setDetectedLocationBadge(clientGeo.cityName);
           }
         }
@@ -1277,9 +1290,40 @@ export default function PropertyMarketplacePage() {
               <p className="text-xs font-bold text-slate-500">Loading verified properties in {featuredCity}...</p>
             </div>
           ) : featuredListings.length === 0 ? (
-            <div className="py-16 text-center bg-slate-50 rounded-2xl border border-slate-200">
-              <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-700">No live spaces found for {featuredCity}</p>
+            <div className="py-12 px-6 text-center bg-gradient-to-br from-teal-50/50 via-white to-slate-50 rounded-2xl border border-teal-200 shadow-2xs space-y-3">
+              <Building2 className="w-10 h-10 text-[#0F8B7D] mx-auto" />
+              <h3 className="text-sm font-black text-slate-900">
+                Expanding to {featuredCity} soon!
+              </h3>
+              <p className="text-xs text-slate-600 max-w-md mx-auto">
+                We are actively onboarding Grade-A spaces in <strong>{featuredCity}</strong>. In the meantime, explore our verified workspaces in the nearest active NCR hubs:
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <button
+                  onClick={() => handleCityChange("Noida")}
+                  className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 text-xs font-bold text-slate-800 transition cursor-pointer shadow-2xs"
+                >
+                  🏢 Noida (491 spaces)
+                </button>
+                <button
+                  onClick={() => handleCityChange("Gurgaon")}
+                  className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 text-xs font-bold text-slate-800 transition cursor-pointer shadow-2xs"
+                >
+                  🏙️ Gurgaon (724 spaces)
+                </button>
+                <button
+                  onClick={() => handleCityChange("Faridabad")}
+                  className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 text-xs font-bold text-slate-800 transition cursor-pointer shadow-2xs"
+                >
+                  🏭 Faridabad (13 spaces)
+                </button>
+                <button
+                  onClick={() => handleCityChange("Delhi NCR")}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold transition cursor-pointer shadow-xs"
+                >
+                  🏛️ Delhi NCR (1,711 spaces)
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">

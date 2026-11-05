@@ -26,7 +26,7 @@ export interface RentRollAuthContext {
   isPortfolioRole: boolean;
 }
 
-export const DEFAULT_TEST_ORG_ID = "a411dd64-65db-462d-8eef-336f9768f49d";
+export const DEFAULT_TEST_ORG_ID = "a411dd64-65db-462d-8eef-336f9768f44d";
 export const DEFAULT_TEST_CLIENT_ID = "25341a70-7bdd-4c38-a44e-3f09986be92c";
 export const DEFAULT_TEST_USER_ID = "00000000-0000-0000-0000-000000000003";
 
@@ -274,14 +274,20 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     // ignore
   }
 
-  // If user is authenticated with an email, isolate data per user email
+  // Super Admin / Platform Admin should default to master commercial portfolio (a411dd64-65db-462d-8eef-336f9768f44d)
+  const isMasterAdmin = role === "super_admin" || userEmail === "admin@gmail.com" || userEmail === "admin@officex.pro";
+
+  // If user is authenticated with an email, isolate data per user email (unless master admin accessing portfolio)
   if (userEmail) {
-    // Only an explicit HTTP header x-org-id should override user email isolation.
-    // Cookies from previous sessions/users must NEVER hijack the active user session!
     const explicitHeaderOrgId = headers.get("x-org-id");
     const explicitHeaderClientId = headers.get("x-client-account-id");
-    orgId = explicitHeaderOrgId || getDeterministicOrgId(userEmail);
-    clientAccountId = explicitHeaderClientId || getDeterministicClientAccountId(userEmail);
+    if (isMasterAdmin && !explicitHeaderOrgId) {
+      orgId = DEFAULT_TEST_ORG_ID;
+      clientAccountId = explicitHeaderClientId || DEFAULT_TEST_CLIENT_ID;
+    } else {
+      orgId = explicitHeaderOrgId || getDeterministicOrgId(userEmail);
+      clientAccountId = explicitHeaderClientId || getDeterministicClientAccountId(userEmail);
+    }
   }
 
   // Fallback to default test constants only if neither email nor orgId was provided

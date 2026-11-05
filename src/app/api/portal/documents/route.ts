@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
           file_url: "/portal/contract",
           version: 1,
           is_current: true,
-          status: "active",
+          status: "executed",
           effective_date: primaryC.start_date ? new Date(primaryC.start_date).toISOString() : new Date().toISOString(),
           expiry_date: primaryC.end_date ? new Date(primaryC.end_date).toISOString() : null,
           created_at: primaryC.created_at ? new Date(primaryC.created_at) : new Date(),

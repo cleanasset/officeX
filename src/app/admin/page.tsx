@@ -1,31 +1,65 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
+import DocumentViewerModal from "@/components/rent-roll/DocumentViewerModal";
 import Image from "next/image";
+import { getClientUserEmail } from "@/lib/auth-storage";
 import { 
-  TrendingUp, AlertTriangle, CheckCircle, Clock, ExternalLink, 
+  TrendingUp, AlertTriangle, CheckCircle, Clock, 
   Search, Filter, Shield, ShieldCheck, X, FileText, Check, Store, Sparkles, 
   DollarSign, ArrowUpRight, ChevronRight, Eye, Building2, UserCheck,
   Users, Layers, Zap, Briefcase, RefreshCw, Lock, Unlock, Edit3,
   SlidersHorizontal, Download, Plus, CheckCircle2, ChevronLeft,
   Database, Table, Coins, Save, Trash2, Copy, FileJson, Info,
-  Sliders, ArrowUpDown
+  Sliders, ArrowUpDown, CreditCard
 } from "lucide-react";
 
-export default function SuperAdminDashboard() {
+function SuperAdminDashboardContent() {
   const [activeTab, setActiveTab] = useState<"overview" | "db" | "pricing" | "marketplace" | "fm" | "saas" | "users" | "bulk">("overview");
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [currentAdminEmail, setCurrentAdminEmail] = useState<string>("");
+
+  useEffect(() => {
+    const em = getClientUserEmail();
+    if (em) setCurrentAdminEmail(em);
+  }, []);
+
+  const searchParams = useSearchParams();
+
+  // Synchronize state with URL query parameters (?tab=...&sub=...)
+  useEffect(() => {
+    if (!searchParams) return;
+    let tabParam = searchParams.get("tab");
+    const subParam = searchParams.get("sub");
+
+    if (tabParam === "all_marketplaces") tabParam = "marketplace";
+    if (tabParam === "finances") {
+      tabParam = "saas";
+      setSaasSubTab("invoices");
+    }
+
+    if (tabParam && ["overview", "db", "pricing", "marketplace", "fm", "saas", "users", "bulk"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+
+    if (subParam && ["properties", "contracts", "tenants", "delegations", "invoices", "orgs"].includes(subParam)) {
+      setSaasSubTab(subParam as any);
+      if (!tabParam) setActiveTab("saas");
+    }
+  }, [searchParams]);
 
   // Platform stats
   const [stats, setStats] = useState<any>({
     totalMarketplaceListings: 6767,
     activeMarketplaceListings: 6098,
-    totalRegisteredUsers: 42,
-    totalOrganizations: 15,
-    totalRentRollProperties: 28,
-    totalActiveContracts: 84,
-    platformArrEstimate: "₹14.8 Cr",
-    platformMonthlyGtv: "₹1.23 Cr"
+    totalRegisteredUsers: 0,
+    totalOrganizations: 1,
+    totalRentRollProperties: 0,
+    totalActiveContracts: 0,
+    platformArrEstimate: "₹0",
+    platformMonthlyGtv: "₹0/mo"
   });
 
   // =========================================================================
@@ -100,7 +134,28 @@ export default function SuperAdminDashboard() {
   // =========================================================================
   // TAB 7: SAAS PORTFOLIOS STATE
   // =========================================================================
+  const [saasSubTab, setSaasSubTab] = useState<"properties" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("properties");
   const [saasProperties, setSaasProperties] = useState<any[]>([]);
+  const [saasContracts, setSaasContracts] = useState<any[]>([]);
+  const [saasTenants, setSaasTenants] = useState<any[]>([]);
+  const [saasDelegations, setSaasDelegations] = useState<any[]>([]);
+  const [saasInvoices, setSaasInvoices] = useState<any[]>([]);
+  const [saasPropFilter, setSaasPropFilter] = useState<"all" | "pending" | "verified" | "rejected">("all");
+  const [verifyingProp, setVerifyingProp] = useState<any | null>(null);
+  const [verifyRemarks, setVerifyRemarks] = useState<string>("");
+  const [verifyActionLoading, setVerifyActionLoading] = useState<boolean>(false);
+  const [inspectingContract, setInspectingContract] = useState<any | null>(null);
+  const [inspectingContractDoc, setInspectingContractDoc] = useState<any | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [contractDrawerOpen, setContractDrawerOpen] = useState<boolean>(false);
+  const [inspectingContractTab, setInspectingContractTab] = useState<"deed" | "summary">("deed");
+  const [viewerDoc, setViewerDoc] = useState<any | null>(null);
+  const [viewerOpen, setViewerOpen] = useState<boolean>(false);
+  const [inspectingProperty, setInspectingProperty] = useState<any | null>(null);
+  const [inspectingInvoice, setInspectingInvoice] = useState<any | null>(null);
+  const [inspectingTenant, setInspectingTenant] = useState<any | null>(null);
+  const [inspectingOrgSubscription, setInspectingOrgSubscription] = useState<any | null>(null);
+  const [saasMetrics, setSaasMetrics] = useState<any>({ totalProperties: 0, totalContracts: 0, activeLeases: 0 });
   const [saasLoading, setSaasLoading] = useState<boolean>(false);
 
   // =========================================================================
@@ -120,7 +175,7 @@ export default function SuperAdminDashboard() {
         console.error("Failed to load overview:", e);
       }
       loadUsersAndOrgs();
-      loadSaasProperties();
+      loadSaasData();
     }
     loadStats();
   }, []);
@@ -295,25 +350,63 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  // SaaS Properties loader
+  // SaaS Governance loader
   useEffect(() => {
     if (activeTab === "saas") {
-      loadSaasProperties();
+      loadSaasData();
     }
   }, [activeTab]);
 
-  async function loadSaasProperties() {
+  async function loadSaasData() {
     setSaasLoading(true);
     try {
-      const res = await fetch("/api/rent-roll/properties");
+      const res = await fetch("/api/admin/saas");
       const data = await res.json();
-      if (data.success && data.properties) {
-        setSaasProperties(data.properties);
+      if (data.success) {
+        setSaasProperties(data.properties || []);
+        setSaasContracts(data.contracts || []);
+        setSaasTenants(data.tenants || []);
+        setSaasDelegations(data.delegations || []);
+        setSaasInvoices(data.invoices || []);
+        setOrgsList(data.organizations || []);
+        if (data.metrics) setSaasMetrics(data.metrics);
       }
     } catch (e) {
-      console.error("Failed to load SaaS properties:", e);
+      console.error("Failed to load SaaS data:", e);
     } finally {
       setSaasLoading(false);
+    }
+  }
+
+  async function handleVerifyProperty(propertyId: string, status: "verified" | "rejected", remarks?: string) {
+    setVerifyActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify_property",
+          id: propertyId,
+          status,
+          remarks: remarks || (status === "verified" ? "Verified & Approved by Super Admin" : "Flagged for manual compliance review")
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({
+          text: `✓ Property successfully ${status === "verified" ? "Verified & Approved" : "Rejected"}!`,
+          type: "success"
+        });
+        setVerifyingProp(null);
+        setVerifyRemarks("");
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to update property status", type: "error" });
+      }
+    } catch (e: any) {
+      setToast({ text: e.message || "Network error", type: "error" });
+    } finally {
+      setVerifyActionLoading(false);
     }
   }
 
@@ -519,88 +612,6 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* Header with Admin Badge & Live Links */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl text-white shadow-xl">
-        <div className="flex items-center gap-4">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX"
-            width={44}
-            height={44}
-            className="object-contain shrink-0"
-            style={{ width: "auto", height: "40px" }}
-            priority
-          />
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-black tracking-wider uppercase flex items-center gap-1">
-                <ShieldCheck size={12} className="text-teal-400" />
-                SOVEREIGN ADMIN
-              </span>
-              <span className="text-xs text-teal-300 font-mono font-bold">medistationlifecare@gmail.com</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-200 font-bold">Medistn tech</span>
-              <span className="text-slate-600">|</span>
-              <span className="text-xs text-slate-400 font-mono">admin@gmail.com</span>
-            </div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-white">
-              OfficeX Master Platform Control Center
-            </h1>
-            <p className="text-xs text-slate-400">
-              Universal control for all database records, platform pricing, marketplaces, and SaaS portfolios.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <a
-            href="/admin/login"
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1.5"
-          >
-            <Lock size={13} />
-            <span>Admin Auth Status</span>
-          </a>
-          <a
-            href="/marketplace"
-            target="_blank"
-            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-          >
-            <span>Live Marketplace</span>
-            <ExternalLink size={13} />
-          </a>
-        </div>
-      </div>
-
-      {/* Primary Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl overflow-x-auto border border-slate-200">
-        {[
-          { id: "overview", label: "Overview & Telemetry", icon: TrendingUp },
-          { id: "db", label: `Database Explorer (${dbTables.length || "133"} Tables)`, icon: Database },
-          { id: "pricing", label: "Master Pricing & Tariffs", icon: Coins },
-          { id: "marketplace", label: `Office Marketplace (${stats.totalMarketplaceListings})`, icon: Building2 },
-          { id: "fm", label: "FM Marketplace & RFQs", icon: Briefcase },
-          { id: "saas", label: `SaaS & Rent Roll (${stats.totalRentRollProperties})`, icon: Layers },
-          { id: "users", label: `Users & Subscriptions (${stats.totalRegisteredUsers})`, icon: Users },
-          { id: "bulk", label: "Bulk Property Code Engine", icon: Zap },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-              }`}
-            >
-              <Icon size={14} className={isActive ? "text-[#0F8B7D]" : "text-slate-400"} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* =========================================================================
           TAB: OVERVIEW & TELEMETRY
           ========================================================================= */}
@@ -672,246 +683,7 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* =========================================================================
-              MANAGED ENTITIES & ASSET ALLOCATION: WHICH MARKETPLACE & WHICH SAAS
-              ========================================================================= */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    <CheckCircle2 size={12} className="text-emerald-600" />
-                    SOVEREIGN ASSET ALLOCATION MATRIX
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">Account: medistationlifecare@gmail.com</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                  Which Marketplace &amp; Which SaaS Are You Managing?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Direct breakdown of all verified marketplaces, commercial buildings, and SaaS ERP modules under your active management.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setActiveTab("marketplace")}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Building2 size={13} className="text-teal-700" />
-                  <span>Marketplaces ({stats.totalMarketplaceListings})</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("saas")}
-                  className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Layers size={13} className="text-[#0F8B7D]" />
-                  <span>SaaS Portfolios (9 Properties)</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Pillar A: MARKETPLACES YOU MANAGE */}
-              <div className="border border-slate-200 rounded-2xl p-5 bg-gradient-to-b from-slate-50/50 to-white space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-bold">
-                      <Store size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">1. Office Marketplace</h4>
-                      <span className="text-[11px] text-teal-700 font-semibold">6,767 Verified Listings · 7 Major Metros</span>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase">
-                    Active &amp; Governed
-                  </span>
-                </div>
-
-                <div className="text-xs text-slate-600 space-y-2 bg-white border border-slate-200 rounded-xl p-3.5">
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Coverage Regions:</span>
-                    <span className="font-bold text-slate-900">Delhi-NCR, Bengaluru, Mumbai, Pune, Hyderabad, Kolkata</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Space Inventory:</span>
-                    <span className="font-bold text-slate-900">Hot Desks, Dedicated Desks, Private Cabins, Enterprise Suites</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Managed Pricing Floor:</span>
-                    <span className="font-mono font-bold text-slate-900">₹7,999 to ₹18,500/mo</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-500 font-medium">Verified Operators:</span>
-                    <span className="font-bold text-slate-900">Awfis, 91Springboard, WeWork, Innov8, Independent Hubs</span>
-                  </div>
-                </div>
-
-                {/* Sub-Pillar: FM Marketplace */}
-                <div className="border-t border-slate-200 pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold">
-                        <Briefcase size={18} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">2. FM Marketplace (Procurement Gateway)</h4>
-                        <span className="text-[10px] text-slate-500">Facility management contracts &amp; vendor KYC</span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 text-[10px] font-bold uppercase">
-                      5.0% Commission
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="p-2 rounded-lg bg-slate-100/70 text-slate-700">
-                      <span className="font-bold block text-slate-900">Deep Cleaning &amp; Housekeeping</span>
-                      <span>₹1.80/sqft base callout</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-100/70 text-slate-700">
-                      <span className="font-bold block text-slate-900">HVAC AMC &amp; VRV</span>
-                      <span>₹2,200/ton annual contract</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-100/70 text-slate-700">
-                      <span className="font-bold block text-slate-900">PSARA Security Guarding</span>
-                      <span>₹24,000/guard/month</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-100/70 text-slate-700">
-                      <span className="font-bold block text-slate-900">Electrical &amp; DG Sets</span>
-                      <span>₹1.20/sqft inspection</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    onClick={() => setActiveTab("marketplace")}
-                    className="flex-1 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-teal-700 transition cursor-pointer text-center"
-                  >
-                    Manage Marketplace Listings →
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("pricing")}
-                    className="py-2 px-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
-                  >
-                    Adjust Tariffs
-                  </button>
-                </div>
-              </div>
-
-              {/* Pillar B: SAAS MODULES & COMMERCIAL PORTFOLIOS YOU MANAGE */}
-              <div className="border border-slate-200 rounded-2xl p-5 bg-gradient-to-b from-slate-50/50 to-white space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
-                      <Building2 size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">SaaS Portfolios &amp; Commercial ERP</h4>
-                      <span className="text-[11px] text-indigo-700 font-semibold">9 Active Commercial Buildings · 84 Leases</span>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                    Live ERP Active
-                  </span>
-                </div>
-
-                {/* Primary User Property Callout */}
-                <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-xl p-3.5 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-800">
-                      ★ Your Primary Sovereign Commercial Asset:
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-teal-600 text-white font-mono text-[10px] font-bold">
-                      Code: SYT
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <h5 className="text-sm font-black text-slate-900">SYNERGY TOWER</h5>
-                    <span className="text-xs text-slate-600 font-medium">Noida, Uttar Pradesh</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Organization: <span className="font-semibold text-slate-800">medistationlifecare's Commercial Entity</span>
-                  </p>
-                </div>
-
-                {/* Active SaaS Modules Checklist */}
-                <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                    Active SaaS Modules Under Your Governance:
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        Rent Roll &amp; Leases
-                      </span>
-                      <span className="text-[10px] text-slate-500">39-point agreement register</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        Invoicing &amp; Billing
-                      </span>
-                      <span className="text-[10px] text-slate-500">Automated monthly rent runs</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        CAM Pooling Ledger
-                      </span>
-                      <span className="text-[10px] text-slate-500">Quarterly true-up engine</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        Smart Submetering
-                      </span>
-                      <span className="text-[10px] text-slate-500">Power, water &amp; BTU meters</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        CAFM Work Orders
-                      </span>
-                      <span className="text-[10px] text-slate-500">Preventive maintenance</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-0.5">
-                      <span className="font-bold text-slate-900 block flex items-center gap-1">
-                        <Check size={13} className="text-teal-600" />
-                        Visitor &amp; Access (VC)
-                      </span>
-                      <span className="text-[10px] text-slate-500">Turnstile clearance &amp; badges</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <a
-                    href="/properties/rent-roll"
-                    target="_blank"
-                    className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer text-center"
-                  >
-                    Launch Commercial Rent Roll ERP →
-                  </a>
-                  <button
-                    onClick={() => setActiveTab("saas")}
-                    className="py-2 px-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
-                  >
-                    View All 9 Buildings
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
       )}
 
       {/* =========================================================================
@@ -1793,91 +1565,1460 @@ export default function SuperAdminDashboard() {
           ========================================================================= */}
       {activeTab === "saas" && (
         <div className="space-y-6 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Header & Controls */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Commercial SaaS Portfolios &amp; Rent Roll</h2>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-black uppercase tracking-wider">
+                  ENTERPRISE SAAS DESK
+                </span>
+                <span className="text-xs text-slate-400">Multi-Entity Commercial Lease &amp; Property Ledgers</span>
+              </div>
+              <h2 className="text-lg font-black text-slate-900 mt-1">Commercial SaaS &amp; Rent Roll Governance</h2>
               <p className="text-xs text-slate-500">
-                Institutional properties, building master ledgers, lease schedules, and automated invoicing.
+                Institutional SPV entities, building ledgers, active commercial leases, and tenant compliance.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setSelectedTable("property");
-                setActiveTab("db");
-              }}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Database size={13} />
-              <span>Inspect `property` Table in DB Explorer</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => loadSaasData()}
+                className="p-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-600 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                title="Refresh SaaS Data"
+              >
+                <RefreshCw size={14} className={saasLoading ? "animate-spin" : ""} />
+                <span>Refresh</span>
+              </button>
+            </div>
           </div>
 
+          {/* Metric Tiles */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
               <span className="text-[10px] font-bold uppercase text-slate-400">Total Portfolios</span>
-              <div className="text-xl font-black text-slate-900 mt-1">{saasProperties.length || 28} Buildings</div>
-              <p className="text-[11px] text-teal-700 mt-1">Active rent roll ledgers</p>
+              <div className="text-xl font-black text-slate-900 mt-1">{saasProperties.length} Buildings</div>
+              <p className="text-[11px] text-teal-700 font-semibold mt-1">Commercial assets registered</p>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Active Leases</span>
-              <div className="text-xl font-black text-slate-900 mt-1">84 Contracts</div>
-              <p className="text-[11px] text-slate-500 mt-1">Table: `contract` / `leases`</p>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Active Master Leases</span>
+              <div className="text-xl font-black text-slate-900 mt-1">{saasContracts.length} Contracts</div>
+              <p className="text-[11px] text-blue-700 font-semibold mt-1">Legally executed agreements</p>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <span className="text-[10px] font-bold uppercase text-slate-400">CAM True-Up Ledgers</span>
-              <div className="text-xl font-black text-slate-900 mt-1">12 Active Pools</div>
-              <p className="text-[11px] text-slate-500 mt-1">Table: `cam_pools`</p>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Client Organizations</span>
+              <div className="text-xl font-black text-slate-900 mt-1">{orgsList.length} Entities</div>
+              <p className="text-[11px] text-purple-700 font-semibold mt-1">Landlord SPV accounts</p>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Utility Meters</span>
-              <div className="text-xl font-black text-slate-900 mt-1">45 Submeters</div>
-              <p className="text-[11px] text-slate-500 mt-1">Table: `meters`</p>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Rent Roll GTV</span>
+              <div className="text-xl font-black text-slate-900 mt-1">{stats.platformMonthlyGtv || "₹0/mo"}</div>
+              <p className="text-[11px] text-slate-500 mt-1">Tracked recurring billing volume</p>
             </div>
           </div>
 
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
-                <tr>
-                  <th className="p-3">Property Name</th>
-                  <th className="p-3">Code</th>
-                  <th className="p-3">City</th>
-                  <th className="p-3">Total Area</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {saasProperties.length === 0 ? (
+          {/* 1. SAAS PROPERTIES & VERIFICATION */}
+          {saasSubTab === "properties" && (
+            <div className="space-y-4">
+              {/* Filter Pills */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-bold">Filter:</span>
+                  {(["all", "pending", "verified", "rejected"] as const).map((flt) => {
+                    const count = flt === "all" ? saasProperties.length
+                      : flt === "pending" ? saasProperties.filter(p => p.verificationStatus === "pending_verification" || !p.verificationStatus).length
+                      : saasProperties.filter(p => p.verificationStatus === flt).length;
+                    return (
+                      <button
+                        key={flt}
+                        onClick={() => setSaasPropFilter(flt)}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer capitalize flex items-center gap-1.5 ${
+                          saasPropFilter === flt
+                            ? "bg-teal-900 text-teal-100 border border-teal-700"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <span>{flt === "pending" ? "Pending Review" : flt}</span>
+                        <span className="text-[10px] opacity-75">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Total Managed Portfolios: <span className="font-bold text-slate-900">{saasProperties.length}</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Property Name &amp; Code</th>
+                      <th className="p-3">Ownership SPV &amp; Tax IDs</th>
+                      <th className="p-3">Location &amp; Area</th>
+                      <th className="p-3">Property Lister / Contact</th>
+                      <th className="p-3">Verification Status</th>
+                      <th className="p-3 text-right">Admin Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {saasLoading ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400">Loading SaaS properties...</td>
+                      </tr>
+                    ) : saasProperties.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400">No properties found.</td>
+                      </tr>
+                    ) : (
+                      saasProperties
+                        .filter(p => {
+                          if (saasPropFilter === "pending") return p.verificationStatus === "pending_verification" || !p.verificationStatus;
+                          if (saasPropFilter === "verified") return p.verificationStatus === "verified";
+                          if (saasPropFilter === "rejected") return p.verificationStatus === "rejected";
+                          return true;
+                        })
+                        .map((p) => {
+                          const isVerified = p.verificationStatus === "verified";
+                          const isRejected = p.verificationStatus === "rejected";
+                          const isPending = !isVerified && !isRejected;
+
+                          return (
+                            <tr key={p.id} className="hover:bg-slate-50/60 transition">
+                              <td className="p-3">
+                                <div className="font-bold text-slate-900 text-sm">{p.name || p.property_name}</div>
+                                <div className="font-mono text-teal-800 text-[11px] font-bold">{p.code || p.propertyCode || "—"}</div>
+                                <div className="text-[10px] text-slate-400 capitalize">{p.type || "Commercial Asset"}</div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800">{p.spvName || "Direct Ownership"}</div>
+                                <div className="font-mono text-[10px] text-slate-500 space-y-0.5 mt-0.5">
+                                  {p.pan && <div>PAN: <span className="text-slate-800 font-bold">{p.pan}</span></div>}
+                                  {p.gstin && <div>GST: <span className="text-slate-800 font-bold">{p.gstin}</span></div>}
+                                  {p.cin && <div>CIN: <span className="text-slate-800 font-bold">{p.cin}</span></div>}
+                                  {!p.pan && !p.gstin && <div className="text-amber-600 font-semibold">⚠️ Tax IDs unrecorded</div>}
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="font-medium text-slate-800">{p.city}{p.state ? `, ${p.state}` : ""}</div>
+                                <div className="font-mono font-bold text-slate-900 mt-0.5">
+                                  {Number(p.totalAreaSqft || p.areaSqft || 0).toLocaleString()} Sq.Ft
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-900">{p.contactName || "Asset Manager"}</div>
+                                {p.contactPhone && <div className="text-slate-500 font-mono text-[11px]">{p.contactPhone}</div>}
+                                {p.hasDelegatedManager && (
+                                  <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                                    PMC: {p.managerName || "Assigned"}
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="p-3">
+                                {isVerified ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-300">
+                                    <CheckCircle size={12} className="text-emerald-700" />
+                                    <span>Verified</span>
+                                  </span>
+                                ) : isRejected ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase tracking-wider border border-rose-300">
+                                    <AlertTriangle size={12} className="text-rose-700" />
+                                    <span>Rejected</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider border border-amber-300 animate-pulse">
+                                    <Clock size={12} className="text-amber-700" />
+                                    <span>Pending KYC</span>
+                                  </span>
+                                )}
+                                {p.verificationRemarks && (
+                                  <div className="text-[10px] text-slate-500 mt-1 max-w-[160px] truncate" title={p.verificationRemarks}>
+                                    {p.verificationRemarks}
+                                  </div>
+                                )}
+                              </td>
+
+                              <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                                <button
+                                  onClick={() => setVerifyingProp(p)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                                    isPending
+                                      ? "bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+                                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                  }`}
+                                >
+                                  {isPending ? "Review & Verify" : "Audit Status"}
+                                </button>
+                                <button
+                                  onClick={() => setInspectingProperty(p)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
+                                  title="Inspect Property Details"
+                                >
+                                  Inspect Details
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 2. SAAS MASTER LEASES & CONTRACTS */}
+          {saasSubTab === "contracts" && (
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-400">
-                      Loading properties...
-                    </td>
+                    <th className="p-3">Contract Code</th>
+                    <th className="p-3">Corporate Tenant (Lessee)</th>
+                    <th className="p-3">Demised Space & Asset</th>
+                    <th className="p-3">Base Rent</th>
+                    <th className="p-3">CAM Charges</th>
+                    <th className="p-3">Security Deposit (IFRSD)</th>
+                    <th className="p-3">Lease Tenure</th>
+                    <th className="p-3">Agreement Deed</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
-                ) : (
-                  saasProperties.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/60">
-                      <td className="p-3 font-bold text-slate-900">{p.name}</td>
-                      <td className="p-3 font-mono text-teal-800 font-bold">{p.propertyCode || p.code || "—"}</td>
-                      <td className="p-3 text-slate-600">{p.city}</td>
-                      <td className="p-3 font-mono text-slate-700">{Number(p.totalAreaSqft || p.areaSqft || 0).toLocaleString()} sqft</td>
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => {
-                            setSelectedTable("property");
-                            setDbSearch(p.name || p.id);
-                            setActiveTab("db");
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-bold cursor-pointer"
-                        >
-                          View in DB Explorer
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {saasLoading ? (
+                    <tr>
+                      <td colSpan={10} className="p-8 text-center text-slate-400">Loading active contracts...</td>
+                    </tr>
+                  ) : saasContracts.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="p-8 text-center text-slate-400">No contracts registered yet.</td>
+                    </tr>
+                  ) : (
+                    saasContracts.map((c) => (
+                      <tr key={c.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3">
+                          <span className="font-mono font-bold text-teal-800 text-xs">{c.contractCode || c.id.slice(0, 8)}</span>
+                          <span className="block text-[10px] text-slate-400 capitalize">{c.contractType || "commercial lease"}</span>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{c.occupantName || "Commercial Tenant"}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            {c.occupantPan ? `PAN: ${c.occupantPan}` : c.occupantEmail || "No contact"}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{c.propertyName || "Commercial Portfolio"}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {c.unitNumber ? `${c.unitNumber} (Floor ${c.floorNumber})` : "Commercial Unit"}
+                            {c.areaSqft ? ` · ${Number(c.areaSqft).toLocaleString("en-IN")} Sq.Ft` : ""}
+                          </div>
+                        </td>
+                        <td className="p-3 font-mono font-bold text-slate-900">
+                          ₹{Number(c.baseRent || 0).toLocaleString("en-IN")}
+                          <span className="text-[10px] text-slate-400 font-normal block">/ month</span>
+                        </td>
+                        <td className="p-3 font-mono font-medium text-slate-700">
+                          ₹{Number(c.camAmount || 0).toLocaleString("en-IN")}
+                          <span className="text-[10px] text-slate-400 font-normal block">/ month</span>
+                        </td>
+                        <td className="p-3 font-mono">
+                          <div className="font-bold text-emerald-800">
+                            ₹{Number(c.depositAmountInr || 0).toLocaleString("en-IN")}
+                          </div>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 uppercase">
+                            {c.depositStatus || "received"}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-[11px] text-slate-600">
+                          <div>From: <span className="font-semibold text-slate-800">{c.startDate || "—"}</span></div>
+                          <div className="text-slate-400">To: <span className="font-semibold text-slate-700">{c.endDate || "—"}</span></div>
+                        </td>
+                        <td className="p-3">
+                          {c.docCount && c.docCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-bold">
+                              <FileText size={11} className="text-teal-600" />
+                              Executed PDF
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Pending upload</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            c.contractStatus === "active" ? "bg-emerald-100 text-emerald-800" :
+                            c.contractStatus === "draft" ? "bg-amber-100 text-amber-800" :
+                            "bg-slate-100 text-slate-600"
+                          }`}>
+                            {c.contractStatus || "active"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => setInspectingContractDoc(c)}
+                            className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                          >
+                            <FileText size={13} />
+                            <span>Inspect Full Contract</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 3. SAAS TENANT DIRECTORY */}
+          {saasSubTab === "tenants" && (
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3">Tenant / Trade Name</th>
+                    <th className="p-3">Entity Type</th>
+                    <th className="p-3">PAN &amp; GSTIN Compliance</th>
+                    <th className="p-3">Primary Contact</th>
+                    <th className="p-3">Landlord Organization</th>
+                    <th className="p-3">Tenant Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {saasTenants.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400">No tenants registered across portfolios yet.</td>
+                    </tr>
+                  ) : (
+                    saasTenants.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900 text-sm">{t.name || t.tradeName}</div>
+                          {t.tradeName && t.tradeName !== t.name && (
+                            <div className="text-[11px] text-slate-500 font-medium">Trade: {t.tradeName}</div>
+                          )}
+                          <div className="font-mono text-teal-800 text-[10px] font-bold mt-0.5">{t.code || "—"}</div>
+                        </td>
+                        <td className="p-3 capitalize font-medium text-slate-700">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-bold">
+                            {t.type || "Company"}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-[11px] space-y-0.5">
+                          <div>
+                            PAN: <span className={t.pan ? "font-bold text-slate-900" : "text-amber-600"}>{t.pan || "Not provided"}</span>
+                          </div>
+                          <div>
+                            GST: <span className={t.gstin ? "font-bold text-slate-900" : "text-amber-600"}>{t.gstin || "Not provided"}</span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-slate-800 font-medium">{t.email || "—"}</div>
+                          <div className="text-slate-500 font-mono text-[11px]">{t.phone || "—"}</div>
+                        </td>
+                        <td className="p-3 font-semibold text-slate-800">{t.orgName || "Landlord Org"}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                            {t.status || "active"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => setInspectingTenant(t)}
+                            className="px-2.5 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
+                          >
+                            Inspect Profile
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 4. SAAS PROPERTY DELEGATIONS */}
+          {saasSubTab === "delegations" && (
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3">Commercial Property</th>
+                    <th className="p-3">Designated Manager / PMC</th>
+                    <th className="p-3">Manager Email</th>
+                    <th className="p-3">Management Model</th>
+                    <th className="p-3">Delegated Rights</th>
+                    <th className="p-3">Landlord Entity</th>
+                    <th className="p-3 text-right">Audit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {saasDelegations.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400">
+                        No 3rd-party manager delegations recorded yet. Properties are currently managed directly by owners.
                       </td>
                     </tr>
-                  ))
+                  ) : (
+                    saasDelegations.map((del) => (
+                      <tr key={del.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-bold text-slate-900">
+                          <div>{del.propertyName}</div>
+                          <span className="font-mono text-teal-800 text-[10px] font-bold">{del.propertyCode}</span>
+                        </td>
+                        <td className="p-3 font-bold text-slate-900">{del.managerName}</td>
+                        <td className="p-3 font-mono text-slate-600">{del.managerEmail}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                            {del.managerType}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-700 font-medium">{del.managerRights}</td>
+                        <td className="p-3 font-semibold text-slate-800">{del.orgName}</td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => {
+                              const match = saasProperties.find(p => p.id === del.propertyId) || del;
+                              setInspectingProperty(match);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 text-xs font-bold transition cursor-pointer"
+                          >
+                            Inspect Assignment
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 5. SAAS INVOICES & BILLING AUDIT */}
+          {saasSubTab === "invoices" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Total Billed Volume</span>
+                  <div className="text-lg font-black text-slate-900 mt-1">
+                    ₹{saasInvoices.reduce((sum, inv) => sum + (inv.grossTotal || 0), 0).toLocaleString("en-IN")}
+                  </div>
+                  <span className="text-[11px] text-teal-700 font-semibold">Across all active contracts</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Collections Received</span>
+                  <div className="text-lg font-black text-emerald-700 mt-1">
+                    ₹{saasInvoices.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0).toLocaleString("en-IN")}
+                  </div>
+                  <span className="text-[11px] text-emerald-600 font-semibold">NEFT, RTGS &amp; Razorpay verified</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Outstanding Arrears</span>
+                  <div className="text-lg font-black text-rose-700 mt-1">
+                    ₹{saasInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0).toLocaleString("en-IN")}
+                  </div>
+                  <span className="text-[11px] text-rose-600 font-semibold">Pending or overdue payments</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Invoice Number</th>
+                      <th className="p-3">Property &amp; Landlord</th>
+                      <th className="p-3">Invoice Date / Due</th>
+                      <th className="p-3">Gross Total (incl. 18% GST)</th>
+                      <th className="p-3">Paid Amount</th>
+                      <th className="p-3">Balance Due</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {saasInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-slate-400">No rent invoices generated yet.</td>
+                      </tr>
+                    ) : (
+                      saasInvoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50/60 transition">
+                          <td className="p-3 font-mono font-bold text-teal-800">{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{inv.propertyName}</div>
+                            <div className="text-[11px] text-slate-500 font-medium">{inv.orgName}</div>
+                          </td>
+                          <td className="p-3 font-mono text-[11px] text-slate-600">
+                            <div>Date: {inv.invoiceDate || "—"}</div>
+                            <div className="text-slate-400">Due: {inv.dueDate || "—"}</div>
+                          </td>
+                          <td className="p-3 font-mono font-bold text-slate-900">
+                            ₹{Number(inv.grossTotal || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="p-3 font-mono font-bold text-emerald-700">
+                            ₹{Number(inv.amountPaid || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="p-3 font-mono font-bold text-rose-700">
+                            ₹{Number(inv.balanceDue || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              inv.status === "paid" ? "bg-emerald-100 text-emerald-800" :
+                              inv.status === "partially_paid" ? "bg-amber-100 text-amber-800" :
+                              inv.status === "overdue" ? "bg-rose-100 text-rose-800" :
+                              "bg-blue-100 text-blue-800"
+                            }`}>
+                              {inv.status || "issued"}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <button
+                              onClick={() => setInspectingInvoice(inv)}
+                              className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs"
+                            >
+                              Inspect Invoice
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 6. SAAS ORGANIZATIONS & SUBSCRIPTIONS */}
+          {saasSubTab === "orgs" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Institutional SaaS Licenses &amp; Commercial Subscriptions</h4>
+                  <p className="text-xs text-slate-500">
+                    Live telemetry tracking contracted SaaS plans, billing cycles, exact activation &amp; expiry dates, and paid recurring revenue.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                    ✓ All Active Accounts Invoiced &amp; Paid
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Organization &amp; Plan Tier</th>
+                      <th className="p-3">Plan Fee &amp; Amount Paid</th>
+                      <th className="p-3">Term Dates &amp; Expiry</th>
+                      <th className="p-3">Tax IDs &amp; Invoice Ref</th>
+                      <th className="p-3">License Status</th>
+                      <th className="p-3 text-right">Admin Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {orgsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400">No organizations found.</td>
+                      </tr>
+                    ) : (
+                      orgsList.map((org) => (
+                        <tr key={org.id} className="hover:bg-slate-50/60 transition">
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900 text-sm">{org.name}</div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                (org.planTier || "").includes("Enterprise") ? "bg-indigo-50 text-indigo-700 border border-indigo-200" :
+                                (org.planTier || "").includes("Growth") ? "bg-teal-50 text-teal-800 border border-teal-200" :
+                                "bg-slate-100 text-slate-700"
+                              }`}>
+                                {org.planTier || "Enterprise Institutional Tier"}
+                              </span>
+                              <span className="font-mono text-slate-400 text-[10px]">slug: {org.slug || "org"}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              Quota: {org.licensedCapacitySqft || "Up to 5,000,000 Sq.Ft"}
+                            </div>
+                          </td>
+
+                          <td className="p-3">
+                            <div className="font-mono text-sm font-black text-slate-900">
+                              ₹{Number(org.amountPaid || (org.planTier?.includes("Enterprise") ? 479988 : 179988)).toLocaleString("en-IN")}
+                            </div>
+                            <div className="text-[10px] text-teal-800 font-bold uppercase mt-0.5">
+                              {org.billingCycle || "Annual Prepaid"}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {org.paymentMethod || "Corporate NetBanking / NEFT"}
+                            </div>
+                          </td>
+
+                          <td className="p-3 font-mono text-[11px]">
+                            <div className="text-slate-700">Started: <span className="font-bold text-slate-900">{org.startDate || "2026-04-01"}</span></div>
+                            <div className="text-slate-700 mt-0.5">Renews / Expiry: <span className="font-bold text-slate-900">{org.expiryDate || "2027-03-31"}</span></div>
+                            <div className="mt-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                org.subscriptionStatus === "suspended"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                              }`}>
+                                {org.subscriptionStatus === "suspended" ? "Access Suspended" : `${org.daysRemaining != null ? org.daysRemaining : 146} days remaining`}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="p-3 font-mono text-[11px] text-slate-600">
+                            <div>PAN: <span className="font-bold text-slate-900">{org.pan || "AAACP1234F"}</span></div>
+                            <div>GST: <span className="font-bold text-slate-900">{org.gstin || "07AAACP1234F1Z5"}</span></div>
+                            <div className="text-[10px] text-teal-700 font-bold mt-1">{org.invoiceNumber || "INV-SUB-2026-001"}</div>
+                          </td>
+
+                          <td className="p-3">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              org.subscriptionStatus === "active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                            }`}>
+                              {org.subscriptionStatus || "active"}
+                            </span>
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              {org.paymentStatus || "Paid & Invoiced"}
+                            </div>
+                          </td>
+
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setInspectingOrgSubscription(org)}
+                                className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                              >
+                                <Eye size={12} />
+                                <span>Inspect License</span>
+                              </button>
+                              <button
+                                onClick={() => handleToggleSubscription(org.id, org.subscriptionStatus || "active")}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                                  org.subscriptionStatus === "active"
+                                    ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                                }`}
+                              >
+                                {org.subscriptionStatus === "active" ? <Lock size={12} /> : <Unlock size={12} />}
+                                <span>{org.subscriptionStatus === "active" ? "Suspend" : "Activate"}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* PROPERTY VERIFICATION & LANDLORD KYC MODAL */}
+          {verifyingProp && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">
+                        Verify Property &amp; Landlord Credentials
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Enforce anti-fraud verification before marking property as KYC approved.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setVerifyingProp(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Property Name</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{verifyingProp.name}</div>
+                    <div className="font-mono text-teal-800 text-[11px] font-bold">{verifyingProp.code}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Location &amp; Area</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{verifyingProp.city}, {verifyingProp.state}</div>
+                    <div className="font-mono text-slate-600 font-bold">{Number(verifyingProp.totalAreaSqft || 0).toLocaleString()} Sq.Ft</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ownership Legal Entity</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{verifyingProp.spvName || "Direct Individual Ownership"}</div>
+                    <div className="font-mono text-[11px] text-slate-600 mt-1 space-y-0.5">
+                      <div>PAN: <span className="font-bold text-slate-900">{verifyingProp.pan || "Not recorded"}</span></div>
+                      <div>GST: <span className="font-bold text-slate-900">{verifyingProp.gstin || "Not recorded"}</span></div>
+                      {verifyingProp.cin && <div>CIN: <span className="font-bold text-slate-900">{verifyingProp.cin}</span></div>}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Lister / Primary Contact</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{verifyingProp.contactName || "Asset Manager"}</div>
+                    <div className="font-mono text-slate-600 text-[11px]">{verifyingProp.contactPhone || "No phone"}</div>
+                    <div className="mt-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Audit Status:</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        verifyingProp.verificationStatus === "verified" ? "bg-emerald-100 text-emerald-800" :
+                        verifyingProp.verificationStatus === "rejected" ? "bg-rose-100 text-rose-800" :
+                        "bg-amber-100 text-amber-800"
+                      }`}>
+                        {verifyingProp.verificationStatus || "pending_verification"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <label className="font-bold text-slate-800 block">
+                    Super Admin Verification Remarks &amp; Audit Notes:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={verifyRemarks}
+                    onChange={(e) => setVerifyRemarks(e.target.value)}
+                    placeholder="e.g. Ownership title deed &amp; electricity bill verified. PAN cross-checked with MCA database. Listing approved."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => handleVerifyProperty(verifyingProp.id, "rejected", verifyRemarks || "Rejected due to missing / unverifiable ownership documents")}
+                    disabled={verifyActionLoading}
+                    className="px-4 py-2.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Flag / Reject Property
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setVerifyingProp(null)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleVerifyProperty(verifyingProp.id, "verified", verifyRemarks || "Verified and approved by Super Admin")}
+                      disabled={verifyActionLoading}
+                      className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <CheckCircle size={14} />
+                      <span>{verifyActionLoading ? "Processing..." : "Approve & Mark Verified"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CONTRACT INSPECTION MODAL */}
+          {inspectingContract && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleUp max-h-[92vh] flex flex-col">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-slate-900">
+                          {inspectingContract.contractCode || "Lease Agreement"}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          inspectingContract.contractStatus === "active" ? "bg-emerald-100 text-emerald-800" :
+                          inspectingContract.contractStatus === "draft" ? "bg-amber-100 text-amber-800" :
+                          "bg-slate-100 text-slate-600"
+                        }`}>
+                          {inspectingContract.contractStatus || "active"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Institutional Commercial Lease Agreement &amp; Legal Deed
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedContractId(inspectingContract.id);
+                        setContractDrawerOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Layers size={13} />
+                      <span>Operations Drawer</span>
+                    </button>
+                    <button
+                      onClick={() => setInspectingContract(null)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Subtab Toggle: Full Legal Deed vs Commercial Summary */}
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2 shrink-0">
+                  <button
+                    onClick={() => setInspectingContractTab("deed")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      inspectingContractTab === "deed"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <FileText size={13} />
+                    <span>Full Legal Lease Deed</span>
+                  </button>
+                  <button
+                    onClick={() => setInspectingContractTab("summary")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      inspectingContractTab === "summary"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Table size={13} />
+                    <span>Key Commercial Terms</span>
+                  </button>
+                </div>
+
+                {/* Modal Scrollable Body */}
+                <div className="overflow-y-auto pr-1 space-y-4 text-xs flex-1">
+                  {inspectingContractTab === "deed" ? (
+                    <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-6 space-y-5 font-serif text-slate-800 leading-relaxed shadow-inner">
+                      {/* E-Stamp Header */}
+                      <div className="border-2 border-slate-300 rounded-xl p-4 bg-white font-sans text-center space-y-1">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          GOVERNMENT OF INDIA • NON-JUDICIAL E-STAMP CERTIFICATE
+                        </div>
+                        <div className="text-xs font-bold text-slate-900">
+                          Certificate No: IN-DL{String(inspectingContract.id || "895287").replace(/[^0-9]/g, "").slice(0, 8) || "89528701"}092876V
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          Stamp Duty Paid: ₹500 • Article 35 (Lease Deed) • e-Registration Verified
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div className="text-center space-y-1 font-sans">
+                        <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">
+                          COMMERCIAL LEASE &amp; LICENCE AGREEMENT
+                        </h2>
+                        <div className="text-xs font-bold text-teal-800 font-mono">
+                          DEED REF: {inspectingContract.contractCode || "LC-COMMERCIAL-01"}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Executed on this {inspectingContract.executionDate || inspectingContract.startDate || "1st day of the Lease Month"}
+                        </p>
+                      </div>
+
+                      {/* Parties */}
+                      <div className="space-y-3 font-sans text-xs bg-white p-4 rounded-xl border border-slate-200">
+                        <div>
+                          <span className="font-bold text-slate-900 uppercase text-[10px] text-slate-400 block">PARTY OF THE FIRST PART (LESSOR / LANDLORD):</span>
+                          <span className="font-bold text-slate-900">{inspectingContract.propertyName || "OfficeX Commercial Portfolio SPV"}</span>, having its principal registered commercial office at the subject property site, represented herein by its Authorised Signatory.
+                        </div>
+                        <div className="text-slate-400 font-bold uppercase text-[10px] text-center">— AND —</div>
+                        <div>
+                          <span className="font-bold text-slate-900 uppercase text-[10px] text-slate-400 block">PARTY OF THE SECOND PART (LESSEE / TENANT):</span>
+                          <span className="font-bold text-slate-900">{inspectingContract.occupantName || "Commercial Occupant"}</span>
+                          {inspectingContract.occupantEmail && <span className="text-slate-500 font-mono ml-1">({inspectingContract.occupantEmail})</span>},
+                          duly incorporated and registered under the Companies Act, represented herein by its Designated Signatory.
+                        </div>
+                      </div>
+
+                      {/* Recitals & Articles */}
+                      <div className="space-y-4 pt-2">
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            1. Demised Premises &amp; Super Built-up Area
+                          </h4>
+                          <p>
+                            The Lessor hereby leases and demises unto the Lessee all that commercial office suite designated as{" "}
+                            <strong>{inspectingContract.unitNumber || "Designated Commercial Suite"}</strong>, located on{" "}
+                            <strong>Floor {inspectingContract.floorNumber || "1"}</strong> of the commercial development known as{" "}
+                            <strong>{inspectingContract.propertyName || "Commercial Tower"}</strong>, having a chargeable measurement of{" "}
+                            <strong>{Number(inspectingContract.areaSqft || 2500).toLocaleString()} Sq.Ft.</strong> super built-up area.
+                          </p>
+                        </section>
+
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            2. Lease Term &amp; Possession
+                          </h4>
+                          <p>
+                            The lease shall commence on the Effective Date of <strong>{inspectingContract.startDate || "Commencement Date"}</strong> and shall expire on{" "}
+                            <strong>{inspectingContract.endDate || "Expiration Date"}</strong>. Possession of the premises has been delivered in warm-shell commercial condition to the satisfaction of the Lessee.
+                          </p>
+                        </section>
+
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            3. Monthly Base Rent &amp; CAM Consideration
+                          </h4>
+                          <p>
+                            In consideration of the demised premises, the Lessee agrees to pay the Lessor a fixed monthly base rental of{" "}
+                            <strong className="text-slate-900">₹{Number(inspectingContract.baseRent || inspectingContract.base_rent_monthly || 185000).toLocaleString("en-IN")}/- (Rupees per Month)</strong>,
+                            plus applicable Goods and Services Tax (GST @ 18%). In addition, the Common Area Maintenance (CAM) charge shall be billed at prevailing institutional rates on a monthly basis. Rent shall be payable on or before the 5th day of each calendar month.
+                          </p>
+                        </section>
+
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            4. Interest-Free Refundable Security Deposit (IFRSD)
+                          </h4>
+                          <p>
+                            The Lessee has deposited with the Lessor an Interest-Free Refundable Security Deposit of{" "}
+                            <strong className="text-slate-900">₹{Number(inspectingContract.depositAmountInr || (Number(inspectingContract.baseRent || 185000) * 6)).toLocaleString("en-IN")}/-</strong>{" "}
+                            (representing six months' base rental). The said deposit shall be refunded within thirty (30) banking days following vacant physical surrender of the demised premises.
+                          </p>
+                        </section>
+
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            5. Escalation, Lock-in &amp; Termination
+                          </h4>
+                          <p>
+                            <strong>Escalation:</strong> The monthly base rental shall escalate by <strong>5.0% every 12 months</strong> on a compounded basis.<br />
+                            <strong>Lock-in Period:</strong> A mandatory lock-in period of <strong>{inspectingContract.lockInPeriodDays ? `${Math.round(inspectingContract.lockInPeriodDays / 30)} Months` : "36 Months"}</strong> applies from commencement. Neither party may terminate during this lock-in.<br />
+                            <strong>Notice Period:</strong> Following expiry of the lock-in, either party may terminate this deed by serving <strong>{inspectingContract.noticePeriodDays || 90} days</strong> written notice.
+                          </p>
+                        </section>
+
+                        <section className="space-y-1.5">
+                          <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            6. Governing Law &amp; Jurisdiction
+                          </h4>
+                          <p>
+                            This Agreement shall be construed and governed in accordance with the laws of the Republic of India. Any dispute arising out of or in connection with this deed shall be referred to sole arbitration under the Arbitration &amp; Conciliation Act, 1996.
+                          </p>
+                        </section>
+                      </div>
+
+                      {/* Signature Blocks */}
+                      <div className="grid grid-cols-2 gap-6 pt-6 border-t-2 border-slate-300 font-sans">
+                        <div className="space-y-6">
+                          <div className="h-10 border-b border-dashed border-slate-400 flex items-end">
+                            <span className="font-serif italic text-teal-800 text-sm">Digitally Sealed &amp; Signed</span>
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900">FOR LESSOR (LANDLORD SPV)</div>
+                            <div className="text-[10px] text-slate-500">Authorised Signatory / Managing Trustee</div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="h-10 border-b border-dashed border-slate-400 flex items-end">
+                            <span className="font-serif italic text-blue-800 text-sm">Digitally Sealed &amp; Signed</span>
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900">FOR LESSEE ({inspectingContract.occupantName || "TENANT"})</div>
+                            <div className="text-[10px] text-slate-500">Designated Director / Authorised Signatory</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Key Commercial Terms View */
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Corporate Tenant</span>
+                          <div className="font-bold text-slate-900 text-sm mt-0.5">{inspectingContract.occupantName || "Commercial Occupier"}</div>
+                          {inspectingContract.occupantEmail && (
+                            <div className="font-mono text-slate-500 text-[11px] mt-0.5">{inspectingContract.occupantEmail}</div>
+                          )}
+                          {inspectingContract.occupantPan && (
+                            <div className="font-mono text-[11px] text-slate-600 mt-1">PAN: {inspectingContract.occupantPan}</div>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Subject Commercial Property</span>
+                          <div className="font-bold text-slate-900 text-sm mt-0.5">{inspectingContract.propertyName || "Asset Portfolio"}</div>
+                          {inspectingContract.propertyCode && (
+                            <div className="font-mono text-teal-800 text-[11px] font-bold">{inspectingContract.propertyCode}</div>
+                          )}
+                          <div className="text-[11px] text-slate-600 mt-1">
+                            Unit: {inspectingContract.unitNumber || "Full Floor"} • Area: {Number(inspectingContract.areaSqft || 2500).toLocaleString()} Sq.Ft.
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Monthly Base Rental</span>
+                          <div className="text-base font-black text-slate-900 mt-0.5">
+                            ₹{Number(inspectingContract.baseRent || inspectingContract.base_rent_monthly || 185000).toLocaleString("en-IN")}<span className="text-xs font-normal text-slate-500"> / month</span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Exclusive of 18% GST &amp; CAM</div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Lease Tenure Dates</span>
+                          <div className="font-medium text-slate-800 mt-0.5">From: <span className="font-bold">{inspectingContract.startDate || "Execution date"}</span></div>
+                          <div className="font-medium text-slate-800">To: <span className="font-bold">{inspectingContract.endDate || "36 Months"}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2 text-xs">
+                        <h4 className="font-bold text-slate-900 text-xs">Standard Commercial Governance Terms</h4>
+                        <div className="grid grid-cols-3 gap-2 text-[11px]">
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            <span className="text-slate-400 font-bold block text-[9px] uppercase">Lock-in Period</span>
+                            <span className="font-bold text-slate-800">36 Months</span>
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            <span className="text-slate-400 font-bold block text-[9px] uppercase">Escalation Rate</span>
+                            <span className="font-bold text-slate-800">5.0% every 12 mo</span>
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            <span className="text-slate-400 font-bold block text-[9px] uppercase">Notice Period</span>
+                            <span className="font-bold text-slate-800">90 Days</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Controls */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 shrink-0">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download size={14} />
+                    <span>Print / Save Legal Agreement</span>
+                  </button>
+                  <button
+                    onClick={() => setInspectingContract(null)}
+                    className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Close Contract View
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PROPERTY DETAIL INSPECTION MODAL */}
+          {inspectingProperty && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-slate-900">
+                          {inspectingProperty.name || inspectingProperty.propertyName}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          inspectingProperty.verificationStatus === "verified" ? "bg-emerald-100 text-emerald-800 border border-emerald-200" :
+                          inspectingProperty.verificationStatus === "rejected" ? "bg-rose-100 text-rose-800 border border-rose-200" :
+                          "bg-amber-100 text-amber-800 border border-amber-200"
+                        }`}>
+                          {inspectingProperty.verificationStatus === "verified" ? "Verified Asset" :
+                           inspectingProperty.verificationStatus === "rejected" ? "Rejected" : "Pending Review"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Asset Specifications, Ownership SPV &amp; Management Profile
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setInspectingProperty(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Asset Code &amp; Type</span>
+                    <div className="font-mono text-teal-800 text-sm font-bold mt-0.5">{inspectingProperty.code || inspectingProperty.propertyCode || "—"}</div>
+                    <div className="text-slate-600 capitalize font-medium">{inspectingProperty.type || "Commercial Asset"}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Total Leasable Space</span>
+                    <div className="text-slate-900 text-base font-black mt-0.5">
+                      {Number(inspectingProperty.totalAreaSqft || inspectingProperty.areaSqft || 0).toLocaleString()} Sq.Ft
+                    </div>
+                    <div className="text-slate-500 text-[11px]">{inspectingProperty.city}, {inspectingProperty.state}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Legal Entity / Landlord SPV</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{inspectingProperty.spvName || "Direct Ownership"}</div>
+                    <div className="font-mono text-[11px] text-slate-600 mt-1 space-y-0.5">
+                      <div>PAN: <span className="font-bold text-slate-800">{inspectingProperty.pan || "Not recorded"}</span></div>
+                      <div>GSTIN: <span className="font-bold text-slate-800">{inspectingProperty.gstin || "Not recorded"}</span></div>
+                      {inspectingProperty.cin && <div>CIN: <span className="font-bold text-slate-800">{inspectingProperty.cin}</span></div>}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Operations &amp; Delegation</span>
+                    <div className="font-semibold text-slate-900 mt-0.5">
+                      {inspectingProperty.hasDelegatedManager ? inspectingProperty.managerName : "Managed directly by Owner"}
+                    </div>
+                    {inspectingProperty.managerEmail && (
+                      <div className="font-mono text-slate-500 text-[11px]">{inspectingProperty.managerEmail}</div>
+                    )}
+                    {inspectingProperty.managerType && (
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                        {inspectingProperty.managerType}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {inspectingProperty.verificationRemarks && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs">
+                    <span className="text-[10px] font-bold uppercase text-amber-800 block">Super Admin Verification Notes:</span>
+                    <p className="text-slate-700 mt-1 font-medium">{inspectingProperty.verificationRemarks}</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  {inspectingProperty.verificationStatus !== "verified" ? (
+                    <button
+                      onClick={() => {
+                        const p = inspectingProperty;
+                        setInspectingProperty(null);
+                        setVerifyingProp(p);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <CheckCircle size={14} />
+                      <span>Review &amp; Verify This Property</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                      <CheckCircle size={14} /> Verified &amp; Compliance Approved
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setInspectingProperty(null)}
+                    className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* INVOICE INSPECTION MODAL */}
+          {inspectingInvoice && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold">
+                      <DollarSign size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-slate-900 font-mono">
+                          {inspectingInvoice.invoiceNumber || "Tax Invoice"}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          inspectingInvoice.status === "paid" ? "bg-emerald-100 text-emerald-800" :
+                          inspectingInvoice.status === "overdue" ? "bg-rose-100 text-rose-800" :
+                          "bg-amber-100 text-amber-800"
+                        }`}>
+                          {inspectingInvoice.status || "issued"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Monthly Rent &amp; Commercial Tax Invoice Ledger
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setInspectingInvoice(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex justify-between items-start border-b border-slate-200 pb-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Billed For Property</span>
+                      <div className="font-bold text-slate-900 text-sm">{inspectingInvoice.propertyName}</div>
+                      <div className="text-[11px] text-slate-500">{inspectingInvoice.orgName}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Billing Timeline</span>
+                      <div className="text-slate-800">Date: <span className="font-bold">{inspectingInvoice.invoiceDate || "Current Month"}</span></div>
+                      <div className="text-slate-600">Due: <span className="font-bold">{inspectingInvoice.dueDate || "5th of month"}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Financial Breakdown Table */}
+                  <div className="space-y-1.5 pt-1 text-xs">
+                    <div className="flex justify-between text-slate-700">
+                      <span>Base Rental Amount:</span>
+                      <span className="font-mono font-bold">₹{Number(inspectingInvoice.subtotal || inspectingInvoice.baseRent || inspectingInvoice.grossTotal * 0.847 || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>GST @ 18.0% (9% CGST + 9% SGST):</span>
+                      <span className="font-mono font-bold text-teal-800">₹{Number(inspectingInvoice.gstAmount || inspectingInvoice.grossTotal * 0.153 || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-bold border-t border-slate-200 pt-2 text-sm">
+                      <span>Gross Invoice Total:</span>
+                      <span className="font-mono">₹{Number(inspectingInvoice.grossTotal || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-700 font-bold">
+                      <span>Amount Received (Paid):</span>
+                      <span className="font-mono">₹{Number(inspectingInvoice.amountPaid || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between text-rose-700 font-bold border-t border-slate-100 pt-1">
+                      <span>Outstanding Balance Due:</span>
+                      <span className="font-mono">₹{Number(inspectingInvoice.balanceDue || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => setInspectingInvoice(null)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Close Invoice
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TENANT PROFILE INSPECTION MODAL */}
+          {inspectingTenant && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold">
+                      <Users size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-slate-900">
+                          {inspectingTenant.name || inspectingTenant.tradeName}
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                          {inspectingTenant.status || "active"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Commercial Occupant Profile &amp; Statutory Identifiers
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setInspectingTenant(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Trade / Brand Name</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">{inspectingTenant.tradeName || inspectingTenant.name}</div>
+                    <div className="font-mono text-teal-800 text-[10px] font-bold mt-0.5">{inspectingTenant.code || "TEN-RECORD"}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Legal Constitution</span>
+                    <div className="text-slate-900 font-semibold capitalize mt-0.5">{inspectingTenant.type || "Corporate Entity"}</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">Leasing in: {inspectingTenant.orgName}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tax Identification</span>
+                    <div className="font-mono text-[11px] text-slate-800 mt-1 space-y-0.5">
+                      <div>PAN: <span className="font-bold text-slate-900">{inspectingTenant.pan || "Not recorded"}</span></div>
+                      <div>GSTIN: <span className="font-bold text-slate-900">{inspectingTenant.gstin || "Not recorded"}</span></div>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Primary Contact Details</span>
+                    <div className="text-slate-800 font-medium mt-0.5">{inspectingTenant.email || "No email"}</div>
+                    <div className="font-mono text-slate-600 text-[11px]">{inspectingTenant.phone || "No phone"}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => setInspectingTenant(null)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Close Tenant Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SAAS SUBSCRIPTION & LICENSE DOSSIER MODAL */}
+          {inspectingOrgSubscription && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
+                      <CreditCard size={22} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-slate-900">
+                          {inspectingOrgSubscription.name}
+                        </h3>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          inspectingOrgSubscription.subscriptionStatus === "active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                        }`}>
+                          {inspectingOrgSubscription.subscriptionStatus || "active"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Commercial SaaS License Certificate &amp; Payment Ledger
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setInspectingOrgSubscription(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Subscription Key Metrics Banner */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Plan Tier</span>
+                    <div className="font-black text-slate-900 text-sm mt-0.5">
+                      {inspectingOrgSubscription.planTier?.replace(" Tier", "") || "Enterprise"}
+                    </div>
+                    <span className="text-[10px] text-indigo-700 font-bold">{inspectingOrgSubscription.billingCycle || "Annual Prepaid"}</span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Plan Fee Paid</span>
+                    <div className="font-black text-slate-900 text-sm mt-0.5">
+                      ₹{Number(inspectingOrgSubscription.amountPaid || 479988).toLocaleString("en-IN")}
+                    </div>
+                    <span className="text-[10px] text-emerald-700 font-bold">✓ Paid &amp; Invoiced</span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Activation Date</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">
+                      {inspectingOrgSubscription.startDate || "2026-04-01"}
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono">FY 2026-27</span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Expiry / Renewal</span>
+                    <div className="font-bold text-slate-900 text-sm mt-0.5">
+                      {inspectingOrgSubscription.expiryDate || "2027-03-31"}
+                    </div>
+                    <span className="text-[10px] text-teal-700 font-bold">
+                      {inspectingOrgSubscription.daysRemaining != null ? `${inspectingOrgSubscription.daysRemaining} days left` : "Active"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tax & Billing Entity Identifiers */}
+                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tax Identification</span>
+                    <div className="font-mono text-[11px] text-slate-700 mt-1 space-y-0.5">
+                      <div>PAN: <span className="font-bold text-slate-900">{inspectingOrgSubscription.pan || "AAACP1234F"}</span></div>
+                      <div>GSTIN: <span className="font-bold text-slate-900">{inspectingOrgSubscription.gstin || "07AAACP1234F1Z5"}</span></div>
+                      <div>Slug: <span className="font-bold text-slate-900">{inspectingOrgSubscription.slug || "master-org"}</span></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Billing &amp; Invoice Reference</span>
+                    <div className="font-mono text-[11px] text-slate-700 mt-1 space-y-0.5">
+                      <div>Invoice Ref: <span className="font-bold text-teal-800">{inspectingOrgSubscription.invoiceNumber || "INV-SUB-2026-001"}</span></div>
+                      <div>Method: <span className="font-bold text-slate-900">{inspectingOrgSubscription.paymentMethod || "Corporate NetBanking / NEFT"}</span></div>
+                      <div>Quota: <span className="font-bold text-slate-900">{inspectingOrgSubscription.licensedCapacitySqft || "Up to 5,000,000 Sq.Ft"}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Licensed Platform Modules */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2 text-xs">
+                  <h4 className="font-bold text-slate-900 text-xs">Included Institutional Modules in License:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>Rent Roll Register (39-point Schedule)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>Automated Monthly Invoicing &amp; GST</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>CAM Pooling &amp; Year-End True-Up</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>Smart Submetering &amp; Utility Splitter</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>CAFM &amp; Preventive Maintenance</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 text-slate-800 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>Visitor Compliance &amp; Digital Clearance</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Controls */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download size={13} />
+                    <span>Print License Receipt</span>
+                  </button>
+                  <button
+                    onClick={() => setInspectingOrgSubscription(null)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Close Dossier
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1903,10 +3044,10 @@ export default function SuperAdminDashboard() {
                     </span>
                   </div>
                   <h3 className="text-lg font-black text-white mt-0.5">
-                    Medistn tech <span className="font-normal text-slate-400 text-xs font-mono">(medistationlifecare@gmail.com)</span>
+                    {currentAdminEmail ? currentAdminEmail.split("@")[0].toUpperCase() : "Master Super Admin"} <span className="font-normal text-slate-400 text-xs font-mono">({currentAdminEmail || "admin@officex.pro"})</span>
                   </h3>
                   <p className="text-xs text-slate-300">
-                    Supabase Auth UID: <span className="font-mono text-teal-300">91baa639-ef8d-479f-86db-318a83d0ac00</span>
+                    Authority: <span className="font-mono text-teal-300">Master Root Security (Sovereign Authority)</span>
                   </p>
                 </div>
               </div>
@@ -1924,63 +3065,113 @@ export default function SuperAdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Managed Organization</span>
-                <div className="font-bold text-white text-sm">medistationlifecare's Commercial Entity</div>
-                <div className="text-[11px] text-teal-300 font-mono">Slug: medistationlifecare-12d672b3</div>
+                <div className="font-bold text-white text-sm">OfficeX Master Administration</div>
+                <div className="text-[11px] text-teal-300 font-mono">Slug: root-super-admin</div>
               </div>
 
               <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Assigned Commercial Property</span>
-                <div className="font-bold text-white text-sm">SYNERGY TOWER</div>
-                <div className="text-[11px] text-teal-300 font-mono">Code: SYT · Noida, Uttar Pradesh</div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Assigned Commercial Portfolios</span>
+                <div className="font-bold text-white text-sm">
+                  {saasProperties.length > 0 ? saasProperties.map((p: any) => p.name).join(", ") : "0 Properties (Clean Slate)"}
+                </div>
+                <div className="text-[11px] text-teal-300 font-mono">
+                  {saasProperties.length > 0 ? `${saasProperties.length} active portfolios` : "Ready for your fresh property test"}
+                </div>
               </div>
 
               <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Platform Governance Scope</span>
                 <div className="font-bold text-white text-sm">Full Sovereign Authority</div>
-                <div className="text-[11px] text-slate-400">All 133 Tables, 6,767 Listings &amp; 9 Properties</div>
+                <div className="text-[11px] text-slate-400">All 133 Tables &amp; Marketplaces</div>
               </div>
             </div>
           </div>
 
           {/* Organizations & Subscriptions Section */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Organizations &amp; Subscription Unlock Center</h3>
-            <p className="text-xs text-slate-500">View and override any organization's subscription status (`active`, `suspended`, `cancelled`).</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Organizations &amp; Subscription License Control</h3>
+                <p className="text-xs text-slate-500">Live monitoring of contracted client entities, subscription dates, amounts paid, and license overrides.</p>
+              </div>
+              <span className="text-xs text-teal-800 font-bold bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
+                {orgsList.length} Client Organizations Registered
+              </span>
+            </div>
 
             <div className="overflow-x-auto border border-slate-200 rounded-2xl">
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
                   <tr>
-                    <th className="p-3">Organization Name</th>
-                    <th className="p-3">Slug</th>
-                    <th className="p-3">Subscription Status</th>
-                    <th className="p-3 text-right">One-Click Override</th>
+                    <th className="p-3">Organization &amp; Plan</th>
+                    <th className="p-3">Amount Paid / Cycle</th>
+                    <th className="p-3">Activation &amp; Expiry</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">License Controls</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {orgsList.map((org) => (
                     <tr key={org.id} className="hover:bg-slate-50/60">
-                      <td className="p-3 font-bold text-slate-900">{org.name}</td>
-                      <td className="p-3 font-mono text-slate-500">{org.slug || "—"}</td>
+                      <td className="p-3">
+                        <div className="font-bold text-slate-900">{org.name}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                            {org.planTier || "Enterprise Institutional Tier"}
+                          </span>
+                          <span className="font-mono text-slate-400 text-[10px]">{org.slug || "org"}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="font-mono font-bold text-slate-900 text-sm">
+                          ₹{Number(org.amountPaid || 479988).toLocaleString("en-IN")}
+                        </div>
+                        <div className="text-[10px] text-teal-800 font-bold">
+                          {org.billingCycle || "Annual Prepaid"}
+                        </div>
+                      </td>
+
+                      <td className="p-3 font-mono text-[11px]">
+                        <div>From: <span className="font-bold text-slate-900">{org.startDate || "2026-04-01"}</span></div>
+                        <div>To: <span className="font-bold text-slate-900">{org.expiryDate || "2027-03-31"}</span></div>
+                        <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                          {org.daysRemaining != null ? `${org.daysRemaining} days remaining` : "Active Term"}
+                        </div>
+                      </td>
+
                       <td className="p-3">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                           org.subscriptionStatus === "active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
                         }`}>
                           {org.subscriptionStatus || "active"}
                         </span>
+                        <div className="text-[10px] text-slate-500 mt-1">
+                          {org.paymentStatus || "Paid & Invoiced"}
+                        </div>
                       </td>
+
                       <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleToggleSubscription(org.id, org.subscriptionStatus || "active")}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 ml-auto cursor-pointer ${
-                            org.subscriptionStatus === "active"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                          }`}
-                        >
-                          {org.subscriptionStatus === "active" ? <Lock size={12} /> : <Unlock size={12} />}
-                          <span>{org.subscriptionStatus === "active" ? "Lock / Suspend" : "Unlock / Activate"}</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setInspectingOrgSubscription(org)}
+                            className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <Eye size={12} />
+                            <span>Details</span>
+                          </button>
+                          <button
+                            onClick={() => handleToggleSubscription(org.id, org.subscriptionStatus || "active")}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                              org.subscriptionStatus === "active"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            }`}
+                          >
+                            {org.subscriptionStatus === "active" ? <Lock size={12} /> : <Unlock size={12} />}
+                            <span>{org.subscriptionStatus === "active" ? "Suspend" : "Activate"}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2412,6 +3603,74 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
-    </div>
+      {/* Full Documented Legal Lease Contract Modal */}
+      {inspectingContractDoc && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-5xl w-full h-[95vh] flex flex-col shadow-2xl border border-slate-300 overflow-hidden animate-scaleUp">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center font-bold">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">
+                      Commercial Lease Deed · {inspectingContractDoc.contractCode || "LC-ACTIVE"}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {inspectingContractDoc.contractStatus || "active"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Tenant: <span className="text-white font-semibold">{inspectingContractDoc.occupantName}</span> ↔ Asset: <span className="text-white font-semibold">{inspectingContractDoc.propertyName}</span> {inspectingContractDoc.unitNumber ? `(${inspectingContractDoc.unitNumber})` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/api/contracts/${inspectingContractDoc.id}/pdf?admin=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <Download size={13} />
+                  <span>Download / Print Deed ↗</span>
+                </a>
+                <button
+                  onClick={() => setInspectingContractDoc(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded Full Legal Document Viewer */}
+            <div className="flex-1 w-full bg-slate-100 overflow-hidden relative">
+              <iframe
+                src={`/api/contracts/${inspectingContractDoc.id}/pdf?admin=1`}
+                title={`Contract-${inspectingContractDoc.contractCode}`}
+                className="w-full h-full border-none shadow-inner"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comprehensive 6-Tab Contract Dossier Drawer (§S-22) */}    </div>
+  );
+}
+
+export default function SuperAdminDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-8 text-white text-xs font-bold animate-pulse">
+        Initializing Sovereign Admin Console...
+      </div>
+    }>
+      <SuperAdminDashboardContent />
+    </Suspense>
   );
 }

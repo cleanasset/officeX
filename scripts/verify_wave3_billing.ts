@@ -41,7 +41,7 @@ async function runEmpiricalVerification() {
     // -------------------------------------------------------------------------
     console.log("--- 1. Baseline Invoicing & Master Checks ---");
     const [sampleOrg] = await db.select().from(organizations).limit(1);
-    const validOrgId = sampleOrg ? sampleOrg.id : "a411dd64-65db-462d-8eef-336f9768f49d";
+    const validOrgId = sampleOrg ? sampleOrg.id : "a411dd64-65db-462d-8eef-336f9768f44d";
 
     const [sampleOccupant] = await db.select().from(occupant).limit(1);
     assert(!!sampleOccupant, "Occupant Master Record Available", `Occupant: ${sampleOccupant?.occupant_name}`);

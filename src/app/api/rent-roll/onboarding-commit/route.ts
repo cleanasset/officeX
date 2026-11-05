@@ -160,15 +160,51 @@ export async function POST(req: Request) {
     }
 
     // 5. Insert SPVs / Billing Entities (§4.4)
+    const effectivePan = (body.pan || "").trim().toUpperCase() || null;
+    const effectiveGstin = (body.gstin || "").trim().toUpperCase() || null;
+
+    // Strict Uniqueness Check: Prevent duplicate PAN / GSTIN across different organizations
+    if (effectivePan) {
+      try {
+        const dupPan = await db.execute(sql`
+          SELECT id, entity_name FROM billing_entity 
+          WHERE UPPER(pan_number) = ${effectivePan} AND org_id != ${targetOrgId} 
+          LIMIT 1
+        `);
+        if (dupPan.rows && dupPan.rows.length > 0) {
+          return NextResponse.json(
+            { error: `PAN ${effectivePan} is already registered to another legal entity in OfficeX.` },
+            { status: 409 }
+          );
+        }
+      } catch (e) {}
+    }
+
+    if (effectiveGstin) {
+      try {
+        const dupGst = await db.execute(sql`
+          SELECT id, entity_name FROM billing_entity 
+          WHERE UPPER(gst_number) = ${effectiveGstin} AND org_id != ${targetOrgId} 
+          LIMIT 1
+        `);
+        if (dupGst.rows && dupGst.rows.length > 0) {
+          return NextResponse.json(
+            { error: `GSTIN ${effectiveGstin} is already registered to another legal entity in OfficeX.` },
+            { status: 409 }
+          );
+        }
+      } catch (e) {}
+    }
+
     const spvs = Array.isArray(body.spvs) && body.spvs.length > 0 ? body.spvs : [
       {
-        legalName: `${companyName} LLP`,
+        legalName: `${companyName} Entity`,
         entityType: "owner",
-        gstin: body.gstin || "29AABCS1429B1Z1",
-        pan: body.pan || "AABCS1429B",
-        state: body.state || "Karnataka",
-        city: body.city || "Bengaluru",
-        address: body.address || "Commercial District",
+        gstin: effectiveGstin,
+        pan: effectivePan,
+        state: body.state || "Delhi",
+        city: body.city || "Delhi NCR",
+        address: body.address || "Registered Office",
       },
     ];
 

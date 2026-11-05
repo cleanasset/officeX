@@ -157,8 +157,15 @@ export async function GET(request: NextRequest) {
         } else if (c === "faridabad") {
           conditions.push(ilike(marketplaceListings.city, "%Faridabad%"));
         } else {
-          // Other cities are Coming Soon - strictly return 0 properties
-          conditions.push(eq(marketplaceListings.id, "00000000-0000-0000-0000-000000000000"));
+          // Dynamic extensible match: automatically supports ANY new city, area or state without code changes
+          conditions.push(
+            or(
+              ilike(marketplaceListings.city, `%${city.trim()}%`),
+              ilike(marketplaceListings.locality, `%${city.trim()}%`),
+              ilike(marketplaceListings.microMarket, `%${city.trim()}%`),
+              ilike(marketplaceListings.fullAddress, `%${city.trim()}%`)
+            )
+          );
         }
       } else {
         // If all or unspecified, properties are strictly confined to the 4 live markets
@@ -329,8 +336,13 @@ export async function GET(request: NextRequest) {
           return pc.includes("faridabad");
         });
       } else {
-        // Any other city is Coming Soon: return 0 properties
-        filtered = [];
+        // Dynamic extensible match for ANY newly added city or locality
+        filtered = filtered.filter((p) => {
+          const pc = (p.city || "").toLowerCase();
+          const pl = (p.locality || "").toLowerCase();
+          const paddr = (p.fullAddress || "").toLowerCase();
+          return pc.includes(c) || pl.includes(c) || paddr.includes(c);
+        });
       }
     } else {
       // If unspecified or 'all', strictly return only properties from the 4 live markets

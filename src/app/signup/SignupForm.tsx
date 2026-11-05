@@ -143,6 +143,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
   const [pinCode, setPinCode] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [gstin, setGstin] = useState("");
+  const [cinNumber, setCinNumber] = useState("");
 
   // Form Fields - S07/S08 (Role Business Profile)
   // Owner Fields:
@@ -580,7 +581,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
   };
 
   // S05/S06: Handle Organization Master Submit
-  const handleOrgSubmit = (e: React.FormEvent) => {
+  const handleOrgSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -594,6 +595,42 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       return;
     }
 
+    if (gstin.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin.trim().toUpperCase())) {
+      setError("Please enter a valid 15-character Indian GSTIN (e.g. 27AAACA1234A1Z5).");
+      return;
+    }
+
+    if (cinNumber.trim() && cinNumber.trim().length !== 21) {
+      setError("Corporate Identification Number (CIN) must be exactly 21 alphanumeric characters (e.g. U72900DL2020PTC123456).");
+      return;
+    }
+
+    // Call server-side uniqueness and corporate compliance validator
+    if (panNumber.trim() || gstin.trim() || cinNumber.trim()) {
+      setIsLoading(true);
+      try {
+        const valRes = await fetch("/api/auth/validate-tax-id", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pan: panNumber.trim(),
+            gstin: gstin.trim(),
+            cin: cinNumber.trim()
+          })
+        });
+        const valData = await valRes.json();
+        if (!valRes.ok || !valData.valid) {
+          setError(valData.error || "Tax identifier validation failed.");
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Tax ID pre-check network error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
     const effectiveCity = operatingCity === "CUSTOM" && customCity.trim() ? customCity.trim() : operatingCity;
 
     if (typeof window !== "undefined") {
@@ -602,6 +639,12 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.setItem("officex_org_city", effectiveCity);
       if (panNumber.trim()) {
         localStorage.setItem("officex_org_pan", panNumber.trim().toUpperCase());
+      }
+      if (gstin.trim()) {
+        localStorage.setItem("officex_org_gstin", gstin.trim().toUpperCase());
+      }
+      if (cinNumber.trim()) {
+        localStorage.setItem("officex_org_cin", cinNumber.trim().toUpperCase());
       }
     }
 
@@ -1484,6 +1527,23 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   />
                 </div>
               </div>
+
+              {/* CIN Field for Incorporated Entities */}
+              {(orgType === "PRIVATE_LIMITED" || orgType === "PUBLIC_LIMITED") && (
+                <div>
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    CORPORATE IDENTIFICATION NUMBER (CIN - 21 DIGIT, OPTIONAL)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={21}
+                    value={cinNumber}
+                    onChange={(e) => setCinNumber(e.target.value.toUpperCase())}
+                    placeholder="U72900DL2020PTC123456"
+                    className="w-full uppercase font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
 
               {/* Registered Address */}
               <div>

@@ -294,10 +294,12 @@ export default function Topbar() {
           <Menu size={18} />
         </button>
 
-        {/* Global Property Selector */}
-        <div className="min-w-0">
-          <PropertySelector />
-        </div>
+        {/* Global Property Selector (Hidden on platform admin console) */}
+        {!pathname?.startsWith("/admin") && (
+          <div className="min-w-0">
+            <PropertySelector />
+          </div>
+        )}
       </div>
 
       {/* Right Search, Notification and Profile Avatar */}
