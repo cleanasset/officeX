@@ -44,10 +44,23 @@ export async function POST(req: Request) {
           (u) => u.email?.toLowerCase() === cleanEmail
         );
         if (existingAuth) {
-          return NextResponse.json(
-            { error: "An account with this email already exists. Please Sign In." },
-            { status: 409 }
-          );
+          const isConfirmed = existingAuth.email_confirmed_at || existingAuth.confirmed_at || existingAuth.user_metadata?.email_verified;
+          if (isConfirmed) {
+            return NextResponse.json(
+              { error: "An account with this email already exists. Please Sign In." },
+              { status: 409 }
+            );
+          }
+          supaUserId = existingAuth.id;
+          await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
+            password: password,
+            user_metadata: {
+              full_name: fullName.trim(),
+              mobile: `${mobileCountryCode}${cleanMobile}`,
+              role: "property_manager",
+              email_verified: false
+            }
+          });
         }
 
         // Strict Mobile Uniqueness: Ensure phone number cannot be reused under another name
@@ -66,7 +79,7 @@ export async function POST(req: Request) {
         const { data: newAuthUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
           email: cleanEmail,
           password: password,
-          email_confirm: true,
+          email_confirm: false,
           user_metadata: {
             full_name: fullName.trim(),
             mobile: `${mobileCountryCode}${cleanMobile}`,

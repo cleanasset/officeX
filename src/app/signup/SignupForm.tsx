@@ -423,55 +423,12 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         return;
       }
 
-      // User registration confirmed - activate session immediately without mock OTP
-      if (typeof window !== "undefined") {
-        localStorage.setItem("officex_user_mobile", cleanDigits);
-        sessionStorage.setItem("officex_user_mobile", cleanDigits);
-        localStorage.setItem("officex_user_name", fullName.trim());
-        sessionStorage.setItem("officex_user_name", fullName.trim());
-        localStorage.setItem("officex_user_email", email.trim().toLowerCase());
-        sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
-        localStorage.setItem("officex_session_active", "1");
-        sessionStorage.setItem("officex_session_active", "1");
-        localStorage.setItem("officex_user_role", selectedRole);
-        sessionStorage.setItem("officex_user_role", selectedRole);
-        localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-        sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-        localStorage.setItem("officex_phone_verified", "1");
-        localStorage.setItem("officex_email_verified", "1");
-        document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
-        document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-        document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `officex_user_role=${encodeURIComponent(selectedRole)}; path=/; max-age=86400; SameSite=Lax`;
-      }
-
-      // Sync Supabase Auth user if password provided
-      if (password) {
-        try {
-          await supabase.auth.signUp({
-            email: email.trim().toLowerCase(),
-            password: password,
-            options: {
-              data: {
-                full_name: fullName.trim(),
-                phone: cleanDigits,
-                role: selectedRole
-              }
-            }
-          });
-        } catch (supaErr) {
-          console.warn("Supabase auth sync notice:", supaErr);
-        }
-      }
-
-      setSuccessMsg("Account verified! Launching your workspace...");
-      setTimeout(() => {
-        setSuccessMsg(null);
-        const destination = (initialRedirect && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
-          ? initialRedirect
-          : `/onboarding?role=${encodeURIComponent(selectedRole)}`;
-        window.location.replace(destination);
-      }, 500);
+      // Advance to Step 2: S03 Contact Verification (OTP)
+      setOtpDigits(["", "", "", "", "", ""]);
+      setResendCountdown(30);
+      setStep(2);
+      setSuccessMsg(`A 6-digit verification code has been dispatched to ${email.trim()}. Please enter it below to verify your account.`);
+      setIsLoading(false);
       return;
     } catch (err: any) {
       console.error("Register error:", err);
@@ -574,10 +531,19 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      setSuccessMsg("Contact verified! Redirecting to Rent Roll...");
+      setSuccessMsg("Verification code confirmed! Launching your workspace...");
       setTimeout(() => {
         setSuccessMsg(null);
-        router.push(initialRedirect || "/properties/rent-roll");
+        const destination = (initialRedirect && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
+          ? initialRedirect
+          : isRentRoll
+          ? "/properties/rent-roll"
+          : isOperate
+          ? "/operate"
+          : isFm
+          ? "/fm-marketplace"
+          : "/properties/rent-roll";
+        window.location.replace(destination);
       }, 500);
     } catch (err: any) {
       console.error("OTP error:", err);
