@@ -68,7 +68,13 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
   // As-of-date and Views (§S-10)
-  const [asOfDate, setAsOfDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [asOfDate, setAsOfDate] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
   const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">("current");
   const [importOpen, setImportOpen] = useState(false);
   const [smartImporterOpen, setSmartImporterOpen] = useState(false);
@@ -979,8 +985,8 @@ export default function RentRollRegisterPage() {
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                   <thead>
-                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
-                      <th className="p-3.5 sticky left-0 bg-slate-50/95 z-10 shadow-2xs">Space & Code</th>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                      <th className="p-3.5 sticky left-0 bg-slate-100 z-20 shadow-xs min-w-[220px]">Space & Code</th>
                       {visibleColumns.building && <th className="p-3.5">Building & Floor</th>}
                       <th className="p-3.5">Occupant / Lessee</th>
                       {visibleColumns.model && <th className="p-3.5">Model</th>}
@@ -1135,22 +1141,34 @@ export default function RentRollRegisterPage() {
                                 setDrawerOpen(true);
                               }
                             }}
-                            className={`transition cursor-pointer ${
+                            className={`transition cursor-pointer group ${
                               isHoldingOver
-                                ? "bg-rose-50/70 border-l-4 border-l-rose-500 hover:bg-rose-100/60"
+                                ? "bg-rose-50 border-l-4 border-l-rose-500 hover:bg-rose-100/70"
                                 : isNotice
-                                ? "bg-amber-50/70 border-l-4 border-l-amber-500 hover:bg-amber-100/60"
+                                ? "bg-amber-50 border-l-4 border-l-amber-500 hover:bg-amber-100/70"
                                 : isVacant
-                                ? "bg-slate-100/60 text-slate-500 hover:bg-slate-200/50"
+                                ? "bg-slate-50 text-slate-500 hover:bg-slate-100"
                                 : isDeal
-                                ? "bg-amber-50/40 text-amber-900 italic hover:bg-amber-100/50"
+                                ? "bg-amber-50/50 text-amber-900 italic hover:bg-amber-100/60"
                                 : isFuture
-                                ? "bg-blue-50/40 hover:bg-blue-100/50 text-blue-950"
-                                : "hover:bg-slate-50/80 text-slate-900"
+                                ? "bg-blue-50/50 hover:bg-blue-100/60 text-blue-950"
+                                : "bg-white hover:bg-slate-50 text-slate-900"
                             }`}
                           >
-                            {/* 1. Space & Code (Sticky) */}
-                            <td className="p-3.5 sticky left-0 bg-inherit z-10 shadow-2xs font-bold">
+                            {/* 1. Space & Code (Sticky with solid background to prevent horizontal scroll overlap) */}
+                            <td className={`p-3.5 sticky left-0 z-10 shadow-xs font-bold min-w-[220px] transition-colors ${
+                              isHoldingOver
+                                ? "bg-rose-50 group-hover:bg-rose-100"
+                                : isNotice
+                                ? "bg-amber-50 group-hover:bg-amber-100"
+                                : isVacant
+                                ? "bg-slate-50 group-hover:bg-slate-100"
+                                : isDeal
+                                ? "bg-amber-50 group-hover:bg-amber-100"
+                                : isFuture
+                                ? "bg-blue-50 group-hover:bg-blue-100"
+                                : "bg-white group-hover:bg-slate-50"
+                            }`}>
                               <span className="block text-slate-900">{r.space_name}</span>
                               <span className="text-[10px] text-slate-400 font-mono">{r.space_code}</span>
                             </td>
@@ -1176,9 +1194,16 @@ export default function RentRollRegisterPage() {
                                     {r.is_critical && (
                                       <span className="text-amber-500 text-xs" title="Critical Occupant">★</span>
                                     )}
+                                    {r.status === "lease_pending" && (
+                                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                        Lease Pending
+                                      </span>
+                                    )}
                                   </div>
                                   <span className="text-[10px] text-slate-400 font-mono block">
-                                    {r.contract_code} · {r.industry}
+                                    {r.status === "lease_pending"
+                                      ? "Enrolled Tenant · Active Assignment"
+                                      : `${r.contract_code} · ${r.industry}`}
                                   </span>
                                 </div>
                               )}
@@ -1324,10 +1349,11 @@ export default function RentRollRegisterPage() {
                   {/* Totals Row (§S-10: Sum of Monthly Base Rent for Visible Rows) */}
                   {visibleRows.length > 0 && (
                     <tfoot>
-                      <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-slate-900 text-xs">
-                        <td className="p-4" colSpan={4}>
+                      <tr className="bg-slate-100 font-bold border-t-2 border-slate-300 text-slate-900 text-xs">
+                        <td className="p-4 sticky left-0 bg-slate-100 z-10 min-w-[220px] shadow-xs">
                           TOTALS ({visibleRows.length} Visible Rows)
                         </td>
+                        <td colSpan={(visibleColumns.building ? 1 : 0) + 1 + (visibleColumns.model ? 1 : 0)}></td>
                         <td className="p-4 text-right font-mono">
                           {visibleRows
                             .reduce((sum: number, r: any) => sum + (r.area_sqft || 0), 0)

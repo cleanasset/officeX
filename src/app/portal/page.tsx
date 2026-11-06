@@ -331,9 +331,15 @@ export default function TenantHomePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
-            <ShieldCheck size={14} /> Active Commercial Lease
-          </span>
+          {primaryContract ? (
+            <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
+              <ShieldCheck size={14} /> Active Commercial Lease
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+              <Clock size={14} className="text-amber-600 animate-pulse" /> Lease Contract Pending Execution
+            </span>
+          )}
         </div>
       </div>
 
@@ -464,22 +470,28 @@ export default function TenantHomePage() {
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                Account & Lease Status
+                Account &amp; Lease Status
               </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Good Standing
+              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                primaryContract 
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                  : "bg-amber-50 text-amber-800 border-amber-300"
+              }`}>
+                {primaryContract ? "Good Standing" : "Pending Lease"}
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="text-3xl sm:text-4xl font-black text-emerald-700 tracking-tight">
-                Active
+              <span className={`text-3xl sm:text-4xl font-black tracking-tight ${
+                primaryContract ? "text-emerald-700" : "text-amber-700"
+              }`}>
+                {primaryContract ? "Active" : "Enrolled"}
               </span>
               <span className="text-xs text-slate-400 font-bold">· 0 Arrears</span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-1">
               {primaryContract
                 ? `Contract ${primaryContract.contract_code || "Active"} · Lock-in compliant`
-                : "Operational lease active · 0 active disputes"}
+                : "Tenant enrolled · Awaiting landlord lease execution in Step 4"}
             </p>
           </div>
 
@@ -663,17 +675,21 @@ export default function TenantHomePage() {
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  <span className={`w-2 h-2 rounded-full ${primaryContract ? "bg-indigo-500" : "bg-amber-500"}`} />
                   Contractual Lease Term
                 </span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Active
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                  primaryContract 
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
+                    : "text-amber-800 bg-amber-50 border-amber-300"
+                }`}>
+                  {primaryContract ? "Active" : "Pending Landlord Contract"}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium pl-3.5 leading-relaxed">
                 {primaryContract?.end_date
                   ? `Active term valid through ${new Date(primaryContract.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}. ${primaryContract.notice_period_days || 90} days mutual notice period applies.`
-                  : "Active commercial tenancy. Statutory lease terms and covenants apply."}
+                  : "Tenant enrollment recorded. Awaiting landlord execution of commercial lease contract (Step 4) to activate term dates."}
               </p>
             </div>
 

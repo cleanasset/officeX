@@ -442,29 +442,58 @@ export async function GET(req: Request) {
     }
 
     // 7. Include Vacant & Uncontracted Spaces
+    // Safeguard: Check if any uncontracted spaces have an enrolled occupant for that property
+    const unleasedOccupants = await db
+      .select({
+        id: occupant.id,
+        occupant_name: occupant.occupant_name,
+        occupant_code: occupant.occupant_code,
+        source_row_id: occupant.source_row_id,
+      })
+      .from(occupant)
+      .where(
+        isSuperAdmin && !searchParams.get("org_id")
+          ? sql`(${occupant.org_id} = ${effectiveOrgId} OR ${occupant.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d') AND ${occupant.deleted_at} IS NULL`
+          : and(eq(occupant.org_id, effectiveOrgId), sql`${occupant.deleted_at} IS NULL`)
+      );
+
+    const propertyOccupantMap = new Map<string, any>();
+    for (const occ of unleasedOccupants) {
+      if (occ.source_row_id) {
+        try {
+          const parsed = JSON.parse(occ.source_row_id);
+          if (parsed.property_id) {
+            propertyOccupantMap.set(parsed.property_id, occ);
+          }
+        } catch {}
+      }
+    }
+
     for (const sp of propertyFilteredSpaces) {
       if (!occupiedSpaceIds.has(sp.space.id)) {
         const area = sp.space.chargeable_area_sqft ? parseFloat(sp.space.chargeable_area_sqft) : 0;
         // RR-33: Only use actual asking rate if saved, never invent ₹85/sqft
         const askingRate = (sp.space as any)?.asking_rate_sqft ? parseFloat((sp.space as any).asking_rate_sqft) : null;
         const askingRent = askingRate ? area * askingRate : null;
-        const isSpaceMarkedOccupied = (sp.space.occupancy_status as string) === "occupied" || (sp.space.occupancy_status as string) === "leased";
+        const propId = sp.property?.id || sp.building?.property_id;
+        const linkedOcc = propId ? propertyOccupantMap.get(propId) : null;
+        const isSpaceMarkedOccupied = (sp.space.occupancy_status as string) === "occupied" || (sp.space.occupancy_status as string) === "leased" || Boolean(linkedOcc);
 
         rows.push({
           type: isSpaceMarkedOccupied ? "occupied_space" : "vacant_space",
-          row_class: isSpaceMarkedOccupied ? "row_occupied" : "row_vacant_grey",
+          row_class: linkedOcc ? "row_occupied" : isSpaceMarkedOccupied ? "row_occupied" : "row_vacant_grey",
           id: `space-${sp.space.id}`,
-          contract_code: "—",
+          contract_code: linkedOcc ? `PENDING-${linkedOcc.occupant_code}` : "—",
           space_id: sp.space.id,
           space_code: sp.space.space_code,
           space_name: sp.space.space_name,
           floor: parseFloorInfo(sp.space).floor,
           floor_name: parseFloorInfo(sp.space).floor_name,
           space_type: (sp.space as any)?.space_type || "Commercial Office",
-          occupant_id: null,
-          occupant_name: isSpaceMarkedOccupied ? "(Occupied)" : "(Vacant Space)",
-          occupant_code: "—",
-          occupant_trade_name: "—",
+          occupant_id: linkedOcc ? linkedOcc.id : null,
+          occupant_name: linkedOcc ? linkedOcc.occupant_name : isSpaceMarkedOccupied ? "(Occupied)" : "(Vacant Space)",
+          occupant_code: linkedOcc ? linkedOcc.occupant_code : "—",
+          occupant_trade_name: linkedOcc ? linkedOcc.occupant_name : "—",
           industry: "—",
           is_critical: false,
           area_sqft: area,
@@ -484,7 +513,7 @@ export async function GET(req: Request) {
           days_to_expiry: null,
           lock_in_end_date: null,
           notice_period_months: null,
-          status: "vacant",
+          status: linkedOcc ? "lease_pending" : isSpaceMarkedOccupied ? "occupied" : "vacant",
           approval_status: "—",
           property_name: sp.property?.property_name || "—",
           building_name: sp.building?.building_name || "—",
@@ -493,7 +522,7 @@ export async function GET(req: Request) {
           outstanding_amount_inr: 0,
           aging_bucket: "—",
           data_quality_status: "verified",
-          renewal_stage: "Available",
+          renewal_stage: linkedOcc ? "Pending Terms" : "Available",
         });
       }
     }

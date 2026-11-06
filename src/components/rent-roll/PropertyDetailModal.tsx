@@ -311,7 +311,7 @@ export default function PropertyDetailModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {!isEditing && (
+            {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
                 className="px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
@@ -319,16 +319,17 @@ export default function PropertyDetailModal({
                 <Edit2 size={13} />
                 <span>Edit Property</span>
               </button>
+            ) : (
+              <button
+                onClick={handleDeleteProperty}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-rose-200 disabled:opacity-60"
+                title="Delete Property from Portfolio"
+              >
+                <Trash2 size={13} />
+                <span>{deleting ? "Deleting..." : "Delete Property"}</span>
+              </button>
             )}
-            <button
-              onClick={handleDeleteProperty}
-              disabled={deleting}
-              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-rose-200 disabled:opacity-60"
-              title="Delete Property from Portfolio"
-            >
-              <Trash2 size={13} />
-              <span>{deleting ? "Deleting..." : "Delete"}</span>
-            </button>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"

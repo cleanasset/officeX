@@ -821,6 +821,12 @@ export default function PropertyHierarchyModal({
           phone: t.phone || "",
         }));
         setTenantsList(tArr);
+        if (tArr.length > 0) {
+          setContractForm((prev) => ({
+            ...prev,
+            occupantId: prev.occupantId || tArr[0].id,
+          }));
+        }
       }
     } catch {
       // Non-blocking fallback
@@ -2298,7 +2304,46 @@ export default function PropertyHierarchyModal({
           link: inviteUrl,
         });
 
-        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled! Now complete Step 4 (Lease Contract) below to activate on the Rent Roll table.`);
+        // Auto-provision initial lease contract so tenant immediately appears on Rent Roll Register
+        const resolvedSpaceId = selectedTenantSuites[0] || contractForm.spaceId || (spacesList.length > 0 ? spacesList[0].id : null);
+        if (data.data?.id && resolvedSpaceId) {
+          try {
+            const today = new Date();
+            const startD = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+            const endD = `${today.getFullYear() + 3}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+            const autoCode = `LEAS-${(tenantForm.companyName || effectiveContactName).replace(/[^a-zA-Z0-9]/g, "").slice(0, 5).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+
+            await fetch("/api/contracts", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...authHeaders,
+              },
+              body: JSON.stringify({
+                occupant_id: data.data.id,
+                space_id: resolvedSpaceId,
+                space_ids: selectedTenantSuites.length > 0 ? selectedTenantSuites : [resolvedSpaceId],
+                contract_code: autoCode,
+                start_date: startD,
+                end_date: endD,
+                commencement_date: startD,
+                contract_type: "lease",
+                base_rent_rate: Number(contractForm.monthlyRent) || 65,
+                billing_model: "area",
+                escalation_type: "percentage",
+                escalation_value: 5,
+                has_escalation: true,
+                deposit_amount_inr: 0,
+                lock_in_period_days: 365,
+                notice_period_days: 90,
+              }),
+            });
+          } catch {
+            // Non-blocking auto-provisioning fallback
+          }
+        }
+
+        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled and linked to property! You can fine-tune lease terms below or finish setup.`);
         await loadHierarchyDropdowns();
 
         // RR-22: Do NOT mark space occupied here. Spaces only become occupied upon active contract creation.

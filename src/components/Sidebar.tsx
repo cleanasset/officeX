@@ -639,22 +639,23 @@ function SidebarInner() {
         {/* Top Brand Logo */}
         <div className="p-4 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <Image 
-              src="/logo-removebg-preview.png" 
-              alt="OfficeX Logo" 
-              width={38} 
-              height={38} 
-              className="object-contain group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "29px" }}
-            />
-            <Image 
-              src="/name-removebg-preview.png" 
-              alt="OfficeX" 
-              width={125} 
-              height={30} 
-              className="object-contain"
-              style={{ width: "auto", height: "25px" }}
-            />
+            {orgLogo ? (
+              <img 
+                src={orgLogo} 
+                alt={orgDisplayName || "Brand Logo"} 
+                className="h-8 max-w-[150px] object-contain group-hover:scale-105 transition-transform" 
+              />
+            ) : (
+              <Image 
+                src="/officex-logo-full.png" 
+                alt="OfficeX Logo" 
+                width={150} 
+                height={35} 
+                priority
+                className="object-contain group-hover:scale-105 transition-transform"
+                style={{ width: "auto", height: "30px" }}
+              />
+            )}
           </Link>
 
           {/* Mobile Drawer Close Button */}
@@ -804,16 +805,22 @@ function SidebarInner() {
                           const subSub = subParams.get("sub");
 
                           let isSubActive = pathname === subPath;
-                          if (subTab) {
-                            const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
-                            if (curTab !== subTab) isSubActive = false;
-                          }
-                          if (subSub) {
-                            const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");
-                            if (curSub !== subSub) isSubActive = false;
-                          }
                           if (pathname === "/properties/rent-roll") {
-                            isSubActive = !subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard");
+                            if (subPath !== "/properties/rent-roll") {
+                              isSubActive = false;
+                            } else {
+                              const curTab = searchParams.get("tab") || activeTabParam || "rentroll";
+                              isSubActive = subTab === curTab || (!subTab && curTab === "rentroll");
+                            }
+                          } else {
+                            if (subTab) {
+                              const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
+                              if (curTab !== subTab) isSubActive = false;
+                            }
+                            if (subSub) {
+                              const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");
+                              if (curSub !== subSub) isSubActive = false;
+                            }
                           }
 
                           return (

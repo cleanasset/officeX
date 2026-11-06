@@ -44,8 +44,17 @@ export default function TenantPortalLayout({
   const [primaryContract, setPrimaryContract] = useState<any>(null);
   const [ownerSubscribed, setOwnerSubscribed] = useState<boolean | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [brandLogo, setBrandLogo] = useState<string>("");
+  const [brandName, setBrandName] = useState<string>("");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const bLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
+      const bName = localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || "";
+      if (bLogo) setBrandLogo(bLogo);
+      if (bName) setBrandName(bName);
+    }
+
     const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
     loadPortalSummary(savedOccId || undefined);
 
@@ -226,17 +235,27 @@ export default function TenantPortalLayout({
         {/* Brand & Logo Header */}
         <div className="p-5 border-b border-slate-800">
           <Link href="/portal" className="flex items-center gap-3 group">
-            <Image 
-              src="/logo-removebg-preview.png" 
-              alt="OfficeX Logo" 
-              width={34} 
-              height={34} 
-              className="object-contain group-hover:scale-105 transition-transform shrink-0"
-              style={{ width: "auto", height: "30px" }}
-            />
+            {brandLogo ? (
+              <img 
+                src={brandLogo} 
+                alt={brandName || "Property Brand"} 
+                className="h-8 max-w-[120px] object-contain group-hover:scale-105 transition-transform shrink-0" 
+              />
+            ) : (
+              <Image 
+                src="/officex-shield.png" 
+                alt="OfficeX Logo" 
+                width={34} 
+                height={34} 
+                className="object-contain group-hover:scale-105 transition-transform shrink-0"
+                style={{ width: "auto", height: "30px" }}
+              />
+            )}
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-base tracking-tight text-white">OFFICEX</span>
+                <span className="font-black text-base tracking-tight text-white">
+                  {brandName ? brandName.toUpperCase() : "OFFICEX"}
+                </span>
                 <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
                   TENANT
                 </span>
@@ -363,15 +382,19 @@ export default function TenantPortalLayout({
 
             {/* Mobile Brand Logo */}
             <Link href="/portal" className="md:hidden flex items-center gap-2">
-              <Image 
-                src="/logo-removebg-preview.png" 
-                alt="OfficeX Logo" 
-                width={26} 
-                height={26} 
-                className="object-contain"
-                style={{ width: "auto", height: "24px" }}
-              />
-              <span className="font-black text-sm tracking-tight text-slate-900">OFFICEX</span>
+              {brandLogo ? (
+                <img src={brandLogo} alt={brandName || "Logo"} className="h-6 max-w-[90px] object-contain" />
+              ) : (
+                <Image 
+                  src="/officex-shield.png" 
+                  alt="OfficeX Logo" 
+                  width={26} 
+                  height={26} 
+                  className="object-contain"
+                  style={{ width: "auto", height: "24px" }}
+                />
+              )}
+              <span className="font-black text-sm tracking-tight text-slate-900">{brandName ? brandName.toUpperCase() : "OFFICEX"}</span>
               <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                 PORTAL
               </span>

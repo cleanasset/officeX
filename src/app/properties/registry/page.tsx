@@ -615,10 +615,10 @@ export default function SpaceAndBuildingRegistryPage() {
                                     setSelectedPropertyForDetail(p);
                                     setPropertyDetailMode("view");
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                                  title="View All Details"
+                                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                  title="View Full Property Details"
                                 >
-                                  <Eye size={12} />
+                                  <Eye size={13} />
                                   <span>Details</span>
                                 </button>
                                 <button
@@ -626,53 +626,21 @@ export default function SpaceAndBuildingRegistryPage() {
                                     setSelectedPropertyForDetail(p);
                                     setPropertyDetailMode("edit");
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                                  title="Edit Property"
+                                  className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200/80 text-xs font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                  title="Edit Property (Delete option inside)"
                                 >
-                                  <Edit2 size={12} />
+                                  <Edit2 size={13} />
                                   <span>Edit</span>
                                 </button>
-
-                                {uniqueOccupants.length > 0 ? (
-                                  <Link
-                                    href={`/properties/tenants?property=${encodeURIComponent(p.id)}`}
-                                    className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                                    title={`View enrolled tenant(s): ${uniqueOccupants.join(", ")}`}
-                                  >
-                                    <Users size={12} />
-                                    <span>Tenants ({uniqueOccupants.length})</span>
-                                  </Link>
-                                ) : null}
-
-                                {!isFullyLeased ? (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPropertyIdForHierarchy(p.id);
-                                      setHierarchyTab("tenant");
-                                      setHierarchyModalOpen(true);
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
-                                    title="Add / Lease space to tenant"
-                                  >
-                                    + Tenant
-                                  </button>
-                                ) : null}
 
                                 <Link
                                   href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
                                   className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5 ml-1 whitespace-nowrap"
+                                  title="Open Rent Roll"
                                 >
                                   <span>Rent Roll</span>
                                   <ChevronRight size={13} className="shrink-0" />
                                 </Link>
-                                <button
-                                  onClick={() => handleDeleteProperty(p.id, p.property_name)}
-                                  className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border border-rose-200 whitespace-nowrap"
-                                  title="Delete Property from Portfolio"
-                                >
-                                  <Trash2 size={12} />
-                                  <span>Delete</span>
-                                </button>
                               </div>
                             </td>
                           </tr>
