@@ -28,6 +28,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import PropertyDetailModal from "@/components/rent-roll/PropertyDetailModal";
 import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
@@ -44,6 +45,9 @@ export default function SpaceAndBuildingRegistryPage() {
   const [selectedBuilding, setSelectedBuilding] = useState("all");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
+
+  // Restore wizard if page is refreshed in the middle of step 2, 3, etc.
+  useWizardDraftResume(setHierarchyModalOpen, setHierarchyTab);
   const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
   const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);

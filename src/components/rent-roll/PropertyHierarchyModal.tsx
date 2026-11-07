@@ -44,12 +44,19 @@ import {
   Trash2,
   MapPin,
   Scissors,
+  RotateCcw,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import {
+  getWizardDraft,
+  saveWizardDraft,
+  clearWizardDraft,
+  setWizardDraftOpen,
+} from "@/lib/rent-roll/wizard-draft";
 import AgreementVarianceModal, {
   AgreementDiffItem,
 } from "./AgreementVarianceModal";
@@ -195,6 +202,7 @@ export default function PropertyHierarchyModal({
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
   const [hasSavedOnboarding, setHasSavedOnboarding] = useState(false);
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setFeedback({ type, text });
@@ -658,16 +666,47 @@ export default function PropertyHierarchyModal({
     }
   };
 
-  // Sync and reset when modal opens
+  // Sync, restore draft, and load dropdowns when modal opens
   useEffect(() => {
     if (isOpen) {
-      setActiveTab(initialTab);
       loadHierarchyDropdowns();
       setFeedback(null);
 
-      // When opening to register/add a new property (Step 1), ALWAYS start with a clean, empty form
-      if (initialTab === "property") {
-        resetPropertyForm();
+      // Check if there is an active wizard draft saved in localStorage
+      const draft = getWizardDraft();
+      const hasDraftData = Boolean(
+        draft &&
+        (draft.activeTab !== "property" ||
+          draft.propForm?.propertyName?.trim() ||
+          draft.tenantForm?.companyName?.trim() ||
+          draft.tenantForm?.occupantName?.trim())
+      );
+
+      if (hasDraftData && draft) {
+        if (draft.activeTab) setActiveTabState(draft.activeTab);
+        if (draft.propForm) setPropForm((prev) => ({ ...prev, ...draft.propForm }));
+        if (draft.floorBreakdown && draft.floorBreakdown.length > 0) setFloorBreakdown(draft.floorBreakdown);
+        if (draft.towersBreakdown && draft.towersBreakdown.length > 0) setTowersBreakdown(draft.towersBreakdown);
+        if (draft.bldgForm) setBldgForm((prev) => ({ ...prev, ...draft.bldgForm }));
+        if (draft.spaceForm) setSpaceForm((prev) => ({ ...prev, ...draft.spaceForm }));
+        if (draft.tenantForm) setTenantForm((prev) => ({ ...prev, ...draft.tenantForm }));
+        if (draft.contractForm) setContractForm((prev) => ({ ...prev, ...draft.contractForm }));
+        if (draft.selectedTenantSuites && draft.selectedTenantSuites.length > 0) setSelectedTenantSuites(draft.selectedTenantSuites);
+        if (draft.selectedTenantFloor) setSelectedTenantFloor(draft.selectedTenantFloor);
+        if (draft.selectedContractFloor) setSelectedContractFloor(draft.selectedContractFloor);
+        if (draft.selectedTenantBuilding) setSelectedTenantBuilding(draft.selectedTenantBuilding);
+        if (draft.activeStudioFloor) setActiveStudioFloor(draft.activeStudioFloor);
+        if (draft.tenantOnboardingMode) setTenantOnboardingMode(draft.tenantOnboardingMode);
+        if (draft.lastSavedPropId) setLastSavedPropId(draft.lastSavedPropId);
+        if (draft.lastSavedPropName) setLastSavedPropName(draft.lastSavedPropName);
+        if (draft.lastSavedOccupantName) setLastSavedOccupantName(draft.lastSavedOccupantName);
+        setIsDraftRestored(true);
+      } else {
+        setActiveTabState(initialTab);
+        if (initialTab === "property") {
+          resetPropertyForm();
+        }
+        setIsDraftRestored(false);
       }
 
       if (typeof window !== "undefined") {
@@ -684,6 +723,8 @@ export default function PropertyHierarchyModal({
           setSubscribedCapacity(storedCap);
         }
       }
+    } else {
+      setIsDraftRestored(false);
     }
   }, [isOpen, initialTab, initialSpaceId, initialPropertyId]);
 
@@ -701,6 +742,168 @@ export default function PropertyHierarchyModal({
       };
     }
   }, []);
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Check if there is anything to save
+    const hasAnyContent = Boolean(
+      propForm.propertyName?.trim() ||
+      tenantForm.companyName?.trim() ||
+      tenantForm.occupantName?.trim() ||
+      activeTab !== "property"
+    );
+
+    if (!hasAnyContent) return;
+
+    const timer = setTimeout(() => {
+      saveWizardDraft({
+        isOpen: true,
+        activeTab,
+        initialTab,
+        preloadSpaceId: initialSpaceId,
+        initialPropertyId,
+        propForm,
+        floorBreakdown,
+        towersBreakdown,
+        bldgForm,
+        spaceForm,
+        tenantForm,
+        contractForm,
+        selectedTenantSuites,
+        selectedTenantFloor,
+        selectedContractFloor,
+        selectedTenantBuilding,
+        activeStudioFloor,
+        tenantOnboardingMode,
+        lastSavedPropId,
+        lastSavedPropName,
+        lastSavedOccupantName,
+      });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [
+    isOpen,
+    activeTab,
+    initialTab,
+    initialSpaceId,
+    initialPropertyId,
+    propForm,
+    floorBreakdown,
+    towersBreakdown,
+    bldgForm,
+    spaceForm,
+    tenantForm,
+    contractForm,
+    selectedTenantSuites,
+    selectedTenantFloor,
+    selectedContractFloor,
+    selectedTenantBuilding,
+    activeStudioFloor,
+    tenantOnboardingMode,
+    lastSavedPropId,
+    lastSavedPropName,
+    lastSavedOccupantName,
+  ]);
+
+  const handleModalClose = () => {
+    setWizardDraftOpen(false);
+    onClose();
+  };
+
+  const handleDiscardDraft = () => {
+    clearWizardDraft();
+    resetPropertyForm();
+    setFloorBreakdown([]);
+    setTowersBreakdown([]);
+    setSpaceForm({
+      buildingId: "",
+      spaceName: "",
+      areaSqft: "",
+      floorNumber: "",
+      unitType: "Office",
+      occupancyStatus: "vacant",
+      fitoutDays: "60",
+      powerLoadKva: "",
+      retailFrontageFt: "",
+      clearHeightFt: "",
+      fitoutCondition: "Fully Furnished",
+      workstationsCount: "",
+      cabinsCount: "",
+      meetingRoomsCount: "",
+    });
+    setTenantForm({
+      companyType: "pvt_ltd",
+      companyName: "",
+      tradeName: "",
+      industryType: "IT & Software",
+      cinNumber: "",
+      gst: "",
+      pan: "",
+      billingAddress: "",
+      occupantName: "",
+      email: "",
+      phone: "",
+      altContactName: "",
+      altContactPhone: "",
+      signatoryName: "",
+      signatoryDesignation: "",
+    });
+    setContractForm({
+      occupantId: "",
+      propertyId: "",
+      buildingId: "",
+      spaceId: "",
+      startDate: "",
+      endDate: "",
+      areaSqft: "",
+      billingModel: "Area-based",
+      ratePerSqft: "",
+      ratePerSeat: "",
+      seatCount: "",
+      bareShellRate: "",
+      fitoutRate: "",
+      monthlyRent: "",
+      camType: "Per Sq.Ft",
+      camRate: "",
+      camMonthly: "",
+      electricityBillingType: "sub_metered",
+      gridRatePerKwh: "11.00",
+      dgBackupRatePerKwh: "22.00",
+      fixedMonthlyUtility: "",
+      hvacOperatingHours: "8:00 AM - 8:00 PM (Included in CAM)",
+      overtimeHvacRatePerHour: "1500",
+      carParkingFreeSlots: "",
+      carParkingPaidSlots: "",
+      carParkingRate: "",
+      twoWheelerFreeSlots: "",
+      twoWheelerPaidSlots: "",
+      twoWheelerRate: "",
+      carParkingSlots: "",
+      twoWheelerSlots: "",
+      securityDeposit: "",
+      depositMonths: "6",
+      fitoutDays: "0",
+      lockInMonths: "12",
+      noticeDays: "90",
+      escalationPct: "5",
+      escalationStartDate: "",
+      escalationFrequency: "Annual",
+      billingEntity: "",
+      paymentTerms: "Due on 5th of month",
+      stampDutySharing: "50:50 Shared",
+      notes: "",
+    });
+    setSelectedTenantSuites([]);
+    setSelectedTenantFloor("");
+    setSelectedContractFloor("");
+    setSelectedTenantBuilding("");
+    setActiveTabState("property");
+    setIsDraftRestored(false);
+    showToast("✓ Draft cleared. Starting fresh from Step 1.");
+  };
 
   const loadHierarchyDropdowns = async () => {
     try {
@@ -3315,6 +3518,7 @@ export default function PropertyHierarchyModal({
           showToast("✓ Commercial Lease Contract registered successfully! Setup complete.");
           setPostContractChoice("self_managed");
           setTimeout(() => {
+            clearWizardDraft();
             onClose();
           }, 1200);
         }
@@ -3380,7 +3584,7 @@ export default function PropertyHierarchyModal({
             </button>
 
             <button
-              onClick={onClose}
+              onClick={handleModalClose}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
             >
               <X size={18} />
@@ -3399,6 +3603,36 @@ export default function PropertyHierarchyModal({
           >
             {feedback.type === "success" ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
             <span>{feedback.text}</span>
+          </div>
+        )}
+
+        {/* Draft Auto-Saved Indicator Banner */}
+        {isDraftRestored && (
+          <div className="mx-5 sm:mx-7 mt-3 p-3 rounded-2xl bg-teal-50/90 border border-teal-200 text-teal-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <Sparkles size={15} className="text-[#0F8B7D] shrink-0" />
+              <span>
+                <strong>Draft Restored:</strong> Resumed at {
+                  activeTab === "property"
+                    ? "Step 1: Property"
+                    : activeTab === "space"
+                    ? "Step 2: Space Demised Studio"
+                    : activeTab === "tenant"
+                    ? "Step 3: Tenant Master"
+                    : activeTab === "contract"
+                    ? "Step 4: Lease Contract"
+                    : "Step 5: Delegation"
+                }{propForm.propertyName ? ` for "${propForm.propertyName}"` : ""}. All your previously entered details have been preserved.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline shrink-0 cursor-pointer flex items-center gap-1"
+            >
+              <RotateCcw size={12} />
+              <span>Discard &amp; Start Over</span>
+            </button>
           </div>
         )}
 
@@ -8874,6 +9108,7 @@ export default function PropertyHierarchyModal({
                         sessionStorage.setItem("officex_onboarding_completed", "1");
                         document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
                       }
+                      clearWizardDraft();
                       onClose();
                       onSuccess?.();
                     }}

@@ -37,6 +37,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 function formatINR(val: number) {
@@ -69,6 +70,9 @@ export default function TenantDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("tenant");
+
+  // Restore wizard if page is refreshed in the middle of step 2, 3, etc.
+  useWizardDraftResume(setHierarchyModalOpen, setHierarchyTab);
 
   // Detailed Lease & Tenant Structuring Modal
   const [selectedTenantDetails, setSelectedTenantDetails] = useState<any | null>(null);

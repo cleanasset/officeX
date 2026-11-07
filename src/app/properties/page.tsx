@@ -27,6 +27,7 @@ import { getClientAuthHeaders } from "@/lib/auth-storage";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import PropertyDetailModal from "@/components/rent-roll/PropertyDetailModal";
 
 export default function PropertiesPortfolioPage() {
@@ -35,6 +36,9 @@ export default function PropertiesPortfolioPage() {
   const [assignments, setAssignments] = useState<Record<string, any>>({});
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
+
+  // Restore wizard if page is refreshed in the middle of step 2, 3, etc.
+  useWizardDraftResume(setHierarchyModalOpen, setHierarchyTab);
   const [selectedPropertyForDetail, setSelectedPropertyForDetail] = useState<any | null>(null);
   const [propertyDetailMode, setPropertyDetailMode] = useState<"view" | "edit">("view");
 

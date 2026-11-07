@@ -56,6 +56,7 @@ import EscalationCalendarView from "@/components/rent-roll/EscalationCalendarVie
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
@@ -130,6 +131,9 @@ export default function RentRollRegisterPage() {
   const [escalationOpen, setEscalationOpen] = useState(false);
   const [masterDataOpen, setMasterDataOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
+
+  // Restore wizard if page is refreshed in the middle of step 2, 3, etc.
+  useWizardDraftResume(setMasterDataOpen, setHierarchyTab, setPreloadSpaceId);
 
   // Document Viewer Modal (§S-23)
   const [viewerDoc, setViewerDoc] = useState<any>(null);

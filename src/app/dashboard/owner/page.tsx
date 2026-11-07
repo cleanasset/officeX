@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
+import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
@@ -102,6 +103,9 @@ export default function OwnerDashboardPage() {
   const [isOnboarded, setIsOnboarded] = useState<boolean>(true);
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyInitialTab, setHierarchyInitialTab] = useState<HierarchyTab>("building");
+
+  // Restore wizard if page is refreshed in the middle of step 2, 3, etc.
+  useWizardDraftResume(setHierarchyModalOpen, setHierarchyInitialTab);
   const [showNextStepBanner, setShowNextStepBanner] = useState(true);
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
 
