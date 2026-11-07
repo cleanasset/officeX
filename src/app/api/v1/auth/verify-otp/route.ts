@@ -30,14 +30,15 @@ export async function POST(req: Request) {
     if (email) {
       try {
         let supaId: string | undefined;
+        let existingUser: any = null;
         if (supabaseAdmin) {
           const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-          const existing = usersData?.users?.find(
+          existingUser = usersData?.users?.find(
             (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
           );
-          if (existing) {
-            supaId = existing.id;
-            await supabaseAdmin.auth.admin.updateUserById(existing.id, { email_confirm: true });
+          if (existingUser) {
+            supaId = existingUser.id;
+            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { email_confirm: true });
           } else {
             const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
               email: email.trim().toLowerCase(),
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
           }
         }
 
-        const finalName = (body.fullName || existing?.user_metadata?.full_name || email.split('@')[0]).trim();
+        const finalName = (body.fullName || existingUser?.user_metadata?.full_name || email.split('@')[0]).trim();
 
         // Also insert into Postgres users table
         await db.insert(users).values({
