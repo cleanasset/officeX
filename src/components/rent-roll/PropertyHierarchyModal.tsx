@@ -698,7 +698,6 @@ export default function PropertyHierarchyModal({
         if (draft.selectedTenantBuilding) setSelectedTenantBuilding(draft.selectedTenantBuilding);
         if (draft.activeStudioFloor) setActiveStudioFloor(draft.activeStudioFloor);
         if (draft.tenantOnboardingMode) setTenantOnboardingMode(draft.tenantOnboardingMode);
-        if (draft.lastSavedPropId) setLastSavedPropId(draft.lastSavedPropId);
         if (draft.lastSavedPropName) setLastSavedPropName(draft.lastSavedPropName);
         if (draft.lastSavedOccupantName) setLastSavedOccupantName(draft.lastSavedOccupantName);
         setIsDraftRestored(true);
@@ -778,7 +777,6 @@ export default function PropertyHierarchyModal({
         selectedTenantBuilding,
         activeStudioFloor,
         tenantOnboardingMode,
-        lastSavedPropId,
         lastSavedPropName,
         lastSavedOccupantName,
       });
@@ -804,7 +802,6 @@ export default function PropertyHierarchyModal({
     selectedTenantBuilding,
     activeStudioFloor,
     tenantOnboardingMode,
-    lastSavedPropId,
     lastSavedPropName,
     lastSavedOccupantName,
   ]);
