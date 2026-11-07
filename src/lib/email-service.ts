@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 export interface SendOtpOptions {
   to: string;
@@ -17,7 +18,7 @@ export interface SendEmailResult {
 /**
  * Configure Nodemailer Transporter from standard environment variables
  */
-let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporter: Transporter | null = null;
 
 function getTransporter() {
   if (cachedTransporter) {
