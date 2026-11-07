@@ -575,6 +575,7 @@ export default function PropertyHierarchyModal({
       areaSqft: "",
       totalSeats: "",
       propertyType: "Office",
+      leasingModel: "single_tenant" as "single_tenant" | "multi_tenant",
       hasMultipleBuildings: false,
       buildingsCount: "1",
       floorsCount: "",
