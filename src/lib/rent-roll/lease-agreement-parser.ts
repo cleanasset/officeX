@@ -1097,7 +1097,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     `Auto-extracted from uploaded agreement: ${fileName || "Lease Deed"}.`,
     `Billing model: ${billingModel} (${ratePerSqft > 0 ? `₹${ratePerSqft}/sqft` : ratePerSeat > 0 ? `₹${ratePerSeat}/seat` : `Fixed ₹${monthlyRent}`}).`,
     camMonthly > 0 ? `CAM: ₹${camMonthly.toLocaleString()}/mo (${camType}).` : null,
-    carParkingSlots > 0 ? `Parking: ${carParkingSlots} car slots.` : null,
+    (carParkingSlots && carParkingSlots > 0) ? `Parking: ${carParkingSlots} car slots.` : null,
     `Escalation: ${escalationPct}% ${escalationFrequency}.`,
     `Security Deposit: ₹${securityDeposit.toLocaleString()} (${depositMonths} months).`,
     fitoutDays > 0 ? `Rent-free fit-out: ${fitoutDays} days.` : null,

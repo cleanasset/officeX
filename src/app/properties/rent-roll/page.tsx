@@ -987,27 +987,27 @@ export default function RentRollRegisterPage() {
 
               {/* Desktop Spreadsheet Grid (hidden sm:block with S-10 standard columns) */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                <table className="w-full text-left border-separate border-spacing-0 text-xs whitespace-nowrap">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
-                      <th className="p-3.5 sticky left-0 bg-slate-100 z-20 shadow-xs min-w-[220px]">Space & Code</th>
-                      {visibleColumns.building && <th className="p-3.5">Building & Floor</th>}
-                      <th className="p-3.5">Occupant / Lessee</th>
-                      {visibleColumns.model && <th className="p-3.5">Model</th>}
-                      {visibleColumns.area && <th className="p-3.5 text-right">Area (sqft)</th>}
-                      {visibleColumns.rate && !isLeasing && <th className="p-3.5 text-right">Rate (₹/sqft)</th>}
-                      {visibleColumns.baseRent && !isLeasing && <th className="p-3.5 text-right">Monthly Base</th>}
-                      {visibleColumns.cam && !isLeasing && <th className="p-3.5 text-right">CAM (₹)</th>}
-                      {visibleColumns.grossRent && !isLeasing && <th className="p-3.5 text-right">Gross Monthly</th>}
-                      {visibleColumns.escalation && <th className="p-3.5">Escalation</th>}
-                      {visibleColumns.expiry && <th className="p-3.5">Expiry Date</th>}
+                    <tr className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                      <th className="p-3.5 sticky left-0 bg-slate-100 z-20 min-w-[240px] max-w-[260px] border-b border-r border-slate-200 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Space & Code</th>
+                      {visibleColumns.building && <th className="p-3.5 border-b border-slate-200">Building & Floor</th>}
+                      <th className="p-3.5 border-b border-slate-200">Occupant / Lessee</th>
+                      {visibleColumns.model && <th className="p-3.5 border-b border-slate-200">Model</th>}
+                      {visibleColumns.area && <th className="p-3.5 text-right border-b border-slate-200">Area (sqft)</th>}
+                      {visibleColumns.rate && !isLeasing && <th className="p-3.5 text-right border-b border-slate-200">Rate (₹/sqft)</th>}
+                      {visibleColumns.baseRent && !isLeasing && <th className="p-3.5 text-right border-b border-slate-200">Monthly Base</th>}
+                      {visibleColumns.cam && !isLeasing && <th className="p-3.5 text-right border-b border-slate-200">CAM (₹)</th>}
+                      {visibleColumns.grossRent && !isLeasing && <th className="p-3.5 text-right border-b border-slate-200">Gross Monthly</th>}
+                      {visibleColumns.escalation && <th className="p-3.5 border-b border-slate-200">Escalation</th>}
+                      {visibleColumns.expiry && <th className="p-3.5 border-b border-slate-200">Expiry Date</th>}
                       {visibleColumns.arrears && (
-                        <th className="p-3.5 text-center">
+                        <th className="p-3.5 text-center border-b border-slate-200">
                           {isLeasing ? "Arrears Y/N" : "Outstanding Arrears"}
                         </th>
                       )}
-                      {visibleColumns.status && <th className="p-3.5">Status</th>}
-                      <th className="p-3.5 text-right">Actions</th>
+                      {visibleColumns.status && <th className="p-3.5 border-b border-slate-200">Status</th>}
+                      <th className="p-3.5 text-right border-b border-slate-200">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1087,8 +1087,8 @@ export default function RentRollRegisterPage() {
                         return (
                           <React.Fragment key={`group-${propName}`}>
                             {/* Property Group Subtotal Header per S-10 */}
-                            <tr className="bg-slate-100/90 border-y border-slate-300 font-bold text-xs select-none">
-                              <td colSpan={14} className="p-3 bg-slate-100/95 sticky left-0 z-10 shadow-2xs">
+                            <tr className="bg-slate-100 font-bold text-xs select-none">
+                              <td colSpan={14} className="p-3 bg-slate-100 border-t border-b border-slate-300">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <Building2 className="w-4 h-4 text-teal-700 shrink-0" />
@@ -1160,7 +1160,7 @@ export default function RentRollRegisterPage() {
                             }`}
                           >
                             {/* 1. Space & Code (Sticky with solid background to prevent horizontal scroll overlap) */}
-                            <td className={`p-3.5 sticky left-0 z-10 shadow-xs font-bold min-w-[220px] transition-colors ${
+                            <td className={`p-3.5 sticky left-0 z-10 font-bold min-w-[240px] max-w-[260px] border-b border-r border-slate-200 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] transition-colors ${
                               isHoldingOver
                                 ? "bg-rose-50 group-hover:bg-rose-100"
                                 : isNotice
@@ -1173,20 +1173,20 @@ export default function RentRollRegisterPage() {
                                 ? "bg-blue-50 group-hover:bg-blue-100"
                                 : "bg-white group-hover:bg-slate-50"
                             }`}>
-                              <span className="block text-slate-900">{r.space_name}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">{r.space_code}</span>
+                              <span className="block text-slate-900 truncate">{r.space_name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block">{r.space_code}</span>
                             </td>
 
                             {/* 2. Building & Floor */}
                             {visibleColumns.building && (
-                              <td className="p-3.5 text-slate-600">
+                              <td className="p-3.5 text-slate-600 border-b border-slate-100">
                                 <span>{r.building_name || "—"}</span>
                                 <span className="block text-[10px] text-slate-400">{r.floor_name || (r.floor === 0 ? "Ground Floor" : `Floor ${r.floor || 1}`)}</span>
                               </td>
                             )}
 
                             {/* 3. Occupant */}
-                            <td className="p-3.5">
+                            <td className="p-3.5 border-b border-slate-100">
                               {isVacant ? (
                                 <span className="text-slate-400 italic font-semibold">(Vacant Space)</span>
                               ) : isDeal ? (
@@ -1215,21 +1215,21 @@ export default function RentRollRegisterPage() {
 
                             {/* 4. Model */}
                             {visibleColumns.model && (
-                              <td className="p-3.5 text-[11px] font-semibold text-slate-600 capitalize">
+                              <td className="p-3.5 text-[11px] font-semibold text-slate-600 capitalize border-b border-slate-100">
                                 {r.billing_model || "area"}
                               </td>
                             )}
 
                             {/* 5. Area */}
                             {visibleColumns.area && (
-                              <td className="p-3.5 text-right font-mono font-medium">
+                              <td className="p-3.5 text-right font-mono font-medium border-b border-slate-100">
                                 {r.area_sqft ? Number(r.area_sqft).toLocaleString() : "—"}
                               </td>
                             )}
 
                             {/* 6. Current Rate (Hidden if Leasing) */}
                             {visibleColumns.rate && !isLeasing && (
-                              <td className="p-3.5 text-right font-mono text-slate-700">
+                              <td className="p-3.5 text-right font-mono text-slate-700 border-b border-slate-100">
                                 {isVacant
                                   ? (r.asking_rate_per_sqft ? `(₹${r.asking_rate_per_sqft})` : "—")
                                   : r.current_rate_per_sqft
@@ -1240,7 +1240,7 @@ export default function RentRollRegisterPage() {
 
                             {/* 7. Monthly Base Rent (Hidden if Leasing) */}
                             {visibleColumns.baseRent && !isLeasing && (
-                              <td className="p-3.5 text-right font-mono">
+                              <td className="p-3.5 text-right font-mono border-b border-slate-100">
                                 {isVacant ? (
                                   <span className="text-slate-400">
                                     (₹{Number(r.asking_rent || 0).toLocaleString("en-IN")})
@@ -1259,21 +1259,21 @@ export default function RentRollRegisterPage() {
 
                             {/* 8. CAM Monthly (Hidden if Leasing) */}
                             {visibleColumns.cam && !isLeasing && (
-                              <td className="p-3.5 text-right font-mono text-slate-600">
+                              <td className="p-3.5 text-right font-mono text-slate-600 border-b border-slate-100">
                                 {r.cam_monthly_inr ? `₹${Math.round(r.cam_monthly_inr).toLocaleString("en-IN")}` : "—"}
                               </td>
                             )}
 
                             {/* 9. Gross Monthly (Hidden if Leasing) */}
                             {visibleColumns.grossRent && !isLeasing && (
-                              <td className="p-3.5 text-right font-mono font-bold text-slate-900">
+                              <td className="p-3.5 text-right font-mono font-bold text-slate-900 border-b border-slate-100">
                                 {r.gross_monthly_recurring_inr ? `₹${Math.round(r.gross_monthly_recurring_inr).toLocaleString("en-IN")}` : "—"}
                               </td>
                             )}
 
                             {/* 10. Escalation Summary */}
                             {visibleColumns.escalation && (
-                              <td className="p-3.5 text-[11px] text-slate-600">
+                              <td className="p-3.5 text-[11px] text-slate-600 border-b border-slate-100">
                                 <span>{r.escalation_summary || "15% / 36m"}</span>
                                 {r.next_escalation_date && (
                                   <span className="block text-[10px] text-teal-700 font-semibold">
@@ -1285,7 +1285,7 @@ export default function RentRollRegisterPage() {
 
                             {/* 11. Expiry Date */}
                             {visibleColumns.expiry && (
-                              <td className="p-3.5 font-mono text-[11px] font-semibold text-slate-700">
+                              <td className="p-3.5 font-mono text-[11px] font-semibold text-slate-700 border-b border-slate-100">
                                 <span>{r.expiry_date || "—"}</span>
                                 {r.days_to_expiry !== null && r.days_to_expiry < 90 && (
                                   <span className="block text-[10px] text-rose-600 font-bold">
@@ -1297,7 +1297,7 @@ export default function RentRollRegisterPage() {
 
                             {/* 12. Arrears / Outstanding (Role-Masked if Leasing) */}
                             {visibleColumns.arrears && (
-                              <td className="p-3.5 text-center font-mono">
+                              <td className="p-3.5 text-center font-mono border-b border-slate-100">
                                 {isLeasing ? (
                                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black ${
                                     r.has_arrears ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
@@ -1314,7 +1314,7 @@ export default function RentRollRegisterPage() {
 
                             {/* 13. Status Chip */}
                             {visibleColumns.status && (
-                              <td className="p-3.5">
+                              <td className="p-3.5 border-b border-slate-100">
                                 <span
                                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                     isVacant
@@ -1336,7 +1336,7 @@ export default function RentRollRegisterPage() {
                             )}
 
                             {/* 14. Details Action */}
-                            <td className="p-3.5 text-right">
+                            <td className="p-3.5 text-right border-b border-slate-100">
                               <span className="text-teal-700 font-bold text-xs flex items-center justify-end gap-1">
                                 {isVacant ? "Actions" : "View"} <ChevronRight className="w-3.5 h-3.5" />
                               </span>
@@ -1353,20 +1353,20 @@ export default function RentRollRegisterPage() {
                   {/* Totals Row (§S-10: Sum of Monthly Base Rent for Visible Rows) */}
                   {visibleRows.length > 0 && (
                     <tfoot>
-                      <tr className="bg-slate-100 font-bold border-t-2 border-slate-300 text-slate-900 text-xs">
-                        <td className="p-4 sticky left-0 bg-slate-100 z-10 min-w-[220px] shadow-xs">
+                      <tr className="bg-slate-100 font-bold text-slate-900 text-xs">
+                        <td className="p-4 sticky left-0 bg-slate-100 z-10 min-w-[240px] max-w-[260px] border-t-2 border-b border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] font-extrabold">
                           TOTALS ({visibleRows.length} Visible Rows)
                         </td>
-                        <td colSpan={(visibleColumns.building ? 1 : 0) + 1 + (visibleColumns.model ? 1 : 0)}></td>
-                        <td className="p-4 text-right font-mono">
+                        <td className="border-t-2 border-b border-slate-300" colSpan={(visibleColumns.building ? 1 : 0) + 1 + (visibleColumns.model ? 1 : 0)}></td>
+                        <td className="p-4 text-right font-mono border-t-2 border-b border-slate-300">
                           {visibleRows
                             .reduce((sum: number, r: any) => sum + (r.area_sqft || 0), 0)
                             .toLocaleString()}{" "}
                           sqft
                         </td>
-                        {visibleColumns.rate && !isLeasing && <td className="p-4"></td>}
+                        {visibleColumns.rate && !isLeasing && <td className="p-4 border-t-2 border-b border-slate-300"></td>}
                         {visibleColumns.baseRent && !isLeasing && (
-                          <td className="p-4 text-right font-mono text-teal-900 text-sm">
+                          <td className="p-4 text-right font-mono text-teal-900 text-sm border-t-2 border-b border-slate-300">
                             ₹
                             {Math.round(
                               visibleRows.reduce((sum: number, r: any) => sum + (r.monthly_base_rent || 0), 0)
@@ -1374,7 +1374,7 @@ export default function RentRollRegisterPage() {
                           </td>
                         )}
                         {visibleColumns.cam && !isLeasing && (
-                          <td className="p-4 text-right font-mono text-slate-700">
+                          <td className="p-4 text-right font-mono text-slate-700 border-t-2 border-b border-slate-300">
                             ₹
                             {Math.round(
                               visibleRows.reduce((sum: number, r: any) => sum + (r.cam_monthly_inr || 0), 0)
@@ -1382,14 +1382,14 @@ export default function RentRollRegisterPage() {
                           </td>
                         )}
                         {visibleColumns.grossRent && !isLeasing && (
-                          <td className="p-4 text-right font-mono font-black text-slate-900">
+                          <td className="p-4 text-right font-mono font-black text-slate-900 border-t-2 border-b border-slate-300">
                             ₹
                             {Math.round(
                               visibleRows.reduce((sum: number, r: any) => sum + (r.gross_monthly_recurring_inr || 0), 0)
                             ).toLocaleString("en-IN")}
                           </td>
                         )}
-                        <td className="p-4" colSpan={4}></td>
+                        <td className="p-4 border-t-2 border-b border-slate-300" colSpan={4}></td>
                       </tr>
                     </tfoot>
                   )}

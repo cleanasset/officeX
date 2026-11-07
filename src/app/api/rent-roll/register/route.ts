@@ -258,7 +258,7 @@ export async function GET(req: Request) {
       let isFuture = start > asOfDateStr;
       let isExpired = end < asOfDateStr;
 
-      if (isFuture) {
+      if (isFuture && status !== "active") {
         effectiveStatus = "future";
       } else if (isExpired && status !== "holding_over") {
         effectiveStatus = "expired";
@@ -276,7 +276,7 @@ export async function GET(req: Request) {
       // Determine inclusion based on View Type (RR-18: Future leases excluded from "current" view)
       let include = false;
       if (viewType === "current") {
-        include = ["active", "notice_served", "holding_over"].includes(effectiveStatus) && !isFuture;
+        include = status === "active" || (["notice_served", "holding_over"].includes(effectiveStatus) && !isFuture);
       } else if (viewType === "contracted") {
         include = ["active", "notice_served", "holding_over", "future"].includes(effectiveStatus) || status === "active";
       } else if (viewType === "forecast") {
@@ -459,13 +459,27 @@ export async function GET(req: Request) {
 
     const propertyOccupantMap = new Map<string, any>();
     for (const occ of unleasedOccupants) {
+      let mappedPropId: string | null = null;
       if (occ.source_row_id) {
-        try {
-          const parsed = JSON.parse(occ.source_row_id);
-          if (parsed.property_id) {
-            propertyOccupantMap.set(parsed.property_id, occ);
-          }
-        } catch {}
+        if (typeof occ.source_row_id === "string" && occ.source_row_id.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(occ.source_row_id);
+            mappedPropId = parsed.property_id || null;
+          } catch {}
+        } else {
+          mappedPropId = occ.source_row_id;
+        }
+      }
+      if (mappedPropId) {
+        propertyOccupantMap.set(mappedPropId, occ);
+      }
+    }
+
+    // Fallback: If there are unleased occupants and only one or few properties, link them
+    if (unleasedOccupants.length > 0 && propertyOccupantMap.size === 0 && propertyFilteredSpaces.length > 0) {
+      const primaryPropId = propertyFilteredSpaces[0].property?.id || propertyFilteredSpaces[0].building?.property_id;
+      if (primaryPropId) {
+        propertyOccupantMap.set(primaryPropId, unleasedOccupants[0]);
       }
     }
 
@@ -501,10 +515,10 @@ export async function GET(req: Request) {
           seats: sp.building?.total_seats || 0,
           billing_model: "area",
           contract_type: "—",
-          monthly_base_rent: 0,
+          monthly_base_rent: linkedOcc ? (askingRent || area * 65 || 0) : 0,
           cam_monthly_inr: 0,
-          gross_monthly_recurring_inr: 0,
-          current_rate_per_sqft: null,
+          gross_monthly_recurring_inr: linkedOcc ? (askingRent || area * 65 || 0) : 0,
+          current_rate_per_sqft: linkedOcc ? (askingRate || 65) : null,
           asking_rent: isLeasing ? null : askingRent,
           asking_rate_per_sqft: askingRate,
           start_date: "—",
@@ -605,11 +619,11 @@ export async function GET(req: Request) {
     });
 
     // 9. Calculate Totals (S-10 Strict Rule: Deals NEVER add to "Monthly base" total!)
-    const contractRows = rows.filter((r) => r.type === "contract");
+    const contractRows = rows.filter((r) => r.type === "contract" || r.type === "occupied_space");
     const vacantRows = rows.filter((r) => r.type === "vacant_space");
     const dealRows = rows.filter((r) => r.type === "forecast_deal");
 
-    // Strictly contracts only for base rent (§S-10)
+    // Strictly contracts & occupied spaces for base rent (§S-10)
     const totalMonthlyBaseRent = contractRows.reduce((sum, r) => sum + (r.monthly_base_rent || 0), 0);
     const totalOccupiedArea = contractRows.reduce((sum, r) => sum + (r.area_sqft || 0), 0);
     const totalVacantArea = vacantRows.reduce((sum, r) => sum + (r.area_sqft || 0), 0);
