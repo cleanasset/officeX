@@ -40,28 +40,13 @@ const ALL_NODES = [
 
 export default function CoreArchitectureDiagram() {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [activeNodeIndex, setActiveNodeIndex] = useState(0);
 
-  // Auto-Rotation Timer: Advances to next node every 2.4 seconds unless paused or hovered
-  useEffect(() => {
-    if (isPaused || hoveredNode !== null) return;
-
-    const interval = setInterval(() => {
-      setActiveNodeIndex((prev) => (prev + 1) % ALL_NODES.length);
-    }, 2400);
-
-    return () => clearInterval(interval);
-  }, [isPaused, hoveredNode]);
-
-  const currentNode = ALL_NODES[activeNodeIndex];
-  const effectiveActiveId = hoveredNode || currentNode.id;
+  const activeNode = hoveredNode ? ALL_NODES.find(n => n.id === hoveredNode) : null;
+  const effectiveActiveId = hoveredNode;
 
   return (
     <div 
-      className="relative w-full max-w-[660px] lg:max-w-[720px] mx-auto flex flex-col items-center select-none pt-0 pb-1 -mt-4 sm:-mt-6 lg:-mt-8"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      className="relative w-full max-w-[540px] lg:max-w-[680px] mx-auto flex flex-col items-center select-none pt-0 pb-1 -mt-2 sm:-mt-6 lg:-mt-8"
     >
       {/* Main Radial Interactive Diagram */}
       <div className="relative w-full aspect-square flex items-center justify-center">
@@ -153,26 +138,25 @@ export default function CoreArchitectureDiagram() {
         </svg>
 
         {/* =========================================================================
-            CENTRAL CORE: Dynamic Live Hub with Real-Time Sync Indicator
+            CENTRAL CORE: Stable Central Hub
             ========================================================================= */}
-        <div className="relative z-20 w-28 h-28 sm:w-36 sm:h-36 rounded-full flex items-center justify-center">
-          {/* Ambient Glow */}
-          <div className="absolute inset-0 rounded-full bg-[#0F8B7D]/15 blur-md animate-pulse" />
+        <div className="relative z-20 w-24 h-24 sm:w-36 sm:h-36 rounded-full flex items-center justify-center">
+          {/* Ambient Subtle Glow */}
+          <div className="absolute inset-0 rounded-full bg-[#0F8B7D]/10 blur-sm" />
 
           {/* Core Circle */}
-          <div className="relative w-full h-full rounded-full bg-gradient-to-b from-teal-50/95 via-white to-teal-50/80 border-2 border-teal-300 shadow-[0_6px_22px_rgba(15,139,125,0.2)] flex flex-col items-center justify-center p-2 text-center transition-all duration-300">
-            <span className="text-[8.5px] sm:text-[10.5px] font-extrabold tracking-widest text-[#0F8B7D] uppercase leading-none">
+          <div className="relative w-full h-full rounded-full bg-gradient-to-b from-teal-50/95 via-white to-teal-50/80 border-2 border-teal-300 shadow-[0_4px_16px_rgba(15,139,125,0.15)] flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
+            <span className="text-[7.5px] sm:text-[10px] font-extrabold tracking-widest text-[#0F8B7D] uppercase leading-none">
               OFFICEX
             </span>
-            <span className="text-lg sm:text-2xl font-black text-slate-900 tracking-wider leading-none mt-0.5">
+            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-wider leading-none mt-0.5">
               CORE
             </span>
 
-            {/* Dynamic Active Module Pill */}
-            <div className="mt-1 px-2.5 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[8.5px] sm:text-[10px] font-extrabold tracking-tight flex items-center gap-1 shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-              <span className="truncate max-w-[85px] sm:max-w-[110px]">
-                {currentNode ? currentNode.name : "SYNCING"}
+            {/* Stable Module Pill */}
+            <div className="mt-1 px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[7.5px] sm:text-[9.5px] font-extrabold tracking-tight flex items-center gap-1 shadow-2xs">
+              <span className="truncate max-w-[80px] sm:max-w-[110px]">
+                {activeNode ? activeNode.name : "Single Truth"}
               </span>
             </div>
           </div>
@@ -181,7 +165,7 @@ export default function CoreArchitectureDiagram() {
         {/* =========================================================================
             CIRCULAR NODES AROUND THE CORE (Uniform, Beautifully Spaced Pill Badges)
             ========================================================================= */}
-        {ALL_NODES.map((node, idx) => {
+        {ALL_NODES.map((node) => {
           const isActive = effectiveActiveId === node.id;
 
           return (
@@ -190,19 +174,18 @@ export default function CoreArchitectureDiagram() {
               style={{ left: `${node.x}%`, top: `${node.y}%` }}
               onMouseEnter={() => setHoveredNode(node.id)}
               onMouseLeave={() => setHoveredNode(null)}
-              onClick={() => setActiveNodeIndex(idx)}
-              className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 cursor-pointer ${
-                isActive ? "scale-108" : "hover:scale-104"
+              onClick={() => setHoveredNode(node.id === hoveredNode ? null : node.id)}
+              className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-200 cursor-pointer ${
+                isActive ? "scale-105" : "hover:scale-102"
               }`}
             >
               <div
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg border text-[9px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
+                className={`px-1.5 sm:px-3 py-0.5 sm:py-1.5 rounded sm:rounded-lg border text-[8px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1 sm:gap-1.5 ${
                   isActive
                     ? "border-[#0F8B7D] bg-white text-[#0F8B7D] font-bold shadow-md ring-2 ring-[#0F8B7D]/25"
                     : "border-slate-200/90 bg-white text-slate-700 hover:border-teal-300 shadow-2xs"
                 }`}
               >
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#0F8B7D] animate-pulse" />}
                 <span>{node.name}</span>
               </div>
             </div>

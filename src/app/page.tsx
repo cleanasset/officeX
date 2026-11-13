@@ -528,12 +528,19 @@ export default function LandingPage() {
   const [spaceBudget, setSpaceBudget] = useState("All Ranges");
   const [spaceGrade, setSpaceGrade] = useState("all");
 
-  // Dynamic location detection on homepage
+  // Dynamic location detection on homepage - restricted strictly to 4 live activated cities
   useEffect(() => {
     fetch("/api/marketplace/detect-location")
       .then((res) => res.json())
       .then((data) => {
-        if (data?.city) setSpaceCity(data.city);
+        if (data?.city) {
+          const isLive = LIVE_MARKETPLACE_CITIES.some(
+            (c) => c.name.toLowerCase() === data.city.toLowerCase()
+          );
+          if (isLive) {
+            setSpaceCity(data.city);
+          }
+        }
       })
       .catch(() => {});
   }, []);
@@ -542,6 +549,9 @@ export default function LandingPage() {
   const [vendorCity, setVendorCity] = useState("Delhi NCR");
   const [vendorBudget, setVendorBudget] = useState("All Budgets");
   const [vendorType, setVendorType] = useState("Commercial Office");
+  const [managedScope, setManagedScope] = useState("all");
+  const [managedCity, setManagedCity] = useState("Delhi NCR");
+  const [managedSize, setManagedSize] = useState("50k-200k");
   const [hoveredEcoCard, setHoveredEcoCard] = useState<string | null>(null);
 
   const [animateCount, setAnimateCount] = useState({
@@ -587,10 +597,24 @@ export default function LandingPage() {
     }
     if (activeSearchTab === "space") {
       const v = spaceGrade === "All Grades" || spaceGrade === "all" ? "all" : spaceGrade;
-      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=${encodeURIComponent(v)}`);
+      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=${encodeURIComponent(v)}&budget=${encodeURIComponent(spaceBudget)}`);
       return;
     }
-    router.push('/managed-services');
+    if (activeSearchTab === "managed") {
+      const scopeRoutes: Record<string, string> = {
+        "rent-roll": "/operate/rent-roll",
+        "ppm": "/operate/ppm",
+        "visitors": "/operate/visitors",
+        "compliance": "/operate/compliance",
+        "helpdesk": "/operate/helpdesk",
+        "lease-crm": "/operate/lease-crm",
+        "managed-services": "/managed-services",
+        "all": "/operate",
+      };
+      const targetRoute = scopeRoutes[managedScope] || (managedScope ? `/operate/${managedScope}` : "/operate");
+      router.push(targetRoute);
+      return;
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -976,7 +1000,7 @@ export default function LandingPage() {
       )}
 
       {/* SECTION 2: HERO — COMPLETE OFFICEX CRE & FM ECOSYSTEM (CENTERED & SLEEK) */}
-      <section className="relative min-h-[560px] md:min-h-[590px] lg:min-h-[620px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-8 md:pt-12 lg:pt-14 pb-10 md:pb-14 lg:pb-16 bg-slate-950 border-b border-slate-800 text-white">
+      <section className="relative min-h-[500px] sm:min-h-[560px] md:min-h-[590px] lg:min-h-[620px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-6 sm:pt-10 md:pt-12 lg:pt-14 pb-8 sm:pb-12 md:pb-14 lg:pb-16 bg-slate-950 border-b border-slate-800 text-white">
         
         {/* Background Image: Clean Architectural Commercial Real Estate Skyline */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
@@ -1004,8 +1028,8 @@ export default function LandingPage() {
               <span>Intelligent Commercial Workplace Platform</span>
             </div>
 
-            {/* Main Headline with Clean, Soft Ambient Contrast (No Harsh Outline) */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.08] mb-3 sm:mb-4 text-center">
+            {/* Main Headline with Clean, Soft Ambient Contrast */}
+            <h1 className="text-2xl sm:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.1] mb-2.5 sm:mb-4 text-center">
               <span className="block text-white [text-shadow:_0_4px_20px_rgba(0,0,0,0.35)]">
                 One Platform.
               </span>
@@ -1015,99 +1039,106 @@ export default function LandingPage() {
             </h1>
 
             {/* Subhead with Clean Contrast */}
-            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-100 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto [text-shadow:_0_2px_8px_rgba(0,0,0,0.35)]">
+            <p className="text-[11px] sm:text-sm md:text-base font-medium text-slate-100 leading-relaxed max-w-xl mb-4 sm:mb-6 text-center mx-auto [text-shadow:_0_2px_8px_rgba(0,0,0,0.35)]">
               Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
             </p>
 
             {/* 3-Tab Search Bar Component — Sleek & Proportional */}
             <div className="w-full max-w-[720px] mb-3 sm:mb-4">
-              {/* Unified Segmented Tabs */}
-              <div className="flex items-center justify-center gap-1 sm:gap-1.5 mb-0 overflow-x-auto no-scrollbar max-w-full">
+              {/* Unified Segmented Tabs - 3 equal responsive tabs with high contrast and zero clipping */}
+              <div className="grid grid-cols-3 w-full gap-1 sm:flex sm:items-center sm:justify-center sm:gap-1.5 mb-0 max-w-full">
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("space")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-1.5 py-1.5 sm:px-5 sm:py-2.5 rounded-t-xl text-[11px] sm:text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center min-h-[40px] sm:min-h-0 ${
                     activeSearchTab === "space"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
+                      : "bg-slate-900/90 backdrop-blur-md text-white/90 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <Building2 size={14} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
-                  <span>Find Spaces</span>
+                  <Building2 size={13} className={activeSearchTab === "space" ? "text-white shrink-0" : "text-teal-300 shrink-0"} />
+                  <span className="leading-tight sm:leading-normal whitespace-normal sm:whitespace-nowrap">Find Spaces</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("vendor")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-1.5 py-1.5 sm:px-5 sm:py-2.5 rounded-t-xl text-[11px] sm:text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center min-h-[40px] sm:min-h-0 ${
                     activeSearchTab === "vendor"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
+                      : "bg-slate-900/90 backdrop-blur-md text-white/90 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <Wrench size={14} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
-                  <span>Hire Vendors</span>
+                  <Wrench size={13} className={activeSearchTab === "vendor" ? "text-white shrink-0" : "text-teal-300 shrink-0"} />
+                  <span className="leading-tight sm:leading-normal whitespace-normal sm:whitespace-nowrap">Hire Vendors</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("managed")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-1.5 py-1.5 sm:px-5 sm:py-2.5 rounded-t-xl text-[11px] sm:text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center min-h-[40px] sm:min-h-0 ${
                     activeSearchTab === "managed"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
+                      : "bg-slate-900/90 backdrop-blur-md text-white/90 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <ShieldCheck size={14} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
-                  <span>Operate &amp; Manage</span>
+                  <ShieldCheck size={13} className={activeSearchTab === "managed" ? "text-white shrink-0" : "text-teal-300 shrink-0"} />
+                  <span className="leading-tight sm:leading-normal whitespace-normal sm:whitespace-nowrap">Operate &amp; Manage</span>
                 </button>
               </div>
 
-              {/* Main Search Bar Card */}
-              <div className="bg-white rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.3)] p-3 sm:p-4 border border-slate-200/90 w-full text-left text-slate-900">
+              {/* Main Search Bar Card - Ultra-compact mobile 2x2 grid proportions */}
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.3)] p-2 sm:p-4 border border-slate-200/90 w-full text-left text-slate-900">
                 {activeSearchTab === "space" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                    {/* Field 1: Location */}
-                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-1.5 sm:gap-2.5 items-center">
+                    {/* Field 1: Location - Only Activated 4 Cities (Row 1 Left on Mobile, Col 1-4 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-4 pr-1.5 sm:pr-3 border-r sm:border-r border-slate-200 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         City / Hub
                       </label>
                       <select
                         value={spaceCity}
                         onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <optgroup label="🟢 Active Locations (Live Now)">
-                          {LIVE_MARKETPLACE_CITIES.map((c) => (
-                            <option key={c.name} value={c.name}>
-                              {c.name} ({c.count} spaces)
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="🚀 Other Metros (Coming Soon)">
-                          {COMING_SOON_METROS.map((c) => (
-                            <option key={c.name} value={c.name}>
-                              {c.name} (Coming Soon)
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="📍 All Other Cities (Coming Soon)">
-                          {COMING_SOON_CITIES.map((c) => (
-                            <option key={c.name} value={c.name}>
-                              {c.name} (Coming Soon)
-                            </option>
-                          ))}
-                        </optgroup>
+                        {LIVE_MARKETPLACE_CITIES.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name} ({c.count} spaces)
+                          </option>
+                        ))}
                       </select>
                     </div>
 
-                    {/* Field 2: Size */}
-                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                    {/* Field 3: Format - Complete myHQ Formats (Row 1 Right on Mobile, Col 8-10 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-3 pl-1.5 sm:pl-0 sm:order-3 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Format
+                      </label>
+                      <select
+                        value={spaceGrade}
+                        onChange={(e) => setSpaceGrade(e.target.value)}
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                      >
+                        <option value="all">All Workspaces</option>
+                        <option value="coworking">Coworking Spaces</option>
+                        <option value="managed">Managed Office Suites</option>
+                        <option value="private_cabin">Private Cabins &amp; Offices</option>
+                        <option value="dedicated_desk">Dedicated Desks</option>
+                        <option value="commercial">Commercial Floors</option>
+                        <option value="virtual_office">Virtual Office</option>
+                        <option value="meeting_room">Meeting Rooms</option>
+                        <option value="day_pass">Day Pass &amp; Flexi</option>
+                        <option value="campus">Enterprise Campus</option>
+                      </select>
+                    </div>
+
+                    {/* Field 2: Size (Row 2 Left on Mobile, Col 5-7 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-3 pr-1.5 sm:pr-3 border-r sm:border-r border-slate-200 sm:order-2 pt-0.5 sm:pt-0">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Floor Area
                       </label>
                       <select
                         value={spaceBudget}
                         onChange={(e) => setSpaceBudget(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="All Ranges">Any Area</option>
                         <option value="2,000 - 5,000 sq.ft.">2k - 5k sq.ft.</option>
@@ -1117,33 +1148,13 @@ export default function LandingPage() {
                       </select>
                     </div>
 
-                    {/* Field 3: Format */}
-                    <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        Format
-                      </label>
-                      <select
-                        value={spaceGrade}
-                        onChange={(e) => setSpaceGrade(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
-                      >
-                        <option value="all">All Workspaces</option>
-                        <option value="coworking">Coworking Space</option>
-                        <option value="managed">Managed Office</option>
-                        <option value="commercial">Commercial Office</option>
-                        <option value="virtual_office">Virtual Office</option>
-                        <option value="meeting_room">Meeting Rooms</option>
-                        <option value="day_pass">Day Pass</option>
-                      </select>
-                    </div>
-
-                    {/* Search Button */}
-                    <div className="sm:col-span-2">
+                    {/* Search Button (Row 2 Right on Mobile, Col 11-12 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-2 pl-1.5 sm:pl-0 sm:order-4 pt-0.5 sm:pt-0 flex items-end">
                       <button
                         onClick={handleLandingSearch}
-                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="w-full py-1.5 sm:py-2.5 px-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer h-[32px] sm:h-auto"
                       >
-                        <Search size={14} />
+                        <Search size={13} />
                         <span>Search</span>
                       </button>
                     </div>
@@ -1152,18 +1163,18 @@ export default function LandingPage() {
 
                 {activeSearchTab === "vendor" && (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                      {/* Field 1: FM Service */}
-                      <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-1.5 sm:gap-2.5 items-center">
+                      {/* Field 1: FM Service (Row 1 Left on Mobile, Col 1-4 on Desktop) */}
+                      <div className="col-span-1 sm:col-span-4 pr-1.5 sm:pr-3 border-r sm:border-r border-slate-200 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100">
+                        <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           FM Service Needed
                         </label>
                         <select
                           value={vendorCategory}
                           onChange={(e) => setVendorCategory(e.target.value)}
-                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                          className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                         >
-                          <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
+                          <option value="HVAC Maintenance">HVAC &amp; Chillers AMC</option>
                           <option value="Deep Cleaning">Commercial Cleaning &amp; Hygiene</option>
                           <option value="Electrical Auditing">MEP &amp; DG Sets Audit</option>
                           <option value="Pest Control">PSARA Manned Security</option>
@@ -1171,52 +1182,54 @@ export default function LandingPage() {
                         </select>
                       </div>
 
-                      {/* Field 2: City */}
-                      <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                      {/* Field 2: City (Row 1 Right on Mobile, Col 5-7 on Desktop) */}
+                      <div className="col-span-1 sm:col-span-3 pl-1.5 sm:pl-0 sm:pr-3 sm:border-r border-slate-200 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100 sm:order-2">
+                        <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           Location
                         </label>
                         <select
                           value={vendorCity}
                           onChange={(e) => setVendorCity(e.target.value)}
-                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                          className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                         >
+                          <option value="Delhi NCR">Delhi NCR</option>
+                          <option value="Gurugram">Gurugram</option>
+                          <option value="Noida">Noida</option>
                           <option value="Mumbai">Mumbai</option>
                           <option value="Bengaluru">Bengaluru</option>
-                          <option value="Gurugram">Delhi NCR</option>
                           <option value="Pune">Pune</option>
                           <option value="Hyderabad">Hyderabad</option>
                           <option value="Ahmedabad">Ahmedabad</option>
                         </select>
                       </div>
 
-                      {/* Field 3: Scope */}
-                      <div className="sm:col-span-3">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                      {/* Field 3: Scope (Row 2 Left on Mobile, Col 8-10 on Desktop) */}
+                      <div className="col-span-1 sm:col-span-3 pr-1.5 sm:pr-3 border-r sm:border-r-0 border-slate-200 sm:order-3 pt-0.5 sm:pt-0">
+                        <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           Contract Term
                         </label>
                         <select
-                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                          className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                         >
-                          <option value="Annual AMC">Annual AMC Contract</option>
-                          <option value="One-Time Service">One-Time Service / Audit</option>
-                          <option value="Multi-Year IFM">Multi-Year IFM Scope</option>
+                          <option value="Annual AMC">Annual AMC</option>
+                          <option value="One-Time Service">One-Time Service</option>
+                          <option value="Multi-Year IFM">Multi-Year IFM</option>
                         </select>
                       </div>
 
-                      {/* Search Button */}
-                      <div className="sm:col-span-2">
+                      {/* Search Button (Row 2 Right on Mobile, Col 11-12 on Desktop) */}
+                      <div className="col-span-1 sm:col-span-2 pl-1.5 sm:pl-0 sm:order-4 pt-0.5 sm:pt-0 flex items-end">
                         <button
                           onClick={handleLandingSearch}
-                          className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="w-full py-1.5 sm:py-2.5 px-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer h-[32px] sm:h-auto"
                         >
-                          <Wrench size={14} />
+                          <Wrench size={13} />
                           <span>Find</span>
                         </button>
                       </div>
                     </div>
-                    <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
-                      <span>Are you an engineering, MEP, security, or facility service provider?</span>
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex flex-wrap items-center justify-between text-[9.5px] sm:text-[11px] text-slate-500">
+                      <span>Are you a facility service provider?</span>
                       <Link href="/vendor" className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-1">
                         <span>Register as Vendor &rarr;</span>
                       </Link>
@@ -1225,28 +1238,37 @@ export default function LandingPage() {
                 )}
 
                 {activeSearchTab === "managed" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                    {/* Field 1: Managed Solution */}
-                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-1.5 sm:gap-2.5 items-center">
+                    {/* Field 1: Scope - Maps directly to specific SaaS product pages (Row 1 Left on Mobile, Col 1-4 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-4 pr-1.5 sm:pr-3 border-r sm:border-r border-slate-200 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Scope
                       </label>
                       <select
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        value={managedScope}
+                        onChange={(e) => setManagedScope(e.target.value)}
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <option value="Integrated FM">Integrated IFM Stewardship</option>
-                        <option value="Rent Roll & CAM">Rent Roll &amp; CAM Audit</option>
-                        <option value="Statutory Vault">100% Statutory Vault</option>
+                        <option value="all">All Modules (Full Platform)</option>
+                        <option value="rent-roll">Rent Roll &amp; CAM Billing</option>
+                        <option value="ppm">52-Week PPM &amp; CAFM</option>
+                        <option value="visitors">Visitor Flow &amp; Turnstiles</option>
+                        <option value="compliance">Statutory Compliance Vault</option>
+                        <option value="helpdesk">Tenant Helpdesk &amp; SLA</option>
+                        <option value="lease-crm">Commercial Lease CRM</option>
+                        <option value="managed-services">Integrated IFM Stewardship</option>
                       </select>
                     </div>
 
-                    {/* Field 2: Portfolio Size */}
-                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                    {/* Field 2: Portfolio Size (Row 1 Right on Mobile, Col 5-7 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-3 pl-1.5 sm:pl-0 sm:pr-3 sm:border-r border-slate-200 pb-1.5 sm:pb-0 border-b sm:border-b-0 border-slate-100 sm:order-2">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Portfolio Size
                       </label>
                       <select
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        value={managedSize}
+                        onChange={(e) => setManagedSize(e.target.value)}
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="10k-50k">10k - 50k Sq.Ft.</option>
                         <option value="50k-200k">50k - 200k Sq.Ft.</option>
@@ -1254,32 +1276,33 @@ export default function LandingPage() {
                       </select>
                     </div>
 
-                    {/* Field 3: City */}
-                    <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        City
+                    {/* Field 3: City - Searchable all-India with Auto-Recognition (Row 2 Left on Mobile, Col 8-10 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-3 pr-1.5 sm:pr-3 border-r sm:border-r-0 border-slate-200 sm:order-3 pt-0.5 sm:pt-0">
+                      <label className="block text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        City / Location
                       </label>
-                      <select
-                        value={spaceCity}
-                        onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
-                      >
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Gurugram">Delhi NCR</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                        <option value="Ahmedabad">Ahmedabad</option>
-                      </select>
+                      <input
+                        type="text"
+                        list="all-india-operate-cities"
+                        value={managedCity}
+                        onChange={(e) => setManagedCity(e.target.value)}
+                        placeholder="Type city..."
+                        className="w-full text-[11px] sm:text-xs font-bold text-slate-900 bg-transparent focus:outline-none truncate py-0.5 placeholder:text-slate-400 placeholder:font-normal"
+                      />
+                      <datalist id="all-india-operate-cities">
+                        {ALL_MARKETPLACE_CITIES.map((c) => (
+                          <option key={c.name} value={c.name} />
+                        ))}
+                      </datalist>
                     </div>
 
-                    {/* Search Button */}
-                    <div className="sm:col-span-2">
+                    {/* Search Button (Row 2 Right on Mobile, Col 11-12 on Desktop) */}
+                    <div className="col-span-1 sm:col-span-2 pl-1.5 sm:pl-0 sm:order-4 pt-0.5 sm:pt-0 flex items-end">
                       <button
-                        onClick={() => router.push('/managed-services')}
-                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                        onClick={handleLandingSearch}
+                        className="w-full py-1.5 sm:py-2.5 px-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer h-[32px] sm:h-auto"
                       >
-                        <ShieldCheck size={14} />
+                        <ShieldCheck size={13} />
                         <span>Explore</span>
                       </button>
                     </div>
@@ -1289,23 +1312,23 @@ export default function LandingPage() {
             </div>
 
             {/* Value Highlight Badges */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-[11px] sm:text-xs text-white font-bold mt-2 sm:mt-2.5">
-              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
-                <CheckCircle2 size={13} className="text-teal-400 shrink-0" />
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-[10px] sm:text-xs text-white font-bold mt-2 sm:mt-2.5">
+              <span className="inline-flex items-center gap-1 bg-slate-950/85 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
+                <CheckCircle2 size={12} className="text-teal-400 shrink-0" />
                 <span>0% Broker Fee</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
-                <ShieldCheck size={13} className="text-teal-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 bg-slate-950/85 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
+                <ShieldCheck size={12} className="text-teal-400 shrink-0" />
                 <span>Milestone-Verified Payouts</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
-                <Lock size={13} className="text-teal-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 bg-slate-950/85 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
+                <Lock size={12} className="text-teal-400 shrink-0" />
                 <span>DPDP Act 2023 Compliant</span>
               </span>
             </div>
 
-            {/* Micro Trust Strip */}
-            <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-200/90 mt-2.5 [text-shadow:_0_1px_4px_rgba(0,0,0,0.95)]">
+            {/* Micro Trust Strip (hidden on mobile, visible on sm+) */}
+            <div className="hidden sm:flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-200/90 mt-2.5 [text-shadow:_0_1px_4px_rgba(0,0,0,0.95)]">
               <span>AES-256 Vaulted</span>
               <span className="text-teal-400/80">•</span>
               <span>DPDP Act 2023 Compliant</span>
@@ -1339,8 +1362,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 5 Vertical Colored Cards matching OfficeX signature logo brand color (1 Shade Lighter) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
+          {/* 5 Vertical Colored Cards: 2 cards row 1, 2 cards row 2, 1 card centered row 3 on mobile */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 [&>*:last-child]:col-span-2 [&>*:last-child]:max-w-[280px] [&>*:last-child]:mx-auto [&>*:last-child]:w-full lg:[&>*:last-child]:col-span-1 lg:[&>*:last-child]:max-w-none">
             {[
               {
                 id: "property",
@@ -1407,30 +1430,30 @@ export default function LandingPage() {
                 <Link
                   key={card.id}
                   href={card.href}
-                  className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100 text-left w-full"
+                  className="flex flex-col rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:ring-2 hover:ring-teal-400/50 active:scale-[0.98] transition-all duration-300 cursor-pointer group border border-slate-100 text-left w-full"
                 >
                 {/* Top Half: Photo */}
-                <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
+                <div className="relative h-24 sm:h-44 md:h-48 w-full overflow-hidden bg-slate-100">
                   <Image
                     src={card.image}
                     alt={card.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, 20vw"
+                    sizes="(max-width: 768px) 50vw, 20vw"
                   />
                 </div>
 
                 {/* Bottom Half: Solid Vibrant Color Box */}
-                <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[210px]`}>
+                <div className={`${card.bgColor} p-3 sm:p-5 flex flex-col justify-between flex-1 min-h-[140px] sm:min-h-[210px]`}>
                   <div>
-                    <h3 className="text-base font-extrabold text-white leading-snug mb-1.5">
+                    <h3 className="text-xs sm:text-base font-extrabold text-white leading-snug mb-1 line-clamp-2">
                       {card.title}
                     </h3>
-                    <p className="text-[11px] text-white/80 font-medium mb-3">
+                    <p className="text-[10px] sm:text-[11px] text-white/80 font-medium mb-1.5 sm:mb-3 line-clamp-1">
                       {card.desc}
                     </p>
-                    {/* 3 Bullet Benefits */}
-                    <ul className="space-y-1.5">
+                    {/* 3 Bullet Benefits - Sleek on desktop */}
+                    <ul className="hidden sm:block space-y-1.5">
                       {card.benefits.map((b, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/90 font-semibold leading-tight">
                           <Check size={10} className="text-white/70 shrink-0 mt-0.5" />
@@ -1441,15 +1464,15 @@ export default function LandingPage() {
                   </div>
 
                   {/* Audience Tag + Explore */}
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-white/60 uppercase tracking-wider">
+                  <div className="mt-2 sm:mt-3 flex items-center justify-between gap-1">
+                    <span className="text-[8px] sm:text-[9px] font-bold text-white/70 uppercase tracking-wider truncate">
                       {card.audience}
                     </span>
-                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 group-hover:scale-110 transition-transform shrink-0">
                       {card.iconType === "sparkle" ? (
-                        <Sparkles size={14} className={card.arrowColor} />
+                        <Sparkles size={12} className={card.arrowColor} />
                       ) : (
-                        <ArrowRight size={14} className={card.arrowColor} />
+                        <ArrowRight size={12} className={card.arrowColor} />
                       )}
                     </div>
                   </div>
@@ -1459,88 +1482,25 @@ export default function LandingPage() {
           })}
           </div>
 
-          {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron seamlessly touching lines */}
-          <div className="w-full mt-5 mb-0 sm:mt-6 sm:mb-0 flex flex-col items-center justify-center">
-            {/* Centered Box with "Powered by OFFICEX CORE" */}
-            <div className="flex flex-col items-center mb-0.5 text-center">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wider">
-                Powered by
-              </span>
-              <span className="text-sm sm:text-base font-black text-[#0F8B7D] tracking-widest uppercase">
-                OFFICEX CORE
-              </span>
-            </div>
-
-            {/* Animated converging lines forming the downward arrow pointing directly to the diagram */}
-            <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center">
-              <svg 
-                className="w-full h-7 overflow-visible" 
-                viewBox="0 0 1000 28" 
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <linearGradient id="coreBeamLeftGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
-                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
-                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
-                  </linearGradient>
-                  <linearGradient id="coreBeamRightGrad" x1="100%" y1="0%" x2="0%" y2="0%">
-                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
-                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
-                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
-                  </linearGradient>
-                </defs>
-
-                {/* 1. Left animated beam: connects from left edge to center arrow tip */}
-                <path 
-                  d="M0,3 L440,3 L500,20" 
-                  stroke="url(#coreBeamLeftGrad)" 
-                  strokeWidth="3" 
-                  fill="none" 
-                  vectorEffect="non-scaling-stroke" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="animate-core-beam-left"
-                  strokeDasharray="520"
-                />
-
-                {/* 2. Right animated beam: connects from right edge to center arrow tip */}
-                <path 
-                  d="M1000,3 L560,3 L500,20" 
-                  stroke="url(#coreBeamRightGrad)" 
-                  strokeWidth="3" 
-                  fill="none" 
-                  vectorEffect="non-scaling-stroke" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="animate-core-beam-right"
-                  strokeDasharray="520"
-                />
-
-                {/* 3. Downward Arrow Head Indicator pointing directly to diagram below */}
-                <polygon 
-                  points="492,15 500,27 508,15" 
-                  fill="#0F8B7D" 
-                  className="animate-core-arrow-pulse"
-                />
-              </svg>
-            </div>
+          {/* Seamless Unified Transition to OFFICEX CORE (No distracting animations) */}
+          <div className="w-full mt-10 sm:mt-14 pt-8 sm:pt-10 border-t border-slate-100 flex flex-col items-center justify-center">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200 mb-2">
+              UNIFIED FOUNDATION
+            </span>
           </div>
 
           {/* LOWER HALF: OFFICEX CORE DATA FOUNDATION & ARCHITECTURE DIAGRAM */}
           <div 
             id="officex-core" 
-            className="pt-0 -mt-2 sm:-mt-3"
+            className="pt-2 sm:pt-4"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-8 items-center w-full">
               
               {/* LEFT COLUMN: Core Proposition & Services (5 cols) */}
               <div className="lg:col-span-5 flex flex-col justify-center self-center py-2 sm:py-4">
-                {/* Headline */}
-                <h2 className="text-xl sm:text-2xl lg:text-[28px] font-black text-slate-950 tracking-tight leading-[1.2] uppercase mb-2">
-                  <span className="block">ONE CORE.</span>
-                  <span className="block">ONE DATA FOUNDATION.</span>
-                  <span className="block">ONE SOURCE OF TRUTH.</span>
+                {/* Headline - Unified & Calm */}
+                <h2 className="text-lg sm:text-2xl lg:text-[28px] font-black text-slate-950 tracking-tight leading-tight uppercase mb-2">
+                  One Core. One Data Foundation. One Source of Truth.
                 </h2>
                 
                 <p className="mt-2 text-slate-600 text-xs sm:text-sm leading-relaxed font-normal max-w-lg">
@@ -1642,7 +1602,7 @@ export default function LandingPage() {
 
         {/* Interactive Persona Tabs + Carousel Arrow Controls */}
         <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 max-w-full">
             {stakeholderKeys.map((key) => {
               const label =
                 key === "owner"
@@ -1663,7 +1623,7 @@ export default function LandingPage() {
                   key={key}
                   type="button"
                   onClick={() => scrollToStakeholder(key)}
-                  className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? "bg-[#0F8B7D] text-white shadow-sm ring-2 ring-teal-300/40"
                       : "bg-white text-slate-600 border border-slate-200 hover:border-teal-300 hover:text-slate-900"
@@ -1715,7 +1675,7 @@ export default function LandingPage() {
                 <div
                   key={key}
                   data-stakeholder-card={key}
-                  className={`w-full min-w-full shrink-0 snap-start bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-7 border transition-all duration-300 grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-stretch ${
+                  className={`w-full min-w-full shrink-0 snap-start bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 border transition-all duration-300 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-stretch ${
                     isActive 
                       ? "border-teal-300/80 shadow-lg ring-1 ring-teal-100" 
                       : "border-slate-200 shadow-xs opacity-95"
@@ -1725,27 +1685,27 @@ export default function LandingPage() {
                   <div className="lg:col-span-7 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] sm:text-[10.5px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                        <span className="text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
                           {data.badge}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
                           {data.role}
                         </span>
                       </div>
 
-                      <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 mt-2 tracking-tight leading-snug">
+                      <h3 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 mt-1.5 sm:mt-2 tracking-tight leading-snug">
                         {data.headline}
                       </h3>
 
-                      <p className="text-slate-600 text-xs sm:text-[13px] font-semibold mt-1.5 italic leading-relaxed">
+                      <p className="text-slate-600 text-[11px] sm:text-[13px] font-semibold mt-1 sm:mt-1.5 italic leading-relaxed line-clamp-2 sm:line-clamp-none">
                         "{data.quote}"
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-3 sm:mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-4">
                       {data.points.map((pt, i) => (
-                        <div key={i} className="flex items-start gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] sm:text-[12px] font-bold text-slate-800 leading-snug">
-                          <CheckCircle size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                        <div key={i} className="flex items-start gap-1.5 p-1.5 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[10.5px] sm:text-[12px] font-bold text-slate-800 leading-tight">
+                          <CheckCircle size={13} className="text-[#0F8B7D] shrink-0 mt-0.5" />
                           <span>{pt}</span>
                         </div>
                       ))}
@@ -1753,38 +1713,38 @@ export default function LandingPage() {
                   </div>
 
                   {/* Right Column: Lighter Slate Navy Dashboard KPIs */}
-                  <div className="lg:col-span-5 bg-[#0E223D] text-white rounded-xl sm:rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-md border border-slate-700/60">
-                    <div className="border-b border-slate-700/60 pb-2 mb-3 flex items-center justify-between">
+                  <div className="lg:col-span-5 bg-[#0E223D] text-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md border border-slate-700/60 mt-2 sm:mt-0">
+                    <div className="border-b border-slate-700/60 pb-1.5 sm:pb-2 mb-2 sm:mb-3 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] sm:text-[11px] font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
+                        <span className="text-[9.5px] sm:text-[11px] font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
                         <div className="text-xs sm:text-sm font-black text-white mt-0.5">{data.role} Dashboard</div>
                       </div>
                       <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mb-3 sm:mb-4 text-center">
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 sm:mb-4 text-center">
                       {data.metrics.map((m, idx) => (
-                        <div key={idx} className="bg-[#142948] p-2 rounded-xl border border-slate-700/50">
-                          <div className="text-sm sm:text-base font-black text-teal-400">{m.val}</div>
-                          <div className="text-[8.5px] text-slate-400 font-bold uppercase mt-0.5 leading-tight">{m.label}</div>
+                        <div key={idx} className="bg-[#142948] p-1.5 sm:p-2 rounded-xl border border-slate-700/50">
+                          <div className="text-xs sm:text-base font-black text-teal-400">{m.val}</div>
+                          <div className="text-[8px] sm:text-[8.5px] text-slate-400 font-bold uppercase mt-0.5 leading-tight">{m.label}</div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5 sm:gap-2">
                       <Link
                         href={data.landingHref}
-                        className="w-full py-2 sm:py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
+                        className="w-full py-1.5 sm:py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
                       >
                         <span>See your journey</span>
-                        <ArrowRight size={13} />
+                        <ArrowRight size={12} />
                       </Link>
                       <Link
                         href="/operate"
-                        className="w-full py-2.5 sm:py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                        className="w-full py-2 sm:py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                       >
                         <span>Explore {data.portalName}</span>
-                        <ArrowRight size={13} />
+                        <ArrowRight size={12} />
                       </Link>
                     </div>
                   </div>
@@ -1797,73 +1757,73 @@ export default function LandingPage() {
       </div>
     </section>
 
-    {/* SECTION 05: REAL OUTCOMES & MEASURABLE IMPACT (MOVED BEFORE TRANSFORMATION & ROI) */}
-    <section id="outcomes" className="py-14 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+    {/* SECTION 05: REAL OUTCOMES & MEASURABLE IMPACT (INSTITUTIONAL RIGOR) */}
+    <section id="outcomes" className="py-10 sm:py-14 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto w-full">
         {/* Title */}
-        <div className="text-center mb-8 md:mb-10">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+        <div className="text-center mb-6 sm:mb-8 md:mb-10">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
             Institutional Rigor. Measurable Operations.
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto font-medium">
+          <p className="mt-2 text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto font-medium">
             Standardized operational infrastructure built specifically for commercial real estate portfolios, property managers, and institutional occupiers.
           </p>
         </div>
 
         {/* 5 Verified Platform Core Capabilities */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-8 xl:gap-12 items-center justify-center max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8 xl:gap-12 items-center justify-center max-w-6xl mx-auto [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1 [&>*:last-child]:mx-auto sm:[&>*:last-child]:mx-0">
           {/* 1. SEBI Audit Ready */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-              <Building className="w-6 h-6 text-[#00A86B]" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Building className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A86B]" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-[#00A86B] tracking-tight">100%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Audit-Trail Ready</div>
+              <div className="text-lg sm:text-2xl font-black text-[#00A86B] tracking-tight">100%</div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 leading-tight">Audit-Trail Ready</div>
             </div>
           </div>
 
           {/* 2. 24 Trades */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-              <Wrench className="w-6 h-6 text-[#0F8B7D]" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+              <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-[#0F8B7D]" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight">24</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">FM Trade Categories</div>
+              <div className="text-lg sm:text-2xl font-black text-[#0F8B7D] tracking-tight">24</div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 leading-tight">FM Trade Categories</div>
             </div>
           </div>
 
           {/* 3. <18s Transit */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-              <Layers className="w-6 h-6 text-[#0F8B7D]" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-[#0F8B7D]" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight">&lt;18s</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Lobby Speed-Gate Transit</div>
+              <div className="text-lg sm:text-2xl font-black text-[#0F8B7D] tracking-tight">&lt;18s</div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 leading-tight">Lobby Speed-Gate Transit</div>
             </div>
           </div>
 
           {/* 4. Automated CAM */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6 text-[#F26522]" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#F26522]" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-[#F26522] tracking-tight">0</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">CAM Billing Calculation Disputes</div>
+              <div className="text-lg sm:text-2xl font-black text-[#F26522] tracking-tight">0</div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 leading-tight">CAM Billing Disputes</div>
             </div>
           </div>
 
           {/* 5. 99.9% Uptime */}
-          <div className="flex items-center gap-3.5 col-span-2 sm:col-span-1">
-            <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-6 h-6 text-[#DB2777]" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-[#DB2777]" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-[#DB2777] tracking-tight">99.9%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">System Infrastructure SLA</div>
+              <div className="text-lg sm:text-2xl font-black text-[#DB2777] tracking-tight">99.9%</div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 leading-tight">Infrastructure SLA</div>
             </div>
           </div>
         </div>
@@ -1871,47 +1831,47 @@ export default function LandingPage() {
       </div>
     </section>
 
-    {/* SECTION 06: BEFORE VS AFTER COMPARISON (TRANSFORMATION & ROI) */}
-    <section id="comparison" className="py-14 md:py-20 bg-slate-50/60 border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+    {/* SECTION 06: BEFORE VS AFTER COMPARISON (TRANSFORMATION & ROI - SIDE BY SIDE ON MOBILE) */}
+    <section id="comparison" className="py-8 sm:py-14 md:py-20 bg-slate-50/60 border-b border-slate-200 px-3 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto w-full">
         
-        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-12">
-          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
+        <div className="text-center max-w-3xl mx-auto mb-5 sm:mb-10 md:mb-12">
+          <span className="text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200">
             TRANSFORMATION &amp; ROI
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+          <h2 className="text-lg sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-1.5 sm:mt-3">
             Why Modern Teams Switch to OfficeX
           </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2">
-            Shift from disconnected spreadsheets and delayed reporting to high-velocity operating confidence.
+          <p className="text-slate-500 text-[11px] sm:text-sm font-medium mt-1 sm:mt-2">
+            Shift from disconnected spreadsheets to high-velocity operating confidence.
           </p>
         </div>
 
-        {/* Before vs After Comparison Container */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+        {/* Before vs After Comparison Container - Smooth Horizontal Scroll on Mobile, 2 Columns on Desktop */}
+        <div className="flex overflow-x-auto gap-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-3 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 sm:gap-6 md:gap-8 sm:overflow-visible">
           
           {/* BEFORE OFFICEX Card */}
-          <div className="p-6 sm:p-8 md:p-9 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between shadow-xs">
+          <div className="w-[85vw] max-w-[340px] sm:w-auto sm:max-w-none shrink-0 snap-center p-5 sm:p-8 md:p-9 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between shadow-xs">
             <div>
               <span className="px-3 py-1 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-black uppercase tracking-wider border border-slate-300/80">
                 BEFORE OFFICEX
               </span>
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-4 mb-2">
-                Manual Chaos, Silos &amp; Delayed Reporting
+              <h3 className="text-base sm:text-xl font-black text-slate-900 mt-3 sm:mt-4 mb-1.5 sm:mb-2 leading-tight">
+                Manual Chaos, Silos &amp; Delays
               </h3>
-              <p className="text-xs text-slate-600 font-medium mb-6">
-                Critical tasks slip through cracks when property operations live across disconnected spreadsheets and messaging channels.
+              <p className="text-xs text-slate-600 font-medium mb-4 sm:mb-6 leading-relaxed">
+                Critical tasks slip through cracks when property operations live across disconnected spreadsheets.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {[
-                  "Disconnected Excel spreadsheets for rent roll and CAM",
-                  "Untracked vendor requests and informal WhatsApp groups",
-                  "Scattered compliance documents risking fire & labor fines",
-                  "Manual reconciliations and delayed month-end reporting",
-                  "Zero real-time visibility across multi-building portfolios"
+                  "Disconnected Excel spreadsheets for rent & CAM",
+                  "Untracked vendor requests on WhatsApp groups",
+                  "Scattered compliance documents risking fines",
+                  "Manual reconciliations and delayed reporting",
+                  "Zero real-time visibility across portfolios"
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-700 leading-snug">
                     <span className="w-4 h-4 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-black text-[10px] shrink-0">✕</span>
                     <span>{item}</span>
                   </div>
@@ -1919,39 +1879,39 @@ export default function LandingPage() {
               </div>
             </div>
             
-            <div className="mt-8 pt-4 border-t border-slate-200/80 text-[11px] font-bold text-slate-500">
-              Impact: Revenue leakage, compliance fines, and tenant friction
+            <div className="mt-5 sm:mt-8 pt-3 sm:pt-4 border-t border-slate-200/80 text-xs font-bold text-slate-500">
+              Impact: Revenue leakage &amp; compliance fines
             </div>
           </div>
 
           {/* AFTER OFFICEX Card */}
-          <div className="p-6 sm:p-8 md:p-9 rounded-3xl bg-white border-2 border-[#0F8B7D] shadow-xl flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="w-[85vw] max-w-[340px] sm:w-auto sm:max-w-none shrink-0 snap-center p-5 sm:p-8 md:p-9 rounded-2xl sm:rounded-3xl bg-white border-2 border-[#0F8B7D] shadow-xl flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
             <div>
               <div className="flex items-center justify-between">
-                <span className="px-3.5 py-1 rounded-full bg-[#0F8B7D] text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
+                <span className="px-3 py-1 rounded-full bg-[#0F8B7D] text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
                   AFTER OFFICEX
                 </span>
                 <span className="text-[10px] font-extrabold text-[#0F8B7D] uppercase tracking-wider bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
                   Recommended
                 </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-4 mb-2">
-                Unified Data Core &amp; Automated Operational Rigor
+              <h3 className="text-base sm:text-xl font-black text-slate-900 mt-3 sm:mt-4 mb-1.5 sm:mb-2 leading-tight">
+                Unified Data Core &amp; Automated Rigor
               </h3>
-              <p className="text-xs text-slate-600 font-medium mb-6">
-                Connect every commercial lease, facility maintenance task, and tenant service request into a continuous digital ecosystem.
+              <p className="text-xs text-slate-600 font-medium mb-4 sm:mb-6 leading-relaxed">
+                Connect leases, maintenance tasks, and tenant requests into a continuous digital ecosystem.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {[
-                  "Single unified data foundation across all properties",
-                  "52-week PPM calendars and QR digital asset passports",
-                  "100% audit-ready statutory compliance matrix",
-                  "Verified vendor procurement with milestone escrow payments",
-                  "Instant executive portfolio dashboards and NOI analytics"
+                  "Single unified data core across all properties",
+                  "52-week automated PPM & QR asset passports",
+                  "100% audit-ready statutory compliance vault",
+                  "Pre-vetted FM vendors with milestone escrow",
+                  "Instant executive portfolio NOI dashboards"
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-800">
+                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-800 leading-snug">
                     <CheckCircle size={15} className="text-[#0F8B7D] shrink-0" />
                     <span>{item}</span>
                   </div>
@@ -1959,11 +1919,16 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-teal-100 text-[11px] font-extrabold text-[#0F8B7D]">
-              Result: 30% lower operating overhead and institutional governance
+            <div className="mt-5 sm:mt-8 pt-3 sm:pt-4 border-t border-teal-100 text-xs font-extrabold text-[#0F8B7D]">
+              Result: 30% lower operating overhead
             </div>
           </div>
 
+        </div>
+
+        {/* Swipe hint for mobile */}
+        <div className="flex sm:hidden items-center justify-center gap-1.5 mt-3 text-[10px] font-bold text-slate-400">
+          <span>&larr; Swipe to compare Before &amp; After &rarr;</span>
         </div>
 
       </div>

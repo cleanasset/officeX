@@ -3,11 +3,19 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Send, CheckCircle2, ShieldCheck, Lock, Building } from "lucide-react";
+import { Send, CheckCircle2, ShieldCheck, Lock, Building, ChevronDown } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    solutions: false,
+    company: false
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,8 +28,8 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#111828] text-white py-14 px-4 md:px-6 border-t border-slate-800 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+    <footer className="bg-[#111828] text-white py-8 sm:py-14 px-4 md:px-6 border-t border-slate-800 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
         
         {/* 1. Brand Column */}
         <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
@@ -97,11 +105,27 @@ export default function Footer() {
         </div>
 
         {/* 2. Solutions Column (SaaS Modules & Marketplaces) */}
-        <div>
-          <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Building size={14} className="text-[#0F8B7D]" /> SaaS &amp; Marketplaces
-          </h4>
-          <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
+        <div className="border-t border-slate-800/80 pt-4 sm:pt-0 sm:border-t-0">
+          <button
+            type="button"
+            onClick={() => toggleSection("solutions")}
+            className="w-full flex items-center justify-between sm:cursor-default"
+          >
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Building size={14} className="text-[#0F8B7D]" /> SaaS &amp; Marketplaces
+            </h4>
+            <ChevronDown
+              size={15}
+              className={`sm:hidden text-slate-400 transition-transform duration-200 ${
+                openSections.solutions ? "rotate-180 text-teal-400" : ""
+              }`}
+            />
+          </button>
+          <ul
+            className={`mt-3 sm:mt-4 flex-col gap-2.5 text-xs text-slate-400 font-semibold ${
+              openSections.solutions ? "flex" : "hidden sm:flex"
+            }`}
+          >
             <li>
               <Link href="/operate/rent-roll" className="hover:text-white transition-colors">
                 Rent Roll &amp; CAM Billing
@@ -146,12 +170,28 @@ export default function Footer() {
         </div>
 
         {/* 3. Trust & Company Column */}
-        <div>
-          <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <ShieldCheck size={14} className="text-[#0F8B7D]" /> Trust &amp; Company
-          </h4>
+        <div className="border-t border-slate-800/80 pt-4 sm:pt-0 sm:border-t-0">
+          <button
+            type="button"
+            onClick={() => toggleSection("company")}
+            className="w-full flex items-center justify-between sm:cursor-default"
+          >
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-[#0F8B7D]" /> Trust &amp; Company
+            </h4>
+            <ChevronDown
+              size={15}
+              className={`sm:hidden text-slate-400 transition-transform duration-200 ${
+                openSections.company ? "rotate-180 text-teal-400" : ""
+              }`}
+            />
+          </button>
 
-          <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
+          <ul
+            className={`mt-3 sm:mt-4 flex-col gap-2.5 text-xs text-slate-400 font-semibold ${
+              openSections.company ? "flex" : "hidden sm:flex"
+            }`}
+          >
             <li>
               <Link href="/about" className="hover:text-white transition-colors">
                 About OfficeX

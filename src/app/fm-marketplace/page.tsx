@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   MapPin,
@@ -86,8 +86,9 @@ interface ServiceCategory {
   popularServices: string[];
 }
 
-export default function FMMarketplacePage() {
+function FMMarketplaceContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [slideInOpen, setSlideInOpen] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<"directory" | "commission">("directory");
   const [calcCategory, setCalcCategory] = useState("hvac");
@@ -105,6 +106,28 @@ export default function FMMarketplacePage() {
   const [rfqBudget, setRfqBudget] = useState("₹5,00,000 - ₹10,00,000");
   const [rfqTimeline, setRfqTimeline] = useState("Immediate (< 7 days)");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  // Sync incoming search query parameters from Landing Hero search
+  useEffect(() => {
+    if (!searchParams) return;
+    const cat = searchParams.get("category");
+    const c = searchParams.get("city");
+    if (cat) {
+      const lower = cat.toLowerCase();
+      if (lower.includes("hvac") || lower.includes("chiller")) setSelectedCategoryFilter("HVAC");
+      else if (lower.includes("cleaning") || lower.includes("hygiene")) setSelectedCategoryFilter("Housekeeping");
+      else if (lower.includes("electrical") || lower.includes("mep") || lower.includes("dg")) setSelectedCategoryFilter("MEP & Electrical");
+      else if (lower.includes("security") || lower.includes("psara")) setSelectedCategoryFilter("Security");
+      else if (lower.includes("fire")) setSelectedCategoryFilter("Fire Safety");
+      else if (lower.includes("lift") || lower.includes("elevator")) setSelectedCategoryFilter("Lifts");
+      else if (lower.includes("pest")) setSelectedCategoryFilter("Pest Control");
+      else if (lower.includes("landscap")) setSelectedCategoryFilter("Landscaping");
+      else setSelectedCategoryFilter(cat);
+    }
+    if (c) {
+      setSelectedCityFilter(c);
+    }
+  }, [searchParams]);
 
   // Commission rates by category
   const commissionRatesByCategory: Record<string, { pct: number; label: string }> = {
@@ -2180,5 +2203,13 @@ export default function FMMarketplacePage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function FMMarketplacePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-teal-400 font-bold">Loading FM Marketplace...</div>}>
+      <FMMarketplaceContent />
+    </Suspense>
   );
 }

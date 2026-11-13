@@ -114,37 +114,37 @@ export default function MarketplaceDualShowcase({
   return (
     <section
       id="marketplace-showcase"
-      className="py-16 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
+      className="py-10 sm:py-16 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto w-full space-y-16 md:space-y-20">
+      <div className="max-w-7xl mx-auto w-full space-y-10 sm:space-y-16 md:space-y-20">
 
         {/* ========================================================================= */}
         {/* SUBSECTION 1: FACILITY MANAGEMENT MARKETPLACE                            */}
         {/* ========================================================================= */}
         <div>
-          {/* Header - Solid Pure Black Heading */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          {/* Header - Centered on Mobile with Full Exact Line */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 mb-5 sm:mb-6 text-center sm:text-left">
+            <div className="w-full sm:w-auto">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-black tracking-tight leading-snug">
                 Find. Compare. Engage. — Connect with Trusted Professionals
               </h2>
             </div>
 
             <Link
               href="/fm-marketplace"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group mx-auto sm:mx-0"
             >
               <span>Explore all services</span>
               <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-[#0F8B7D]" />
             </Link>
           </div>
 
-          {/* 4 CARDS DISPLAY (COMPACT PROPORTIONS WITH PROMINENT IMAGE) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4.5">
+          {/* 4 CARDS DISPLAY (HORIZONTAL SCROLL ON MOBILE, GRID ON TABLET/DESKTOP) */}
+          <div className="flex overflow-x-auto gap-3.5 snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
             {vendors.map((vendor) => (
               <div
                 key={vendor.id}
-                className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
+                className="w-[270px] min-w-[270px] sm:w-auto sm:min-w-0 shrink-0 snap-start bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
               >
                 {/* Photo with Overlay Chips — Compact & Image-forward */}
                 <div className="relative h-38 sm:h-42 w-full overflow-hidden bg-slate-100 shrink-0">
@@ -222,29 +222,32 @@ export default function MarketplaceDualShowcase({
         {/* SUBSECTION 2: OFFICE / CRE DISCOVERY MARKETPLACE                         */}
         {/* ========================================================================= */}
         <div>
-          {/* Header - Pure Black Heading */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          {/* Header - Centered on Mobile */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 mb-5 sm:mb-6 text-center sm:text-left">
+            <div className="w-full sm:w-auto">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-black tracking-tight leading-snug">
                 Discover. Compare. Lease.
               </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-1">
+                Verified Commercial Spaces, Managed Offices &amp; Tech Parks
+              </p>
             </div>
 
             <Link
               href="/marketplace"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group mx-auto sm:mx-0"
             >
               <span>Explore all spaces</span>
               <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-[#0F8B7D]" />
             </Link>
           </div>
 
-          {/* 4 CARDS DISPLAY (COMPACT PROPORTIONS WITH PROMINENT IMAGE) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4.5">
+          {/* 4 CARDS DISPLAY (HORIZONTAL SCROLL ON MOBILE, GRID ON TABLET/DESKTOP) */}
+          <div className="flex overflow-x-auto gap-3.5 snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
             {offices.map((office) => (
               <div
                 key={office.id}
-                className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
+                className="w-[270px] min-w-[270px] sm:w-auto sm:min-w-0 shrink-0 snap-start bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
               >
                 {/* Photo with Overlay Chips — Compact & Image-forward */}
                 <div className="relative h-38 sm:h-42 w-full overflow-hidden bg-slate-100 shrink-0">
