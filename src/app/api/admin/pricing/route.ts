@@ -25,13 +25,25 @@ export interface GlobalPricingConfig {
     };
   };
   saasModules: {
+    // All-in-One CAFM Operations Suite Bundles
+    cafmEssentialsMonthly: number;
+    cafmProMonthly: number;
+    cafmEnterpriseMonthly: number;
+    cafmProRatePerSqft: number;
+    cafmEnterpriseRatePerSqft: number;
+
+    // Standalone Individual SaaS Modules
     rentRollStarterMonthly: number;
     rentRollGrowthMonthly: number;
     rentRollEnterpriseMonthly: number;
+    rentRollRatePerSqft: number;
+    ppmModuleMonthly: number; // 52-Week PPM & Asset QR
+    visitorModuleMonthly: number; // Visitor Flow & Speed-Gates
+    complianceModuleMonthly: number; // Statutory Compliance Calendar
+    leaseCrmMonthly: number; // Commercial Lease Dealflow CRM
+    helpdeskModuleMonthly: number; // Tenant Helpdesk & Room Booking
     camModuleMonthly: number;
     submeteringModuleMonthly: number;
-    cafmPpmModuleMonthly: number;
-    visitorModuleMonthly: number;
     tenantPaymentGatewayFeePct: number;
   };
   updatedAt: string;
@@ -72,13 +84,25 @@ const DEFAULT_GLOBAL_PRICING: GlobalPricingConfig = {
     },
   },
   saasModules: {
-    rentRollStarterMonthly: 4999,
-    rentRollGrowthMonthly: 14999,
-    rentRollEnterpriseMonthly: 39999,
+    // All-in-One CAFM Suite Bundles
+    cafmEssentialsMonthly: 19999,
+    cafmProMonthly: 39999,
+    cafmEnterpriseMonthly: 79999,
+    cafmProRatePerSqft: 2.0,
+    cafmEnterpriseRatePerSqft: 3.5,
+
+    // Standalone Individual Modules
+    rentRollStarterMonthly: 9999,
+    rentRollGrowthMonthly: 24999,
+    rentRollEnterpriseMonthly: 49999,
+    rentRollRatePerSqft: 1.0,
+    ppmModuleMonthly: 6999,
+    visitorModuleMonthly: 4999,
+    complianceModuleMonthly: 3999,
+    leaseCrmMonthly: 5999,
+    helpdeskModuleMonthly: 3499,
     camModuleMonthly: 3999,
     submeteringModuleMonthly: 2499,
-    cafmPpmModuleMonthly: 3499,
-    visitorModuleMonthly: 1999,
     tenantPaymentGatewayFeePct: 1.2,
   },
   updatedAt: new Date().toISOString(),

@@ -28,12 +28,14 @@ import {
   Cpu,
   BarChart3,
   ExternalLink,
-  Calendar
+  Calendar,
+  CreditCard
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import { ModuleCoverFlow } from "@/components/marketing/ModuleCoverFlow";
+import OperatePricingSection from "@/components/operate/OperatePricingSection";
 
 export default function OperatePage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
@@ -190,11 +192,19 @@ export default function OperatePage() {
 
             <a
               href="#saas-modules"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0D7B6C] font-bold text-xs sm:text-sm border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer group backdrop-blur-sm"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0D7B6C] font-bold text-xs sm:text-sm border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer group backdrop-blur-sm"
             >
               <Layers className="w-4 h-4 text-[#0D7B6C] group-hover:scale-110 transition-transform" />
               <span>Explore SaaS Modules</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
+            </a>
+
+            <a
+              href="#pricing"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] font-black text-xs sm:text-sm border border-teal-200/90 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer group"
+            >
+              <CreditCard className="w-4 h-4 text-[#0D7B6C]" />
+              <span>Pricing &amp; Plans</span>
             </a>
           </div>
 
@@ -562,6 +572,11 @@ export default function OperatePage() {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════
+          OPERATE PRICING MATRIX — BUNDLE & A-LA-CARTE MODULES
+          ═══════════════════════════════════════════════════════════ */}
+      <OperatePricingSection id="pricing" />
 
       {/* ═══════════════════════════════════════════════════════════
           FAQ ACCORDION

@@ -1254,84 +1254,303 @@ function SuperAdminDashboardContent() {
                 </div>
 
                 {/* 3. SaaS Subscription Modules & Tiers */}
-                <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="space-y-6 pt-6 border-t border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                       <Layers size={16} className="text-indigo-600" />
-                      <span>OfficeX SaaS Platform Modules &amp; Subscriptions</span>
+                      <span>OfficeX SaaS Platform Pricing &amp; Entitlements Master</span>
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Monthly subscription pricing for Rent Roll, CAM billing, CAFM, Submetering, and Visitor compliance.
+                      Configure live subscription rates for All-in-One CAFM Suite Bundles and Individual Standalone Modules. Changes saved here reflect immediately on the Operate Pricing page and Razorpay checkout.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Starter (₹/mo)</label>
-                      <input
-                        type="number"
-                        value={pricingConfig.saasModules?.rentRollStarterMonthly || 4999}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          saasModules: {
-                            ...pricingConfig.saasModules,
-                            rentRollStarterMonthly: Number(e.target.value)
-                          }
-                        })}
-                        className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                      />
-                      <span className="text-[10px] text-slate-400">Up to 50,000 sqft</span>
+                  {/* Section A: All-In-One CAFM Suite Bundles */}
+                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-indigo-950 flex items-center gap-1.5">
+                        <Building2 size={14} className="text-indigo-600" />
+                        All-in-One CAFM Operations Suite Bundles (Full Platform)
+                      </span>
+                      <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">
+                        Includes all 6 modules
+                      </span>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Growth (₹/mo)</label>
-                      <input
-                        type="number"
-                        value={pricingConfig.saasModules?.rentRollGrowthMonthly || 14999}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          saasModules: {
-                            ...pricingConfig.saasModules,
-                            rentRollGrowthMonthly: Number(e.target.value)
-                          }
-                        })}
-                        className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                      />
-                      <span className="text-[10px] text-slate-400">Up to 250,000 sqft</span>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">CAFM Essentials (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.cafmEssentialsMonthly ?? 19999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              cafmEssentialsMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 font-mono outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Up to 25,000 sqft</span>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">CAFM Pro Base (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.cafmProMonthly ?? 39999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              cafmProMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 font-mono outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Up to 100,000 sqft</span>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">CAFM Pro (₹/sqft/mo)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={pricingConfig.saasModules?.cafmProRatePerSqft ?? 2.0}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              cafmProRatePerSqft: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 font-mono outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Area-based calculation</span>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">CAFM Enterprise Base (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.cafmEnterpriseMonthly ?? 79999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              cafmEnterpriseMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 font-mono outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Multi-property portfolio</span>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Enterprise (₹/sqft/mo)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={pricingConfig.saasModules?.cafmEnterpriseRatePerSqft ?? 3.5}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              cafmEnterpriseRatePerSqft: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 font-mono outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Full IWMS integration</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section B: Individual Standalone SaaS Modules (A-la-Carte) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
+                        <Layers size={14} className="text-teal-600" />
+                        Individual Standalone SaaS Modules (A-la-Carte)
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-500">
+                        Customers can purchase any single module independently
+                      </span>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block">CAM Reconciliation (₹/mo)</label>
-                      <input
-                        type="number"
-                        value={pricingConfig.saasModules?.camModuleMonthly || 3999}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          saasModules: {
-                            ...pricingConfig.saasModules,
-                            camModuleMonthly: Number(e.target.value)
-                          }
-                        })}
-                        className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                      />
-                      <span className="text-[10px] text-slate-400">Automated true-up ledger</span>
-                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Starter (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.rentRollStarterMonthly ?? 9999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              rentRollStarterMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Up to 50k sqft</span>
+                      </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block">Submetering Module (₹/mo)</label>
-                      <input
-                        type="number"
-                        value={pricingConfig.saasModules?.submeteringModuleMonthly || 2499}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          saasModules: {
-                            ...pricingConfig.saasModules,
-                            submeteringModuleMonthly: Number(e.target.value)
-                          }
-                        })}
-                        className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                      />
-                      <span className="text-[10px] text-slate-400">Smart utility splitter</span>
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Rate (₹/sqft)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={pricingConfig.saasModules?.rentRollRatePerSqft ?? 1.0}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              rentRollRatePerSqft: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Area calculation</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">52-Week PPM (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.ppmModuleMonthly ?? 6999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              ppmModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Asset QR &amp; Maintenance</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Visitor Flow (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.visitorModuleMonthly ?? 4999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              visitorModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">QR Check-in &amp; Gates</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Compliance Cal. (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.complianceModuleMonthly ?? 3999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              complianceModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Statutory &amp; Fire NOC</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Lease CRM (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.leaseCrmMonthly ?? 5999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              leaseCrmMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Deal pipeline &amp; LOI</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Tenant Helpdesk (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.helpdeskModuleMonthly ?? 3499}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              helpdeskModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Ticketing &amp; Rooms</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">CAM Recon (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.camModuleMonthly ?? 3999}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              camModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">True-up ledger</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Submetering (₹/mo)</label>
+                        <input
+                          type="number"
+                          value={pricingConfig.saasModules?.submeteringModuleMonthly ?? 2499}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              submeteringModuleMonthly: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Utility splitter</span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">PG Fee (%)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={pricingConfig.saasModules?.tenantPaymentGatewayFeePct ?? 1.2}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            saasModules: {
+                              ...pricingConfig.saasModules,
+                              tenantPaymentGatewayFeePct: Number(e.target.value)
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="text-[10px] text-slate-400">Tenant collections</span>
+                      </div>
                     </div>
                   </div>
                 </div>

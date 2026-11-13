@@ -210,8 +210,15 @@ export default function RentRollProductPage() {
                   className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                 >
                   <Calendar size={15} className="text-[#0D7B6C]" />
-                  <span>Book a Demo with Us</span>
+                  <span>Book a Demo</span>
                 </a>
+                <Link
+                  href="/operate/pricing"
+                  className="px-5 py-3.5 rounded-xl bg-teal-50/80 hover:bg-teal-100 text-[#0D7B6C] font-extrabold text-xs sm:text-sm border border-teal-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                >
+                  <Tag size={15} />
+                  <span>Pricing &amp; Plans</span>
+                </Link>
               </div>
 
               {/* Direct Institutional Value Ribbon */}

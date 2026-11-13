@@ -151,9 +151,9 @@ export default function MarketingHeader({
 
               {/* Pricing in Main Menu */}
               <Link
-                href="/operate/rent-roll/pricing"
+                href="/operate/pricing"
                 className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap font-semibold ${
-                  pathname === "/operate/rent-roll/pricing" ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
+                  pathname === "/operate/pricing" ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
                 }`}
               >
                 Pricing
@@ -463,7 +463,7 @@ export default function MarketingHeader({
                 <Link href="/operate/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Rent Roll &amp; Billing
                 </Link>
-                <Link href="/operate/rent-roll/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                <Link href="/operate/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Pricing &amp; Plans
                 </Link>
                 <Link href="/operate/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
