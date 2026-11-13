@@ -248,7 +248,23 @@ export async function GET(request: NextRequest) {
     }
 
     // 7. DEFAULT: MARKETPLACE LISTINGS VIEW
+    const status = searchParams.get("status") || "all";
     const conditions: any[] = [];
+
+    if (status && status !== "all") {
+      if (status === "pending_review") {
+        conditions.push(
+          or(
+            eq(marketplaceListings.status, "pending_review"),
+            eq(marketplaceListings.status, "pending"),
+            eq(marketplaceListings.status, "resubmitted")
+          )
+        );
+      } else {
+        conditions.push(eq(marketplaceListings.status, status));
+      }
+    }
+
     if (q.trim()) {
       const term = `%${q.trim()}%`;
       conditions.push(
@@ -283,10 +299,43 @@ export async function GET(request: NextRequest) {
 
     const total = Number(countResult[0]?.count || 0);
 
+    // Compute status counts for admin moderation pills
+    let pendingCount = 0;
+    let changesRequestedCount = 0;
+    let activeCount = 0;
+    try {
+      const allCounts = await db
+        .select({
+          status: marketplaceListings.status,
+          count: sql<number>`count(*)`
+        })
+        .from(marketplaceListings)
+        .groupBy(marketplaceListings.status);
+
+      allCounts.forEach((c: any) => {
+        const cnt = Number(c.count || 0);
+        if (c.status === "pending_review" || c.status === "pending" || c.status === "resubmitted") {
+          pendingCount += cnt;
+        } else if (c.status === "changes_requested") {
+          changesRequestedCount += cnt;
+        } else if (c.status === "active") {
+          activeCount += cnt;
+        }
+      });
+    } catch (countErr) {
+      console.warn("Could not compute status counts:", countErr);
+    }
+
     return NextResponse.json({
       success: true,
       view: "listings",
       listings,
+      counts: {
+        pendingCount,
+        changesRequestedCount,
+        activeCount,
+        total
+      },
       pagination: {
         total,
         page,
@@ -532,6 +581,93 @@ export async function PUT(request: NextRequest) {
         console.warn("DB owner update notice:", err);
       }
       return NextResponse.json({ success: true, id, verified: body.verified });
+    }
+
+    // Admin Property Listing Moderation (Approval / Reversion Workflow)
+    if (view === "moderation" || body.action === "approve" || body.action === "revert") {
+      try {
+        const [existing] = await db
+          .select()
+          .from(marketplaceListings)
+          .where(eq(marketplaceListings.id, id))
+          .limit(1);
+
+        if (!existing) {
+          return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+        }
+
+        const currentPlans = (existing.pricingPlans as any) || {};
+        const currentMod = currentPlans.moderation || {};
+        const currentHistory = Array.isArray(currentMod.history) ? [...currentMod.history] : [];
+
+        let newStatus = existing.status;
+        let newModeration = { ...currentMod };
+
+        if (body.action === "approve") {
+          newStatus = "active";
+          currentHistory.push({
+            action: "approved",
+            timestamp: new Date().toISOString(),
+            note: body.adminRemarks || "Listing approved and published to public marketplace by Super Admin",
+            by: "super_admin"
+          });
+          newModeration = {
+            ...newModeration,
+            status: "active",
+            approvedAt: new Date().toISOString(),
+            adminRemarks: body.adminRemarks || null,
+            history: currentHistory
+          };
+        } else if (body.action === "revert") {
+          newStatus = "changes_requested";
+          currentHistory.push({
+            action: "changes_requested",
+            timestamp: new Date().toISOString(),
+            note: body.adminRemarks || "Revisions and required documents requested by Super Admin",
+            requestedDocs: body.requestedDocs || [],
+            by: "super_admin"
+          });
+          newModeration = {
+            ...newModeration,
+            status: "changes_requested",
+            revertedAt: new Date().toISOString(),
+            adminRemarks: body.adminRemarks || "Please upload the requested documents to proceed with publishing.",
+            requestedDocs: body.requestedDocs || [],
+            emailNotification: {
+              sent: true,
+              timestamp: new Date().toISOString(),
+              targetEmail: existing.consultantPhone || "operator@workspace.com",
+              notes: body.adminRemarks
+            },
+            history: currentHistory
+          };
+        }
+
+        const [updated] = await db
+          .update(marketplaceListings)
+          .set({
+            status: newStatus,
+            pricingPlans: {
+              ...currentPlans,
+              moderation: newModeration
+            },
+            updatedAt: new Date()
+          })
+          .where(eq(marketplaceListings.id, id))
+          .returning();
+
+        return NextResponse.json({
+          success: true,
+          action: body.action,
+          listing: updated,
+          message: body.action === "approve"
+            ? "Space listing approved and published live to public marketplace!"
+            : "Listing reverted to host. Notification and document checklist dispatched."
+        });
+      } catch (err: any) {
+        console.error("Moderation update error:", err);
+        return NextResponse.json({ error: "Moderation action failed", details: err.message }, { status: 500 });
+      }
     }
 
     // Update Request Approval

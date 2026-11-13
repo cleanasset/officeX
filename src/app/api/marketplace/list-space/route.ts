@@ -135,7 +135,25 @@ export async function POST(req: Request) {
     const validPhotos = Array.isArray(photos) ? photos.filter((p: string) => typeof p === "string" && p.trim().length > 0) : [];
     const featuredImage = validPhotos[0] || null;
 
-    // 3. Insert into marketplace_listings
+    // Attach moderation audit metadata
+    pricingPlans.moderation = {
+      status: "pending_review",
+      batchVersion: 1,
+      submittedAt: new Date().toISOString(),
+      adminRemarks: null,
+      requestedDocs: [],
+      history: [
+        {
+          action: "submitted",
+          batchVersion: 1,
+          timestamp: new Date().toISOString(),
+          note: "Listing submitted by host for Admin audit & quality check",
+          by: "host"
+        }
+      ]
+    };
+
+    // 3. Insert into marketplace_listings (Status: pending_review - Admin Approval Required)
     const [listing] = await db
       .insert(marketplaceListings)
       .values({
@@ -143,7 +161,7 @@ export async function POST(req: Request) {
         name: String(spaceName).trim(),
         brandName: brandName ? String(brandName).trim() : companyName ? String(companyName).trim() : null,
         vertical: String(vertical),
-        status: "active",
+        status: "pending_review",
         city: String(city).trim(),
         locality: locality ? String(locality).trim() : null,
         microMarket: locality ? String(locality).trim() : null,
@@ -176,7 +194,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Listing published successfully to Office Marketplace",
+      message: "Workspace listing submitted for Admin verification. It will be published upon approval.",
       listing,
       owner
     });

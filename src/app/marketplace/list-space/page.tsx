@@ -20,7 +20,9 @@ import {
   Mail,
   Loader2,
   ChevronLeft,
-  ArrowUpRight
+  ArrowUpRight,
+  X,
+  Image as ImageIcon
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -75,6 +77,72 @@ export default function ListSpacePage() {
     photos: [] as string[]
   });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [photoUrlInput, setPhotoUrlInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Handle direct file upload via FileReader (converts to base64 data URLs)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newPhotos: string[] = [];
+    let processed = 0;
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) {
+        processed++;
+        if (processed === files.length) setIsUploading(false);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          newPhotos.push(result);
+        }
+        processed++;
+        if (processed === files.length) {
+          setFormData((prev) => ({
+            ...prev,
+            photos: [...prev.photos, ...newPhotos]
+          }));
+          setIsUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddPhotoByUrl = () => {
+    if (!photoUrlInput.trim()) return;
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...prev.photos, photoUrlInput.trim()]
+    }));
+    setPhotoUrlInput("");
+  };
+
+  const removePhoto = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleLoadSamplePhotos = () => {
+    const samples = [
+      "/images/workspace_managed_suite.jpg",
+      "/images/showcase_managed_coworking.jpg",
+      "/images/showcase_single_tower.jpg",
+      "/images/showcase_commercial_warmshell.jpg"
+    ];
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...prev.photos, ...samples]
+    }));
+  };
 
   const allAmenitiesOptions = [
     "High-Speed WiFi",
@@ -225,7 +293,8 @@ export default function ListSpacePage() {
                 { s: 1, label: "Operator Info" },
                 { s: 2, label: "Space Specs" },
                 { s: 3, label: "Pricing & Plans" },
-                { s: 4, label: "Review & Submit" }
+                { s: 4, label: "Photos & Media" },
+                { s: 5, label: "Review & Submit" }
               ].map((item) => (
                 <div key={item.s} className="flex items-center gap-2">
                   <div
@@ -625,7 +694,123 @@ export default function ListSpacePage() {
                   <button
                     type="button"
                     onClick={() => setStep(4)}
-                    className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    Next: Photos &amp; Media <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Photos & Visual Media */}
+            {step === 4 && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Workspace Photography &amp; Visuals</h3>
+                  <p className="text-xs text-slate-500">Upload high-resolution photos of workstations, private cabins, meeting rooms, and reception.</p>
+                </div>
+
+                {/* Dropzone file picker */}
+                <div className="border-2 border-dashed border-teal-200 rounded-3xl p-8 text-center hover:border-[#0F8B7D] transition-colors bg-teal-50/20">
+                  <input
+                    type="file"
+                    id="photoFileInput"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <label htmlFor="photoFileInput" className="cursor-pointer flex flex-col items-center justify-center gap-2.5">
+                    <div className="w-14 h-14 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center shadow-xs border border-teal-100">
+                      <Upload size={24} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-slate-900 block">Click to upload photos or drag and drop</span>
+                      <span className="text-xs text-slate-400">PNG, JPG, WebP supported · High quality photos attract 4x more site visits</span>
+                    </div>
+                    <span className="mt-1 px-4 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shadow-xs">
+                      Browse Files
+                    </span>
+                  </label>
+                </div>
+
+                {/* URL paste and Sample photos row */}
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="flex-1 flex gap-2 w-full">
+                    <input
+                      type="url"
+                      placeholder="Or paste an image URL..."
+                      value={photoUrlInput}
+                      onChange={(e) => setPhotoUrlInput(e.target.value)}
+                      className="flex-1 p-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:ring-2 focus:ring-[#0F8B7D] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddPhotoByUrl}
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer"
+                    >
+                      Add URL
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLoadSamplePhotos}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-[#0F8B7D] font-bold text-xs whitespace-nowrap cursor-pointer"
+                  >
+                    + Add High-Res Sample Photos
+                  </button>
+                </div>
+
+                {/* Uploaded Photos Gallery Preview */}
+                {formData.photos.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Uploaded Photos ({formData.photos.length})</span>
+                      <span className="text-[11px] text-slate-400">First image will be the Featured Cover photo</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {formData.photos.map((url, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-video bg-slate-100 shadow-2xs">
+                          <img
+                            src={url}
+                            alt={`Workspace ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {idx === 0 && (
+                            <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-[#0F8B7D] text-white text-[9px] font-bold shadow-xs">
+                              Cover Photo
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(idx)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-xs cursor-pointer"
+                            title="Remove photo"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
+                    No custom photos added yet. If none are provided, OfficeX will apply curated high-res Grade-A workspace photography.
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ChevronLeft size={13} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep(5)}
+                    className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     Next: Review &amp; Submit <ArrowRight size={13} />
                   </button>
@@ -633,12 +818,12 @@ export default function ListSpacePage() {
               </div>
             )}
 
-            {/* Step 4: Review & Submit */}
-            {step === 4 && (
+            {/* Step 5: Review & Submit */}
+            {step === 5 && (
               <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-150">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Review Workspace Listing Application</h3>
-                  <p className="text-xs text-slate-500">Confirm all details before submitting for marketplace verification.</p>
+                  <p className="text-xs text-slate-500">Confirm all details before submitting for marketplace publication.</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
@@ -663,6 +848,19 @@ export default function ListSpacePage() {
                       <span className="font-bold text-[#0F8B7D]">₹{Number(formData.dedicatedDeskMonthly).toLocaleString("en-IN")}/mo</span>
                     </div>
                   </div>
+
+                  {formData.photos.length > 0 && (
+                    <div className="border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 block font-semibold mb-1">Attached Photos ({formData.photos.length})</span>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {formData.photos.slice(0, 6).map((img, i) => (
+                          <div key={i} className="w-16 h-12 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-slate-200">
+                            <img src={img} alt="thumb" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <span className="text-slate-400 block font-semibold mb-1">Amenities ({formData.amenities.length})</span>
@@ -698,8 +896,8 @@ export default function ListSpacePage() {
                 <div className="flex justify-between pt-4">
                   <button
                     type="button"
-                    onClick={() => setStep(3)}
-                    className="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-slate-700 font-bold text-xs flex items-center gap-1.5"
+                    onClick={() => setStep(4)}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <ChevronLeft size={13} /> Back
                   </button>

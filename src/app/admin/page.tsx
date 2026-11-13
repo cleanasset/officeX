@@ -105,6 +105,18 @@ function SuperAdminDashboardContent() {
   const [mpLoading, setMpLoading] = useState<boolean>(false);
   const [mpSearch, setMpSearch] = useState<string>("");
   const [mpCity, setMpCity] = useState<string>("all");
+  const [mpStatus, setMpStatus] = useState<string>("all");
+  const [mpCounts, setMpCounts] = useState<{ pendingCount: number; changesRequestedCount: number; activeCount: number; total: number }>({
+    pendingCount: 0,
+    changesRequestedCount: 0,
+    activeCount: 0,
+    total: 0
+  });
+  const [moderatingListing, setModeratingListing] = useState<any | null>(null);
+  const [modAdminRemarks, setModAdminRemarks] = useState<string>("");
+  const [modRequestedDocs, setModRequestedDocs] = useState<string[]>([]);
+  const [modActionLoading, setModActionLoading] = useState<boolean>(false);
+  const [revertMode, setRevertMode] = useState<boolean>(false);
   const [mpPage, setMpPage] = useState<number>(1);
   const [mpTotalPages, setMpTotalPages] = useState<number>(1);
   const [editingListing, setEditingListing] = useState<any | null>(null);
@@ -309,17 +321,20 @@ function SuperAdminDashboardContent() {
     if (activeTab === "marketplace") {
       loadMarketplaceListings();
     }
-  }, [activeTab, mpPage, mpCity]);
+  }, [activeTab, mpPage, mpCity, mpStatus]);
 
   async function loadMarketplaceListings() {
     setMpLoading(true);
     try {
-      const url = `/api/admin/marketplace?page=${mpPage}&limit=15&q=${encodeURIComponent(mpSearch)}&city=${encodeURIComponent(mpCity)}`;
+      const url = `/api/admin/marketplace?page=${mpPage}&limit=15&q=${encodeURIComponent(mpSearch)}&city=${encodeURIComponent(mpCity)}&status=${encodeURIComponent(mpStatus)}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setMpListings(data.listings || []);
         setMpTotalPages(data.pagination?.totalPages || 1);
+        if (data.counts) {
+          setMpCounts(data.counts);
+        }
       }
     } catch (e) {
       console.error("Failed to load marketplace listings:", e);
@@ -552,6 +567,75 @@ function SuperAdminDashboardContent() {
       }
     } catch {
       showToast("Error updating listing", "error");
+    }
+  }
+
+  // Admin Moderation: Approve and Publish to Marketplace
+  async function handleApproveListing(listingId: string) {
+    setModActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/marketplace", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: listingId,
+          view: "moderation",
+          action: "approve",
+          adminRemarks: modAdminRemarks || "Approved and published by Super Admin"
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("✓ Listing approved and published live to public marketplace!");
+        setModeratingListing(null);
+        setRevertMode(false);
+        setModAdminRemarks("");
+        setModRequestedDocs([]);
+        loadMarketplaceListings();
+      } else {
+        showToast(data.error || "Approval failed", "error");
+      }
+    } catch {
+      showToast("Error approving listing", "error");
+    } finally {
+      setModActionLoading(false);
+    }
+  }
+
+  // Admin Moderation: Revert with feedback notes and requested documents
+  async function handleRevertListing(listingId: string) {
+    if (!modAdminRemarks.trim() && modRequestedDocs.length === 0) {
+      showToast("Please enter remarks or select at least one document to request", "error");
+      return;
+    }
+    setModActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/marketplace", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: listingId,
+          view: "moderation",
+          action: "revert",
+          adminRemarks: modAdminRemarks,
+          requestedDocs: modRequestedDocs
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("✓ Revert notice dispatched to host with document checklist!");
+        setModeratingListing(null);
+        setRevertMode(false);
+        setModAdminRemarks("");
+        setModRequestedDocs([]);
+        loadMarketplaceListings();
+      } else {
+        showToast(data.error || "Revert failed", "error");
+      }
+    } catch {
+      showToast("Error reverting listing", "error");
+    } finally {
+      setModActionLoading(false);
     }
   }
 
@@ -1561,14 +1645,21 @@ function SuperAdminDashboardContent() {
       )}
 
       {/* =========================================================================
-          TAB: OFFICE MARKETPLACE MANAGER
+          TAB: OFFICE MARKETPLACE MANAGER & MODERATION
           ========================================================================= */}
       {activeTab === "marketplace" && (
         <div className="space-y-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Office Marketplace Listings Manager</h2>
-              <p className="text-xs text-slate-500">Manage 6,767 verified listings, edit pricing, toggle status, and verify photos.</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">Office Marketplace Listings Manager</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200">
+                  Strict Admin Moderation
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Audit new partner submissions, verify property media, request legal documents / Fire NOC, or approve spaces live to the marketplace.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1599,10 +1690,65 @@ function SuperAdminDashboardContent() {
               <button
                 onClick={() => loadMarketplaceListings()}
                 className="p-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+                title="Refresh listings"
               >
                 <RefreshCw size={14} className={mpLoading ? "animate-spin" : ""} />
               </button>
             </div>
+          </div>
+
+          {/* Status Filter Navigation Tabs */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-b border-slate-100 pb-3">
+            <button
+              onClick={() => { setMpStatus("all"); setMpPage(1); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                mpStatus === "all" ? "bg-slate-900 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <span>All Spaces</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${mpStatus === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
+                {mpCounts.total || mpListings.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setMpStatus("pending_review"); setMpPage(1); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                mpStatus === "pending_review" ? "bg-amber-500 text-white shadow-xs" : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+              }`}
+            >
+              <Clock size={13} />
+              <span>Pending Review / Audits</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${mpStatus === "pending_review" ? "bg-white/20 text-white" : "bg-amber-200 text-amber-900"}`}>
+                {mpCounts.pendingCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setMpStatus("changes_requested"); setMpPage(1); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                mpStatus === "changes_requested" ? "bg-rose-600 text-white shadow-xs" : "bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100"
+              }`}
+            >
+              <AlertTriangle size={13} />
+              <span>Changes Requested / Reverted</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${mpStatus === "changes_requested" ? "bg-white/20 text-white" : "bg-rose-200 text-rose-900"}`}>
+                {mpCounts.changesRequestedCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setMpStatus("active"); setMpPage(1); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                mpStatus === "active" ? "bg-emerald-600 text-white shadow-xs" : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+              }`}
+            >
+              <CheckCircle2 size={13} />
+              <span>Active on Live Marketplace</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${mpStatus === "active" ? "bg-white/20 text-white" : "bg-emerald-200 text-emerald-900"}`}>
+                {mpCounts.activeCount}
+              </span>
+            </button>
           </div>
 
           {/* Table */}
@@ -1610,12 +1756,12 @@ function SuperAdminDashboardContent() {
             <table className="w-full text-left text-xs text-slate-700">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
                 <tr>
-                  <th className="p-3">Space Name</th>
+                  <th className="p-3">Space Name &amp; Batch</th>
                   <th className="p-3">Brand / Operator</th>
                   <th className="p-3">City &amp; Area</th>
                   <th className="p-3">Starting Price</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
+                  <th className="p-3">Audit Status</th>
+                  <th className="p-3 text-right">Moderation Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1628,39 +1774,93 @@ function SuperAdminDashboardContent() {
                     <td colSpan={6} className="p-8 text-center text-slate-400">No listings found matching criteria.</td>
                   </tr>
                 ) : (
-                  mpListings.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50/60 transition">
-                      <td className="p-3 font-bold text-slate-900">{l.name}</td>
-                      <td className="p-3 text-slate-600 font-medium">{l.brandName || "Independent"}</td>
-                      <td className="p-3 text-slate-500">{l.locality || l.city}, {l.city}</td>
-                      <td className="p-3 font-bold text-slate-900">₹{Number(l.startingPrice || 8500).toLocaleString("en-IN")}/mo</td>
-                      <td className="p-3">
-                        <button
-                          onClick={() => handleToggleListingStatus(l.id, l.status)}
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer ${
-                            l.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
-                          }`}
-                        >
-                          {l.status}
-                        </button>
-                      </td>
-                      <td className="p-3 text-right space-x-1.5">
-                        <button
-                          onClick={() => setEditingListing({ ...l })}
-                          className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-700 cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                        <a
-                          href={`/marketplace/${l.slug || l.id}`}
-                          target="_blank"
-                          className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-bold"
-                        >
-                          View
-                        </a>
-                      </td>
-                    </tr>
-                  ))
+                  mpListings.map((l) => {
+                    const mod = l.pricingPlans?.moderation;
+                    const batchVer = mod?.batchVersion || 1;
+                    const isPending = l.status === "pending_review" || l.status === "pending";
+                    const isResubmitted = l.status === "resubmitted";
+                    const isChangesReq = l.status === "changes_requested";
+
+                    return (
+                      <tr key={l.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-bold text-slate-900">
+                          <div className="flex items-center gap-1.5">
+                            <span>{l.name}</span>
+                            {batchVer > 1 && (
+                              <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[9px] font-black uppercase">
+                                Batch v{batchVer}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            {l.vertical ? l.vertical.replace("_", " ").toUpperCase() : "COWORKING"} · {l.totalSeats ? `${l.totalSeats} seats` : "Flexible"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-600 font-medium">{l.brandName || "Independent"}</td>
+                        <td className="p-3 text-slate-500">{l.locality || l.city}, {l.city}</td>
+                        <td className="p-3 font-bold text-slate-900">₹{Number(l.startingPrice || 8500).toLocaleString("en-IN")}/mo</td>
+                        <td className="p-3">
+                          {isPending && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 w-fit">
+                              <Clock size={10} /> Pending Audit
+                            </span>
+                          )}
+                          {isResubmitted && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1 w-fit">
+                              <RefreshCw size={10} className="animate-spin" /> Resubmitted (Batch v{batchVer})
+                            </span>
+                          )}
+                          {isChangesReq && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1 w-fit">
+                              <AlertTriangle size={10} /> Revert Sent
+                            </span>
+                          )}
+                          {!isPending && !isResubmitted && !isChangesReq && (
+                            <button
+                              onClick={() => handleToggleListingStatus(l.id, l.status)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer ${
+                                l.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                              }`}
+                            >
+                              {l.status}
+                            </button>
+                          )}
+                        </td>
+                        <td className="p-3 text-right space-x-1.5">
+                          <button
+                            onClick={() => {
+                              setModeratingListing(l);
+                              setRevertMode(false);
+                              setModAdminRemarks(l.pricingPlans?.moderation?.adminRemarks || "");
+                              setModRequestedDocs(l.pricingPlans?.moderation?.requestedDocs || []);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-xs cursor-pointer inline-flex items-center gap-1 ${
+                              isPending || isResubmitted || isChangesReq
+                                ? "bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white"
+                                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            <ShieldCheck size={12} />
+                            <span>{isPending || isResubmitted ? "Audit & Moderate" : isChangesReq ? "View Revert" : "Audit"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => setEditingListing({ ...l })}
+                            className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-700 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <a
+                            href={`/marketplace/${l.slug || l.id}`}
+                            target="_blank"
+                            className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-bold"
+                          >
+                            View
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -3745,6 +3945,310 @@ function SuperAdminDashboardContent() {
                 <Save size={14} />
                 <span>{editRowLoading ? "Saving to Database..." : "Save Changes to Database"}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Admin Marketplace Moderation & Approval Modal */}
+      {moderatingListing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-scaleUp">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center font-bold">
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">
+                      {moderatingListing.name}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      Batch v{moderatingListing.pricingPlans?.moderation?.batchVersion || 1}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      moderatingListing.status === "active"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : moderatingListing.status === "changes_requested"
+                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}>
+                      {moderatingListing.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {moderatingListing.brandName || "Independent"} · {moderatingListing.locality || moderatingListing.city}, {moderatingListing.city}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setModeratingListing(null);
+                  setRevertMode(false);
+                }}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body: 2 Columns */}
+            <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 text-xs text-slate-700">
+              {/* Left Column: Property Specs, Media & Submitted Docs (7 cols) */}
+              <div className="lg:col-span-7 space-y-5">
+                {/* Space Specifications Box */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <h4 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                    <Building2 size={14} className="text-teal-600" />
+                    <span>Property &amp; Operator Specifications</span>
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Vertical</span>
+                      <p className="font-bold text-slate-900 capitalize">{moderatingListing.vertical?.replace("_", " ") || "Coworking"}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Starting Rate</span>
+                      <p className="font-bold text-teal-700">₹{Number(moderatingListing.startingPrice || 8500).toLocaleString("en-IN")}/mo</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Workstations</span>
+                      <p className="font-bold text-slate-900">{moderatingListing.totalSeats ? `${moderatingListing.totalSeats} Seats` : "Flexible"}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Total Area</span>
+                      <p className="font-bold text-slate-900">{moderatingListing.totalAreaSqft ? `${moderatingListing.totalAreaSqft} sqft` : "N/A"}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Building Grade</span>
+                      <p className="font-bold text-slate-900">{moderatingListing.buildingGrade || "Grade A"}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Operator Contact</span>
+                      <p className="font-bold text-slate-900 truncate">{moderatingListing.consultantName || moderatingListing.brandName || "Partner"}</p>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-600 pt-1">
+                    <b>Address:</b> {moderatingListing.fullAddress || `${moderatingListing.locality || ""}, ${moderatingListing.city}`}
+                  </div>
+                </div>
+
+                {/* Uploaded Photos & Media Gallery */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <Eye size={13} className="text-teal-600" />
+                      <span>Uploaded Photos &amp; Media ({Array.isArray(moderatingListing.images) ? moderatingListing.images.length : (moderatingListing.featuredImage ? 1 : 0)})</span>
+                    </h4>
+                    <span className="text-[10px] text-slate-400">Replaced automatically on batch updates</span>
+                  </div>
+
+                  {Array.isArray(moderatingListing.images) && moderatingListing.images.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {moderatingListing.images.map((img: string, idx: number) => (
+                        <div key={idx} className="h-28 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group">
+                          <img
+                            src={img}
+                            alt={`Preview ${idx + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                            onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
+                          />
+                          <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-bold">
+                            {idx === 0 ? "Cover" : `#${idx + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : moderatingListing.featuredImage ? (
+                    <div className="h-44 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                      <img
+                        src={moderatingListing.featuredImage}
+                        alt="Featured preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.src = "/images/showcase_commercial_warmshell.jpg"; }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl border border-dashed border-slate-300 text-center text-slate-400">
+                      No media uploaded yet for this property.
+                    </div>
+                  )}
+                </div>
+
+                {/* Host Notes / Resubmission Remarks */}
+                {moderatingListing.pricingPlans?.moderation?.hostRemarks && (
+                  <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-1">
+                    <div className="flex items-center gap-1.5 text-teal-900 font-bold text-xs">
+                      <RefreshCw size={13} className="text-teal-600" />
+                      <span>Host Resubmission Note (Batch v{moderatingListing.pricingPlans?.moderation?.batchVersion || 2}):</span>
+                    </div>
+                    <p className="text-xs text-teal-800">
+                      "{moderatingListing.pricingPlans?.moderation?.hostRemarks}"
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Audit Trail & Moderation Decision (5 cols) */}
+              <div className="lg:col-span-5 space-y-5">
+                {/* Audit & Revision History */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock size={13} className="text-teal-600" />
+                    <span>Audit &amp; Revision Trail</span>
+                  </h4>
+                  <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                    {Array.isArray(moderatingListing.pricingPlans?.moderation?.history) &&
+                    moderatingListing.pricingPlans.moderation.history.length > 0 ? (
+                      moderatingListing.pricingPlans.moderation.history.map((h: any, i: number) => (
+                        <div key={i} className="text-xs border-l-2 border-teal-500 pl-3 py-0.5 space-y-0.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 capitalize">{h.action?.replace("_", " ")}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {h.timestamp ? new Date(h.timestamp).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                            </span>
+                          </div>
+                          {h.note && <p className="text-slate-600 text-[11px]">"{h.note}"</p>}
+                          {Array.isArray(h.requestedDocs) && h.requestedDocs.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {h.requestedDocs.map((d: string, di: number) => (
+                                <span key={di} className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 text-[9px] font-bold">
+                                  {d}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-400 text-center py-2">Initial submission logged.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Moderation Actions Box */}
+                {!revertMode ? (
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                      <div>
+                        <h5 className="font-extrabold text-emerald-900 text-xs flex items-center gap-1.5">
+                          <CheckCircle2 size={14} className="text-emerald-600" />
+                          <span>Approve &amp; Publish to Public Marketplace</span>
+                        </h5>
+                        <p className="text-[11px] text-emerald-700 mt-1">
+                          Grants verified status. Normal users and seekers will be able to discover and rent this space immediately.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleApproveListing(moderatingListing.id)}
+                        disabled={modActionLoading}
+                        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Check size={14} />
+                        <span>{modActionLoading ? "Publishing..." : "Approve & Publish Space"}</span>
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                      <div>
+                        <h5 className="font-extrabold text-rose-900 text-xs flex items-center gap-1.5">
+                          <AlertTriangle size={14} className="text-rose-600" />
+                          <span>Revert &amp; Request Documents from Operator</span>
+                        </h5>
+                        <p className="text-[11px] text-rose-700 mt-0.5">
+                          Flag missing Fire Safety NOC, layout blueprints, or blurry photos. Notifies the host on their dashboard &amp; email.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setRevertMode(true)}
+                        className="w-full py-2.5 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <AlertTriangle size={14} />
+                        <span>Specify Missing Documents &amp; Revert</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 animate-in zoom-in-95">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-black text-amber-900 text-xs flex items-center gap-1.5">
+                        <AlertTriangle size={14} className="text-amber-600" />
+                        <span>Select Documents &amp; Remarks for Operator</span>
+                      </h5>
+                      <button
+                        onClick={() => setRevertMode(false)}
+                        className="text-[11px] text-slate-500 hover:text-slate-800 font-bold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    {/* Checkbox of requested documents */}
+                    <div className="space-y-1.5 bg-white p-3 rounded-xl border border-amber-200">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Required Documents</span>
+                      {[
+                        "Fire Safety NOC Certificate",
+                        "Building Ownership Title Deed / Lease",
+                        "Floor Layout & Workstation Blueprint",
+                        "High-Resolution Workstation Photos",
+                        "Latest Electricity / Utility Bill",
+                        "GST Registration Certificate"
+                      ].map((docName) => {
+                        const checked = modRequestedDocs.includes(docName);
+                        return (
+                          <label key={docName} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setModRequestedDocs([...modRequestedDocs, docName]);
+                                } else {
+                                  setModRequestedDocs(modRequestedDocs.filter(d => d !== docName));
+                                }
+                              }}
+                              className="rounded text-amber-600 focus:ring-amber-500"
+                            />
+                            <span>{docName}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Remarks for Operator (Email &amp; Dashboard)</label>
+                      <textarea
+                        rows={3}
+                        placeholder="e.g. Please provide Fire Safety NOC and update the floor plan before we can approve this space."
+                        value={modAdminRemarks}
+                        onChange={(e) => setModAdminRemarks(e.target.value)}
+                        className="w-full p-2 rounded-xl border border-slate-300 bg-white text-xs text-slate-800 outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => setRevertMode(false)}
+                        className="flex-1 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => handleRevertListing(moderatingListing.id)}
+                        disabled={modActionLoading}
+                        className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
+                      >
+                        {modActionLoading ? "Sending Revert..." : "Send Revert Notice"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

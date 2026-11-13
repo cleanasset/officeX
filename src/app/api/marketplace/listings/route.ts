@@ -125,12 +125,28 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(250, Math.max(1, Number(searchParams.get("limit")) || 20));
     const offset = (page - 1) * limit;
 
+    const statusParam = searchParams.get("status");
+    const ownerId = searchParams.get("ownerId") || searchParams.get("marketplaceOwnerId");
+
     let dbListings: any[] = [];
     let dbTotal = 0;
 
     // 1. Try querying PostgreSQL database
     try {
-      const conditions: any[] = [eq(marketplaceListings.status, "active")];
+      const conditions: any[] = [];
+
+      // Status Filter:
+      if (statusParam && statusParam.toLowerCase() !== "all") {
+        conditions.push(eq(marketplaceListings.status, statusParam));
+      } else if (!statusParam) {
+        // Public search strictly only shows approved 'active' spaces
+        conditions.push(eq(marketplaceListings.status, "active"));
+      }
+      // If statusParam === "all", do not filter by status (allows Admin and Host Console to fetch all)
+
+      if (ownerId) {
+        conditions.push(eq(marketplaceListings.marketplaceOwnerId, ownerId));
+      }
 
       if (city && city.toLowerCase() !== "all") {
         const c = city.trim().toLowerCase();
@@ -305,6 +321,14 @@ export async function GET(request: NextRequest) {
           limit,
           totalPages: Math.ceil(dbTotal / limit)
         }
+      });
+    }
+
+    // If specific non-active status is queried, do not fall back to active static catalogue
+    if (statusParam && statusParam !== "active") {
+      return NextResponse.json({
+        listings: [],
+        pagination: { total: 0, page, limit, totalPages: 1 }
       });
     }
 
