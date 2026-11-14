@@ -27,15 +27,18 @@ export default function DashboardLayout({
         localStorage.getItem("officex_user_email") ||
         sessionStorage.getItem("officex_user_email");
 
-      // Super Admin bypass: Admin should NEVER stay in the standard user dashboard or workspace hub
-      const isAdmin =
-        (email && (email.toLowerCase().trim() === "admin@gmail.com" || email.toLowerCase().trim() === "medistationlifecare@gmail.com")) ||
-        getAuthCookie("officex_admin") === "1" ||
-        localStorage.getItem("officex_admin") === "1" ||
-        sessionStorage.getItem("officex_admin") === "1" ||
-        localStorage.getItem("officex_role") === "super_admin";
+      // Clean up invalid or stale admin flags if user is not actually admin@gmail.com
+      const isSuperAdminEmail = email && (email.toLowerCase().trim() === "admin@gmail.com" || email.toLowerCase().trim() === "medistationlifecare@gmail.com");
+      if (!isSuperAdminEmail) {
+        if (localStorage.getItem("officex_admin") === "1" || sessionStorage.getItem("officex_admin") === "1") {
+          localStorage.removeItem("officex_admin");
+          sessionStorage.removeItem("officex_admin");
+          document.cookie = "officex_admin=; path=/; max-age=0; SameSite=Lax";
+        }
+      }
 
-      if (isAdmin && (pathname === "/dashboard" || pathname.startsWith("/dashboard/"))) {
+      // Only redirect to /admin if on top-level /dashboard hub and is genuinely super admin
+      if (isSuperAdminEmail && pathname === "/dashboard") {
         router.replace("/admin");
         return;
       }

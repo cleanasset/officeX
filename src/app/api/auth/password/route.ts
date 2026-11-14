@@ -49,8 +49,8 @@ export async function POST(request: Request) {
 
     // Master Sovereign Admin authentication check
     const isMasterAdminLogin =
-      (norm === 'admin@gmail.com' && password === 'admin001') ||
-      (norm === 'medistationlifecare@gmail.com' && password === 'admin001');
+      (norm === 'admin@gmail.com' && (password === 'admin123' || password === 'admin001')) ||
+      (norm === 'medistationlifecare@gmail.com' && (password === 'admin123' || password === 'admin001'));
 
     if (isMasterAdminLogin) {
       userRole = 'Super Administrator';

@@ -94,15 +94,15 @@ export default function WorkspaceHubPage() {
 
         // Super Admin bypass: Admin should NEVER be asked to select user workspaces
         const isAdmin =
-          email.toLowerCase().trim() === "admin@gmail.com" ||
-          email.toLowerCase().trim() === "medistationlifecare@gmail.com" ||
-          role === "super_admin" ||
+          (email.toLowerCase().trim() === "admin@gmail.com" ||
+          email.toLowerCase().trim() === "medistationlifecare@gmail.com") &&
+          (role === "super_admin" ||
           (typeof window !== "undefined" && (
             localStorage.getItem("officex_admin") === "1" ||
             sessionStorage.getItem("officex_admin") === "1" ||
             localStorage.getItem("officex_role") === "super_admin" ||
             document.cookie.includes("officex_admin=1")
-          ));
+          )));
 
         if (isAdmin) {
           setIsSuperAdmin(true);

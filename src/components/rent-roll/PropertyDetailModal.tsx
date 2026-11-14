@@ -22,6 +22,7 @@ import {
   Briefcase,
   Landmark,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
@@ -236,24 +237,64 @@ export default function PropertyDetailModal({
   };
 
   const [deleting, setDeleting] = useState(false);
+  const [checkingImpact, setCheckingImpact] = useState(false);
+  const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<any>(null);
+  const [confirmInputText, setConfirmInputText] = useState("");
+  const [confirmCheckbox, setConfirmCheckbox] = useState(false);
 
   const handleDeleteProperty = async () => {
     if (!property?.id) return;
-    const pName = property.property_name || property.name || "this property";
-    if (
-      !confirm(
-        `Are you sure you want to permanently delete "${pName}" and all its units from your portfolio?\n\nThis will remove the property and its leasable spaces.`
-      )
-    ) {
-      return;
+    try {
+      setCheckingImpact(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${property.id}?action=impact`, {
+        headers: authHeaders,
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setDeleteImpact(d.impact || null);
+      } else {
+        // Fallback to local state if endpoint fails
+        setDeleteImpact({
+          has_impact: contracts.length > 0,
+          active_contracts_count: contracts.length,
+          contracts: contracts.map((c: any) => ({
+            id: c.id,
+            code: c.contract_code,
+            tenant_name: c.occupant_name || c.tenant_name || "Commercial Tenant",
+          })),
+        });
+      }
+      setConfirmInputText("");
+      setConfirmCheckbox(false);
+      setDeleteConfirmModalOpen(true);
+    } catch {
+      setDeleteImpact({
+        has_impact: contracts.length > 0,
+        active_contracts_count: contracts.length,
+        contracts: contracts,
+      });
+      setConfirmInputText("");
+      setConfirmCheckbox(false);
+      setDeleteConfirmModalOpen(true);
+    } finally {
+      setCheckingImpact(false);
     }
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!property?.id) return;
+    const pName = property.property_name || property.name || "this property";
+
     try {
       setDeleting(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${property.id}`, {
+      const res = await fetch(`/api/rent-roll/properties/${property.id}?cascade_confirmed=true`, {
         method: "DELETE",
         headers: authHeaders,
       });
+
       if (res.ok) {
         if (typeof window !== "undefined") {
           const activeProp = localStorage.getItem("officex_active_property");
@@ -261,11 +302,12 @@ export default function PropertyDetailModal({
             localStorage.removeItem("officex_active_property");
           }
         }
+        setDeleteConfirmModalOpen(false);
         onPropertyUpdated?.();
         onClose();
       } else {
         const d = await res.json().catch(() => ({}));
-        setToastMessage({ text: d.message || "Failed to delete property", type: "error" });
+        setToastMessage({ text: d.message || d.error || "Failed to delete property", type: "error" });
       }
     } catch {
       setToastMessage({ text: "Network error deleting property", type: "error" });
@@ -964,6 +1006,127 @@ export default function PropertyDetailModal({
                   className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
                   {deRegLoading ? "Submitting..." : "Submit Removal Request"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Enhanced Property Deletion & Contract Termination Safeguard Modal */}
+        {deleteConfirmModalOpen && (
+          <div className="fixed inset-0 z-70 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm text-slate-900">Delete Property &amp; Terminate Contracts</h3>
+                    <p className="text-[11px] text-slate-500">Irreversible portfolio deletion safeguard</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteConfirmModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {deleteImpact?.has_impact || (deleteImpact?.active_contracts_count > 0) ? (
+                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-3">
+                  <div className="flex items-center gap-2 text-rose-800 font-extrabold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                    <span>ACTIVE TENANTS &amp; CONTRACTS DETECTED</span>
+                  </div>
+                  <p className="text-xs text-rose-900 leading-relaxed">
+                    <strong>{propName}</strong> currently has{" "}
+                    <span className="font-black underline">{deleteImpact.active_contracts_count} active tenant lease(s)</span>.
+                    Proceeding with deletion will execute the following consequential actions:
+                  </p>
+                  <ul className="text-[11px] text-rose-800 space-y-1.5 list-disc list-inside">
+                    <li>All active lease contracts will be immediately <strong>terminated</strong>.</li>
+                    <li>Tenant portal logins and dashboards for these occupiers will be <strong>deactivated</strong>.</li>
+                    <li>Third-party property manager mandates &amp; delegations will be <strong>revoked</strong>.</li>
+                    <li>All recurring rent roll billing, CAM pooling, and utility meters will be <strong>stopped</strong>.</li>
+                  </ul>
+
+                  {deleteImpact.contracts && deleteImpact.contracts.length > 0 && (
+                    <div className="pt-2 border-t border-rose-200/80">
+                      <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">
+                        Affected Tenants:
+                      </span>
+                      <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                        {deleteImpact.contracts.map((c: any) => (
+                          <div key={c.id || c.code} className="text-[11px] bg-white/80 px-2 py-1 rounded border border-rose-100 flex items-center justify-between text-slate-800 font-medium">
+                            <span className="truncate">{c.tenant_name || "Commercial Occupant"}</span>
+                            <span className="text-[10px] font-mono text-rose-600 font-bold shrink-0 ml-2">{c.code}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-2">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <ShieldCheck size={16} />
+                    <span>Portfolio Removal Notice</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    This property has no active tenant leases. Removing <strong>{propName}</strong> will delete its leasable spaces, building structure, and configuration from your portfolio.
+                  </p>
+                </div>
+              )}
+
+              {/* Explicit Safeguard Checkbox & Confirmation Text */}
+              <div className="space-y-3 pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={confirmCheckbox}
+                    onChange={(e) => setConfirmCheckbox(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                  />
+                  <span className="text-[11px] text-slate-700 font-medium leading-snug">
+                    I acknowledge that deleting this property will terminate all active tenant contracts, revoke tenant and manager portal access, and permanently remove all spaces.
+                  </span>
+                </label>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    To confirm, type <span className="font-mono text-rose-600 font-extrabold">DELETE</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmInputText}
+                    onChange={(e) => setConfirmInputText(e.target.value)}
+                    placeholder="Type DELETE"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono focus:border-rose-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteConfirmModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!confirmCheckbox || confirmInputText.trim().toUpperCase() !== "DELETE" || deleting}
+                  onClick={handleExecuteDelete}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md shadow-rose-600/20 disabled:opacity-40 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 size={13} />
+                  <span>{deleting ? "Terminating & Deleting..." : "Permanently Delete Property"}</span>
                 </button>
               </div>
             </div>

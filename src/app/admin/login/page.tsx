@@ -21,7 +21,7 @@ import {
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState("admin001");
+  const [password, setPassword] = useState("admin123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
 
   const fillDefaultCredentials = () => {
     setEmail("admin@gmail.com");
-    setPassword("admin001");
+    setPassword("admin123");
     setError(null);
   };
 

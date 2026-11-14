@@ -1,10 +1,11 @@
 "use client";
 
-import React, { Suspense } from "react";
-import { usePathname } from "next/navigation";
+import React, { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { getClientUserEmail, getAuthCookie } from "@/lib/auth-storage";
 
 function PortalLayoutContent({
   children,
@@ -12,10 +13,48 @@ function PortalLayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isLoginPage = pathname === "/admin/login";
+  const [isAuthorized, setIsAuthorized] = useState(isLoginPage);
+
+  useEffect(() => {
+    if (isLoginPage) return;
+
+    if (typeof window !== "undefined") {
+      const email = (
+        getClientUserEmail() ||
+        getAuthCookie("officex_user_email") ||
+        localStorage.getItem("officex_user_email") ||
+        sessionStorage.getItem("officex_user_email") ||
+        ""
+      ).toLowerCase().trim();
+
+      const isAdminCookie = getAuthCookie("officex_admin") === "1";
+      const isAdminLocal = localStorage.getItem("officex_admin") === "1" || sessionStorage.getItem("officex_admin") === "1";
+      const isSuperAdminRole = localStorage.getItem("officex_role") === "super_admin" || getAuthCookie("officex_role") === "super_admin";
+
+      const isPermittedAdminEmail = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com";
+
+      if ((isAdminCookie || isAdminLocal || isSuperAdminRole) && isPermittedAdminEmail) {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+        router.replace(`/admin/login?redirect=${encodeURIComponent(pathname)}`);
+      }
+    }
+  }, [pathname, isLoginPage, router]);
 
   if (isLoginPage) {
     return <>{children}</>;
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <div className="w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs font-mono text-slate-400 tracking-wider">Verifying Super Admin Authorization...</p>
+      </div>
+    );
   }
 
   return (

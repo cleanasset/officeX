@@ -101,22 +101,22 @@ export default function SettingsSuitePage() {
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="px-2 py-0.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded">
-                Enterprise Settings
+                Company &amp; Portfolio Organization
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Administration &amp; Governance</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Landlord &amp; Asset Entity Setup</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
               <Settings className="text-[#0D7B6C] w-5 h-5 sm:w-6 sm:h-6" />
-              Settings &amp; System Master Suite
+              Company &amp; Billing Settings
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Configure multi-state billing entities, charge catalogues, numbering sequences, maker-checker approval thresholds, and audit trails.
+              Configure your property company profile, legal SPV billing entities, GSTIN &amp; PAN details, invoice numbering formats, and team member permissions.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
-              <ShieldCheck size={14} /> Org Admin Privileged Scope
+              <ShieldCheck size={14} /> Landlord Company Scope
             </span>
           </div>
         </div>

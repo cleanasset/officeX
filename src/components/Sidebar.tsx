@@ -308,11 +308,19 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
   // EXECUTIVE CONTROL / GOVERNANCE (MASTER PLATFORM CONSOLE)
   admin: [
+    // 1. Overview of all marketplace along with saas
+    {
+      name: "Executive Overview",
+      href: "/admin?tab=overview",
+      icon: Layers,
+      section: "Overview"
+    },
+    // 2. Office Marketplace
     {
       name: "Office Marketplace",
       href: "/admin?tab=marketplace",
       icon: Building2,
-      section: "Commercial Marketplaces",
+      section: "Office Marketplace",
       subItems: [
         { name: "Spaces & Inventory", href: "/admin?tab=marketplace&sub=listings", tabKey: "listings", icon: Building2 },
         { name: "Space Approvals", href: "/admin?tab=marketplace&sub=approvals", tabKey: "approvals", icon: CheckCircle2 },
@@ -324,25 +332,23 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Launch Cities & Rules", href: "/admin?tab=marketplace&sub=settings", tabKey: "settings", icon: Settings }
       ]
     },
+    // 3. FM Marketplace
     {
       name: "FM Marketplace",
       href: "/admin?tab=fm",
       icon: Briefcase,
+      section: "FM Marketplace",
       subItems: [
         { name: "Active RFQs & Bidding", href: "/admin?tab=fm&sub=rfqs", tabKey: "rfqs", icon: ClipboardList },
         { name: "Vendor Commission & Rates", href: "/admin?tab=pricing&sub=fm", tabKey: "rate_cards", icon: Coins }
       ]
     },
+    // 4. All SaaS Modules
     {
-      name: "All Marketplaces",
-      href: "/admin?tab=all_marketplaces",
-      icon: Store
-    },
-    {
-      name: "Rent Roll & SaaS",
+      name: "SaaS Asset Modules",
       href: "/admin?tab=saas",
-      icon: Layers,
-      section: "SaaS & Asset Portfolios",
+      icon: Building,
+      section: "SaaS Modules",
       subItems: [
         { name: "Properties & Verification", href: "/admin?tab=saas&sub=properties", tabKey: "properties", icon: Building },
         { name: "Active Lease Contracts", href: "/admin?tab=saas&sub=contracts", tabKey: "contracts", icon: FileText },
@@ -352,27 +358,29 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Enterprise Organizations", href: "/admin?tab=saas&sub=orgs", tabKey: "orgs", icon: ShieldCheck }
       ]
     },
+    // 5. All Settings
     {
-      name: "Finances & Escrow",
+      name: "Platform Settings",
+      href: "/admin?tab=pricing",
+      icon: Settings,
+      section: "All Settings",
+      subItems: [
+        { name: "Master Pricing & Tariffs", href: "/admin?tab=pricing", tabKey: "pricing", icon: Coins },
+        { name: "Request Approvals", href: "/admin?tab=approvals", tabKey: "approvals", icon: CheckCircle2 }
+      ]
+    },
+    // 6. Financial Modules
+    {
+      name: "Financial Modules",
       href: "/admin?tab=finances",
       icon: DollarSign,
-      section: "Finance & Governance",
+      section: "Financial Modules",
       subItems: [
         { name: "Brokerage Revenue & GTV", href: "/admin?tab=finances", tabKey: "finances", icon: DollarSign },
         { name: "Razorpay Escrow Control", href: "/admin/escrow", tabKey: "escrow", icon: CreditCard }
       ]
     },
-    {
-      name: "Request Approvals",
-      href: "/admin?tab=approvals",
-      icon: CheckCircle2,
-      badge: "Pending"
-    },
-    {
-      name: "Master Pricing & Tariffs",
-      href: "/admin?tab=pricing",
-      icon: Coins
-    },
+    // 7. Platform System Core Thing
     {
       name: "Platform Users & Roles",
       href: "/admin?tab=users",
@@ -696,11 +704,11 @@ function SidebarInner() {
               const subSub = subParams.get("sub");
               if (pathname !== subBase) return false;
               if (subTab) {
-                const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
+                const curTab = searchParams.get("tab") || (pathname === "/admin" ? "overview" : "");
                 if (curTab !== subTab) return false;
               }
               if (subSub) {
-                const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");
+                const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "overview") ? "" : "");
                 if (curSub !== subSub) return false;
               }
               return true;
@@ -710,11 +718,12 @@ function SidebarInner() {
               ? (pathname === itemPath && (
                   !itemTab || 
                   searchParams.get("tab") === itemTab || 
-                  (!searchParams.get("tab") && itemTab === "marketplace" && pathname === "/admin")
+                  (!searchParams.get("tab") && (itemTab === "overview" || !itemTab) && pathname === "/admin")
                 )) || isSubItemActive
               : (pathname === itemPath && (
                   !itemTab || 
-                  searchParams.get("tab") === itemTab
+                  searchParams.get("tab") === itemTab ||
+                  (!searchParams.get("tab") && itemTab === "overview" && pathname === "/admin")
                 )) || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && item.href !== "/admin" && pathname.startsWith(item.href));
 
             const Icon = item.icon;

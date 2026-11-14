@@ -66,41 +66,18 @@ export default function Topbar() {
   const [isModuleChooserOpen, setIsModuleChooserOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Notification Drawer State
+  // Notification Drawer State - Real notifications only, zero synthetic mocks
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "Lease Expiry Notice (Within 90 Days)",
-      message: "Unit 402 contract enters 90-day renewal notice period. Action required.",
-      time: "15m ago",
-      tag: "Lease Renewal",
-      tagColor: "bg-amber-50 text-amber-700 border-amber-200",
-      unread: true,
-      route: "/properties/rent-roll?tab=contracts"
-    },
-    {
-      id: "notif-2",
-      title: "Contractual Step-Up Escalation",
-      message: "Scheduled 5% escalation is queued for next monthly billing cycle.",
-      time: "2h ago",
-      tag: "Escalation",
-      tagColor: "bg-blue-50 text-blue-700 border-blue-200",
-      unread: true,
-      route: "/operate/escalations"
-    },
-    {
-      id: "notif-3",
-      title: "Monthly Rent Roll Invoices Ready",
-      message: "Pro-rata billing run completed. Invoices available for review.",
-      time: "Today",
-      tag: "Billing",
-      tagColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      unread: true,
-      route: "/operate/invoices"
+  const [notifications, setNotifications] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("officex_notifications");
+        if (stored) return JSON.parse(stored);
+      } catch {}
     }
-  ]);
+    return [];
+  });
 
   // Multi-Client Operator State
   const [clients, setClients] = useState<any[]>([]);
@@ -432,33 +409,45 @@ export default function Topbar() {
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    onClick={() => handleNotificationClick(n)}
-                    className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${
-                      n.unread ? "bg-teal-50/20" : ""
-                    }`}
-                  >
-                    <div className="pt-0.5 shrink-0">
-                      <span
-                        className={`w-2 h-2 rounded-full inline-block ${
-                          n.unread ? "bg-teal-600 ring-2 ring-teal-200" : "bg-slate-300"
-                        }`}
-                      ></span>
+                {notifications.length === 0 ? (
+                  <div className="py-8 px-4 text-center flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                      <Bell size={18} />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider truncate border-slate-200 text-slate-600">
-                          {n.tag}
-                        </span>
-                        <span className="text-[10px] text-slate-400 shrink-0 font-medium">{n.time}</span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 leading-snug">{n.title}</h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{n.message}</p>
-                    </div>
+                    <span className="text-xs font-bold text-slate-800">No New Notifications</span>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-[240px] leading-relaxed">
+                      You are all caught up! Real notifications will appear here when administrative notices or alerts are dispatched.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => handleNotificationClick(n)}
+                      className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${
+                        n.unread ? "bg-teal-50/20" : ""
+                      }`}
+                    >
+                      <div className="pt-0.5 shrink-0">
+                        <span
+                          className={`w-2 h-2 rounded-full inline-block ${
+                            n.unread ? "bg-teal-600 ring-2 ring-teal-200" : "bg-slate-300"
+                          }`}
+                        ></span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider truncate border-slate-200 text-slate-600">
+                            {n.tag}
+                          </span>
+                          <span className="text-[10px] text-slate-400 shrink-0 font-medium">{n.time}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug">{n.title}</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{n.message}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
@@ -543,9 +532,9 @@ export default function Topbar() {
                 >
                   <Settings size={15} className="text-slate-600 shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-bold text-slate-900">Enterprise Settings</span>
+                    <span className="font-bold text-slate-900">Company &amp; Billing Settings</span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      Branding, Billing SPVs &amp; Tax Rules
+                      Your Brand, SPVs, GSTIN &amp; Tax Rules
                     </span>
                   </div>
                 </button>
@@ -554,7 +543,7 @@ export default function Topbar() {
                   type="button"
                   onClick={() => {
                     setIsProfileMenuOpen(false);
-                    router.push("/operate/rent-roll/pricing");
+                    router.push("/operate/subscription");
                   }}
                   className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 cursor-pointer"
                 >
@@ -562,7 +551,7 @@ export default function Topbar() {
                   <div className="flex flex-col">
                     <span className="font-bold text-slate-900">Subscription &amp; Quota</span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      Rent Roll Suite
+                      Active Plan &amp; Capacity
                     </span>
                   </div>
                 </button>
