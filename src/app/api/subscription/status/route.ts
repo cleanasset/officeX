@@ -127,7 +127,8 @@ export async function GET(request: Request) {
           ends_at: dbSub.ends_at,
           days_remaining: daysRemaining,
           payment_id: dbSub.payment_id,
-          coupon: dbSub.coupon_code
+          coupon: dbSub.coupon_code,
+          subscribed_sqft: dbSub.metadata?.subscribed_sqft || null,
         }, { status: 200 });
         res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
         res.cookies.set("officex_owner_subscribed", "true", { path: "/", maxAge: 2592000, sameSite: "lax" });
@@ -167,7 +168,8 @@ export async function GET(request: Request) {
             ends_at: endsAtStr,
             days_remaining: daysRemaining,
             paymentId: userSub.paymentId,
-            coupon: userSub.coupon
+            coupon: userSub.coupon,
+            subscribed_sqft: userSub.subscribed_sqft || null,
           }, { status: 200 });
           res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
           return res;
@@ -239,7 +241,8 @@ export async function POST(request: Request) {
         metadata: {
           userAgent: request.headers.get("user-agent") || "",
           subscribedAt: startsAt.toISOString(),
-          requestedDuration: `${durationMonths} month(s)`
+          requestedDuration: `${durationMonths} month(s)`,
+          subscribed_sqft: body.subscribed_sqft ? Number(body.subscribed_sqft) : null,
         }
       });
     } catch (insertErr) {
@@ -266,6 +269,7 @@ export async function POST(request: Request) {
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
         amount: amount,
+        subscribed_sqft: body.subscribed_sqft ? Number(body.subscribed_sqft) : null,
         updatedAt: startsAt.toISOString()
       };
 
@@ -294,6 +298,7 @@ export async function POST(request: Request) {
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
       days_remaining: durationMonths * 30,
+      subscribed_sqft: body.subscribed_sqft ? Number(body.subscribed_sqft) : null,
       message: `Commercial Pro subscription activated for ${durationMonths} month(s) until ${endsAt.toLocaleDateString("en-IN")}`
     }, { status: 200 });
 

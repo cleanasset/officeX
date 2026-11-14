@@ -241,6 +241,7 @@ export async function GET(request: Request) {
           body: JSON.stringify({
             input: searchInput,
             includedRegionCodes: ["in"],
+            languageCode: "en",
           }),
         });
 
