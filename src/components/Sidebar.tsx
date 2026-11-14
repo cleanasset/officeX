@@ -528,6 +528,7 @@ function SidebarInner() {
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
   const [isMounted, setIsMounted] = useState(false);
+  const [daysRemaining, setDaysRemaining] = useState<number>(30);
   const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
@@ -537,16 +538,24 @@ function SidebarInner() {
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
       if (isAdmin) return true;
+      if (!email) return false;
+
+      // User-scoped check takes absolute precedence to eliminate flicker/delay
+      const userSub = localStorage.getItem(`officex_sub_${email}`);
+      if (userSub === "inactive" || userSub === "false" || userSub === "none") {
+        return false;
+      }
+      if (userSub === "active") {
+        return true;
+      }
 
       const subStatus = localStorage.getItem("officex_subscription");
       const subStatus2 = localStorage.getItem("officex_subscription_status");
       const ownerSub = localStorage.getItem("officex_owner_subscribed");
       const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
       return (
-        subStatus === "active" ||
-        subStatus2 === "active" ||
-        ownerSub === "true" ||
-        rentrollSub === "true"
+        subStatus === "active" &&
+        (subStatus2 === "active" || ownerSub === "true" || rentrollSub === "true")
       );
     }
     return false;
@@ -656,15 +665,20 @@ function SidebarInner() {
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
               setIsSubscribed(true);
+              if (typeof d?.days_remaining === "number") setDaysRemaining(d.days_remaining);
+              localStorage.setItem(`officex_sub_${userEmail}`, "active");
               localStorage.setItem("officex_subscription", "active");
               localStorage.setItem("officex_subscription_status", "active");
               localStorage.setItem("officex_owner_subscribed", "true");
+              localStorage.setItem("officex_rentroll_subscribed", "true");
             } else {
               setIsSubscribed(false);
+              localStorage.setItem(`officex_sub_${userEmail}`, "inactive");
               localStorage.removeItem("officex_subscription");
               localStorage.removeItem("officex_subscription_status");
               localStorage.removeItem("officex_owner_subscribed");
               localStorage.removeItem("officex_rentroll_subscribed");
+              localStorage.removeItem("officex_subscription_plan");
             }
           })
           .catch(() => {
@@ -680,7 +694,44 @@ function SidebarInner() {
   useEffect(() => {
     const handleToggle = () => setIsOpen(prev => !prev);
     window.addEventListener("officex-toggle-sidebar", handleToggle);
-    return () => window.removeEventListener("officex-toggle-sidebar", handleToggle);
+
+    const handleSubChanged = () => {
+      setIsSubscribed(true);
+      if (typeof window !== "undefined") {
+        const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+        if (email) {
+          fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (d?.subscribed) {
+                setIsSubscribed(true);
+                if (typeof d?.days_remaining === "number") setDaysRemaining(d.days_remaining);
+                localStorage.setItem(`officex_sub_${email}`, "active");
+                localStorage.setItem("officex_subscription", "active");
+                localStorage.setItem("officex_subscription_status", "active");
+                localStorage.setItem("officex_owner_subscribed", "true");
+                localStorage.setItem("officex_rentroll_subscribed", "true");
+              } else {
+                setIsSubscribed(false);
+                localStorage.setItem(`officex_sub_${email}`, "inactive");
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_subscription_status");
+                localStorage.removeItem("officex_owner_subscribed");
+                localStorage.removeItem("officex_rentroll_subscribed");
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    };
+    window.addEventListener("officex-subscription-changed", handleSubChanged);
+    window.addEventListener("focus", handleSubChanged);
+
+    return () => {
+      window.removeEventListener("officex-toggle-sidebar", handleToggle);
+      window.removeEventListener("officex-subscription-changed", handleSubChanged);
+      window.removeEventListener("focus", handleSubChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -874,10 +925,17 @@ function SidebarInner() {
                           <span>PRO LOCKED</span>
                         </span>
                       ) : item.requiresSubscription && isSubscribed ? (
-                        <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
-                          <CheckCircle size={9} className="text-emerald-700" />
-                          <span>ACTIVE</span>
-                        </span>
+                        daysRemaining <= 5 ? (
+                          <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 shrink-0 animate-pulse">
+                            <AlertTriangle size={9} className="text-rose-700" />
+                            <span>{daysRemaining <= 1 ? "1D LEFT" : `${daysRemaining}D LEFT`}</span>
+                          </span>
+                        ) : (
+                          <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
+                            <CheckCircle size={9} className="text-emerald-700" />
+                            <span>ACTIVE</span>
+                          </span>
+                        )
                       ) : item.badge && !isItemActive ? (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0">
                           {item.badge}

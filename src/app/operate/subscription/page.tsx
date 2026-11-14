@@ -14,6 +14,7 @@ import {
   X,
   Receipt,
   AlertCircle,
+  AlertTriangle,
   Sliders,
   TrendingUp,
   Maximize2,
@@ -204,6 +205,7 @@ export default function SubscriptionAndQuotaPage() {
           localStorage.setItem("officex_subscribed_sqft", String(effectiveSubscribeSqft));
           document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
           document.cookie = "officex_owner_subscribed=true; path=/; max-age=31536000; SameSite=Lax";
+          window.dispatchEvent(new Event("officex-subscription-changed"));
         }
 
         await fetch("/api/subscription/status", {
@@ -276,6 +278,7 @@ export default function SubscriptionAndQuotaPage() {
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_subscribed_sqft", String(finalCap));
           localStorage.setItem("officex_subscription", "active");
+          window.dispatchEvent(new Event("officex-subscription-changed"));
         }
 
         await fetch("/api/subscription/status", {
@@ -727,6 +730,38 @@ export default function SubscriptionAndQuotaPage() {
         </div>
       )}
 
+      {/* 5-Day Expiration Red Warning Alert Banner */}
+      {daysRemainingInCycle <= 5 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+              <AlertTriangle size={22} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-sm sm:text-base text-rose-900">
+                  {daysRemainingInCycle <= 1 ? "⚠️ License Expires Within 24 Hours!" : `⚠️ License Expiring in ${daysRemainingInCycle} Days!`}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
+                  Renewal Required
+                </span>
+              </div>
+              <p className="text-xs text-rose-800 mt-1 font-semibold">
+                Your OfficeX Commercial Suite license expires {subData?.ends_at ? `on ${new Date(subData.ends_at).toLocaleDateString("en-IN")}` : "soon"}. Renew now to maintain uninterrupted access to Rent Roll registers and lease invoicing.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUpgradeModalOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition shadow-xs cursor-pointer shrink-0 self-start sm:self-auto flex items-center gap-1.5"
+          >
+            <span>Renew License (₹1/sq.ft)</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
+
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Active Tier */}
@@ -756,7 +791,10 @@ export default function SubscriptionAndQuotaPage() {
           </div>
           <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
             <span>Renewal</span>
-            <strong className="text-slate-700 font-bold">{daysRemainingInCycle} Days Left</strong>
+            <strong className={`font-bold ${daysRemainingInCycle <= 5 ? "text-rose-600 font-black animate-pulse flex items-center gap-1" : "text-slate-700"}`}>
+              {daysRemainingInCycle <= 5 && <AlertTriangle size={12} className="text-rose-600" />}
+              {daysRemainingInCycle <= 0 ? "Expired Today" : `${daysRemainingInCycle} Day${daysRemainingInCycle === 1 ? "" : "s"} Left`}
+            </strong>
           </div>
         </div>
 

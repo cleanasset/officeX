@@ -798,11 +798,15 @@ export default function SignInForm({
               sessionStorage.setItem(`officex_sub_${cleanVal}`, "active");
               document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=active; path=/; max-age=2592000; SameSite=Lax`;
             } else {
+              localStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
+              sessionStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
               localStorage.removeItem("officex_subscription");
               sessionStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_subscription_status");
+              sessionStorage.removeItem("officex_subscription_status");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
               document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-              localStorage.removeItem(`officex_sub_${cleanVal}`);
-              sessionStorage.removeItem(`officex_sub_${cleanVal}`);
               document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`;
             }
           })
