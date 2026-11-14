@@ -27,9 +27,6 @@ import {
   Receipt,
   FileText
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import { SUBSCRIPTION_PLAN_OPTIONS } from "@/components/SubscriptionGate";
 
@@ -169,13 +166,8 @@ export default function SubscriptionAndQuotaPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
-      <Sidebar />
-      <div className="flex-1 min-w-0 pl-0 md:pl-[260px] flex flex-col max-w-full overflow-x-hidden">
-        <Topbar />
-
-        <main className="flex-1 mt-[60px] p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 pb-28 md:pb-8">
-          {/* Breadcrumb & Executive Header */}
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
+      {/* Breadcrumb & Executive Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -225,20 +217,20 @@ export default function SubscriptionAndQuotaPage() {
             </div>
           )}
 
-          {/* 4 High-Density Responsive Stat Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* Card 1: Active Tier */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Active Plan</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              </div>
-              <span className="text-base sm:text-lg font-black text-slate-900 truncate">{currentPlan.name}</span>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-                <span>Renewal</span>
-                <strong className="text-emerald-700 font-bold">{daysRemainingInCycle} Days Left</strong>
-              </div>
-            </div>
+      {/* 4 High-Density Responsive Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Active Tier */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Active Plan</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          </div>
+          <span className="text-base sm:text-lg font-black text-slate-900 leading-snug">{currentPlan.name}</span>
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+            <span>Renewal</span>
+            <strong className="text-emerald-700 font-bold">{daysRemainingInCycle} Days Left</strong>
+          </div>
+        </div>
 
             {/* Card 2: Total Licensed Cap */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
@@ -575,10 +567,6 @@ export default function SubscriptionAndQuotaPage() {
               </div>
             )}
           </div>
-        </main>
-
-        <MobileBottomNav />
-      </div>
-    </div>
-  );
-}
+        </div>
+      );
+    }
