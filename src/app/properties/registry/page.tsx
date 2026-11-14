@@ -349,16 +349,6 @@ export default function SpaceAndBuildingRegistryPage() {
                 <Plus size={16} />
                 <span>Register Property</span>
               </button>
-              <button
-                onClick={() => {
-                  setHierarchyTab("space");
-                  setHierarchyModalOpen(true);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md flex items-center gap-2 transition cursor-pointer"
-              >
-                <Layers size={15} />
-                <span>Demarcate Unit</span>
-              </button>
             </div>
           </div>
 
