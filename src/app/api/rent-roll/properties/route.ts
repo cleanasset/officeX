@@ -138,7 +138,7 @@ export async function POST(req: Request) {
         const headerPlan = (req.headers.get("x-subscription-plan") || "").toLowerCase().trim();
         const headerCustomCap = Number(req.headers.get("x-subscribed-sqft")) || 0;
         
-        let planCap = 0; // Default Free tier has 0 sq.ft capacity
+        let planCap = 0;
         if (headerCustomCap > 0) {
           planCap = headerCustomCap;
         } else if (headerPlan === "starter") {
@@ -147,23 +147,23 @@ export async function POST(req: Request) {
           planCap = 250000;
         } else if (headerPlan === "reit-mega" || headerPlan === "enterprise") {
           planCap = 500000000;
-        } else {
-          // If no subscription plan header sent, check database organization subscription or default
-          planCap = 250000;
         }
 
-        const projectedTotal = currentManagedSqft + areaVal;
-        if (projectedTotal > planCap) {
-          return NextResponse.json(
-            {
-              error: `Portfolio Quota Exceeded: Your active licensing tier allows up to ${planCap.toLocaleString()} Sq.Ft. Currently managing ${currentManagedSqft.toLocaleString()} Sq.Ft. Adding this property (${areaVal.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotal.toLocaleString()} Sq.Ft, exceeding capacity by ${(projectedTotal - planCap).toLocaleString()} Sq.Ft. Please upgrade your subscription tier to proceed.`,
-              currentManagedSqft,
-              planCap,
-              attemptedArea: areaVal,
-              excessSqft: projectedTotal - planCap,
-            },
-            { status: 422 }
-          );
+        // Only enforce cap if user has an active subscribed plan tier with a limit
+        if (planCap > 0) {
+          const projectedTotal = currentManagedSqft + areaVal;
+          if (projectedTotal > planCap) {
+            return NextResponse.json(
+              {
+                error: `Portfolio Quota Exceeded: Your active licensing tier allows up to ${planCap.toLocaleString()} Sq.Ft. Currently managing ${currentManagedSqft.toLocaleString()} Sq.Ft. Adding this property (${areaVal.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotal.toLocaleString()} Sq.Ft, exceeding capacity by ${(projectedTotal - planCap).toLocaleString()} Sq.Ft. Please upgrade your subscription tier to proceed.`,
+                currentManagedSqft,
+                planCap,
+                attemptedArea: areaVal,
+                excessSqft: projectedTotal - planCap,
+              },
+              { status: 422 }
+            );
+          }
         }
       }
     }

@@ -1522,22 +1522,21 @@ export default function PropertyHierarchyModal({
       }
     }
 
-    // Strict Portfolio Area Quota Check (Point 1)
+    // Portfolio Area Quota Check for subscribed accounts with an active licensed capacity ceiling
     const isSub = checkIsOwnerSubscribed();
-    const effectiveCap = isSub ? (subscribedCapacity > 0 ? subscribedCapacity : 250000) : 0;
-    const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
-    const projectedTotalArea = currentPortfolioArea + enteredArea;
-    if (effectiveCap === 0 || projectedTotalArea > effectiveCap) {
-      const excess = effectiveCap === 0 ? enteredArea : projectedTotalArea - effectiveCap;
-      showToast(
-        effectiveCap === 0
-          ? `Subscription Required: Free operational tier has 0 Sq.Ft licensed capacity. Please upgrade to a commercial plan to onboard properties.`
-          : `Portfolio Quota Exceeded: Your active plan allows up to ${effectiveCap.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${excess.toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
-        "error"
-      );
-      setSubscriptionGateReason(effectiveCap === 0 ? "Subscription Required to Add Properties" : "Portfolio Area Quota Exceeded");
-      setSubscriptionGateModalOpen(true);
-      return;
+    if (isSub && subscribedCapacity > 0) {
+      const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+      const projectedTotalArea = currentPortfolioArea + enteredArea;
+      if (projectedTotalArea > subscribedCapacity) {
+        const excess = projectedTotalArea - subscribedCapacity;
+        showToast(
+          `Portfolio Quota Exceeded: Your active plan allows up to ${subscribedCapacity.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${excess.toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
+          "error"
+        );
+        setSubscriptionGateReason("Portfolio Area Quota Exceeded");
+        setSubscriptionGateModalOpen(true);
+        return;
+      }
     }
     setLoading(true);
     try {

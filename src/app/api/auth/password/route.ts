@@ -168,7 +168,7 @@ export async function POST(request: Request) {
             propertyScope: 'Active Leases & Rent Roll Governance',
             badge: 'Rent Roll',
             badgeColor: 'bg-emerald-500/20 text-emerald-700 border-emerald-400/30',
-            isLastUsed: true
+            isLastUsed: false
           },
           {
             id: `mem_marketplace_${shortId}`,
