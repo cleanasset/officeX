@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
 import DocumentViewerModal from "@/components/rent-roll/DocumentViewerModal";
@@ -44,7 +45,7 @@ function SuperAdminDashboardContent() {
       setActiveTab(tabParam as any);
     }
 
-    if (subParam && ["properties", "contracts", "tenants", "delegations", "invoices", "orgs"].includes(subParam)) {
+    if (subParam && ["overview", "properties", "contracts", "tenants", "delegations", "invoices", "orgs"].includes(subParam)) {
       setSaasSubTab(subParam as any);
       if (!tabParam) setActiveTab("saas");
     }
@@ -146,7 +147,7 @@ function SuperAdminDashboardContent() {
   // =========================================================================
   // TAB 7: SAAS PORTFOLIOS STATE
   // =========================================================================
-  const [saasSubTab, setSaasSubTab] = useState<"properties" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("properties");
+  const [saasSubTab, setSaasSubTab] = useState<"overview" | "properties" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("overview");
   const [saasProperties, setSaasProperties] = useState<any[]>([]);
   const [saasContracts, setSaasContracts] = useState<any[]>([]);
   const [saasTenants, setSaasTenants] = useState<any[]>([]);
@@ -158,6 +159,18 @@ function SuperAdminDashboardContent() {
   const [verifyActionLoading, setVerifyActionLoading] = useState<boolean>(false);
   const [inspectingContract, setInspectingContract] = useState<any | null>(null);
   const [inspectingContractDoc, setInspectingContractDoc] = useState<any | null>(null);
+
+  // Discounts & Special User Pricing State
+  const [discountsList, setDiscountsList] = useState<any[]>([]);
+  const [discountsLoading, setDiscountsLoading] = useState<boolean>(false);
+  const [showAddDiscountModal, setShowAddDiscountModal] = useState<boolean>(false);
+  const [newDiscount, setNewDiscount] = useState({
+    code: "",
+    discountPct: 100,
+    type: "global",
+    targetUserEmail: "",
+    notes: "",
+  });
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [contractDrawerOpen, setContractDrawerOpen] = useState<boolean>(false);
   const [inspectingContractTab, setInspectingContractTab] = useState<"deed" | "summary">("deed");
@@ -246,8 +259,97 @@ function SuperAdminDashboardContent() {
   useEffect(() => {
     if (activeTab === "pricing") {
       loadPricingConfig();
+      loadDiscounts();
     }
   }, [activeTab]);
+
+  async function loadDiscounts() {
+    setDiscountsLoading(true);
+    try {
+      const res = await fetch("/api/admin/discounts");
+      const data = await res.json();
+      if (data.success) {
+        setDiscountsList(data.discounts || []);
+      }
+    } catch {
+      showToast("Failed to load promotional discounts", "error");
+    } finally {
+      setDiscountsLoading(false);
+    }
+  }
+
+  async function handleCreateDiscount(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newDiscount.code) {
+      showToast("Please enter a coupon code", "error");
+      return;
+    }
+    if (newDiscount.type === "user_specific" && !newDiscount.targetUserEmail) {
+      showToast("Please specify the target user email", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/discounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          discount: newDiscount,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDiscountsList(data.discounts);
+        setShowAddDiscountModal(false);
+        setNewDiscount({
+          code: "",
+          discountPct: 100,
+          type: "global",
+          targetUserEmail: "",
+          notes: "",
+        });
+        showToast("✓ Discount coupon / special user pricing created successfully!", "success");
+      }
+    } catch {
+      showToast("Failed to create discount", "error");
+    }
+  }
+
+  async function handleToggleDiscount(id: string) {
+    try {
+      const res = await fetch("/api/admin/discounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle", id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDiscountsList(data.discounts);
+        showToast("Discount status updated", "success");
+      }
+    } catch {
+      showToast("Failed to toggle discount", "error");
+    }
+  }
+
+  async function handleDeleteDiscount(id: string) {
+    if (!confirm("Are you sure you want to revoke this discount code?")) return;
+    try {
+      const res = await fetch("/api/admin/discounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDiscountsList(data.discounts);
+        showToast("Discount revoked", "success");
+      }
+    } catch {
+      showToast("Failed to revoke discount", "error");
+    }
+  }
 
   async function loadPricingConfig() {
     setPricingLoading(true);
@@ -1637,6 +1739,104 @@ function SuperAdminDashboardContent() {
                       </div>
                     </div>
                   </div>
+
+                  {/* 4. Promotional Coupons & User Special Pricing */}
+                  <div className="pt-6 border-t border-slate-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                          <CreditCard size={16} className="text-[#0F8B7D]" />
+                          <span>Discounts, Coupons &amp; User-Specific Special Grants</span>
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Create global discount codes or grant individual custom special discounts to specific user email accounts.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAddDiscountModal(true)}
+                        className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+                      >
+                        <Plus size={14} />
+                        <span>Add Coupon / User Grant</span>
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left text-xs text-slate-700">
+                        <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                          <tr>
+                            <th className="p-3">Coupon Code</th>
+                            <th className="p-3">Discount %</th>
+                            <th className="p-3">Eligibility Scope</th>
+                            <th className="p-3">Target Email</th>
+                            <th className="p-3">Used Count</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {discountsLoading ? (
+                            <tr><td colSpan={7} className="p-6 text-center text-slate-400">Loading discount codes...</td></tr>
+                          ) : discountsList.length === 0 ? (
+                            <tr><td colSpan={7} className="p-6 text-center text-slate-400">No active discount codes configured.</td></tr>
+                          ) : (
+                            discountsList.map((d) => (
+                              <tr key={d.id} className="hover:bg-slate-50/60 transition">
+                                <td className="p-3 font-mono font-bold text-[#0F8B7D]">
+                                  {d.code}
+                                </td>
+                                <td className="p-3 font-black text-slate-900">
+                                  <span className="px-2 py-0.5 rounded font-mono font-bold bg-emerald-100 text-emerald-800 text-[11px]">
+                                    {d.discountPct}% OFF
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  {d.type === "user_specific" ? (
+                                    <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold uppercase">
+                                      Individual User Grant
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold uppercase">
+                                      Global Public Code
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 font-medium text-slate-600">
+                                  {d.targetUserEmail || "Any User"}
+                                </td>
+                                <td className="p-3 font-mono text-slate-500">
+                                  {d.usedCount || 0}
+                                </td>
+                                <td className="p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleDiscount(d.id)}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition cursor-pointer ${
+                                      d.isActive ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    {d.isActive ? "Active" : "Disabled"}
+                                  </button>
+                                </td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDiscount(d.id)}
+                                    className="p-1 rounded text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                                    title="Revoke Discount"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -2010,6 +2210,36 @@ function SuperAdminDashboardContent() {
             </div>
           </div>
 
+          {/* SaaS Sub-Tab Navigation Switcher */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-100 text-xs font-bold scrollbar-none">
+            {[
+              { id: "overview", label: "SaaS Overview & Packages", icon: Layers },
+              { id: "properties", label: "Properties & Verification", icon: Building2 },
+              { id: "contracts", label: "Active Lease Contracts", icon: FileText },
+              { id: "tenants", label: "Tenant Directory & KYC", icon: Users },
+              { id: "delegations", label: "Property Delegations", icon: Briefcase },
+              { id: "invoices", label: "Invoices & Billing Audit", icon: DollarSign },
+              { id: "orgs", label: "Organizations & Quotas", icon: ShieldCheck },
+            ].map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = saasSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSaasSubTab(tab.id as any)}
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    isActive
+                      ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  <TabIcon size={13} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Metric Tiles */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
@@ -2033,6 +2263,243 @@ function SuperAdminDashboardContent() {
               <p className="text-[11px] text-slate-500 mt-1">Tracked recurring billing volume</p>
             </div>
           </div>
+
+          {/* 0. ALL SAAS OVERVIEW & OPERATE PACKAGES */}
+          {saasSubTab === "overview" && (
+            <div className="space-y-6">
+              {/* Executive Packages Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Operate SaaS Suite Packages</h3>
+                    <p className="text-xs text-slate-500">Commercial real estate management modules active across the ecosystem.</p>
+                  </div>
+                  <Link
+                    href="/operate/pricing"
+                    target="_blank"
+                    className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
+                  >
+                    View Public Pricing Matrix ↗
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Package 1: Rent Roll & Lease-to-Cash */}
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold">
+                          <DollarSign size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Rent Roll &amp; Lease-to-Cash</h4>
+                          <span className="text-[10px] text-slate-400">Core Billing Suite</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-600 space-y-1">
+                      <li>• 39-Point canonical lease contract master</li>
+                      <li>• Automated 5% step escalations &amp; alerts</li>
+                      <li>• CAM common area expense pooling &amp; sub-meters</li>
+                      <li>• 18% GST (SAC 997212) &amp; Section 194I TDS ledgers</li>
+                    </ul>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-700">₹1/sq.ft · ₹9,999/mo min</span>
+                      <button
+                        onClick={() => setSaasSubTab("contracts")}
+                        className="text-[11px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                      >
+                        Inspect Leases ({saasContracts.length}) →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Package 2: 52-Week Maintenance CAFM */}
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                          <Zap size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">52-Week CAFM &amp; PPM</h4>
+                          <span className="text-[10px] text-slate-400">Facility Operations</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-600 space-y-1">
+                      <li>• 52-Week annual preventative maintenance calendar</li>
+                      <li>• QR passports for DG sets, chillers &amp; STP</li>
+                      <li>• Mean-Time-To-Repair (MTTR) work order tracking</li>
+                      <li>• Direct FM contractor dispatch</li>
+                    </ul>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-700">₹6,999/mo base</span>
+                      <Link
+                        href="/ops"
+                        className="text-[11px] font-bold text-blue-700 hover:underline"
+                      >
+                        Open Ops Console →
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Package 3: Visitor Flow & Lobby Turnstiles */}
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                          <Users size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Visitor Flow &amp; Turnstiles</h4>
+                          <span className="text-[10px] text-slate-400">Lobby &amp; Speed-Gates</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-600 space-y-1">
+                      <li>• Pre-invite WhatsApp barcode visitor passes</li>
+                      <li>• 18-Second lobby turnstile transit</li>
+                      <li>• Real-time overstay &amp; emergency evacuation list</li>
+                      <li>• Dual-mode security guard terminal</li>
+                    </ul>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-700">₹4,999/mo base</span>
+                      <Link
+                        href="/visitor-compliance"
+                        className="text-[11px] font-bold text-purple-700 hover:underline"
+                      >
+                        Open Visitor Desk →
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Package 4: Statutory Compliance & Audit Vault */}
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                          <ShieldCheck size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Compliance &amp; Audit Vault</h4>
+                          <span className="text-[10px] text-slate-400">Statutory Governance</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-600 space-y-1">
+                      <li>• 48 Pre-configured Indian commercial licenses</li>
+                      <li>• 90, 60 &amp; 30-day automated alert escalations</li>
+                      <li>• Tamper-proof certificate &amp; NOC vault</li>
+                      <li>• Multi-entity REIT disclosure exports</li>
+                    </ul>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-700">Built-in Suite</span>
+                      <Link
+                        href="/compliance"
+                        className="text-[11px] font-bold text-amber-800 hover:underline"
+                      >
+                        Open Vault →
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Package 5: Commercial Lease CRM & Stacking Plan */}
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                          <Layers size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Leasing CRM &amp; Stacking</h4>
+                          <span className="text-[10px] text-slate-400">Spatial Demising</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-600 space-y-1">
+                      <li>• Interactive multi-floor spatial stacking plans</li>
+                      <li>• Instant LOI term sheet generation</li>
+                      <li>• Vacancy absorption forecasting</li>
+                      <li>• Demarcated units &amp; floorplates</li>
+                    </ul>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-700">Included in Growth</span>
+                      <Link
+                        href="/operate/stacking"
+                        className="text-[11px] font-bold text-emerald-800 hover:underline"
+                      >
+                        Open Stacking Plan →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Client Organizations & Subscribed Quotas */}
+              <div className="pt-4 border-t border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Active Client Organizations &amp; Subscribed Quotas</h3>
+                    <p className="text-xs text-slate-500">Live landlord accounts and their licensed square footage capacity.</p>
+                  </div>
+                  <button
+                    onClick={() => setSaasSubTab("orgs")}
+                    className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                  >
+                    View All Entities ({orgsList.length}) →
+                  </button>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Organization Name</th>
+                        <th className="p-3">PAN &amp; GSTIN</th>
+                        <th className="p-3">Address / City</th>
+                        <th className="p-3">Currency</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Quick Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {orgsList.length === 0 ? (
+                        <tr><td colSpan={6} className="p-6 text-center text-slate-400">No organizations registered yet.</td></tr>
+                      ) : (
+                        orgsList.slice(0, 5).map((org) => (
+                          <tr key={org.id} className="hover:bg-slate-50/60 transition">
+                            <td className="p-3 font-bold text-slate-900">{org.name}</td>
+                            <td className="p-3 font-mono text-[11px]">{org.pan || "—"} / {org.gstin || "—"}</td>
+                            <td className="p-3 text-slate-600">{org.city || org.address || "—"}</td>
+                            <td className="p-3 font-mono">{org.currency || "INR"}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">
+                                {org.subscription_status || "Active"}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => setSaasSubTab("properties")}
+                                className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-bold cursor-pointer"
+                              >
+                                View Buildings
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 1. SAAS PROPERTIES & VERIFICATION */}
           {saasSubTab === "properties" && (
@@ -4378,6 +4845,136 @@ function SuperAdminDashboardContent() {
                 className="w-full h-full border-none shadow-inner"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Coupon / Special User Grant */}
+      {showAddDiscountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <CreditCard size={18} className="text-[#0F8B7D]" />
+                <span>Add Discount / User Grant</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddDiscountModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateDiscount} className="space-y-4 text-xs">
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">
+                  Promo / Coupon Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. VIP50, PRABHAT100, SUMMER25"
+                  value={newDiscount.code}
+                  onChange={(e) => setNewDiscount({ ...newDiscount, code: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">
+                  Discount Percentage (%) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={newDiscount.discountPct}
+                  onChange={(e) => setNewDiscount({ ...newDiscount, discountPct: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold text-slate-900"
+                >
+                  <option value={100}>100% OFF (Full Complimentary Access)</option>
+                  <option value={75}>75% OFF</option>
+                  <option value={50}>50% OFF (Half Price)</option>
+                  <option value={35}>35% OFF</option>
+                  <option value={25}>25% OFF</option>
+                  <option value={20}>20% OFF</option>
+                  <option value={10}>10% OFF</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">
+                  Eligibility Scope
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewDiscount({ ...newDiscount, type: "global" })}
+                    className={`py-2 px-3 rounded-xl border text-center font-bold transition cursor-pointer ${
+                      newDiscount.type === "global"
+                        ? "border-[#0F8B7D] bg-teal-50 text-[#0F8B7D]"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    Global (Any User)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewDiscount({ ...newDiscount, type: "user_specific" })}
+                    className={`py-2 px-3 rounded-xl border text-center font-bold transition cursor-pointer ${
+                      newDiscount.type === "user_specific"
+                        ? "border-purple-600 bg-purple-50 text-purple-700"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    Specific User Only
+                  </button>
+                </div>
+              </div>
+
+              {newDiscount.type === "user_specific" && (
+                <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1">
+                  <label className="text-purple-900 block font-bold text-[11px]">
+                    Authorized User Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. prabhat@gmail.com"
+                    value={newDiscount.targetUserEmail}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, targetUserEmail: e.target.value.toLowerCase() })}
+                    className="w-full px-3 py-1.5 border border-purple-300 rounded-lg bg-white font-medium text-slate-900"
+                  />
+                  <p className="text-[10px] text-purple-700">Only this registered email will be permitted to activate this discount.</p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">Internal Admin Notes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Granted by founder for strategic pilot"
+                  value={newDiscount.notes}
+                  onChange={(e) => setNewDiscount({ ...newDiscount, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddDiscountModal(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold rounded-xl shadow-sm cursor-pointer"
+                >
+                  Save &amp; Activate
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -65,34 +65,52 @@ export default function SubscriptionAndQuotaPage() {
     }
   };
 
-  const currentPlanId = subData?.plan || "techpark";
-  const currentPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === currentPlanId) || SUBSCRIPTION_PLAN_OPTIONS[1];
+  const isSubscribed = Boolean(subData?.subscribed && subData.plan && subData.plan !== "none" && subData.plan !== "free");
+  const currentPlanId = isSubscribed ? subData.plan : "free";
+  const currentPlan = isSubscribed
+    ? (SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === currentPlanId) || SUBSCRIPTION_PLAN_OPTIONS[1])
+    : { id: "free", name: "Free Operational Workspace", badge: "Free Tier", price: 0 };
 
   // Capacity Limits
   const currentCapSqft =
     currentPlanId === "starter" ? 50000 :
-    currentPlanId === "techpark" ? 250000 : 50000000;
+    currentPlanId === "techpark" ? 250000 :
+    currentPlanId === "reit-mega" ? 50000000 : 0;
 
-  const currentPortfolioSqft = Number(portfolioData?.totalAreaSqft || portfolioData?.totalArea || 0);
-  const remainingSqft = Math.max(0, currentCapSqft - currentPortfolioSqft);
-  const currentUsagePct = Math.min(100, Math.round((currentPortfolioSqft / currentCapSqft) * 100));
+  const currentPortfolioSqft = Number(portfolioData?.totalPortfolioSqft || portfolioData?.totalAreaSqft || portfolioData?.totalArea || 0);
+  const remainingSqft = currentCapSqft > 0 ? Math.max(0, currentCapSqft - currentPortfolioSqft) : 0;
+  const currentUsagePct = currentCapSqft > 0 ? Math.min(100, Math.round((currentPortfolioSqft / currentCapSqft) * 100)) : 0;
 
   const targetPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedTierId) || SUBSCRIPTION_PLAN_OPTIONS[1];
   const targetCapSqft =
     selectedTierId === "starter" ? 50000 :
     selectedTierId === "techpark" ? 250000 : 50000000;
 
-  const daysRemainingInCycle = subData?.days_remaining || 16;
+  const daysRemainingInCycle = isSubscribed ? (subData?.days_remaining || 30) : 0;
   const is100Free = couponApplied === "OFFICEX100" || couponApplied === "RENTROLL12" || couponApplied === "FREE100";
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = couponCode.trim().toUpperCase();
-    if (clean === "OFFICEX100" || clean === "RENTROLL12" || clean === "FREE100") {
-      setCouponApplied(clean);
-      setCouponMsg({ text: `🎉 Promo code '${clean}' applied: 100% Free Plan Upgrade!`, type: "success" });
-    } else {
-      setCouponMsg({ text: "Invalid code. Use OFFICEX100 or RENTROLL12 for full access.", type: "error" });
+    if (!clean) return;
+
+    try {
+      const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
+      const res = await fetch(`/api/subscription/coupons/validate?code=${encodeURIComponent(clean)}&email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (data.valid) {
+        setCouponApplied(clean);
+        setCouponMsg({ text: data.message || `🎉 Promo code '${clean}' applied!`, type: "success" });
+      } else {
+        setCouponMsg({ text: data.message || "Invalid coupon code.", type: "error" });
+      }
+    } catch {
+      if (clean === "OFFICEX100" || clean === "RENTROLL12" || clean === "FREE100") {
+        setCouponApplied(clean);
+        setCouponMsg({ text: `🎉 Promo code '${clean}' applied: 100% Free Plan Upgrade!`, type: "success" });
+      } else {
+        setCouponMsg({ text: "Invalid code. Contact admin for special pricing grant.", type: "error" });
+      }
     }
   };
 
@@ -152,9 +170,11 @@ export default function SubscriptionAndQuotaPage() {
               <ShieldCheck className="text-[#0F8B7D] w-6 h-6 shrink-0" />
               <span>Subscription &amp; Capacity Quota</span>
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-              Active License: {currentPlan.name}
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${
+              isSubscribed ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-200"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isSubscribed ? "bg-emerald-600 animate-pulse" : "bg-slate-400"}`}></span>
+              {isSubscribed ? `Active License: ${currentPlan.name}` : "Free Operational Workspace"}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -190,12 +210,14 @@ export default function SubscriptionAndQuotaPage() {
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Active Plan</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className={`w-2 h-2 rounded-full ${isSubscribed ? "bg-emerald-500" : "bg-slate-300"}`}></span>
           </div>
           <span className="text-base sm:text-lg font-black text-slate-900 leading-snug">{currentPlan.name}</span>
           <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
             <span>Renewal</span>
-            <strong className="text-emerald-700 font-bold">{daysRemainingInCycle} Days Left</strong>
+            <strong className={isSubscribed ? "text-emerald-700 font-bold" : "text-slate-500 font-medium"}>
+              {isSubscribed ? `${daysRemainingInCycle} Days Left` : "Free Operational Tier"}
+            </strong>
           </div>
         </div>
 

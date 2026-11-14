@@ -6,6 +6,7 @@ import "./globals.css";
 import CookieConsent from "@/components/marketing/CookieConsent";
 import CalendlyGlobalModal from "@/components/marketing/CalendlyModal";
 import OAuthCallbackHandler from "@/components/auth/OAuthCallbackHandler";
+import BrandingSyncProvider from "@/components/BrandingSyncProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden w-full max-w-full">
+        <BrandingSyncProvider />
         <OAuthCallbackHandler />
         {children}
         <CookieConsent />

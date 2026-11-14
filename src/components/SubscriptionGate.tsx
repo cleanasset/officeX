@@ -45,13 +45,13 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
   },
   {
     id: "techpark",
-    name: "Tech Park Campus",
+    name: "Commercial Growth / Campus",
     badge: "Most Popular",
     popular: true,
     price: 2,
     period: "/mo",
     scope: "Up to 2,50,000 sq.ft",
-    target: "Multi-Tower Tech Parks & Campuses",
+    target: "Multi-Floor Commercial Asset",
     description: "Complete lease-to-cash billing, CAM expense pooling & statutory compliance.",
     features: [
       "Full Lease-to-Cash billing centre with monthly batch runs",
@@ -62,7 +62,7 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
   },
   {
     id: "reit-mega",
-    name: "REIT Mega-Portfolio",
+    name: "Portfolio Enterprise / REIT",
     badge: "Enterprise Scale",
     popular: false,
     price: 3,
@@ -170,26 +170,41 @@ export default function SubscriptionGate({
   const finalPriceInRupees = is100PercentDiscount ? 0 : discountedCalculatedPrice;
   const finalAmountInPaise = is100PercentDiscount ? 0 : discountedCalculatedPrice * 100;
 
-  const handleApplyCoupon = (e?: React.FormEvent) => {
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = couponInput.trim().toUpperCase();
     if (!clean) return;
 
-    if (clean === "RENTROLL12" || clean === "OFFICEX100" || clean === "FREE100") {
-      setAppliedCoupon(clean);
-      setCouponSuccess(`🎉 Coupon '${clean}' applied! 100% FREE Access activated for ${selectedPlan.name} (₹0).`);
-      setCouponError(null);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("officex_applied_coupon", clean);
-        sessionStorage.setItem("officex_applied_coupon", clean);
-        localStorage.setItem("officex_subscription", "active");
-        sessionStorage.setItem("officex_subscription", "active");
-        localStorage.setItem("officex_subscribed_sqft", String(customSqft));
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+    try {
+      const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
+      const res = await fetch(`/api/subscription/coupons/validate?code=${encodeURIComponent(clean)}&email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+
+      if (data.valid) {
+        setAppliedCoupon(clean);
+        setCouponSuccess(data.message || `🎉 Promo code '${clean}' applied! (${data.discountPct}% OFF)`);
+        setCouponError(null);
+        if (data.discountPct === 100 && typeof window !== "undefined") {
+          localStorage.setItem("officex_applied_coupon", clean);
+          sessionStorage.setItem("officex_applied_coupon", clean);
+          localStorage.setItem("officex_subscription", "active");
+          sessionStorage.setItem("officex_subscription", "active");
+          localStorage.setItem("officex_subscribed_sqft", String(customSqft));
+          document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+        }
+      } else {
+        setCouponError(data.message || "Invalid or expired coupon code.");
+        setCouponSuccess(null);
       }
-    } else {
-      setCouponError("Invalid coupon code. Try OFFICEX100, RENTROLL12 or FREE100 for 100% FREE access.");
-      setCouponSuccess(null);
+    } catch {
+      if (clean === "RENTROLL12" || clean === "OFFICEX100" || clean === "FREE100") {
+        setAppliedCoupon(clean);
+        setCouponSuccess(`🎉 Coupon '${clean}' applied! 100% FREE Access activated for ${selectedPlan.name} (₹0).`);
+        setCouponError(null);
+      } else {
+        setCouponError("Invalid coupon code. Contact administrator for special discount access.");
+        setCouponSuccess(null);
+      }
     }
   };
 

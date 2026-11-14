@@ -470,6 +470,7 @@ export default function Topbar() {
             suppressHydrationWarning
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className="w-9 h-9 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-teal-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-teal-100 overflow-hidden"
+            style={{ backgroundColor: "var(--brand-color, #0D7B6C)" }}
           >
             {brandLogo ? (
               <img src={brandLogo} alt="Logo" className="w-full h-full object-cover" />

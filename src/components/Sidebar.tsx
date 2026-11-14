@@ -350,12 +350,13 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
       icon: Building,
       section: "SaaS Modules",
       subItems: [
+        { name: "All SaaS Overview & Packages", href: "/admin?tab=saas&sub=overview", tabKey: "overview", icon: Layers },
         { name: "Properties & Verification", href: "/admin?tab=saas&sub=properties", tabKey: "properties", icon: Building },
         { name: "Active Lease Contracts", href: "/admin?tab=saas&sub=contracts", tabKey: "contracts", icon: FileText },
-        { name: "Tenant Directory", href: "/admin?tab=saas&sub=tenants", tabKey: "tenants", icon: Users },
+        { name: "Tenant Directory & KYC", href: "/admin?tab=saas&sub=tenants", tabKey: "tenants", icon: Users },
         { name: "Property Delegations", href: "/admin?tab=saas&sub=delegations", tabKey: "delegations", icon: Briefcase },
         { name: "Invoices & Billing Audit", href: "/admin?tab=saas&sub=invoices", tabKey: "invoices", icon: DollarSign },
-        { name: "Enterprise Organizations", href: "/admin?tab=saas&sub=orgs", tabKey: "orgs", icon: ShieldCheck }
+        { name: "Enterprise Organizations & Quotas", href: "/admin?tab=saas&sub=orgs", tabKey: "orgs", icon: ShieldCheck }
       ]
     },
     // 5. All Settings
@@ -763,6 +764,7 @@ function SidebarInner() {
                           ? "bg-amber-50/70 border border-amber-200/80 text-slate-800 hover:bg-amber-100/70"
                           : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 bg-transparent"
                       }`}
+                      style={isItemActive ? { backgroundColor: "var(--brand-color, #0F8B7D)" } : undefined}
                     >
                       <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-amber-700 shrink-0" : "text-slate-500 shrink-0"} />
                       <span className="truncate flex-1 font-bold tracking-tight">{item.name}</span>
@@ -865,6 +867,7 @@ function SidebarInner() {
                         ? "text-slate-600 hover:bg-amber-50/60 hover:text-slate-900"
                         : "text-slate-700 font-semibold hover:bg-slate-100/80 hover:text-slate-900"
                     }`}
+                    style={isItemActive ? { backgroundColor: "var(--brand-color, #0F8B7D)" } : undefined}
                   >
                     <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
                     <span className="truncate flex-1 tracking-tight">{item.name}</span>

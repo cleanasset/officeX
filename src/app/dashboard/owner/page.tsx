@@ -140,6 +140,7 @@ export default function OwnerDashboardPage() {
   const [selectedNewManagerEmail, setSelectedNewManagerEmail] = useState("");
   const [showManagerActivationBanner, setShowManagerActivationBanner] = useState(true);
   const [showBankingBanner, setShowBankingBanner] = useState(true);
+  const [showSettingsBanner, setShowSettingsBanner] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const [isRentRollSubscribed, setIsRentRollSubscribed] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -192,6 +193,17 @@ export default function OwnerDashboardPage() {
       setShowManagerActivationBanner(!isDismissed);
       const isBankingDismissed = localStorage.getItem("officex_dismiss_banking_banner") === "true";
       setShowBankingBanner(!isBankingDismissed);
+      const isSettingsDismissed = localStorage.getItem("officex_dismiss_settings_banner") === "true";
+      if (!isSettingsDismissed) {
+        fetch("/api/settings")
+          .then((r) => r.json())
+          .then((res) => {
+            if (res.success && (!res.data?.organisation?.name || res.data.organisation.name.trim() === "")) {
+              setShowSettingsBanner(true);
+            }
+          })
+          .catch(() => {});
+      }
 
       try {
         const assigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
@@ -247,6 +259,13 @@ export default function OwnerDashboardPage() {
     setShowManagerActivationBanner(false);
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_dismiss_manager_banner", "true");
+    }
+  };
+
+  const handleDismissSettingsBanner = () => {
+    setShowSettingsBanner(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_dismiss_settings_banner", "true");
     }
   };
 
@@ -647,6 +666,45 @@ export default function OwnerDashboardPage() {
             <button
               type="button"
               onClick={handleDismissManagerActivationBanner}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Notice: Complete Company & Billing Profile */}
+      {showSettingsBanner && (
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-white border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 className="w-5 h-5 text-teal-200" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs sm:text-sm font-extrabold text-slate-900">Complete Your Company &amp; Billing Profile</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Recommended Setup
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed max-w-3xl">
+                Add your company name, GSTIN, and settlement bank account in Settings to generate legally compliant tax invoices, rent receipts, and branded tenant statements.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/settings"
+              className="px-4 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-extrabold shrink-0 transition-all shadow-xs text-center flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <span>Complete Profile</span>
+              <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+            <button
+              type="button"
+              onClick={handleDismissSettingsBanner}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
               title="Dismiss"
             >
