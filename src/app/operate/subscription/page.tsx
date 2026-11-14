@@ -124,7 +124,10 @@ export default function SubscriptionAndQuotaPage() {
   // Custom expanded capacity stored in database / localStorage
   const storedCustomCap =
     typeof window !== "undefined" ? Number(localStorage.getItem("officex_subscribed_sqft")) : 0;
-  const currentCapSqft = Math.max(baseCapSqft, Number(subData?.subscribed_sqft || 0), storedCustomCap || 0);
+  
+  // Explicit custom capacity (if set) is authoritative; otherwise use plan tier base cap
+  const explicitCustomCap = Number(subData?.subscribed_sqft || 0) || storedCustomCap || 0;
+  const currentCapSqft = explicitCustomCap > 0 ? explicitCustomCap : baseCapSqft;
 
   const currentPortfolioSqft = Number(
     portfolioData?.totalPortfolioSqft || portfolioData?.totalAreaSqft || portfolioData?.totalArea || 0
@@ -205,6 +208,14 @@ export default function SubscriptionAndQuotaPage() {
           localStorage.setItem("officex_subscribed_sqft", String(finalCap));
           document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
         }
+        // Immediately update React state so subsequent upgrades in the same session stack cumulatively
+        setSubData((prev: any) => ({
+          ...(prev || {}),
+          subscribed: true,
+          plan: finalPlanId,
+          plan_name: finalPlanName,
+          subscribed_sqft: finalCap,
+        }));
         setUpgradeSuccess(`✓ Quota expanded to ${finalCap.toLocaleString("en-IN")} sq.ft successfully!`);
         setUpgradeModalOpen(false);
         setTimeout(() => setUpgradeSuccess(null), 5000);
@@ -588,7 +599,7 @@ export default function SubscriptionAndQuotaPage() {
 
                 {/* Quick Add Increment Chips */}
                 <div className="flex flex-wrap gap-2">
-                  {[25000, 50000, 100000, 250000, 500000, 1000000, 500000000].map((val) => (
+                  {[100, 500, 1000, 5000, 25000, 50000, 100000, 250000, 500000000].map((val) => (
                     <button
                       key={val}
                       type="button"
@@ -599,7 +610,7 @@ export default function SubscriptionAndQuotaPage() {
                           : "bg-white text-slate-700 border border-slate-200 hover:border-slate-300"
                       }`}
                     >
-                      +{val >= 10000000 ? `${(val / 10000000).toLocaleString("en-IN")} Cr` : val >= 100000 ? `${(val / 100000).toLocaleString("en-IN")} Lakh` : `${(val / 1000).toLocaleString("en-IN")}k`} sq.ft
+                      +{val >= 10000000 ? `${(val / 10000000).toLocaleString("en-IN")} Cr` : val >= 100000 ? `${(val / 100000).toLocaleString("en-IN")} Lakh` : val >= 1000 ? `${(val / 1000).toLocaleString("en-IN")}k` : val} sq.ft
                     </button>
                   ))}
                 </div>
@@ -610,10 +621,11 @@ export default function SubscriptionAndQuotaPage() {
                   <div className="relative">
                     <input
                       type="number"
-                      min={1000}
-                      step={1000}
+                      min={1}
+                      step={1}
                       value={customAddSqft}
                       onChange={(e) => setCustomAddSqft(Math.max(0, Number(e.target.value) || 0))}
+                      placeholder="e.g. 100"
                       className="w-full px-3 py-2 pr-16 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold focus:border-[#0F8B7D] outline-none"
                     />
                     <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">sq.ft</span>
