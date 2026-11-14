@@ -80,14 +80,6 @@ const ownerMenuItems: MenuItem[] = [
   { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
 
   {
-    name: "Subscription & Quota",
-    href: "/operate/subscription",
-    icon: Award,
-    badge: "CAPACITY",
-    section: "Portfolio Assets",
-  },
-
-  {
     name: "Rent Roll & Financials",
     href: "/properties/rent-roll",
     icon: DollarSign,
@@ -107,6 +99,13 @@ const ownerMenuItems: MenuItem[] = [
       { name: "Exceptions Centre", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
       { name: "Approvals Inbox", href: "/approvals", tabKey: "approvals", icon: ShieldCheck }
     ]
+  },
+
+  {
+    name: "Subscription & Quota",
+    href: "/operate/subscription",
+    icon: Award,
+    badge: "CAPACITY",
   }
 ];
 
@@ -530,7 +529,29 @@ function SidebarInner() {
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const isAdmin =
+        email === "admin@gmail.com" ||
+        email === "medistationlifecare@gmail.com" ||
+        localStorage.getItem("officex_admin") === "1" ||
+        localStorage.getItem("officex_role") === "super_admin";
+      if (isAdmin) return true;
+
+      const subStatus = localStorage.getItem("officex_subscription");
+      const subStatus2 = localStorage.getItem("officex_subscription_status");
+      const ownerSub = localStorage.getItem("officex_owner_subscribed");
+      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
+      return (
+        subStatus === "active" ||
+        subStatus2 === "active" ||
+        ownerSub === "true" ||
+        rentrollSub === "true"
+      );
+    }
+    return false;
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -628,7 +649,7 @@ function SidebarInner() {
         localStorage.getItem("officex_owner_subscribed") === "true" ||
         localStorage.getItem("officex_rentroll_subscribed") === "true";
 
-      if (isAdmin || storedSub) {
+      if (isAdmin) {
         setIsSubscribed(true);
       } else if (userEmail) {
         fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
@@ -639,10 +660,12 @@ function SidebarInner() {
               localStorage.setItem("officex_subscription", "active");
               localStorage.setItem("officex_subscription_status", "active");
               localStorage.setItem("officex_owner_subscribed", "true");
-            } else if (storedSub) {
-              setIsSubscribed(true);
             } else {
               setIsSubscribed(false);
+              localStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_subscription_status");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
             }
           })
           .catch(() => {
