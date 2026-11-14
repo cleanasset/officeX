@@ -73,8 +73,12 @@ function MarketplaceSearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL Query Parameters
-  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") || "Delhi NCR" : "Delhi NCR");
+  // URL Query Parameters - strictly restricted to 4 live activated cities
+  const rawCityParam = searchParams?.get("city");
+  const storedCity = typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") : null;
+  const initialCity = (rawCityParam && isCityLive(rawCityParam))
+    ? rawCityParam
+    : (storedCity && isCityLive(storedCity) ? storedCity : "Delhi NCR");
   const initialQ = searchParams?.get("q") || "";
   const initialLocality = searchParams?.get("locality") || "";
   const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "all";
@@ -137,26 +141,38 @@ function MarketplaceSearchContent() {
     }
   };
 
-  // Sync state with URL params if they change externally
+  // Clean up any stale non-live city from previous browser sessions
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("officex_marketplace_city");
+      if (stored && !isCityLive(stored)) {
+        try { localStorage.removeItem("officex_marketplace_city"); } catch {}
+      }
+    }
+  }, []);
+
+  // Sync state with URL params if they change externally (strictly limited to 4 live activated cities)
   useEffect(() => {
     if (searchParams) {
       const c = searchParams.get("city");
-      if (c && c !== city) {
-        setCity(c);
-      } else if (!c) {
-        // No city specified in URL: check if user explicitly picked a city in this session, otherwise auto-detect
+      if (c) {
+        const liveC = isCityLive(c) ? c : "Delhi NCR";
+        if (liveC !== city) setCity(liveC);
+      } else {
+        // No city specified in URL: check if user explicitly picked a live city in this session, otherwise auto-detect
         const sessionManual = typeof window !== "undefined" ? sessionStorage.getItem("officex_manual_city_chosen") : null;
-        if (sessionManual && sessionManual !== city) {
+        if (sessionManual && isCityLive(sessionManual) && sessionManual !== city) {
           setCity(sessionManual);
         } else {
-          // Auto-detect visitor location dynamically (IP / edge headers)
+          // Auto-detect visitor location dynamically (restricted strictly to 4 live activated cities)
           fetch("/api/marketplace/detect-location")
             .then((res) => res.json())
             .then((data) => {
-              if (data?.city && data.city !== city) {
-                setCity(data.city);
+              const liveDetected = isCityLive(data?.city) ? data.city : "Delhi NCR";
+              if (liveDetected && liveDetected !== city) {
+                setCity(liveDetected);
                 try {
-                  localStorage.setItem("officex_marketplace_city", data.city);
+                  localStorage.setItem("officex_marketplace_city", liveDetected);
                 } catch {}
               }
             })
@@ -171,6 +187,27 @@ function MarketplaceSearchContent() {
       if (v && v !== selectedProduct) setSelectedProduct(v);
     }
   }, [searchParams]);
+
+  // Synchronize clean, canonical URL in browser address bar (strips redundant defaults like vertical=all or budget=All Ranges)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (city && city.toLowerCase() !== "all") params.set("city", city);
+    if (selectedProduct && selectedProduct.toLowerCase() !== "all") params.set("vertical", selectedProduct);
+    if (selectedLocality && selectedLocality.trim()) params.set("locality", selectedLocality.trim());
+    if (searchQuery && searchQuery.trim()) params.set("q", searchQuery.trim());
+    if (selectedPriceRange && selectedPriceRange !== "all") params.set("price", selectedPriceRange);
+    if (selectedBrand && selectedBrand !== "All Operators") params.set("brand", selectedBrand);
+    if (sortBy && sortBy !== "popular") params.set("sort", sortBy);
+
+    const qs = params.toString();
+    const cleanUrl = `/marketplace/search${qs ? `?${qs}` : ""}`;
+    const currentUrl = window.location.pathname + window.location.search;
+
+    if (currentUrl !== cleanUrl) {
+      window.history.replaceState(null, "", cleanUrl);
+    }
+  }, [city, selectedProduct, selectedLocality, searchQuery, selectedPriceRange, selectedBrand, sortBy]);
 
   // Fetch Listings from API with all active filters
   useEffect(() => {

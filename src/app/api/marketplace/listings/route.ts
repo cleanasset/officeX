@@ -1,113 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import { db } from "@/db";
 import { marketplaceListings } from "@/db/marketplace-schema";
 import { and, eq, ilike, or, gte, lte, desc, asc, sql } from "drizzle-orm";
-
-function cleanImageUrl(url: string | null | undefined): string {
-  if (!url || typeof url !== "string") return "/images/showcase_commercial_warmshell.jpg";
-  let cleaned = url.trim();
-  if (!cleaned) return "/images/showcase_commercial_warmshell.jpg";
-
-  if (cleaned.includes("res.cloudinary.com/myhq/image/upload/")) {
-    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/myhq\/image\/upload\//i, "/assets/spaces/");
-  } else if (cleaned.includes("cloudinary.com") && cleaned.includes("myhq")) {
-    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//i, "/assets/spaces/");
-  }
-
-  // Ensure "myhq" is NEVER present in the URL path presented to the client
-  if (cleaned.includes("myhq")) {
-    cleaned = cleaned.replace(/myhq/gi, "officex");
-  }
-
-  return cleaned;
-}
-
-function sanitizeText(val: string | null | undefined): string {
-  if (!val || typeof val !== "string") return "";
-  return val.replace(/myhq/gi, "OfficeX");
-}
-
-// In-memory cache for master properties dataset
-let masterCache: any[] | null = null;
-function getMasterListings(): any[] {
-  if (masterCache) return masterCache;
-  try {
-    const jsonPath = path.join(process.cwd(), "office marketplace data", "json", "all_properties_master.json");
-    if (fs.existsSync(jsonPath)) {
-      const raw = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-      const parsed: any[] = raw.map((p: any, idx: number) => {
-        const rawPhotoUrls = (p["Photo URLs"] || "").split(";").map((s: string) => s.trim()).filter(Boolean);
-        const photos = rawPhotoUrls.map(cleanImageUrl);
-        const featuredImage = photos[0] || cleanImageUrl(p["Featured Image"]);
-
-        let vertical = "coworking";
-        const rawType = (p["Property Type"] || "").toLowerCase();
-        if (rawType.includes("virtual")) vertical = "virtual_office";
-        else if (rawType.includes("managed")) vertical = "managed_office";
-        else if (rawType.includes("commercial")) vertical = "commercial";
-        else if (rawType.includes("meeting")) vertical = "meeting_room";
-        else if (rawType.includes("day pass") || rawType.includes("day_pass")) vertical = "day_pass";
-
-        const startingPrice = Number(
-          p["Hot Desk Price (INR/mo)"] ||
-          p["Dedicated Desk (INR/mo)"] ||
-          p["Private Cabin (INR/seat/mo)"] ||
-          p["Managed Office (INR/seat/mo)"] ||
-          p["Rent per sqft/mo (INR)"] ||
-          p["Virtual Office Monthly (INR)"] ||
-          8500
-        );
-
-        return {
-          id: p["Property ID"] || `space-${idx}`,
-          slug: p["Property ID"] || `space-${idx}`,
-          name: sanitizeText(p["Property Name"] || "Commercial Workspace"),
-          brandName: sanitizeText(p["Brand / Operator"] || "Verified Operator"),
-          vertical,
-          city: p["City"] || "Delhi",
-          locality: p["Locality / Area"] || "",
-          microMarket: p["Locality / Area"] || "",
-          fullAddress: p["Full Address"] || "",
-          pincode: p["Pincode"] || "",
-          latitude: String(p["Latitude"] || "28.6139"),
-          longitude: String(p["Longitude"] || "77.2090"),
-          totalAreaSqft: Number(p["Total Area (sq.ft.)"]) || 10000,
-          totalSeats: Number(p["Total Seating Capacity"]) || 150,
-          buildingGrade: p["Building Grade"] || "Grade A",
-          buildingType: p["Building Type"] || "Commercial Office Building",
-          furnishingStatus: p["Furnishing Status"] || "Fully Furnished",
-          images: photos.length > 0 ? photos : ["/images/showcase_commercial_warmshell.jpg"],
-          featuredImage: featuredImage || "/images/showcase_commercial_warmshell.jpg",
-          amenities: ["High-Speed WiFi", "Power Backup", "Meeting Rooms", "Tea / Coffee", "Security & CCTV"],
-          pricingPlans: {
-            hotDeskMonthly: Number(p["Hot Desk Price (INR/mo)"]) || undefined,
-            dedicatedDeskMonthly: Number(p["Dedicated Desk (INR/mo)"]) || undefined,
-            privateCabinMonthly: Number(p["Private Cabin (INR/seat/mo)"]) || undefined,
-            managedOfficeMonthly: Number(p["Managed Office (INR/seat/mo)"]) || undefined,
-          },
-          startingPrice,
-          startingPriceUnit: "per_month",
-          description: sanitizeText(p["Description"] || ""),
-          avgRating: String(p["Rating (out of 5)"] || "4.5"),
-          totalReviews: Number(p["Total Reviews"]) || 15,
-          nearestMetro: p["Nearest Metro"] || "",
-          metroDistance: p["Metro Distance"] || "",
-          consultantName: "OfficeX Commercial Advisory",
-          consultantPhone: "+91 98200 12345",
-          status: "active",
-          source: "verified_listing",
-        };
-      });
-      masterCache = parsed;
-      return parsed;
-    }
-  } catch (err) {
-    console.warn("Failed to load master properties JSON:", err);
-  }
-  return [];
-}
+import { getMasterListings, cleanImageUrl, sanitizeText } from "@/lib/marketplace-master";
 
 export async function GET(request: NextRequest) {
   try {
@@ -311,28 +206,21 @@ export async function GET(request: NextRequest) {
       // Database unavailable or empty, continue to master dataset fallback
     }
 
-    // 2. If database has records, return them
-    if (dbListings.length > 0) {
+    // If specific non-active status is queried (e.g. pending_review, changes_requested), or ownerId is specified,
+    // this is strictly for Admin Moderation or Host Operator Console. Return only database records.
+    if ((statusParam && statusParam !== "active") || ownerId) {
       return NextResponse.json({
         listings: dbListings,
         pagination: {
           total: dbTotal,
           page,
           limit,
-          totalPages: Math.ceil(dbTotal / limit)
+          totalPages: Math.ceil(dbTotal / limit) || 1
         }
       });
     }
 
-    // If specific non-active status is queried, do not fall back to active static catalogue
-    if (statusParam && statusParam !== "active") {
-      return NextResponse.json({
-        listings: [],
-        pagination: { total: 0, page, limit, totalPages: 1 }
-      });
-    }
-
-    // 3. Robust High-Performance Fallback: Query 6,767 authentic properties from master dataset
+    // 2. Query authentic commercial properties from master catalogue (6,767 listings)
     const all = getMasterListings();
     let filtered = all;
 
@@ -360,13 +248,8 @@ export async function GET(request: NextRequest) {
           return pc.includes("faridabad");
         });
       } else {
-        // Dynamic extensible match for ANY newly added city or locality
-        filtered = filtered.filter((p) => {
-          const pc = (p.city || "").toLowerCase();
-          const pl = (p.locality || "").toLowerCase();
-          const paddr = (p.fullAddress || "").toLowerCase();
-          return pc.includes(c) || pl.includes(c) || paddr.includes(c);
-        });
+        // Any other city is inactive / Coming Soon: return 0 properties until officially activated
+        filtered = [];
       }
     } else {
       // If unspecified or 'all', strictly return only properties from the 4 live markets
@@ -390,11 +273,21 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((p) => p.vertical === targetV);
     }
 
+    // Brand Filter
+    if (brand && brand.toLowerCase() !== "all" && brand.toLowerCase() !== "all operators") {
+      const b = brand.trim().toLowerCase();
+      filtered = filtered.filter((p) =>
+        (p.brandName || "").toLowerCase().includes(b) ||
+        (p.name || "").toLowerCase().includes(b)
+      );
+    }
+
     // Keyword Search Filter
     if (q && q.trim()) {
       const query = q.trim().toLowerCase();
       filtered = filtered.filter((p) =>
         (p.name || "").toLowerCase().includes(query) ||
+        (p.brandName || "").toLowerCase().includes(query) ||
         (p.locality || "").toLowerCase().includes(query) ||
         (p.city || "").toLowerCase().includes(query) ||
         (p.fullAddress || "").toLowerCase().includes(query)
@@ -418,20 +311,47 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((p) => p.startingPrice <= maxPrice);
     }
 
-    // Sorting
-    if (sort === "price_asc") {
-      filtered.sort((a, b) => a.startingPrice - b.startingPrice);
-    } else if (sort === "price_desc") {
-      filtered.sort((a, b) => b.startingPrice - a.startingPrice);
-    } else if (sort === "rating") {
-      filtered.sort((a, b) => Number(b.avgRating || 0) - Number(a.avgRating || 0));
-    } else {
-      // Default: prioritize listings with authentic photos
-      filtered.sort((a, b) => (b.images?.length || 0) - (a.images?.length || 0));
+    // 3. COMBINE active DB listings + filtered master listings
+    // Deduplicate by slug, id, or normalized name
+    const seenKeys = new Set<string>();
+    const combinedListings: any[] = [];
+
+    // Active approved partner DB listings come first (promoted / featured)
+    for (const d of dbListings) {
+      const key = String(d.slug || d.id || d.name).trim().toLowerCase();
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        combinedListings.push(d);
+      }
     }
 
-    const total = filtered.length;
-    const paginated = filtered.slice(offset, offset + limit);
+    // Followed by the master authentic properties catalogue
+    for (const p of filtered) {
+      const key = String(p.slug || p.id || p.name).trim().toLowerCase();
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        combinedListings.push(p);
+      }
+    }
+
+    // Sorting
+    if (sort === "price_asc") {
+      combinedListings.sort((a, b) => Number(a.startingPrice || 0) - Number(b.startingPrice || 0));
+    } else if (sort === "price_desc") {
+      combinedListings.sort((a, b) => Number(b.startingPrice || 0) - Number(a.startingPrice || 0));
+    } else if (sort === "rating") {
+      combinedListings.sort((a, b) => Number(b.avgRating || 0) - Number(a.avgRating || 0));
+    } else {
+      // Default: listings with multiple authentic photos first, prioritizing active verified
+      combinedListings.sort((a, b) => {
+        const aCount = Array.isArray(a.images) ? a.images.length : (a.featuredImage ? 1 : 0);
+        const bCount = Array.isArray(b.images) ? b.images.length : (b.featuredImage ? 1 : 0);
+        return bCount - aCount;
+      });
+    }
+
+    const total = combinedListings.length;
+    const paginated = combinedListings.slice(offset, offset + limit);
 
     return NextResponse.json({
       listings: paginated,

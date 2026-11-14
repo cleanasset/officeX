@@ -72,72 +72,39 @@ export default function PropertyMarketplacePage() {
     }
   };
 
-  // Auto-detect visitor location on first load (traveling-aware: always detects current visitor city unless manually chosen in session)
+  // Auto-detect visitor location on first load (strictly clamped to the 4 active markets: Delhi NCR, Noida, Gurgaon, Faridabad)
   useEffect(() => {
-    // 1. If user explicitly clicked a city in this active browsing session, respect it
+    // 1. If user explicitly clicked a city in this active browsing session, respect it if live
     const explicitSessionCity = typeof window !== "undefined" ? sessionStorage.getItem("officex_manual_city_chosen") : null;
-    if (explicitSessionCity) {
+    if (explicitSessionCity && isCityLive(explicitSessionCity)) {
       handleCityChange(explicitSessionCity, false);
       return;
     }
 
-    // 2. Clear old stale default "Ahmedabad" from past sessions so travelers to Delhi/Pune get their real current city
+    // 2. Clear old stale or non-live cities from past sessions
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("officex_marketplace_city");
-      if (stored === "Ahmedabad") {
+      if (stored && !isCityLive(stored)) {
         try { localStorage.removeItem("officex_marketplace_city"); } catch {}
       }
     }
 
-    // 3. Auto-detect from server IP headers / geo lookup
+    // 3. Auto-detect from server IP headers / geo lookup (strictly maps to active 4 cities)
     async function autoDetectLocation() {
       try {
         const res = await fetch("/api/marketplace/detect-location");
         if (res.ok) {
           const data = await res.json();
-          if (data?.city) {
-            handleCityChange(data.city, false);
-            setDetectedLocationBadge(data.rawCity || data.city);
-            return;
-          }
+          const targetCity = isCityLive(data?.city) ? data.city : "Delhi NCR";
+          handleCityChange(targetCity, false);
+          setDetectedLocationBadge(targetCity);
+          return;
         }
       } catch (err) {
         console.warn("Marketplace location auto-detection error:", err);
       }
-
-      // Fast client-side fallback if server was behind a corporate/mobile proxy
-      try {
-        const clientGeoRes = await fetch("https://freeipapi.com/api/json");
-        if (clientGeoRes.ok) {
-          const clientGeo = await clientGeoRes.json();
-          const rawCity = (clientGeo.cityName || "").toLowerCase();
-          if (rawCity.includes("faridabad")) {
-            handleCityChange("Faridabad", false);
-            setDetectedLocationBadge(clientGeo.cityName || "Faridabad");
-          } else if (rawCity.includes("noida") || rawCity.includes("greater noida")) {
-            handleCityChange("Noida", false);
-            setDetectedLocationBadge(clientGeo.cityName || "Noida");
-          } else if (rawCity.includes("gurgaon") || rawCity.includes("gurugram") || rawCity.includes("manesar")) {
-            handleCityChange("Gurgaon", false);
-            setDetectedLocationBadge(clientGeo.cityName || "Gurgaon");
-          } else if (rawCity.includes("delhi") || rawCity.includes("ghaziabad") || rawCity.includes("ncr")) {
-            handleCityChange("Delhi NCR", false);
-            setDetectedLocationBadge(clientGeo.cityName || "Delhi NCR");
-          } else if (rawCity.includes("mumbai") || rawCity.includes("bombay")) {
-            handleCityChange("Mumbai", false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          } else if (rawCity.includes("bangalore") || rawCity.includes("bengaluru")) {
-            handleCityChange("Bengaluru", false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          } else if (rawCity.includes("pune") || rawCity.includes("poona")) {
-            handleCityChange("Pune", false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          } else if (rawCity) {
-            handleCityChange(clientGeo.cityName, false);
-            setDetectedLocationBadge(clientGeo.cityName);
-          }
-        }
-      } catch {}
+      handleCityChange("Delhi NCR", false);
+      setDetectedLocationBadge("Delhi NCR");
     }
     autoDetectLocation();
   }, []);
@@ -443,249 +410,6 @@ export default function PropertyMarketplacePage() {
       desc: "Core corporate and banking district in Faridabad featuring executive team cabins and modern flex facilities.",
       image: "/images/space_prahlad_capital.jpg",
       highlights: ["Neelam Chowk Proximity", "Corporate Suites", "Ample Parking"],
-    },
-    // Ahmedabad Hubs
-    {
-      id: "sg-highway",
-      name: "SG Highway & Makarba",
-      shortName: "SG Highway IT Corridor",
-      city: "Ahmedabad, Gujarat",
-      searchCity: "Ahmedabad",
-      searchQuery: "SG Highway",
-      region: "ahmedabad",
-      tag: "Top Tech Corridor",
-      spaces: "16+ Verified Spaces",
-      desc: "Ahmedabad's premier corporate corridor hosting Grade-A coworking hubs and enterprise managed offices.",
-      image: "/images/district_sghighway.jpg",
-      highlights: ["Titanium City Center", "Enterprise Managed Suites", "S.P. Ring Road Access"],
-    },
-    {
-      id: "prahlad-nagar",
-      name: "Prahlad Nagar & Bodakdev",
-      shortName: "Prahlad Nagar CBD",
-      city: "Ahmedabad, Gujarat",
-      searchCity: "Ahmedabad",
-      searchQuery: "Bodakdev",
-      region: "ahmedabad",
-      tag: "Prime Executive CBD",
-      spaces: "16+ Verified Spaces",
-      desc: "Upscale corporate boulevard with boutique executive suites, fine dining, and premier retail hubs.",
-      image: "/images/district_prahladnagar.jpg",
-      highlights: ["Opulence & Karyaco", "Sindhu Bhavan Proximity", "Executive Furnished Suites"],
-    },
-    {
-      id: "thaltej",
-      name: "Thaltej & Sindhu Bhavan",
-      shortName: "Sindhu Bhavan High-Street",
-      city: "Ahmedabad, Gujarat",
-      searchCity: "Ahmedabad",
-      searchQuery: "Thaltej",
-      region: "ahmedabad",
-      tag: "High-Street Corporate",
-      spaces: "8+ Verified Spaces",
-      desc: "The fastest-growing executive hub with premium coworking spaces including Sentient, Incuspaze, and URSA.",
-      image: "/images/space_prahlad_capital.jpg",
-      highlights: ["Sentient Coworking", "Incuspaze & URSA", "SBR Corporate Avenue"],
-    },
-    {
-      id: "navrangpura",
-      name: "Navrangpura & CG Road",
-      shortName: "Central Financial Hub",
-      city: "Ahmedabad, Gujarat",
-      searchCity: "Ahmedabad",
-      searchQuery: "Navrangpura",
-      region: "ahmedabad",
-      tag: "Central Business District",
-      spaces: "17+ Verified Spaces",
-      desc: "Core central business district with traditional banking headquarters and contemporary flexible workspaces.",
-      image: "/images/showcase_single_tower.jpg",
-      highlights: ["DevX & Sspacia", "CG Road Financial Belt", "Old City & Metro Access"],
-    },
-    {
-      id: "vastrapur",
-      name: "Vastrapur & IIM Road",
-      shortName: "Vastrapur Innovation Hub",
-      city: "Ahmedabad, Gujarat",
-      searchCity: "Ahmedabad",
-      searchQuery: "Vastrapur",
-      region: "ahmedabad",
-      tag: "Academic & Tech Hub",
-      spaces: "10+ Verified Spaces",
-      desc: "Thriving innovation corridor adjacent to IIM Ahmedabad, featuring Incuspaze, The First, and Vastrapur Lake.",
-      image: "/images/workspace_managed_suite.jpg",
-      highlights: ["Incuspaze Center", "IIM Ahmedabad Cluster", "Alpha One Mall"],
-    },
-    {
-      id: "gift-city",
-      name: "GIFT City IFSC, Gandhinagar",
-      shortName: "GIFT City IFSC",
-      city: "Gandhinagar / Ahmedabad",
-      searchCity: "Ahmedabad",
-      searchQuery: "GIFT City",
-      region: "ahmedabad",
-      tag: "Global FinTech IFSC",
-      spaces: "5+ Verified Spaces",
-      desc: "India's flagship International Financial Services Centre offering global banking and dual-currency trading.",
-      image: "/images/district_giftcity.jpg",
-      highlights: ["IFSC SEZ FinTech", "GIFT One Tower", "DevX & Incuspaze"],
-    },
-    // Bengaluru Hubs
-    {
-      id: "blr-hsr",
-      name: "HSR Layout, Bengaluru",
-      shortName: "HSR Startup Hub",
-      city: "Bengaluru, Karnataka",
-      searchCity: "Bangalore",
-      searchQuery: "HSR Layout",
-      region: "bengaluru",
-      tag: "Unicorn Hub",
-      spaces: "190+ Verified Spaces",
-      desc: "The epicentre of Indian venture-backed startups with vibrant cafes, high-energy incubators, and enterprise floors.",
-      image: "/images/district_bangaloreorr.jpg",
-      highlights: ["Tier-1 Flex Operators", "Sector 1-7 Startups", "Outer Ring Road Link"],
-    },
-    {
-      id: "blr-koramangala",
-      name: "Koramangala, Bengaluru",
-      shortName: "Koramangala CBD",
-      city: "Bengaluru, Karnataka",
-      searchCity: "Bangalore",
-      searchQuery: "Koramangala",
-      region: "bengaluru",
-      tag: "Venture Capital Hub",
-      spaces: "135+ Verified Spaces",
-      desc: "Home to India's top tech founders, investors, and premier coworking communities across 8 blocks.",
-      image: "/images/workspace_dedicated_desks.jpg",
-      highlights: ["VC & Angel Cluster", "80 Feet Road Dining", "Enterprise Flex Desks"],
-    },
-    {
-      id: "blr-whitefield",
-      name: "Whitefield, Bengaluru",
-      shortName: "Whitefield Tech Parks",
-      city: "Bengaluru, Karnataka",
-      searchCity: "Bangalore",
-      searchQuery: "Whitefield",
-      region: "bengaluru",
-      tag: "Global Tech Campuses",
-      spaces: "160+ Verified Spaces",
-      desc: "Massive campus ecosystems hosting multinational GCCs, ITPL tech parks, and Purple Line metro stations.",
-      image: "/images/showcase_office_techhorizon_hd.jpg",
-      highlights: ["ITPL & EPIP Zone", "Purple Line Metro", "Enterprise Private Floors"],
-    },
-    {
-      id: "blr-indiranagar",
-      name: "Indiranagar, Bengaluru",
-      shortName: "Indiranagar Lifestyle CBD",
-      city: "Bengaluru, Karnataka",
-      searchCity: "Bangalore",
-      searchQuery: "Indiranagar",
-      region: "bengaluru",
-      tag: "Boutique Creative",
-      spaces: "115+ Verified Spaces",
-      desc: "Boutique creative workspaces nestled on 100 Feet and 12th Main Roads with elite connectivity.",
-      image: "/images/hero_scene_campus_atrium.jpg",
-      highlights: ["100 Feet Road", "Design & Tech Studios", "Creative & Media Agencies"],
-    },
-    // Mumbai Hubs
-    {
-      id: "bkc-mumbai",
-      name: "Bandra Kurla Complex (BKC)",
-      shortName: "BKC Financial Hub",
-      city: "Mumbai, Maharashtra",
-      searchCity: "Mumbai",
-      searchQuery: "Bandra Kurla Complex",
-      region: "mumbai",
-      tag: "Financial Capital",
-      spaces: "43+ Verified Spaces",
-      desc: "The nerve center of Indian banking, private equity, consulates, and Fortune 500 headquarters.",
-      image: "/images/district_mumbaibkc.jpg",
-      highlights: ["Prime Grade-A Towers", "Jio World Centre", "Metro Line 3 Link"],
-    },
-    {
-      id: "andheri-mumbai",
-      name: "Andheri (East & West), Mumbai",
-      shortName: "Andheri Metro Hub",
-      city: "Mumbai, Maharashtra",
-      searchCity: "Mumbai",
-      searchQuery: "Andheri",
-      region: "mumbai",
-      tag: "Metro & Airport Hub",
-      spaces: "110+ Verified Spaces",
-      desc: "Western Mumbai's commercial nexus with proximity to Chhatrapati Shivaji Maharaj International Airport.",
-      image: "/images/card_office_marketplace.jpg",
-      highlights: ["Western Express Highway", "International Airport", "Chakala & MIDC"],
-    },
-    {
-      id: "lower-parel-mumbai",
-      name: "Lower Parel & Worli, Mumbai",
-      shortName: "Lower Parel Corporate",
-      city: "Mumbai, Maharashtra",
-      searchCity: "Mumbai",
-      searchQuery: "Lower Parel",
-      region: "mumbai",
-      tag: "Corporate High-Rise",
-      spaces: "29+ Verified Spaces",
-      desc: "Redeveloped mill district featuring high-end corporate towers, One World Center, and luxury retail.",
-      image: "/images/space_gift_one_tower.jpg",
-      highlights: ["One World Center", "Kamala Mills", "Boutique Managed Suites"],
-    },
-    // Pune Hubs
-    {
-      id: "hinjewadi-pune",
-      name: "Hinjewadi IT Park (Phases 1-3), Pune",
-      shortName: "Hinjewadi Tech Hub",
-      city: "Pune, Maharashtra",
-      searchCity: "Pune",
-      searchQuery: "Hinjewadi",
-      region: "pune",
-      tag: "Mega IT Park Hub",
-      spaces: "185+ Verified Spaces",
-      desc: "Pune's sprawling tech epicenter home to multinational IT services campuses, SEZs, and grade-A managed spaces.",
-      image: "/images/showcase_single_tower.jpg",
-      highlights: ["Phase 1 & 2 SEZ", "Quadron Business Park", "Enterprise Tech Suites"],
-    },
-    {
-      id: "baner-pune",
-      name: "Baner & Balewadi, Pune",
-      shortName: "Baner Tech Corridor",
-      city: "Pune, Maharashtra",
-      searchCity: "Pune",
-      searchQuery: "Baner",
-      region: "pune",
-      tag: "Western IT Belt",
-      spaces: "159+ Verified Spaces",
-      desc: "Pune's fastest-expanding IT hub along Mumbai-Bengaluru Highway with high-density coworking supply.",
-      image: "/images/district_sghighway.jpg",
-      highlights: ["Mumbai-Pune Highway", "Balewadi High Street", "Tech & FinTech Clusters"],
-    },
-    {
-      id: "kharadi-pune",
-      name: "Kharadi & Viman Nagar, Pune",
-      shortName: "Kharadi EON Corridor",
-      city: "Pune, Maharashtra",
-      searchCity: "Pune",
-      searchQuery: "Kharadi",
-      region: "pune",
-      tag: "Eastern IT Hub",
-      spaces: "142+ Verified Spaces",
-      desc: "Eastern Pune's prime business district featuring EON Free Zone, World Trade Center, and close airport connectivity.",
-      image: "/images/district_cybercity.jpg",
-      highlights: ["EON IT Park", "World Trade Center Pune", "Airport Connectivity"],
-    },
-    // Hyderabad Hubs
-    {
-      id: "hitec-city-hyderabad",
-      name: "HITEC City & Madhapur",
-      shortName: "Cyberabad Tech Core",
-      city: "Hyderabad, Telangana",
-      searchCity: "Hyderabad",
-      searchQuery: "HITEC City",
-      region: "hyderabad",
-      tag: "Cyberabad IT Core",
-      spaces: "148+ Verified Spaces",
-      desc: "The heartbeat of Hyderabad's IT economy, housing major global tech companies and Cyber Towers.",
-      image: "/images/district_cybercity.jpg",
-      highlights: ["Cyber Towers & Inorbit", "Durgam Cheruvu Metro", "Enterprise Campuses"],
     }
   ];
   const commercialDistricts = topWorkspaceHubs; // Backward compatibility alias

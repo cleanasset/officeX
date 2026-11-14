@@ -2,43 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { marketplaceListings } from "@/db/marketplace-schema";
 import { eq, and, ne } from "drizzle-orm";
-
-function cleanImageUrl(url: string | null | undefined): string {
-  if (!url || typeof url !== "string") return "/images/showcase_commercial_warmshell.jpg";
-  let cleaned = url.trim();
-  if (!cleaned) return "/images/showcase_commercial_warmshell.jpg";
-
-  if (cleaned.includes("res.cloudinary.com/myhq/image/upload/")) {
-    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/myhq\/image\/upload\//i, "/assets/spaces/");
-  } else if (cleaned.includes("cloudinary.com") && cleaned.includes("myhq")) {
-    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//i, "/assets/spaces/");
-  }
-
-  if (cleaned.includes("myhq")) {
-    cleaned = cleaned.replace(/myhq/gi, "officex");
-  }
-
-  return cleaned;
-}
-
-function sanitizeText(val: string | null | undefined): string {
-  if (!val || typeof val !== "string") return "";
-  return val.replace(/myhq/gi, "OfficeX");
-}
-
-function sanitizeListing(l: any) {
-  if (!l) return l;
-  return {
-    ...l,
-    name: sanitizeText(l.name),
-    brandName: sanitizeText(l.brandName),
-    description: sanitizeText(l.description),
-    featuredImage: cleanImageUrl(l.featuredImage),
-    images: Array.isArray(l.images) && l.images.length > 0
-      ? l.images.map(cleanImageUrl)
-      : [cleanImageUrl(l.featuredImage)],
-  };
-}
+import {
+  cleanImageUrl,
+  sanitizeText,
+  sanitizeListing,
+  getMasterListingBySlug,
+  getSimilarMasterListings,
+} from "@/lib/marketplace-master";
 
 export async function GET(
   request: NextRequest,
@@ -50,47 +20,85 @@ export async function GET(
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });
     }
 
-    // Check by slug or by UUID id
+    // 1. Check PostgreSQL database first (for host/partner submitted spaces)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     
-    let listing;
-    if (isUuid) {
-      const results = await db
-        .select()
-        .from(marketplaceListings)
-        .where(eq(marketplaceListings.id, slug))
-        .limit(1);
-      listing = results[0];
-    } else {
-      const results = await db
-        .select()
-        .from(marketplaceListings)
-        .where(eq(marketplaceListings.slug, slug))
-        .limit(1);
-      listing = results[0];
+    let dbListing: any = null;
+    try {
+      if (isUuid) {
+        const results = await db
+          .select()
+          .from(marketplaceListings)
+          .where(eq(marketplaceListings.id, slug))
+          .limit(1);
+        dbListing = results[0];
+      } else {
+        const results = await db
+          .select()
+          .from(marketplaceListings)
+          .where(eq(marketplaceListings.slug, slug))
+          .limit(1);
+        dbListing = results[0];
+      }
+    } catch (dbErr) {
+      // Continue to master dataset fallback if DB is empty or unreachable
+      console.warn("DB query for listing failed, falling back to master dataset:", dbErr);
     }
 
-    if (!listing) {
-      return NextResponse.json({ error: "Listing not found" }, { status: 400 });
+    // 2. If found in DB, return DB listing and similar
+    if (dbListing) {
+      let similar: any[] = [];
+      try {
+        similar = await db
+          .select()
+          .from(marketplaceListings)
+          .where(
+            and(
+              eq(marketplaceListings.city, dbListing.city),
+              eq(marketplaceListings.vertical, dbListing.vertical),
+              ne(marketplaceListings.id, dbListing.id),
+              eq(marketplaceListings.status, "active")
+            )
+          )
+          .limit(4);
+      } catch {
+        // Ignore DB error for similar
+      }
+
+      // If DB has fewer than 4 similar listings, backfill from authentic master dataset
+      if (similar.length < 4) {
+        const extraSimilar = getSimilarMasterListings(
+          dbListing.city,
+          dbListing.vertical,
+          dbListing.id,
+          4 - similar.length
+        );
+        similar = [...similar, ...extraSimilar];
+      }
+
+      return NextResponse.json({
+        listing: sanitizeListing(dbListing),
+        similar: similar.map(sanitizeListing),
+      });
     }
 
-    // Fetch up to 4 similar listings in the same city and vertical
-    const similar = await db
-      .select()
-      .from(marketplaceListings)
-      .where(
-        and(
-          eq(marketplaceListings.city, listing.city),
-          eq(marketplaceListings.vertical, listing.vertical),
-          ne(marketplaceListings.id, listing.id),
-          eq(marketplaceListings.status, "active")
-        )
-      )
-      .limit(4);
+    // 3. Fallback: Lookup in 6,767 authentic real myHQ scraped workspaces
+    const masterListing = getMasterListingBySlug(slug);
+    if (!masterListing) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    // Fetch up to 4 similar listings from the master dataset
+    const similarMaster = getSimilarMasterListings(
+      masterListing.city,
+      masterListing.vertical,
+      masterListing.id,
+      4
+    );
 
     return NextResponse.json({
-      listing: sanitizeListing(listing),
-      similar: similar.map(sanitizeListing)
+      listing: sanitizeListing(masterListing),
+      similar: similarMaster.map(sanitizeListing),
     });
   } catch (error: any) {
     console.error("Error fetching listing details:", error);

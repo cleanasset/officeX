@@ -1,42 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCityLive } from "@/data/marketplace-cities";
 
-// Normalizes any incoming city, town, or region name to an OfficeX primary hub
+// Maps detected location to standardized OfficeX city name
 function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
-  if (!rawCity && !rawRegion) return "Delhi NCR"; // Default lead market fallback
+  if (!rawCity && !rawRegion) return "Delhi NCR";
   const c = (rawCity || "").toLowerCase().trim();
   const r = (rawRegion || "").toLowerCase().trim();
 
-  // 1. Pune & Pimpri-Chinchwad
-  if (
-    c.includes("pune") ||
-    c.includes("poona") ||
-    c.includes("pimpri") ||
-    c.includes("chinchwad") ||
-    c.includes("hinjewadi") ||
-    c.includes("baner") ||
-    c.includes("magarpatta") ||
-    c.includes("kharadi") ||
-    c.includes("hadapsar") ||
-    c.includes("viman nagar") ||
-    c.includes("kothrud") ||
-    c.includes("wakad") ||
-    c.includes("balewadi") ||
-    c.includes("bavdhan")
-  ) {
-    return "Pune";
-  }
-
-  // 2. Faridabad
+  // 1. Faridabad
   if (c.includes("faridabad")) {
     return "Faridabad";
   }
 
-  // 3. Noida & Greater Noida
+  // 2. Noida & Greater Noida
   if (c.includes("noida") || c.includes("greater noida")) {
     return "Noida";
   }
 
-  // 4. Gurgaon & Gurugram
+  // 3. Gurgaon & Gurugram
   if (
     c.includes("gurgaon") ||
     c.includes("gurugram") ||
@@ -46,7 +27,7 @@ function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
     return "Gurgaon";
   }
 
-  // 5. Delhi NCR (Delhi, Ghaziabad, etc.)
+  // 4. Delhi NCR
   if (
     c.includes("delhi") ||
     c.includes("ghaziabad") ||
@@ -57,111 +38,64 @@ function mapToOfficeXCity(rawCity: string, rawRegion: string = ""): string {
     return "Delhi NCR";
   }
 
-  // 3. Mumbai MMR
+  // 5. Mumbai MMR
   if (
     c.includes("mumbai") ||
     c.includes("bombay") ||
     c.includes("thane") ||
     c.includes("navi mumbai") ||
-    c.includes("kalyan") ||
-    c.includes("dombivli") ||
-    c.includes("vasai") ||
-    c.includes("virar") ||
-    c.includes("panvel") ||
     c.includes("andheri") ||
     c.includes("bkc")
   ) {
     return "Mumbai";
   }
 
-  // 4. Bengaluru
+  // 6. Bengaluru
   if (
     c.includes("bengaluru") ||
     c.includes("bangalore") ||
     c.includes("whitefield") ||
     c.includes("koramangala") ||
-    c.includes("indiranagar") ||
-    c.includes("electronic city") ||
-    c.includes("hosur") ||
-    r === "ka" ||
-    r.includes("karnataka")
+    c.includes("electronic city")
   ) {
     return "Bengaluru";
   }
 
-  // 5. Hyderabad
-  if (
-    c.includes("hyderabad") ||
-    c.includes("secunderabad") ||
-    c.includes("cyberabad") ||
-    c.includes("hitec") ||
-    c.includes("gachibowli") ||
-    c.includes("madhapur") ||
-    r === "tg" ||
-    r.includes("telangana")
-  ) {
+  // 7. Pune
+  if (c.includes("pune") || c.includes("poona") || c.includes("hinjewadi") || c.includes("baner")) {
+    return "Pune";
+  }
+
+  // 8. Hyderabad
+  if (c.includes("hyderabad") || c.includes("secunderabad") || c.includes("cyberabad") || c.includes("hitec")) {
     return "Hyderabad";
   }
 
-  // 6. Ahmedabad & Gandhinagar (Gujarat)
+  // 9. Ahmedabad & GIFT City
   if (
     c.includes("ahmedabad") ||
-    c.includes("ahemedabad") ||
     c.includes("gandhinagar") ||
     c.includes("gift") ||
     c.includes("sanand") ||
-    c.includes("bavla") ||
-    c.includes("kalol") ||
     c.includes("vadodara") ||
     c.includes("surat") ||
-    c.includes("rajkot") ||
     r === "gj" ||
     r.includes("gujarat")
   ) {
     return "Ahmedabad";
   }
 
-  // 7. Chennai
-  if (c.includes("chennai") || c.includes("madras") || r === "tn" || r.includes("tamil nadu")) {
+  // 10. Chennai
+  if (c.includes("chennai") || c.includes("madras")) {
     return "Chennai";
   }
 
-  // 8. Kolkata
-  if (c.includes("kolkata") || c.includes("calcutta") || r === "wb" || r.includes("west bengal")) {
+  // 11. Kolkata
+  if (c.includes("kolkata") || c.includes("calcutta")) {
     return "Kolkata";
   }
 
-  // 9. Jaipur
-  if (c.includes("jaipur") || r === "rj" || r.includes("rajasthan")) {
-    return "Jaipur";
-  }
-
-  // 10. Indore
-  if (c.includes("indore") || r === "mp" || r.includes("madhya pradesh")) {
-    return "Indore";
-  }
-
-  // 11. Kochi
-  if (c.includes("kochi") || c.includes("cochin") || r === "kl" || r.includes("kerala")) {
-    return "Kochi";
-  }
-
-  // 12. Chandigarh
-  if (c.includes("chandigarh") || c.includes("mohali") || c.includes("panchkula")) {
-    return "Chandigarh";
-  }
-
-  // 13. Goa
-  if (c.includes("goa") || c.includes("panaji") || c.includes("panjim") || r === "ga") {
-    return "Goa";
-  }
-
-  // If in Maharashtra outside Mumbai/Pune, check if near Pune
-  if (r === "mh" || r.includes("maharashtra")) {
-    return "Mumbai";
-  }
-
-  return "Delhi NCR"; // Safe default to lead commercial metro
+  return rawCity ? rawCity.trim() : "Delhi NCR";
 }
 
 export async function GET(request: NextRequest) {
@@ -181,6 +115,7 @@ export async function GET(request: NextRequest) {
         region: vercelRegion || null,
         country: vercelCountry || "IN",
         city: matchedCity,
+        isLive: isCityLive(matchedCity),
       });
     }
 
@@ -198,6 +133,7 @@ export async function GET(request: NextRequest) {
         region: cfRegion || null,
         country: cfCountry || "IN",
         city: matchedCity,
+        isLive: isCityLive(matchedCity),
       });
     }
 
@@ -244,6 +180,7 @@ export async function GET(request: NextRequest) {
             region: rawRegion,
             country: geoData.country || "IN",
             city: matchedCity,
+            isLive: isCityLive(matchedCity),
           });
         }
       } catch {
@@ -272,6 +209,7 @@ export async function GET(request: NextRequest) {
               region: rawRegion,
               country: geoData.country || "IN",
               city: matchedCity,
+              isLive: isCityLive(matchedCity),
             });
           }
         }
@@ -287,12 +225,14 @@ export async function GET(request: NextRequest) {
       city: "Delhi NCR",
       rawCity: "Delhi NCR",
       country: "IN",
+      isLive: true,
     });
   } catch (err: any) {
     return NextResponse.json({
       success: false,
       error: err?.message || "Location detection failed",
       city: "Delhi NCR",
+      isLive: true,
     });
   }
 }

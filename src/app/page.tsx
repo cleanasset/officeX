@@ -596,8 +596,18 @@ export default function LandingPage() {
       return;
     }
     if (activeSearchTab === "space") {
-      const v = spaceGrade === "All Grades" || spaceGrade === "all" ? "all" : spaceGrade;
-      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=${encodeURIComponent(v)}&budget=${encodeURIComponent(spaceBudget)}`);
+      const params = new URLSearchParams();
+      if (spaceCity && spaceCity !== "all") {
+        params.set("city", spaceCity);
+      }
+      if (spaceGrade && spaceGrade !== "all" && spaceGrade !== "All Workspaces" && spaceGrade !== "All Grades") {
+        params.set("vertical", spaceGrade);
+      }
+      if (spaceBudget && spaceBudget !== "All Ranges" && spaceBudget !== "Any Area" && spaceBudget !== "all") {
+        params.set("area", spaceBudget);
+      }
+      const qs = params.toString();
+      router.push(`/marketplace/search${qs ? `?${qs}` : ""}`);
       return;
     }
     if (activeSearchTab === "managed") {

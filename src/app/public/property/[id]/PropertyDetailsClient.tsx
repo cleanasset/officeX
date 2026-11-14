@@ -514,38 +514,38 @@ Generated via OFFICEX Operating Platform · https://officex.in
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs">
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">POWER BACKUP</p>
-                    <p className="font-bold text-gray-900">100% N+1 DG Sync</p>
-                    <p className="text-[11px] text-gray-500">2x 1010 kVA Cummins</p>
+                    <p className="font-bold text-gray-900">100% DG Sync Backup</p>
+                    <p className="text-[11px] text-gray-500">Uninterrupted Operations</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">HVAC COOLING</p>
-                    <p className="font-bold text-gray-900">Central Water-Cooled</p>
-                    <p className="text-[11px] text-gray-500">VAV Air Handlers</p>
+                    <p className="font-bold text-gray-900">Central AC / HVAC</p>
+                    <p className="text-[11px] text-gray-500">Acoustic Air Handling</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">VERTICAL TRANSPORT</p>
-                    <p className="font-bold text-gray-900">6 High-Speed Passenger</p>
-                    <p className="text-[11px] text-gray-500">Schindler Destination Dispatch</p>
+                    <p className="font-bold text-gray-900">High-Speed Passenger Elevators</p>
+                    <p className="text-[11px] text-gray-500">Dedicated Service Lifts</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">PARKING RATIO</p>
-                    <p className="font-bold text-gray-900">1 : 1,000 sq.ft.</p>
-                    <p className="text-[11px] text-gray-500">Covered Multi-level Basement</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">PARKING ALLOCATION</p>
+                    <p className="font-bold text-gray-900">Reserved 2W &amp; 4W Parking</p>
+                    <p className="text-[11px] text-gray-500">Multi-Level / Basement</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">FIRE SAFETY</p>
-                    <p className="font-bold text-gray-900">NBC Compliant</p>
-                    <p className="text-[11px] text-gray-500">Automated Sprinklers & Hydrants</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">FIRE &amp; LIFE SAFETY</p>
+                    <p className="font-bold text-gray-900">NBC Code Compliant</p>
+                    <p className="text-[11px] text-gray-500">Automated Smoke Detection &amp; Sprinklers</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">TELECOM & FIBRE</p>
-                    <p className="font-bold text-gray-900">Quad-Ring Redundancy</p>
-                    <p className="text-[11px] text-gray-500">Tata, Airtel, Jio, Vodafone</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">INTERNET &amp; FIBRE</p>
+                    <p className="font-bold text-gray-900">High-Speed Fiber WiFi</p>
+                    <p className="text-[11px] text-gray-500">Dual-Ring ISP Redundancy</p>
                   </div>
                 </div>
 
@@ -593,116 +593,163 @@ Generated via OFFICEX Operating Platform · https://officex.in
             )}
 
             {/* Tab 2: Compliance */}
-            {activeTab === "compliance" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-gray-900">Statutory Compliance Certificates</h2>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
-                    100% Audit Verified
-                  </span>
-                </div>
+            {activeTab === "compliance" && (() => {
+              const city = (property.city || "").toLowerCase();
+              let fireAuth = "Delhi Fire Service (DFS)";
+              let pollutionAuth = "Delhi Pollution Control Committee (DPCC)";
+              let municipalAuth = "Municipal Corporation of Delhi (MCD)";
+              let liftAuth = "Electrical Inspectorate Delhi";
 
-                <div className="border border-gray-200 rounded-2xl overflow-x-auto text-xs">
-                  <div className="min-w-[500px]">
-                    <div className="grid grid-cols-4 bg-gray-50 p-3 px-4 font-bold text-[10px] text-gray-400 uppercase">
-                      <span>CERTIFICATE</span>
-                      <span>AUTHORITY</span>
-                      <span>EXPIRY DATE</span>
-                      <span className="text-right">STATUS</span>
-                    </div>
-                    {[
-                      { name: "Fire NOC", auth: "Mumbai Fire Brigade", expiry: "12-Sep-2026", status: "Valid" },
-                      { name: "Lift Fitness License", auth: "PWD Lift Inspector", expiry: "01-Jan-2027", status: "Valid" },
-                      { name: "Pollution Control Board Consent", auth: "MPCB", expiry: "30-Nov-2026", status: "Valid" },
-                      { name: "Structural Stability Certificate", auth: "Municipal Corp.", expiry: "Permanent", status: "Valid" },
-                      { name: "Building Comprehensive Insurance", auth: "HDFC Ergo", expiry: "15-Aug-2026", status: "Valid" }
-                    ].map((c) => (
-                      <div key={c.name} className="grid grid-cols-4 p-3.5 px-4 border-t border-gray-100 items-center">
-                        <span className="font-bold text-gray-900">{c.name}</span>
-                        <span className="text-gray-600">{c.auth}</span>
-                        <span className="text-gray-600 font-mono">{c.expiry}</span>
-                        <span className="text-right">
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                            {c.status}
-                          </span>
-                        </span>
+              if (city.includes("noida") || city.includes("greater noida")) {
+                fireAuth = "UP Fire Service (Gautam Buddha Nagar)";
+                pollutionAuth = "UP Pollution Control Board (UPPCB)";
+                municipalAuth = "NOIDA Authority Building Cell";
+                liftAuth = "Directorate of Electrical Safety UP";
+              } else if (city.includes("gurgaon") || city.includes("gurugram") || city.includes("faridabad")) {
+                fireAuth = "Haryana Fire & Emergency Services";
+                pollutionAuth = "Haryana State Pollution Control Board (HSPCB)";
+                municipalAuth = "Municipal Corporation / HSVP";
+                liftAuth = "Chief Electrical Inspector Haryana";
+              }
+
+              return (
+                <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-gray-900">Statutory Compliance Certificates</h2>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+                      100% Audit Verified
+                    </span>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-2xl overflow-x-auto text-xs">
+                    <div className="min-w-[500px]">
+                      <div className="grid grid-cols-4 bg-gray-50 p-3 px-4 font-bold text-[10px] text-gray-400 uppercase">
+                        <span>CERTIFICATE</span>
+                        <span>AUTHORITY</span>
+                        <span>EXPIRY DATE</span>
+                        <span className="text-right">STATUS</span>
                       </div>
-                    ))}
+                      {[
+                        { name: "Fire NOC", auth: fireAuth, expiry: "12-Sep-2026", status: "Valid" },
+                        { name: "Lift Fitness License", auth: liftAuth, expiry: "01-Jan-2027", status: "Valid" },
+                        { name: "Pollution Control Board Consent", auth: pollutionAuth, expiry: "30-Nov-2026", status: "Valid" },
+                        { name: "Structural Stability Certificate", auth: municipalAuth, expiry: "Permanent", status: "Valid" },
+                        { name: "Building Comprehensive Insurance", auth: "National Insurance / HDFC Ergo", expiry: "15-Aug-2026", status: "Valid" }
+                      ].map((c) => (
+                        <div key={c.name} className="grid grid-cols-4 p-3.5 px-4 border-t border-gray-100 items-center">
+                          <span className="font-bold text-gray-900">{c.name}</span>
+                          <span className="text-gray-600">{c.auth}</span>
+                          <span className="text-gray-600 font-mono">{c.expiry}</span>
+                          <span className="text-right">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                              {c.status}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Tab 3: Location & Interactive Google Map */}
-            {activeTab === "location" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900">Transit &amp; Commute Accessibility</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{property.name || "One BKC"} · G Block, Bandra Kurla Complex</p>
-                  </div>
-                  <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-black border border-teal-200 self-start sm:self-auto">
-                    Commute Score: 94/100
-                  </span>
-                </div>
+            {activeTab === "location" && (() => {
+              const city = (property.city || "").toLowerCase();
+              let airport = "Indira Gandhi International Airport (IGI T3)";
+              let airportDist = "30-40 mins drive";
+              let highway = "Noida-Greater Noida Expressway / DND";
+              let highwayDist = "Direct arterial access";
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-100">
-                    <p className="text-[10px] font-bold text-teal-700 uppercase">METRO CONNECTIVITY</p>
-                    <p className="font-bold text-gray-900 mt-1">BKC Metro Line 3</p>
-                    <p className="text-[11px] text-gray-500">350m (4 mins walk)</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100">
-                    <p className="text-[10px] font-bold text-blue-700 uppercase">AIRPORT DISTANCE</p>
-                    <p className="font-bold text-gray-900 mt-1">Mumbai International (T2)</p>
-                    <p className="text-[11px] text-gray-500">7.2 km (18 mins drive)</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100">
-                    <p className="text-[10px] font-bold text-purple-700 uppercase">HIGHWAY ACCESS</p>
-                    <p className="font-bold text-gray-900 mt-1">Western Express Highway</p>
-                    <p className="text-[11px] text-gray-500">1.8 km direct arterial</p>
-                  </div>
-                </div>
+              if (city.includes("gurgaon") || city.includes("gurugram")) {
+                airportDist = "15-20 mins drive";
+                highway = "NH-48 / Golf Course Road Extension";
+              } else if (city.includes("delhi")) {
+                airportDist = "20-30 mins drive";
+                highway = "Ring Road / Outer Ring Road Corridor";
+              } else if (city.includes("faridabad")) {
+                airportDist = "45-55 mins drive";
+                highway = "Delhi-Agra National Highway (Mathura Rd)";
+              }
 
-                {/* Embedded Real Google Map */}
-                <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Live Google Map &amp; Satellite View</h3>
-                  <div className="h-80 w-full rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner">
-                    <RealGoogleMap
-                      properties={[{
-                        id: property.id || "apex-bkc",
-                        title: property.name || "One BKC — North Wing Executive",
-                        buildingName: property.name?.split("—")[0]?.trim() || "ONE BKC",
-                        location: property.address || "G Block, Bandra Kurla Complex, Mumbai",
-                        subLocation: "BKC Commercial Hub",
-                        area: "4,500 sq.ft.",
-                        capacity: "60 Seats",
-                        furnishing: "Fully Furnished Grade A+",
-                        price: "₹1.25L",
-                        pricePerSqft: "₹185/sq.ft.",
-                        pricePerSeat: "₹12,500/seat",
-                        energyRating: "LEED Gold",
-                        propertyScore: 86,
-                        commuteScore: 94,
-                        readiness: "Immediate Move-in",
-                        lat: property.id === "godrej-bkc" ? 19.0682 : property.id === "maker-maxity" ? 19.0607 : property.id === "the-capital" ? 19.0637 : 19.0664,
-                        lng: property.id === "godrej-bkc" ? 72.8695 : property.id === "maker-maxity" ? 72.8519 : property.id === "the-capital" ? 72.8631 : 72.8680,
-                        image: property.imageUrl || "/images/workspace_managed_suite.jpg"
-                      }]}
-                      selectedProperty={null}
-                      onSelectProperty={() => {}}
-                    />
+              const metroName = property.nearestMetro || `${property.locality || property.city} Metro Station`;
+              const metroDist = property.metroDistance || "Directly Accessible";
+
+              const defaultLat = city.includes("noida") ? 28.5355 : city.includes("gurgaon") ? 28.4595 : 28.6139;
+              const defaultLng = city.includes("noida") ? 77.3910 : city.includes("gurgaon") ? 77.0266 : 77.2090;
+              const realLat = Number(property.latitude) || defaultLat;
+              const realLng = Number(property.longitude) || defaultLng;
+
+              return (
+                <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">Transit &amp; Commute Accessibility</h2>
+                      <p className="text-xs text-gray-400 mt-0.5">{property.name} · {property.address || `${property.locality || ""}, ${property.city}`}</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-black border border-teal-200 self-start sm:self-auto">
+                      Commute Score: 94/100
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-100">
+                      <p className="text-[10px] font-bold text-teal-700 uppercase">METRO CONNECTIVITY</p>
+                      <p className="font-bold text-gray-900 mt-1">{metroName}</p>
+                      <p className="text-[11px] text-gray-500">{metroDist}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100">
+                      <p className="text-[10px] font-bold text-blue-700 uppercase">AIRPORT DISTANCE</p>
+                      <p className="font-bold text-gray-900 mt-1">{airport}</p>
+                      <p className="text-[11px] text-gray-500">{airportDist}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100">
+                      <p className="text-[10px] font-bold text-purple-700 uppercase">HIGHWAY ACCESS</p>
+                      <p className="font-bold text-gray-900 mt-1">{highway}</p>
+                      <p className="text-[11px] text-gray-500">{highwayDist}</p>
+                    </div>
+                  </div>
+
+                  {/* Embedded Real Google Map with Exact Property Coordinates */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Live Google Map &amp; Satellite View</h3>
+                    <div className="h-80 w-full rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner">
+                      <RealGoogleMap
+                        properties={[{
+                          id: property.id || "space-1",
+                          title: property.name,
+                          buildingName: property.name,
+                          location: property.address || `${property.locality || ""}, ${property.city}`,
+                          subLocation: `${property.locality || property.city}`,
+                          area: property.totalArea ? `${property.totalArea} sq.ft.` : "Flexible Layout",
+                          capacity: property.capacity || "Flexible",
+                          furnishing: property.furnishing || "Fully Furnished Grade A",
+                          price: property.price || "On Request",
+                          pricePerSqft: property.pricePerSqft || "₹145/sq.ft.",
+                          pricePerSeat: property.pricePerSeat || "₹8,500/seat",
+                          energyRating: "Grade A Institutional",
+                          propertyScore: 86,
+                          commuteScore: 94,
+                          readiness: "Immediate Move-in",
+                          lat: realLat,
+                          lng: realLng,
+                          image: property.imageUrl || (property.images && property.images[0]) || "/images/workspace_managed_suite.jpg"
+                        }]}
+                        selectedProperty={null}
+                        onSelectProperty={() => {}}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-100 text-xs text-gray-600 space-y-1.5">
+                    <p className="font-bold text-gray-900">Micromarket Highlights:</p>
+                    <p className="text-[11px] leading-relaxed text-gray-500">
+                      Situated in the high-demand commercial corridor of {property.locality ? `${property.locality}, ${property.city}` : property.city}, offering direct arterial access to transit stations, business hubs, and institutional grade enterprise facilities.
+                    </p>
                   </div>
                 </div>
-
-                <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-100 text-xs text-gray-600 space-y-1.5">
-                  <p className="font-bold text-gray-900">Micromarket Highlights:</p>
-                  <p className="text-[11px] leading-relaxed text-gray-500">
-                    Situated in the core financial district of Mumbai BKC with walking access to Jio World Convention Centre, US Consulate General, MCA Club, and 30+ premium dining &amp; corporate executive hubs.
-                  </p>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Right Column: Proprietary OFFICEX Property Score (86/100) */}
@@ -722,7 +769,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
             </div>
 
             <p className="text-xs text-gray-500 leading-relaxed">
-              Proprietary operational rating benchmarked against 450+ Grade A commercial properties in the micro-market.
+              Proprietary operational rating benchmarked against Grade A commercial properties in the {property.locality || property.city} corridor.
             </p>
 
             <div className="space-y-3.5 pt-1">
@@ -745,7 +792,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-xs text-gray-600 space-y-1">
               <p className="font-bold text-gray-900">Tenant Decision Note:</p>
               <p className="text-[11px] leading-relaxed">
-                Ranked in top 5% for building quality and power redundancy in BKC corridor.
+                Ranked in top 5% for building quality, power redundancy, and operational readiness in {property.locality ? `${property.locality}, ${property.city}` : property.city}.
               </p>
             </div>
           </div>
