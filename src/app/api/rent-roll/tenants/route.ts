@@ -301,18 +301,8 @@ export async function POST(req: Request) {
         console.warn("Landlord self-lease check notice:", err);
       }
 
-      // 2. Embedded PAN in GSTIN Validation (Point 4)
-      if (panToTest && gstToTest && gstToTest.length >= 12) {
-        const embeddedPan = gstToTest.slice(2, 12);
-        if (embeddedPan !== panToTest) {
-          return NextResponse.json(
-            {
-              error: `Corporate GSTIN and PAN mismatch: Characters 3–12 of GSTIN (${embeddedPan}) must match the entered PAN (${panToTest}).`
-            },
-            { status: 422 }
-          );
-        }
-      }
+      // 2. Format validation for PAN and GSTIN independently (no cross-field blocking)
+      // Entities, branch offices, and group companies can have differing PAN and GST numbers.
 
       // 3. Duplicate tenant check with precise field attribution (Point 4)
       const dupConditions = [];

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
+import { supabase } from "@/lib/supabase";
 import { property, building, space } from "@/db/schema";
 import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
@@ -141,14 +142,41 @@ export async function POST(req: Request) {
         let planCap = 0;
         if (headerCustomCap > 0) {
           planCap = headerCustomCap;
-        } else if (headerPlan === "commercial-suite") {
-          planCap = headerCustomCap > 0 ? headerCustomCap : 500000000;
-        } else if (headerPlan === "starter") {
-          planCap = 50000;
-        } else if (headerPlan === "techpark" || headerPlan === "growth" || headerPlan === "campus") {
-          planCap = 250000;
-        } else if (headerPlan === "reit-mega" || headerPlan === "enterprise") {
-          planCap = 500000000;
+        } else {
+          // Look up user_subscriptions for actual subscribed_sqft
+          if (auth.userEmail) {
+            try {
+              const { data: subRow } = await supabase
+                .from("user_subscriptions")
+                .select("metadata, plan_id")
+                .eq("email", auth.userEmail.toLowerCase())
+                .eq("status", "active")
+                .gt("ends_at", new Date().toISOString())
+                .order("ends_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (subRow) {
+                const metaSqft = Number(subRow.metadata?.subscribed_sqft);
+                if (metaSqft > 0) {
+                  planCap = metaSqft;
+                } else if (subRow.plan_id === "starter") {
+                  planCap = 50000;
+                } else if (subRow.plan_id === "commercial-suite") {
+                  planCap = 500000;
+                }
+              }
+            } catch (e) {
+              console.warn("DB subscription lookup notice:", e);
+            }
+          }
+
+          if (planCap === 0) {
+            if (headerPlan === "starter") planCap = 50000;
+            else if (headerPlan === "commercial-suite") planCap = 500000;
+            else if (headerPlan === "techpark" || headerPlan === "growth" || headerPlan === "campus") planCap = 250000;
+            else if (headerPlan === "reit-mega" || headerPlan === "enterprise") planCap = 500000000;
+          }
         }
 
         // Only enforce cap if user has an active subscribed plan tier with a limit

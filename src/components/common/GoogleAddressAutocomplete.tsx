@@ -352,7 +352,8 @@ export default function GoogleAddressAutocomplete({
           autoCapitalize="off"
           spellCheck={false}
           data-form-type="other"
-          className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#0D7B6C] focus:ring-2 focus:ring-[#0D7B6C]/10 outline-none transition shadow-2xs"
+          title={query}
+          className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#0D7B6C] focus:ring-2 focus:ring-[#0D7B6C]/10 outline-none transition shadow-2xs truncate"
         />
 
         {query && (

@@ -729,14 +729,32 @@ export default function PropertyHierarchyModal({
         let planCap = 0;
         if (storedCap && !isNaN(storedCap) && storedCap > 0) {
           planCap = storedCap;
+        } else if (storedPlan === "commercial-suite") {
+          planCap = storedCap > 0 ? storedCap : 500000;
         } else if (storedPlan === "starter") {
           planCap = 50000;
         } else if (storedPlan === "techpark" || storedPlan === "growth" || storedPlan === "campus") {
           planCap = 250000;
         } else if (storedPlan === "reit-mega" || storedPlan === "enterprise") {
           planCap = 500000000;
+        } else if (checkIsOwnerSubscribed()) {
+          planCap = 500000;
         }
         setSubscribedCapacity(planCap);
+
+        // Async fetch exact quota from DB
+        const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+        if (userEmail) {
+          fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (d?.subscribed && Number(d.subscribed_sqft) > 0) {
+                setSubscribedCapacity(Number(d.subscribed_sqft));
+                localStorage.setItem("officex_subscribed_sqft", String(d.subscribed_sqft));
+              }
+            })
+            .catch(() => {});
+        }
       }
     } else {
       setIsDraftRestored(false);
@@ -1531,7 +1549,7 @@ export default function PropertyHierarchyModal({
       if (projectedTotalArea > subscribedCapacity) {
         const excess = projectedTotalArea - subscribedCapacity;
         showToast(
-          `Portfolio Quota Exceeded: Your active plan allows up to ${subscribedCapacity.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${excess.toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
+          `Hard Stop: Portfolio Quota Exceeded! Your active plan allows up to ${subscribedCapacity.toLocaleString("en-IN")} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString("en-IN")} Sq.Ft. Adding this property (${enteredArea.toLocaleString("en-IN")} Sq.Ft) exceeds capacity by ${excess.toLocaleString("en-IN")} Sq.Ft. Saving this property is blocked until quota is upgraded.`,
           "error"
         );
         setSubscriptionGateReason("Portfolio Area Quota Exceeded");
@@ -2553,7 +2571,9 @@ export default function PropertyHierarchyModal({
         // Auto-select newly created tenant and demised suites in Step 5 (Contract)
         if (data.data?.id) {
           const effectiveArea =
-            totalTenantSelectedArea > 0
+            propForm.leasingModel === "single_tenant"
+              ? (Number(propForm.areaSqft) || 500000)
+              : totalTenantSelectedArea > 0
               ? totalTenantSelectedArea
               : selectedTenantFloor === "all"
               ? (Number(propForm.areaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0))
@@ -3697,7 +3717,11 @@ export default function PropertyHierarchyModal({
             }`}
           >
             <User size={14} />
-            <span>{shouldSkipSpaceStep ? `2. Tenants (${tenantsList.length})` : `3. Tenants (${tenantsList.length})`}</span>
+            <span>
+              {shouldSkipSpaceStep
+                ? tenantsList.length > 0 ? `2. Tenants (${tenantsList.length})` : "2. Tenants"
+                : tenantsList.length > 0 ? `3. Tenants (${tenantsList.length})` : "3. Tenants"}
+            </span>
           </button>
 
           <button
@@ -3966,20 +3990,65 @@ export default function PropertyHierarchyModal({
                     </select>
                   </div>
 
-                  {/* Total Leasable Area */}
+                  {/* Total Leasable Area (With Real-Time Hard Quota Stop) */}
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">
-                      Total Leasable Area (Sq.Ft) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      placeholder="Enter total area (e.g. 1500, 10000, 50000)"
-                      value={propForm.areaSqft}
-                      onChange={(e) => handleAreaSqftChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
-                    />
+                    {(() => {
+                      const enteredAreaNum = Number(propForm.areaSqft) || 0;
+                      const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                      const projectedPortfolioArea = currentPortfolioArea + enteredAreaNum;
+                      const isExceedingCapacity = isOwnerSubscribed && subscribedCapacity > 0 && projectedPortfolioArea > subscribedCapacity;
+                      const excessSqft = isExceedingCapacity ? projectedPortfolioArea - subscribedCapacity : 0;
+
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="font-semibold text-slate-700 block">
+                              Total Leasable Area (Sq.Ft) *
+                            </label>
+                            {subscribedCapacity > 0 && (
+                              <span className={`text-[10px] font-bold ${isExceedingCapacity ? "text-rose-600 font-extrabold" : "text-teal-700"}`}>
+                                Licensed Limit: {subscribedCapacity.toLocaleString("en-IN")} Sq.Ft
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            placeholder="Enter total area (e.g. 1500, 10000, 50000)"
+                            value={propForm.areaSqft}
+                            onChange={(e) => handleAreaSqftChange(e.target.value)}
+                            className={`w-full px-3 py-2 rounded-xl border font-mono font-bold outline-none transition ${
+                              isExceedingCapacity
+                                ? "border-rose-500 bg-rose-50 text-rose-950 focus:border-rose-600 ring-2 ring-rose-400/30"
+                                : "border-slate-300 text-slate-900 focus:border-[#0F8B7D]"
+                            }`}
+                          />
+                          {isExceedingCapacity && (
+                            <div className="mt-2 p-2.5 rounded-xl bg-rose-50 border-2 border-rose-400 text-rose-950 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs animate-in fade-in">
+                              <div className="flex items-start sm:items-center gap-1.5">
+                                <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5 sm:mt-0" />
+                                <div>
+                                  <span className="font-black text-rose-950 block">Hard Stop: Exceeds Licensed Capacity!</span>
+                                  <span className="text-[11px] text-rose-800">
+                                    Projected total ({projectedPortfolioArea.toLocaleString("en-IN")} Sq.Ft) exceeds your {subscribedCapacity.toLocaleString("en-IN")} Sq.Ft limit by <strong>{excessSqft.toLocaleString("en-IN")} Sq.Ft</strong>. Adding this property is blocked.
+                                  </span>
+                                </div>
+                              </div>
+                              <a
+                                href="/operate/subscription"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] rounded-lg shrink-0 text-center transition flex items-center justify-center gap-1 shadow-2xs"
+                              >
+                                <Zap size={11} />
+                                <span>Upgrade Quota</span>
+                              </a>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Tower / Building Architecture - Asset-type aware Segmented Toggle */}
@@ -4827,18 +4896,34 @@ export default function PropertyHierarchyModal({
 
               {/* Form Submission Button */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>
-                    {shouldSkipSpaceStep
-                      ? "Save Property & Next (Add Tenants) →"
-                      : "Save Property & Next (Spaces & Units) →"}
-                  </span>
-                </button>
+                {(() => {
+                  const enteredAreaNum = Number(propForm.areaSqft) || 0;
+                  const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                  const projectedPortfolioArea = currentPortfolioArea + enteredAreaNum;
+                  const isExceedingCapacity = isOwnerSubscribed && subscribedCapacity > 0 && projectedPortfolioArea > subscribedCapacity;
+                  const excessSqft = isExceedingCapacity ? projectedPortfolioArea - subscribedCapacity : 0;
+
+                  return (
+                    <button
+                      type="submit"
+                      disabled={loading || isExceedingCapacity}
+                      className={`px-6 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 ${
+                        isExceedingCapacity
+                          ? "bg-rose-400 text-white cursor-not-allowed opacity-80"
+                          : "bg-[#0F8B7D] hover:bg-[#0c7367] cursor-pointer disabled:opacity-60"
+                      }`}
+                    >
+                      {isExceedingCapacity ? <Lock size={13} /> : loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                      <span>
+                        {isExceedingCapacity
+                          ? `Locked: Exceeds Quota by ${excessSqft.toLocaleString("en-IN")} Sq.Ft`
+                          : shouldSkipSpaceStep
+                          ? "Save Property & Next (Add Tenants) →"
+                          : "Save Property & Next (Spaces & Units) →"}
+                      </span>
+                    </button>
+                  );
+                })()}
               </div>
             </form>
           )}
@@ -6503,8 +6588,43 @@ export default function PropertyHierarchyModal({
                     </span>
                   </div>
 
-                  {/* Warehouse Asset: Entire Facility vs Partial Bay Allocation (§10) */}
-                  {isSingleLevelAssetType(propForm.propertyType) ? (
+                  {/* Single Tenant Property: Automatically allocate 100% of entire building */}
+                  {propForm.leasingModel === "single_tenant" ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="p-4 rounded-2xl bg-white border-2 border-[#0F8B7D] space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center font-bold">
+                              <Building2 size={18} />
+                            </div>
+                            <div>
+                              <h4 className="font-black text-xs text-slate-900">
+                                Single Occupier Asset (100% Leased)
+                              </h4>
+                              <p className="text-[11px] text-slate-500">
+                                Full building is designated for this single corporate tenant. Demarcated floor and suite breakdown is skipped.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Entire Building
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 flex items-center justify-between">
+                          <div>
+                            <span className="text-slate-600 font-bold text-xs block">Allocated Demised Area:</span>
+                            <span className="font-semibold text-slate-500 text-[11px]">
+                              Full Facility ({Number(propForm.floorsCount) || 1} Floors Total)
+                            </span>
+                          </div>
+                          <span className="text-base sm:text-lg font-black font-mono text-[#0F8B7D]">
+                            {Number(propForm.areaSqft || 500000).toLocaleString("en-IN")} Sq.Ft
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : isSingleLevelAssetType(propForm.propertyType) ? (
                     <div className="space-y-3 pt-1">
                       <div className="flex items-center justify-between">
                         <label className="font-bold text-slate-800 text-xs">
@@ -6663,7 +6783,7 @@ export default function PropertyHierarchyModal({
                     >
                       {(() => {
                         const curBldg = buildingsList.find((b) => b.id === (selectedTenantBuilding || displayBuildings[0]?.id));
-                        const totalBuildingTenantArea = Number(curBldg?.totalAreaSqft) || Number(propForm.areaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0);
+                        const totalBuildingTenantArea = Number(propForm.areaSqft) || Number(curBldg?.totalAreaSqft) || spacesList.reduce((acc, s) => acc + (s.area || 0), 0);
                         return (
                           <>
                             <option value="">
