@@ -34,7 +34,7 @@ import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImpo
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
-  const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
+  const [activeTab, setActiveTab] = useState<"properties" | "units" | "approvals">("properties");
   const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
   const [registerRows, setRegisterRows] = useState<any[]>([]);
@@ -232,7 +232,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
     if (
       !confirm(
-        `Commercial Property Security Protocol:\n\nAre you sure you want to request deletion of "${propertyName}"?\n\nFor institutional security, legal audit compliance, and tenant contract preservation, property deletions must be approved by the Super Admin in the Admin Governance Console. Your deletion request will be submitted for admin verification.`
+        `Commercial Property Removal:\n\nAre you sure you want to delete "${propertyName}"?\n\n• If this property has no active tenant leases, it will be deleted immediately.\n• If it has active leases, it will be submitted for Super Admin approval and moved to the "Pending Deletions & Approvals" tab.`
       )
     ) {
       return;
@@ -240,7 +240,7 @@ export default function SpaceAndBuildingRegistryPage() {
     try {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${propertyId}`, {
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}?cascade_confirmed=true`, {
         method: "DELETE",
         headers: authHeaders,
       });
@@ -248,7 +248,9 @@ export default function SpaceAndBuildingRegistryPage() {
       if (res.ok) {
         if (d.pending_approval) {
           alert(`Deletion Request Submitted:\n\n${d.message}`);
+          setActiveTab("approvals");
         } else {
+          alert(`Property "${propertyName}" has been permanently deleted.`);
           if (typeof window !== "undefined") {
             const activeProp = localStorage.getItem("officex_active_property");
             if (activeProp === propertyName || activeProp === propertyId) {
@@ -262,6 +264,63 @@ export default function SpaceAndBuildingRegistryPage() {
       }
     } catch {
       alert("Network error requesting property deletion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelDeletionRequest = async (propertyId: string) => {
+    try {
+      setLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}?action=cancel`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert("Deletion request cancelled successfully. Property restored to active registered list.");
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to cancel deletion request");
+      }
+    } catch {
+      alert("Network error cancelling deletion request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceDeleteProperty = async (propertyId: string, propertyName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY delete "${propertyName}"?\n\nThis will terminate any active tenant leases and remove all demarcated spaces immediately. This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}?force=true&cascade_confirmed=true`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`Property "${propertyName}" has been permanently deleted.`);
+        if (typeof window !== "undefined") {
+          const activeProp = localStorage.getItem("officex_active_property");
+          if (activeProp === propertyName || activeProp === propertyId) {
+            localStorage.removeItem("officex_active_property");
+          }
+        }
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to permanently delete property");
+      }
+    } catch {
+      alert("Network error permanently deleting property");
     } finally {
       setLoading(false);
     }
@@ -289,7 +348,10 @@ export default function SpaceAndBuildingRegistryPage() {
     }
   };
 
-  const filteredProperties = properties.filter((p) => {
+  const registeredProperties = properties.filter((p) => !p.is_pending_deletion);
+  const pendingDeletionProperties = properties.filter((p) => Boolean(p.is_pending_deletion));
+
+  const filteredProperties = registeredProperties.filter((p) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !q ||
@@ -306,6 +368,16 @@ export default function SpaceAndBuildingRegistryPage() {
       matchesScope = thisId === pId || thisName === pId || thisName === pName || (pName !== "all properties" && thisName.includes(pName));
     }
     return matchesSearch && matchesScope;
+  });
+
+  const filteredPendingProperties = pendingDeletionProperties.filter((p) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      (p.property_name && p.property_name.toLowerCase().includes(q)) ||
+      (p.city && p.city.toLowerCase().includes(q)) ||
+      (p.property_code && p.property_code.toLowerCase().includes(q))
+    );
   });
 
   const filteredSpaces = spaces.filter((s) => {
@@ -378,7 +450,7 @@ export default function SpaceAndBuildingRegistryPage() {
             </div>
           </div>
 
-          {/* Tab Navigation: Properties vs Demarcated Units */}
+          {/* Tab Navigation: Properties vs Demarcated Units vs Pending Approvals */}
           <div className="flex items-center gap-3 border-b border-slate-200">
             <button
               onClick={() => setActiveTab("properties")}
@@ -389,7 +461,7 @@ export default function SpaceAndBuildingRegistryPage() {
               }`}
             >
               <Building2 size={16} />
-              <span>Registered Properties ({properties.length})</span>
+              <span>Registered Properties ({registeredProperties.length})</span>
             </button>
             <button
               onClick={() => setActiveTab("units")}
@@ -402,6 +474,22 @@ export default function SpaceAndBuildingRegistryPage() {
               <Layers size={16} />
               <span>Demarcated Units &amp; Spaces ({spaces.length})</span>
             </button>
+            <button
+              onClick={() => setActiveTab("approvals")}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
+                activeTab === "approvals"
+                  ? "border-amber-500 text-amber-700"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <AlertTriangle size={16} className={pendingDeletionProperties.length > 0 ? "text-amber-500" : ""} />
+              <span>Pending Deletions &amp; Approvals</span>
+              {pendingDeletionProperties.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  {pendingDeletionProperties.length}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Search & Filter Bar */}
@@ -413,7 +501,9 @@ export default function SpaceAndBuildingRegistryPage() {
                 placeholder={
                   activeTab === "properties"
                     ? "Search property name, city, code..."
-                    : "Search unit number, wing, or tower..."
+                    : activeTab === "units"
+                    ? "Search unit number, wing, or tower..."
+                    : "Search pending properties..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -425,7 +515,9 @@ export default function SpaceAndBuildingRegistryPage() {
               <span className="font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
                 {activeTab === "properties"
                   ? `${filteredProperties.length} Properties`
-                  : `${filteredSpaces.length} Units Demarcated`}
+                  : activeTab === "units"
+                  ? `${filteredSpaces.length} Units Demarcated`
+                  : `${filteredPendingProperties.length} Pending Approval`}
               </span>
             </div>
           </div>
@@ -810,6 +902,133 @@ export default function SpaceAndBuildingRegistryPage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 3: PENDING DELETIONS & APPROVALS */}
+          {activeTab === "approvals" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
+                <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-amber-950">Property Deletion Governance &amp; Approvals</h4>
+                  <p className="mt-0.5 text-amber-800 leading-relaxed">
+                    Properties with active lease contracts or pending compliance review are held in this approval queue before final purge. Vacant assets delete immediately. You can review, cancel the deletion request, or permanently purge them below.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
+                {loading ? (
+                  <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
+                    <RefreshCw size={24} className="animate-spin text-teal-600" />
+                    <span>Loading pending deletion records...</span>
+                  </div>
+                ) : filteredPendingProperties.length === 0 ? (
+                  <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 size={28} />
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">No properties pending deletion</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      All your properties are active. When a deletion request is initiated on an occupied property, it will appear here for admin governance.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Code</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Location</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
+                          <th className="py-3 px-4">Reason / Notes</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Requested By</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                          <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredPendingProperties.map((p) => (
+                          <tr key={p.id} className="hover:bg-amber-50/30 transition">
+                            <td className="py-3.5 px-4 font-black text-slate-900">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                  <Building size={14} />
+                                </div>
+                                <div>
+                                  <span className="text-slate-900">{p.property_name}</span>
+                                  <div className="text-[10px] text-slate-400 font-normal">
+                                    {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                              {p.property_code || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-700 font-semibold whitespace-nowrap">
+                              <div className="flex items-center gap-1 text-slate-600">
+                                <MapPin size={12} className="text-teal-600 shrink-0" />
+                                <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-black text-slate-900 whitespace-nowrap">
+                              {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="text-xs text-slate-700 font-medium">
+                                {p.pending_deletion_reason || "User requested property deletion"}
+                              </div>
+                              {p.pending_deletion_active_contracts > 0 && (
+                                <div className="text-[10px] font-bold text-rose-600 mt-0.5">
+                                  ⚠️ {p.pending_deletion_active_contracts} active lease contract(s)
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-600 text-[11px] whitespace-nowrap">
+                              <div>{p.pending_deletion_requested_by || "Admin / User"}</div>
+                              {p.pending_deletion_requested_at && (
+                                <div className="text-[10px] text-slate-400">
+                                  {new Date(p.pending_deletion_requested_at).toLocaleDateString()}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                PENDING APPROVAL
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelDeletionRequest(p.id)}
+                                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
+                                  title="Cancel deletion and restore to active list"
+                                >
+                                  Cancel Request
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleForceDeleteProperty(p.id, p.property_name)}
+                                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                  title="Permanently delete property"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete Permanently</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>

@@ -126,7 +126,9 @@ export async function DELETE(
     const auth = getAuthContext(req);
     const { id } = await params;
     const url = new URL(req.url);
+    const action = url.searchParams.get("action");
     const cascadeConfirmed = url.searchParams.get("cascade_confirmed") === "true";
+    const forceDelete = url.searchParams.get("force") === "true";
 
     const userEmail = req.headers.get("x-user-email") || "";
     const isPlatformAdmin =
@@ -137,13 +139,10 @@ export async function DELETE(
       userEmail === "admin.cleanasset@gmail.com" ||
       userEmail.toLowerCase().includes("admin");
 
-    const forceDelete = url.searchParams.get("force") === "true";
-
-    // Commercial Property Security Protocol (Point 7):
-    // Non-admin deletions require Super Admin verification & approval
-    if (!isPlatformAdmin && !forceDelete) {
+    // Action 1: Cancel pending deletion request
+    if (action === "cancel") {
       const propRecord = await db
-        .select({ id: property.id, name: property.property_name })
+        .select({ id: property.id, source_row_id: property.source_row_id })
         .from(property)
         .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)))
         .limit(1);
@@ -152,15 +151,20 @@ export async function DELETE(
         return NextResponse.json({ error: "Property not found" }, { status: 404 });
       }
 
+      let meta: any = {};
+      if (propRecord[0].source_row_id && typeof propRecord[0].source_row_id === "string" && propRecord[0].source_row_id.startsWith("{")) {
+        try { meta = JSON.parse(propRecord[0].source_row_id); } catch {}
+      }
+      delete meta.pending_deletion;
+      delete meta.requested_by;
+      delete meta.requested_at;
+      delete meta.reason;
+      delete meta.active_contracts_count;
+
       await db
         .update(property)
         .set({
-          source_row_id: JSON.stringify({
-            pending_deletion: true,
-            requested_by: userEmail || auth.userId,
-            requested_at: new Date().toISOString(),
-            reason: "User requested property deletion from Property Registry",
-          }),
+          source_row_id: JSON.stringify(meta),
           updated_at: new Date(),
           updated_by: auth.userId,
         })
@@ -168,10 +172,19 @@ export async function DELETE(
 
       return NextResponse.json({
         success: true,
-        pending_approval: true,
-        message:
-          `Deletion request submitted for Super Admin approval for "${propRecord[0].name}". For institutional security and lease protection, the property will remain locked until approved in the Admin Console.`,
+        message: "Deletion request cancelled. Property restored to active status.",
       });
+    }
+
+    // Inspect property record
+    const propRecord = await db
+      .select({ id: property.id, name: property.property_name, source_row_id: property.source_row_id })
+      .from(property)
+      .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)))
+      .limit(1);
+
+    if (propRecord.length === 0) {
+      return NextResponse.json({ error: "Property not found" }, { status: 404 });
     }
 
     // 1. Gather buildings and spaces
@@ -211,8 +224,39 @@ export async function DELETE(
       }
     }
 
+    // Commercial Property Security Protocol:
+    // If property has active contracts AND the requester is NOT an admin AND not forcing:
+    // Require Super Admin approval and move under the "Pending Approvals" tab.
+    // BUT IF IT HAS ZERO ACTIVE CONTRACTS (Vacant asset) -> Delete immediately!
+    if (activeContracts.length > 0 && !isPlatformAdmin && !forceDelete) {
+      let meta: any = {};
+      if (propRecord[0].source_row_id && typeof propRecord[0].source_row_id === "string" && propRecord[0].source_row_id.startsWith("{")) {
+        try { meta = JSON.parse(propRecord[0].source_row_id); } catch {}
+      }
+      meta.pending_deletion = true;
+      meta.requested_by = userEmail || auth.userId;
+      meta.requested_at = new Date().toISOString();
+      meta.reason = `Deletion requested with ${activeContracts.length} active lease contract(s)`;
+      meta.active_contracts_count = activeContracts.length;
+
+      await db
+        .update(property)
+        .set({
+          source_row_id: JSON.stringify(meta),
+          updated_at: new Date(),
+          updated_by: auth.userId,
+        })
+        .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)));
+
+      return NextResponse.json({
+        success: true,
+        pending_approval: true,
+        message: `Deletion request submitted for Super Admin approval for "${propRecord[0].name}". This property has ${activeContracts.length} active lease contract(s) and has been moved to the "Pending Approvals" tab until verified.`,
+      });
+    }
+
     // 2. Strict Safety Safeguard: If property has active tenant leases and user hasn't explicitly confirmed cascade
-    if (activeContracts.length > 0 && !cascadeConfirmed) {
+    if (activeContracts.length > 0 && !cascadeConfirmed && !forceDelete) {
       return NextResponse.json(
         {
           error: `Property has ${activeContracts.length} active tenant lease contract(s). Deletion will terminate all contracts, stop active billing, and revoke tenant and third-party portal access. Explicit confirmation required.`,

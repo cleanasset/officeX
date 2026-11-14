@@ -296,6 +296,7 @@ export default function PropertyDetailModal({
       });
 
       if (res.ok) {
+        const d = await res.json().catch(() => ({}));
         if (typeof window !== "undefined") {
           const activeProp = localStorage.getItem("officex_active_property");
           if (activeProp === pName || activeProp === property.id) {
@@ -303,6 +304,9 @@ export default function PropertyDetailModal({
           }
         }
         setDeleteConfirmModalOpen(false);
+        if (d.pending_approval) {
+          alert(`Deletion Request Submitted:\n\n${d.message}`);
+        }
         onPropertyUpdated?.();
         onClose();
       } else {

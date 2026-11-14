@@ -64,6 +64,11 @@ export async function GET(req: Request) {
           default_fitout_days: meta.default_fitout_days || "60",
           workstations_count: meta.workstations_count || null,
           cabins_count: meta.cabins_count || null,
+          is_pending_deletion: Boolean(meta.pending_deletion),
+          pending_deletion_reason: meta.reason || null,
+          pending_deletion_requested_at: meta.requested_at || null,
+          pending_deletion_requested_by: meta.requested_by || null,
+          pending_deletion_active_contracts: meta.active_contracts_count || 0,
         };
       }),
     });
