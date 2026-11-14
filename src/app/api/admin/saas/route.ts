@@ -63,6 +63,10 @@ export async function GET(request: NextRequest) {
         verificationRemarks: meta.verification_remarks || "Verified & Validated Institutional Commercial Asset",
         verifiedAt: meta.verified_at || p.createdAt,
         verifiedBy: meta.verified_by || "Master Sovereign Admin",
+        pendingDeletion: Boolean(meta.pending_deletion),
+        deletionRequestedBy: meta.requested_by || null,
+        deletionRequestedAt: meta.requested_at || null,
+        deletionReason: meta.reason || null,
         hasDelegatedManager: meta.has_delegated_manager || Boolean(meta.manager_name),
         managerName: meta.manager_name || null,
         managerEmail: meta.manager_email || null,
@@ -542,6 +546,44 @@ export async function PUT(request: NextRequest) {
         .where(eq(organizations.id, id));
 
       return NextResponse.json({ success: true, id, status });
+    }
+
+    // E. Approve Property Deletion (Security Governance)
+    if (action === "approve_deletion") {
+      // Soft-delete buildings & spaces
+      const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, id));
+      const bldgIds = bldgs.map((b) => b.id);
+      if (bldgIds.length > 0) {
+        const sps = await db.select({ id: space.id }).from(space).where(sql`${space.building_id} IN ${bldgIds}`);
+        const spIds = sps.map((s) => s.id);
+        if (spIds.length > 0) {
+          await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(sql`${contract.space_id} IN ${spIds}`);
+          await db.update(space).set({ deleted_at: new Date() }).where(sql`${space.id} IN ${spIds}`);
+        }
+        await db.update(building).set({ deleted_at: new Date() }).where(sql`${building.id} IN ${bldgIds}`);
+      }
+      // Soft-delete property
+      await db.update(property).set({ deleted_at: new Date() }).where(eq(property.id, id));
+      try {
+        await db.delete(property).where(eq(property.id, id));
+      } catch {}
+
+      return NextResponse.json({ success: true, message: "Property deletion approved and permanently archived." });
+    }
+
+    // F. Reject Property Deletion
+    if (action === "reject_deletion") {
+      const propData = await db.select({ sourceRowId: property.source_row_id }).from(property).where(eq(property.id, id)).limit(1);
+      let meta: any = {};
+      if (propData[0]?.sourceRowId && typeof propData[0].sourceRowId === "string" && propData[0].sourceRowId.startsWith("{")) {
+        try { meta = JSON.parse(propData[0].sourceRowId); } catch {}
+      }
+      meta.pending_deletion = false;
+      meta.deletion_rejected_at = new Date().toISOString();
+      meta.deletion_rejected_by = "super_admin";
+
+      await db.update(property).set({ source_row_id: JSON.stringify(meta), updated_at: new Date() }).where(eq(property.id, id));
+      return NextResponse.json({ success: true, message: "Property deletion request rejected. Property restored to active state." });
     }
 
     return NextResponse.json({ error: "Invalid SaaS action" }, { status: 400 });

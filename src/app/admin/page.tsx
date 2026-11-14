@@ -147,7 +147,50 @@ function SuperAdminDashboardContent() {
   // =========================================================================
   // TAB 7: SAAS PORTFOLIOS STATE
   // =========================================================================
-  const [saasSubTab, setSaasSubTab] = useState<"overview" | "properties" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("overview");
+  const [saasSubTab, setSaasSubTab] = useState<"overview" | "properties" | "pending_deletions" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("overview");
+  const [selectedSaasModule, setSelectedSaasModule] = useState<"package" | "rent_roll" | "marketplace" | "cafm" | "visitor">("package");
+  const [userFilterRole, setUserFilterRole] = useState<string>("all");
+  const [inspectingUser, setInspectingUser] = useState<any | null>(null);
+  const [inspectingTargetEmail, setInspectingTargetEmail] = useState<any | null>(null);
+
+  const handleApprovePropertyDeletion = async (propertyId: string) => {
+    if (!confirm("Are you sure you want to approve permanent deletion of this property? This will terminate associated leases.")) return;
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve_deletion", id: propertyId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: "✓ Property deletion approved and permanently deleted.", type: "success" });
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to approve deletion", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error approving deletion", type: "error" });
+    }
+  };
+
+  const handleRejectPropertyDeletion = async (propertyId: string) => {
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject_deletion", id: propertyId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: "✓ Deletion request rejected. Property restored to active.", type: "success" });
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to reject deletion", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error rejecting deletion", type: "error" });
+    }
+  };
   const [saasProperties, setSaasProperties] = useState<any[]>([]);
   const [saasContracts, setSaasContracts] = useState<any[]>([]);
   const [saasTenants, setSaasTenants] = useState<any[]>([]);
@@ -1803,11 +1846,30 @@ function SuperAdminDashboardContent() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="p-3 font-medium text-slate-600">
-                                  {d.targetUserEmail || "Any User"}
+                                <td className="p-3">
+                                  {d.targetUserEmail ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setInspectingTargetEmail(d)}
+                                      className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1 cursor-pointer"
+                                      title="Click to inspect target user and eligibility"
+                                    >
+                                      <Eye size={11} />
+                                      <span>{d.targetUserEmail}</span>
+                                    </button>
+                                  ) : (
+                                    <span className="text-slate-400 font-medium">All Users (Global)</span>
+                                  )}
                                 </td>
-                                <td className="p-3 font-mono text-slate-500">
-                                  {d.usedCount || 0}
+                                <td className="p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setInspectingTargetEmail(d)}
+                                    className="font-mono text-xs font-bold text-slate-800 hover:text-teal-700 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded cursor-pointer transition"
+                                    title="Click to view redemptions audit"
+                                  >
+                                    {d.usedCount || 0} used
+                                  </button>
                                 </td>
                                 <td className="p-3">
                                   <button
@@ -2210,11 +2272,43 @@ function SuperAdminDashboardContent() {
             </div>
           </div>
 
+          {/* Module & Master Package Selector Bar (Point 6 & 9) */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-700">Module Scope:</span>
+              <select
+                value={selectedSaasModule}
+                onChange={(e) => setSelectedSaasModule(e.target.value as any)}
+                className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="package">📦 Master Enterprise Institutional Package (All 5 SaaS Included)</option>
+                <option value="rent_roll">🏢 Standalone Rent Roll &amp; Lease-to-Cash SaaS</option>
+                <option value="marketplace">🌐 Commercial Space &amp; Coworking Marketplace SaaS</option>
+                <option value="cafm">⚡ 52-Week CAFM &amp; Asset Maintenance SaaS</option>
+                <option value="visitor">🛡️ Visitor Kiosks &amp; Lobby Security Compliance SaaS</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-500">Entitlement Classification:</span>
+              <span className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 font-extrabold text-[11px]">
+                {selectedSaasModule === "package"
+                  ? "Full Sovereign Package · Multi-Module Suite"
+                  : "Individual Standalone SaaS Module"}
+              </span>
+            </div>
+          </div>
+
           {/* SaaS Sub-Tab Navigation Switcher */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-100 text-xs font-bold scrollbar-none">
             {[
-              { id: "overview", label: "SaaS Overview & Packages", icon: Layers },
+              { id: "overview", label: "Master Suite & Packages", icon: Layers },
               { id: "properties", label: "Properties & Verification", icon: Building2 },
+              {
+                id: "pending_deletions",
+                label: "Deletion & Security Approvals",
+                icon: AlertTriangle,
+              },
               { id: "contracts", label: "Active Lease Contracts", icon: FileText },
               { id: "tenants", label: "Tenant Directory & KYC", icon: Users },
               { id: "delegations", label: "Property Delegations", icon: Briefcase },
@@ -2223,6 +2317,7 @@ function SuperAdminDashboardContent() {
             ].map((tab) => {
               const TabIcon = tab.icon;
               const isActive = saasSubTab === tab.id;
+              const pendingCount = tab.id === "pending_deletions" ? saasProperties.filter((p) => p.pendingDeletion).length : 0;
               return (
                 <button
                   key={tab.id}
@@ -2235,6 +2330,11 @@ function SuperAdminDashboardContent() {
                 >
                   <TabIcon size={13} />
                   <span>{tab.label}</span>
+                  {pendingCount > 0 && (
+                    <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -2498,6 +2598,89 @@ function SuperAdminDashboardContent() {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: PENDING DELETIONS & SECURITY APPROVALS (Point 7) */}
+          {saasSubTab === "pending_deletions" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Commercial Property Deletion Governance</h3>
+                  <p className="text-xs text-slate-500">
+                    Institutional safety protocol: Commercial properties cannot be deleted without Super Admin verification and explicit approval.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold shrink-0">
+                  {saasProperties.filter((p) => p.pendingDeletion).length} Pending Review
+                </span>
+              </div>
+
+              {saasProperties.filter((p) => p.pendingDeletion).length === 0 ? (
+                <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                  <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                  <h4 className="text-sm font-bold text-slate-800">Zero Pending Deletion Requests</h4>
+                  <p className="text-xs text-slate-500 mt-1">All commercial properties across portfolios are verified and secure.</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Property Name &amp; Code</th>
+                        <th className="p-3">Managed Area</th>
+                        <th className="p-3">Location</th>
+                        <th className="p-3">Requested By</th>
+                        <th className="p-3">Requested At</th>
+                        <th className="p-3 text-right">Governance Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {saasProperties
+                        .filter((p) => p.pendingDeletion)
+                        .map((p) => (
+                          <tr key={p.id} className="hover:bg-slate-50/60">
+                            <td className="p-3">
+                              <div className="font-bold text-slate-900">{p.name}</div>
+                              <div className="text-[10px] font-mono text-slate-400">{p.code}</div>
+                            </td>
+                            <td className="p-3 font-mono font-bold text-slate-800">
+                              {Number(p.totalAreaSqft || 0).toLocaleString("en-IN")} sq.ft
+                            </td>
+                            <td className="p-3 text-slate-600">
+                              {p.city}, {p.state}
+                            </td>
+                            <td className="p-3 font-medium text-slate-700">
+                              {p.deletionRequestedBy || "User Landlord"}
+                            </td>
+                            <td className="p-3 text-slate-500">
+                              {p.deletionRequestedAt ? new Date(p.deletionRequestedAt).toLocaleString("en-IN") : "Recent"}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectPropertyDeletion(p.id)}
+                                  className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                                >
+                                  Reject Request
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprovePropertyDeletion(p.id)}
+                                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Approve Permanent Deletion</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -4066,32 +4249,124 @@ function SuperAdminDashboardContent() {
             </div>
           </div>
 
-          {/* User Directory */}
+          {/* User Directory & Classification (Point 8 & 10) */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Registered Users Directory</h3>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Platform Users &amp; Multi-Tenant Classification</h3>
+                <p className="text-xs text-slate-500">
+                  Categorized view of individual SaaS subscribers, full suite package owners, marketplace operators, and corporate tenants.
+                </p>
+              </div>
+
+              {/* Classification Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
+                {[
+                  { id: "all", label: `All Users (${usersList.length})` },
+                  { id: "package", label: "Full Package Suites" },
+                  { id: "rent_roll", label: "Rent Roll SaaS" },
+                  { id: "marketplace", label: "Marketplace Hosts" },
+                  { id: "tenant", label: "Tenants" },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setUserFilterRole(f.id)}
+                    className={`px-3 py-1.5 rounded-xl transition cursor-pointer text-xs ${
+                      userFilterRole === f.id
+                        ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="overflow-x-auto border border-slate-200 rounded-2xl">
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
                   <tr>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Email Address</th>
-                    <th className="p-3">Role</th>
+                    <th className="p-3">User &amp; Organization</th>
+                    <th className="p-3">Email &amp; Role</th>
+                    <th className="p-3">SaaS / Marketplace Subscribed</th>
+                    <th className="p-3">Portfolio Footprint</th>
                     <th className="p-3">Registered At</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {usersList.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/60">
-                      <td className="p-3 font-bold text-slate-900">{u.fullName}</td>
-                      <td className="p-3 font-mono text-slate-600">{u.email}</td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-bold uppercase">
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="p-3 text-slate-400">{new Date(u.createdAt).toLocaleDateString("en-IN")}</td>
-                    </tr>
-                  ))}
+                  {usersList
+                    .filter((u) => {
+                      if (userFilterRole === "all") return true;
+                      if (userFilterRole === "package") return u.role === "owner" || u.role === "super_admin";
+                      if (userFilterRole === "rent_roll") return u.role === "owner" || u.role === "property_manager" || u.role === "finance_manager";
+                      if (userFilterRole === "marketplace") return u.role === "marketplace_owner" || u.role === "broker";
+                      if (userFilterRole === "tenant") return u.role === "tenant" || u.role === "occupant";
+                      return true;
+                    })
+                    .map((u) => {
+                      const userProps = saasProperties.filter((p) => p.orgId === u.orgId);
+                      const totalArea = userProps.reduce((acc, p) => acc + Number(p.totalAreaSqft || 0), 0);
+                      const isFullSuite = u.role === "super_admin" || u.role === "owner";
+
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/60 transition">
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{u.fullName || "User Account"}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">Org: {u.orgName || "Default SPV"}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-mono text-slate-700">{u.email}</div>
+                            <span className="inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex flex-wrap gap-1">
+                              {isFullSuite ? (
+                                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-purple-50 text-purple-800 border border-purple-200">
+                                  Full Enterprise Package
+                                </span>
+                              ) : u.role === "marketplace_owner" ? (
+                                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-amber-50 text-amber-800 border border-amber-200">
+                                  Marketplace Listing Host
+                                </span>
+                              ) : u.role === "tenant" ? (
+                                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-50 text-blue-800 border border-blue-200">
+                                  Occupant / Corporate Tenant
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-teal-50 text-teal-800 border border-teal-200">
+                                  Rent Roll Standalone
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-mono font-bold text-slate-800">
+                              {userProps.length > 0 ? `${userProps.length} Props · ${totalArea.toLocaleString("en-IN")} sq.ft` : "0 Assets"}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {saasContracts.filter((c) => c.orgId === u.orgId).length} Active Leases
+                            </div>
+                          </td>
+                          <td className="p-3 text-slate-500 font-mono text-[11px]">
+                            {new Date(u.createdAt).toLocaleDateString("en-IN")}
+                          </td>
+                          <td className="p-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setInspectingUser({ ...u, userProps, totalArea })}
+                              className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 ml-auto cursor-pointer"
+                            >
+                              <Eye size={12} />
+                              <span>View Dossier</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -4975,6 +5250,218 @@ function SuperAdminDashboardContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Comprehensive User Full Dossier (Point 10) */}
+      {inspectingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-800 border border-teal-500/30 flex items-center justify-center font-black text-base">
+                  {inspectingUser.fullName ? inspectingUser.fullName[0].toUpperCase() : "U"}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{inspectingUser.fullName || "User Account"}</h3>
+                  <p className="text-xs text-slate-500 font-mono">{inspectingUser.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingUser(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Assigned Role</span>
+                <span className="font-bold text-slate-900 uppercase mt-0.5 block">{inspectingUser.role}</span>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Properties</span>
+                <span className="font-bold text-slate-900 mt-0.5 block">{inspectingUser.userProps?.length || 0} Registered</span>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Managed Area</span>
+                <span className="font-bold text-teal-800 font-mono mt-0.5 block">
+                  {Number(inspectingUser.totalArea || 0).toLocaleString("en-IN")} sq.ft
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Registered On</span>
+                <span className="font-mono text-slate-700 mt-0.5 block">
+                  {new Date(inspectingUser.createdAt).toLocaleDateString("en-IN")}
+                </span>
+              </div>
+            </div>
+
+            {/* Subscribed Marketplaces & SaaS Packages */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Subscribed Marketplaces &amp; Entitlements</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} className="text-teal-600" />
+                    <span className="font-semibold text-slate-800">Commercial Rent Roll SaaS</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                </div>
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Store size={16} className="text-blue-600" />
+                    <span className="font-semibold text-slate-800">Office Marketplace</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">OPTIONAL</span>
+                </div>
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers size={16} className="text-purple-600" />
+                    <span className="font-semibold text-slate-800">Flex / Coworking Network</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">INCLUDED</span>
+                </div>
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-amber-600" />
+                    <span className="font-semibold text-slate-800">FM &amp; Statutory Compliance</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">ACTIVE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Registered Properties List */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Registered Portfolio Assets</h4>
+              {(!inspectingUser.userProps || inspectingUser.userProps.length === 0) ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center text-slate-400 text-xs">
+                  No properties registered under this account yet.
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="p-2.5">Property Name</th>
+                        <th className="p-2.5">City &amp; State</th>
+                        <th className="p-2.5">Total Area</th>
+                        <th className="p-2.5">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {inspectingUser.userProps.map((p: any) => (
+                        <tr key={p.id}>
+                          <td className="p-2.5 font-bold text-slate-900">{p.name}</td>
+                          <td className="p-2.5 text-slate-600">{p.city}, {p.state}</td>
+                          <td className="p-2.5 font-mono font-bold text-slate-800">
+                            {Number(p.totalAreaSqft || 0).toLocaleString("en-IN")} sq.ft
+                          </td>
+                          <td className="p-2.5">
+                            {p.pendingDeletion ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                                Deletion Pending
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                Verified Active
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setInspectingUser(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+              >
+                Close Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Inspect Target Email & Discount Audit (Point 11) */}
+      {inspectingTargetEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <CreditCard size={18} className="text-[#0F8B7D]" />
+                <h3 className="text-base font-bold text-slate-900">Discount Code &amp; Target User Audit</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingTargetEmail(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Promo Code:</span>
+                <span className="font-mono font-black text-sm text-[#0F8B7D]">{inspectingTargetEmail.code}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Discount Percentage:</span>
+                <span className="font-mono font-black text-emerald-700">{inspectingTargetEmail.discountPct}% OFF</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Eligibility Scope:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 text-purple-800">
+                  {inspectingTargetEmail.type === "user_specific" ? "Target Specific User Grant" : "Global Public Code"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Target Email Address:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {inspectingTargetEmail.targetUserEmail || "All Platform Accounts (Global)"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Times Redeemed:</span>
+                <span className="font-mono font-bold text-slate-800">{inspectingTargetEmail.usedCount || 0} times</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">Status:</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  inspectingTargetEmail.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                }`}>
+                  {inspectingTargetEmail.isActive ? "Active Live" : "Disabled"}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl space-y-1">
+              <span className="text-teal-900 font-bold text-[11px] block">Eligible Modules &amp; Packages:</span>
+              <p className="text-[11px] text-teal-800 leading-relaxed">
+                Applies to all Rent Roll Commercial Plans (Starter, Tech Park Campus, REIT Mega), Marketplace Listings, and Enterprise Master Packages.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setInspectingTargetEmail(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+              >
+                Close Audit
+              </button>
+            </div>
           </div>
         </div>
       )}

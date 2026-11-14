@@ -27,7 +27,10 @@ import {
   Info,
   Mail,
   UserPlus,
-  Landmark
+  Landmark,
+  UploadCloud,
+  RotateCcw,
+  Trash2
 } from "lucide-react";
 
 export default function SettingsSuitePage() {
@@ -35,11 +38,35 @@ export default function SettingsSuitePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [showSetupReminder, setShowSetupReminder] = useState<boolean>(false);
 
   // S-60 State
   const [orgData, setOrgData] = useState<any>(null);
   // S-61 State
   const [billingEntities, setBillingEntities] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const lastDismissed = localStorage.getItem("officex_setup_reminder_dismissed_at");
+      const fiveHoursMs = 5 * 60 * 60 * 1000;
+      const shouldCheck = !lastDismissed || Date.now() - Number(lastDismissed) > fiveHoursMs;
+
+      const hasLogo = Boolean(orgData?.branding?.logo_url || localStorage.getItem("officex_company_logo"));
+      const hasBanking = billingEntities.length > 0;
+      if (shouldCheck && (!hasLogo || !hasBanking)) {
+        setShowSetupReminder(true);
+      } else {
+        setShowSetupReminder(false);
+      }
+    }
+  }, [orgData, billingEntities]);
+
+  const handleDismissReminder = () => {
+    setShowSetupReminder(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_setup_reminder_dismissed_at", Date.now().toString());
+    }
+  };
   // S-62 State
   const [chargesData, setChargesData] = useState<any>(null);
   // S-63 State
@@ -164,6 +191,37 @@ export default function SettingsSuitePage() {
     }
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Logo file size must be less than 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setOrgData({
+        ...orgData,
+        branding: { ...orgData.branding, logo_url: dataUrl },
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_company_logo", dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setOrgData({
+      ...orgData,
+      branding: { ...orgData.branding, logo_url: "" },
+    });
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("officex_company_logo");
+    }
+  };
+
   const handleCreateBillingEntity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBillingEntity.legal_name || !newBillingEntity.gstin || !newBillingEntity.pan) {
@@ -273,6 +331,39 @@ export default function SettingsSuitePage() {
         <div className="p-3.5 sm:p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm flex items-center gap-2 animate-in fade-in duration-200">
           <CheckCircle size={18} className="text-emerald-600 flex-shrink-0" />
           <span>{message}</span>
+        </div>
+      )}
+
+      {showSetupReminder && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0 text-amber-700 mt-0.5 sm:mt-0">
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-amber-950">Incomplete Enterprise Profile &amp; Banking Details</h4>
+              <p className="text-[11px] sm:text-xs text-amber-800 mt-0.5 leading-relaxed">
+                {!orgData?.branding?.logo_url && "• Please upload your official Company Logo. "}
+                {billingEntities.length === 0 && "• Add your Legal Entity SPV and Disbursement Bank Account. "}
+                These are required to issue legally valid GST invoices and process tenant rent disbursements.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              onClick={() => setActiveTab(billingEntities.length === 0 ? "s61" : "s60")}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs transition"
+            >
+              Complete Now
+            </button>
+            <button
+              onClick={handleDismissReminder}
+              className="px-2.5 py-1.5 text-xs text-amber-800 hover:text-amber-950 hover:bg-amber-100 rounded-lg transition"
+              title="Snooze for 5 hours"
+            >
+              Dismiss (5h)
+            </button>
+          </div>
         </div>
       )}
 
@@ -520,9 +611,60 @@ export default function SettingsSuitePage() {
                     </div>
                   </div>
 
+                  {/* Company Logo Upload */}
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold">Company / Brand Logo</label>
+                    <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-slate-50/50">
+                      {orgData.branding?.logo_url ? (
+                        <div className="relative w-16 h-16 rounded-xl border border-slate-200 bg-white p-1 overflow-hidden shrink-0 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={orgData.branding.logo_url}
+                            alt="Company Logo"
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 bg-slate-100/60 flex flex-col items-center justify-center text-slate-400 shrink-0">
+                          <Building size={20} />
+                          <span className="text-[9px] mt-0.5">No Logo</span>
+                        </div>
+                      )}
+
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <label className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer shadow-2xs inline-flex items-center gap-1.5">
+                            <UploadCloud size={13} className="text-[#0D7B6C]" />
+                            <span>Upload Logo</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                              onChange={handleLogoUpload}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {orgData.branding?.logo_url && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveLogo}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                              title="Remove logo"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Supports PNG, JPG, or SVG up to 2MB. Displayed on tenant invoices, receipts, and leases.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-slate-600 block mb-1 font-semibold">Brand Theme Color</label>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <input
                         type="color"
                         value={orgData.branding?.primary_color || "#0D7B6C"}
@@ -532,7 +674,19 @@ export default function SettingsSuitePage() {
                       <span className="font-mono text-xs font-bold text-slate-700">
                         {orgData.branding?.primary_color || "#0D7B6C"}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleBrandColorChange("#0D7B6C")}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1 shadow-2xs transition"
+                        title="Reset to default brand color"
+                      >
+                        <RotateCcw size={11} className="text-slate-500" />
+                        <span>Reset to Default OfficeX Teal (#0D7B6C)</span>
+                      </button>
                     </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Applied to: Action buttons, active navigation highlights, invoice accent headers, and tenant portal badges.
+                    </p>
                   </div>
 
                   <div>

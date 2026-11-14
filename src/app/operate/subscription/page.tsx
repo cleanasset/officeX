@@ -12,7 +12,8 @@ import {
   CreditCard,
   Plus,
   X,
-  Receipt
+  Receipt,
+  AlertCircle
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import { SUBSCRIPTION_PLAN_OPTIONS } from "@/components/SubscriptionGate";
@@ -265,17 +266,23 @@ export default function SubscriptionAndQuotaPage() {
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Available Headroom</span>
-            <CheckCircle2 size={14} className="text-emerald-600" />
+            {remainingSqft <= 0 ? (
+              <AlertCircle size={14} className="text-rose-600" />
+            ) : (
+              <CheckCircle2 size={14} className="text-emerald-600" />
+            )}
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg sm:text-xl font-black text-emerald-700 font-mono">
+            <span className={`text-lg sm:text-xl font-black font-mono ${remainingSqft <= 0 ? "text-rose-700" : "text-emerald-700"}`}>
               {remainingSqft.toLocaleString("en-IN")}
             </span>
-            <span className="text-[10px] sm:text-xs text-emerald-600 font-medium">sq.ft</span>
+            <span className={`text-[10px] sm:text-xs font-medium ${remainingSqft <= 0 ? "text-rose-500" : "text-emerald-600"}`}>sq.ft</span>
           </div>
           <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
             <span>Status</span>
-            <strong className="text-emerald-700 font-bold">Unused Capacity</strong>
+            <strong className={remainingSqft <= 0 ? "text-rose-700 font-bold" : "text-emerald-700 font-bold"}>
+              {remainingSqft <= 0 ? "Capacity Exhausted (Upgrade Required)" : "Unused Capacity"}
+            </strong>
           </div>
         </div>
       </div>

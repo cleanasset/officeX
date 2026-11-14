@@ -204,10 +204,35 @@ export default function SpaceAndBuildingRegistryPage() {
     } catch {}
   };
 
+  const handleOpenRegisterProperty = () => {
+    // Check licensed portfolio quota
+    const effectiveCap = Number(localStorage.getItem("officex_subscribed_sqft")) || 250000;
+    const currentTotalSqft = properties.reduce(
+      (acc, p) => acc + Number(p.total_leasable_area_sqft || p.area_sqft || 0),
+      0
+    );
+    if (currentTotalSqft >= effectiveCap) {
+      if (
+        confirm(
+          `⛔ Portfolio Capacity Limit Reached:\n\nYou are managing ${currentTotalSqft.toLocaleString(
+            "en-IN"
+          )} Sq.Ft out of your ${effectiveCap.toLocaleString(
+            "en-IN"
+          )} Sq.Ft plan limit (100% capacity used).\n\nAdding more properties requires a plan expansion or additional square footage.\n\nClick OK to open the Plan Upgrades & Sq.Ft expansion console.`
+        )
+      ) {
+        window.location.href = "/operate/subscription";
+      }
+      return;
+    }
+    setHierarchyTab("property");
+    setHierarchyModalOpen(true);
+  };
+
   const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
     if (
       !confirm(
-        `Are you sure you want to permanently delete "${propertyName}" and all its units from your portfolio?\n\nThis will remove the property and its leasable spaces.`
+        `Commercial Property Security Protocol:\n\nAre you sure you want to request deletion of "${propertyName}"?\n\nFor institutional security, legal audit compliance, and tenant contract preservation, property deletions must be approved by the Super Admin in the Admin Governance Console. Your deletion request will be submitted for admin verification.`
       )
     ) {
       return;
@@ -219,20 +244,24 @@ export default function SpaceAndBuildingRegistryPage() {
         method: "DELETE",
         headers: authHeaders,
       });
+      const d = await res.json().catch(() => ({}));
       if (res.ok) {
-        if (typeof window !== "undefined") {
-          const activeProp = localStorage.getItem("officex_active_property");
-          if (activeProp === propertyName || activeProp === propertyId) {
-            localStorage.removeItem("officex_active_property");
+        if (d.pending_approval) {
+          alert(`Deletion Request Submitted:\n\n${d.message}`);
+        } else {
+          if (typeof window !== "undefined") {
+            const activeProp = localStorage.getItem("officex_active_property");
+            if (activeProp === propertyName || activeProp === propertyId) {
+              localStorage.removeItem("officex_active_property");
+            }
           }
         }
         await fetchRegistryData();
       } else {
-        const d = await res.json().catch(() => ({}));
-        alert(d.message || "Failed to delete property");
+        alert(d.message || d.error || "Failed to process property deletion request");
       }
     } catch {
-      alert("Network error deleting property");
+      alert("Network error requesting property deletion");
     } finally {
       setLoading(false);
     }
@@ -340,10 +369,7 @@ export default function SpaceAndBuildingRegistryPage() {
                 <span>Upload in Bulk</span>
               </button>
               <button
-                onClick={() => {
-                  setHierarchyTab("property");
-                  setHierarchyModalOpen(true);
-                }}
+                onClick={handleOpenRegisterProperty}
                 className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
@@ -430,10 +456,7 @@ export default function SpaceAndBuildingRegistryPage() {
                       <span>Upload via Excel Sheet</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setHierarchyTab("property");
-                        setHierarchyModalOpen(true);
-                      }}
+                      onClick={handleOpenRegisterProperty}
                       className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
                     >
                       <Plus size={15} />

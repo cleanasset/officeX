@@ -137,7 +137,7 @@ export default function GoogleAddressAutocomplete({
   const handleSelect = async (item: any) => {
     // Extract clean street address vs complete display name
     const bName = item.buildingName || "";
-    const fAddress = item.fullAddress || item.displayName || "";
+    let fAddress = item.fullAddress || item.displayName || "";
     
     // Choose clean street address representation
     let streetAddress = fAddress;
@@ -150,6 +150,31 @@ export default function GoogleAddressAutocomplete({
     let resolvedCity = item.city || "";
     let resolvedState = item.state || "";
     let resolvedPin = item.pincode || "";
+
+    // 0. If item has a placeId (from Google Places API), fetch official coordinates & exact details
+    if (item.placeId) {
+      try {
+        const detailRes = await fetch(`/api/geocode?place_id=${encodeURIComponent(item.placeId)}`);
+        if (detailRes.ok) {
+          const detailData = await detailRes.json();
+          if (detailData.result) {
+            const dr = detailData.result;
+            if (dr.latitude !== null && dr.latitude !== undefined) finalLat = dr.latitude;
+            if (dr.longitude !== null && dr.longitude !== undefined) finalLng = dr.longitude;
+            if (dr.city) resolvedCity = dr.city;
+            if (dr.state) resolvedState = dr.state;
+            if (dr.pincode) resolvedPin = dr.pincode;
+            if (dr.area && !item.area) item.area = dr.area;
+            if (dr.fullAddress) {
+              fAddress = dr.fullAddress;
+              streetAddress = dr.fullAddress;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Place details query exception:", err);
+      }
+    }
 
     // 1. If city or state is missing, query geocode endpoint
     if (!resolvedCity || !resolvedState) {
@@ -360,7 +385,7 @@ export default function GoogleAddressAutocomplete({
           <div className="px-3 py-1.5 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
             <span className="flex items-center gap-1">
               <Sparkles size={11} className="text-teal-600" />
-              Worldwide Google Maps Suggestions
+              Official Google Maps Suggestions
             </span>
             <span>Click to autofill PIN, City & State</span>
           </div>

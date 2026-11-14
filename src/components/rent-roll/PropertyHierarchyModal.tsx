@@ -3750,6 +3750,40 @@ export default function PropertyHierarchyModal({
                 </div>
               </div>
 
+              {/* Capacity Exhausted Banner (Point 5 & 12) */}
+              {(() => {
+                const effCap = subscribedCapacity > 0 ? subscribedCapacity : 250000;
+                const currArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                const isExhausted = currArea >= effCap;
+                if (!isExhausted) return null;
+                return (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 border border-rose-300 text-rose-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0 text-rose-700 mt-0.5 sm:mt-0">
+                        <AlertCircle size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-bold text-rose-950">
+                          Portfolio Capacity Limit Reached (100% Used)
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5 leading-relaxed">
+                          You are currently managing <strong>{currArea.toLocaleString("en-IN")} Sq.Ft</strong> out of your <strong>{effCap.toLocaleString("en-IN")} Sq.Ft</strong> licensed capacity limit. Adding new properties is locked.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <a
+                        href="/operate/subscription"
+                        className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
+                      >
+                        <Zap size={13} />
+                        <span>Upgrade Capacity</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ──── SECTION 1: PRIMARY BUILDING & COMMERCIAL ASSET SPECS ──── */}
               <div className="space-y-3.5">
                 <div className="text-xs font-bold text-slate-700 flex items-center gap-2">

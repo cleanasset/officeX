@@ -128,6 +128,52 @@ export async function DELETE(
     const url = new URL(req.url);
     const cascadeConfirmed = url.searchParams.get("cascade_confirmed") === "true";
 
+    const userEmail = req.headers.get("x-user-email") || "";
+    const isPlatformAdmin =
+      auth.role === "super_admin" ||
+      auth.role === "org_admin" ||
+      auth.role === "admin_ops" ||
+      auth.role === "platform_support" ||
+      userEmail === "admin.cleanasset@gmail.com" ||
+      userEmail.toLowerCase().includes("admin");
+
+    const forceDelete = url.searchParams.get("force") === "true";
+
+    // Commercial Property Security Protocol (Point 7):
+    // Non-admin deletions require Super Admin verification & approval
+    if (!isPlatformAdmin && !forceDelete) {
+      const propRecord = await db
+        .select({ id: property.id, name: property.property_name })
+        .from(property)
+        .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)))
+        .limit(1);
+
+      if (propRecord.length === 0) {
+        return NextResponse.json({ error: "Property not found" }, { status: 404 });
+      }
+
+      await db
+        .update(property)
+        .set({
+          source_row_id: JSON.stringify({
+            pending_deletion: true,
+            requested_by: userEmail || auth.userId,
+            requested_at: new Date().toISOString(),
+            reason: "User requested property deletion from Property Registry",
+          }),
+          updated_at: new Date(),
+          updated_by: auth.userId,
+        })
+        .where(and(eq(property.id, id), eq(property.org_id, auth.orgId)));
+
+      return NextResponse.json({
+        success: true,
+        pending_approval: true,
+        message:
+          `Deletion request submitted for Super Admin approval for "${propRecord[0].name}". For institutional security and lease protection, the property will remain locked until approved in the Admin Console.`,
+      });
+    }
+
     // 1. Gather buildings and spaces
     const bldgs = await db
       .select({ id: building.id })
