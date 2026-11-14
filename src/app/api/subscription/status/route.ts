@@ -206,8 +206,8 @@ export async function POST(request: Request) {
     const email = (body.email || "").toLowerCase().trim();
     const coupon = (body.coupon || "").toUpperCase().trim();
     const paymentId = body.paymentId || `PAY_${Date.now()}`;
-    const plan = (body.plan || "techpark").toLowerCase().trim();
-    const planName = body.plan_name || (plan === "starter" ? "Commercial Starter" : plan === "reit-mega" ? "REIT Mega-Portfolio" : "Tech Park Campus");
+    const plan = (body.plan || "commercial-suite").toLowerCase().trim();
+    const planName = body.plan_name || (plan === "commercial-suite" ? "OfficeX Commercial Suite" : plan === "starter" ? "Commercial Starter" : plan === "reit-mega" ? "REIT Mega-Portfolio" : "Commercial Operating Suite");
 
     const durationMonths = Number(body.duration_months) || (body.billing_cycle === "annual" ? 12 : body.billing_cycle === "half_yearly" ? 6 : body.billing_cycle === "quarterly" ? 3 : 1);
     const billingCycle = body.billing_cycle || (durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 3 ? "quarterly" : "monthly");

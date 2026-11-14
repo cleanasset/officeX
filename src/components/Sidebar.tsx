@@ -88,7 +88,6 @@ const ownerMenuItems: MenuItem[] = [
     section: "Pro Suite",
     subItems: [
       { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
-      { name: "Subscription & Cap Quota", href: "/operate/subscription", tabKey: "subscription", icon: Award },
       { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
       { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", tabKey: "banking", icon: Landmark },
       { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: FileText },

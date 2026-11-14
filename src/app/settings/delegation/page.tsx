@@ -1191,9 +1191,9 @@ function DelegationContent() {
 
       {/* Pro Subscription Checkout / Unlock Modal (§Minimum Amount on Added Property Sq.Ft) */}
       {subscriptionModalOpen && (() => {
-        const ratePerSqft = subModalCycle === "annual" ? 1.2 : 1.5;
+        const ratePerSqft = 1.0;
         const minMonthlyPayable = Math.round(activeDelegationSqft * ratePerSqft);
-        const minCyclePayable = minMonthlyPayable * (subModalCycle === "annual" ? 12 : 1);
+        const minCyclePayable = subModalCycle === "annual" ? Math.round(minMonthlyPayable * 12 * 0.8) : minMonthlyPayable;
 
         return (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -1230,7 +1230,7 @@ function DelegationContent() {
                   <div className="bg-white p-2.5 rounded-xl border border-teal-200">
                     <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
                     <span className="text-sm font-black text-teal-800 font-mono">
-                      ₹{ratePerSqft} / sqft / mo
+                      ₹1.00 / sqft / mo
                     </span>
                   </div>
                 </div>
@@ -1251,7 +1251,7 @@ function DelegationContent() {
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-500 pt-0.5">
-                    Calculation: {activeDelegationSqft.toLocaleString()} Sq.Ft × ₹{ratePerSqft}/sq.ft {subModalCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
+                    Calculation: {activeDelegationSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft {subModalCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
                   </p>
                 </div>
               </div>

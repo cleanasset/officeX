@@ -114,9 +114,8 @@ function PricingPageContent() {
 
           {/* Portfolio Scale Banner (When user has registered properties) */}
           {minPortfolioSqft > 0 && (() => {
-            const minMonthly = Math.round(minPortfolioSqft * 1.5);
-            const minAnnualMonthly = Math.round(minPortfolioSqft * 1.2);
-            const minAnnualTotal = minAnnualMonthly * 12;
+            const minMonthly = minPortfolioSqft; // Flat ₹1 per sq.ft / month
+            const minAnnualTotal = minMonthly * 12;
 
             return (
               <div className="mb-10 max-w-4xl mx-auto p-4 sm:p-5 rounded-3xl bg-teal-50 border-2 border-teal-300 text-teal-950 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
@@ -134,10 +133,10 @@ function PricingPageContent() {
                       </span>
                     </div>
                     <p className="text-xs text-teal-900 mt-1 font-semibold">
-                      Minimum Payable on Added Sq.Ft: <strong className="text-slate-950 font-black">₹{minAnnualMonthly.toLocaleString("en-IN")} / mo</strong> (₹{minAnnualTotal.toLocaleString("en-IN")} / yr on Annual) or <strong className="text-slate-950 font-black">₹{minMonthly.toLocaleString("en-IN")} / mo</strong> (Monthly).
+                      Fixed Single Rate: <strong className="text-slate-950 font-black">₹1.00 / Sq.Ft / Month</strong> (₹{minMonthly.toLocaleString("en-IN")} / mo).
                     </p>
                     <p className="text-[11px] text-teal-700 mt-0.5">
-                      Formula: {minPortfolioSqft.toLocaleString()} Sq.Ft × ₹1.2/sq.ft (Annual) or ₹1.5/sq.ft (Monthly)
+                      Formula: {minPortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00 / sq.ft / month
                     </p>
                   </div>
                 </div>
@@ -161,7 +160,7 @@ function PricingPageContent() {
                   className="px-5 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
                 >
                   <Sparkles size={14} />
-                  <span>Pay Minimum ₹{minAnnualTotal.toLocaleString("en-IN")} ({minPortfolioSqft.toLocaleString()} Sq.Ft) →</span>
+                  <span>Subscribe ₹{minMonthly.toLocaleString("en-IN")}/mo ({minPortfolioSqft.toLocaleString()} Sq.Ft) →</span>
                 </button>
               </div>
             );
@@ -189,10 +188,10 @@ function PricingPageContent() {
                 <div className="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pricing Model</div>
                   <div className="text-base font-black text-slate-900 mt-0.5">
-                    {minPortfolioSqft > 0 ? `₹${Math.round(minPortfolioSqft * 1.2).toLocaleString()} / mo` : "Bespoke / Sq.Ft."}
+                    {minPortfolioSqft > 0 ? `₹${minPortfolioSqft.toLocaleString()} / mo (Fixed ₹1/sq.ft)` : "Fixed ₹1.00 / Sq.Ft / mo"}
                   </div>
                   <div className="text-[11px] text-teal-800 font-semibold mt-0.5">
-                    {minPortfolioSqft > 0 ? `Covers ${minPortfolioSqft.toLocaleString()} Sq.Ft registered portfolio` : "Discounts for multi-tower portfolios"}
+                    {minPortfolioSqft > 0 ? `Covers ${minPortfolioSqft.toLocaleString()} Sq.Ft registered portfolio` : "Single unified commercial license"}
                   </div>
                 </div>
                 

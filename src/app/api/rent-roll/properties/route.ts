@@ -141,6 +141,8 @@ export async function POST(req: Request) {
         let planCap = 0;
         if (headerCustomCap > 0) {
           planCap = headerCustomCap;
+        } else if (headerPlan === "commercial-suite") {
+          planCap = headerCustomCap > 0 ? headerCustomCap : 500000000;
         } else if (headerPlan === "starter") {
           planCap = 50000;
         } else if (headerPlan === "techpark" || headerPlan === "growth" || headerPlan === "campus") {

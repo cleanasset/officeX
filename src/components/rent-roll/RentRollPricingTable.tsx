@@ -195,51 +195,25 @@ export default function RentRollPricingTable({
     handleSqftChange(val);
   };
 
-  // Commercial Slabs: ₹1, ₹2, ₹3 per sq.ft with specific tier benefits
+  // Unified Commercial Operating License: Single Fixed Rate of ₹1 per sq.ft
   const SLABS = [
     {
-      id: "starter",
-      name: "Commercial Starter",
-      badge: "Standalone Tower",
+      id: "commercial-suite",
+      name: "OfficeX Commercial Suite",
+      badge: "Fixed ₹1 / Sq.Ft",
       ratePerSqft: 1,
-      target: "Standalone Commercial Towers & Small Portfolios",
-      popular: false,
-      ctaText: "Select Starter",
+      target: "Commercial Real Estate Assets & Towers",
+      popular: true,
+      ctaText: "Select Commercial Suite",
       features: [
         "39-Point canonical lease contract master & live register",
         "Automated step escalations with 90-day anniversary alerts",
-        "Bulk Excel/CSV data importer with auto-column mapper",
-        "Audit-ready exports (WALE, rollover & board MIS sheets)",
-      ],
-    },
-    {
-      id: "techpark",
-      name: "Tech Park Campus",
-      badge: "Most Popular",
-      ratePerSqft: 2,
-      target: "Multi-Tower Tech Parks & Commercial Campuses",
-      popular: true,
-      ctaText: "Select Tech Park",
-      features: [
         "Full Lease-to-Cash billing centre with monthly batch runs",
         "Automated CAM pooling & utility sub-meter ingestion",
         "Statutory 18% GST & Section 194I TDS deduction ledgers",
-        "Occupant self-service portal & legal default notices (§106)",
-      ],
-    },
-    {
-      id: "reit-mega",
-      name: "REIT Mega-Portfolio",
-      badge: "Enterprise Scale",
-      ratePerSqft: 3,
-      target: "Institutional Funds, REITs & Mega Portfolios",
-      popular: false,
-      ctaText: "Select Enterprise",
-      features: [
-        "Consolidated portfolio aggregation across multiple cities",
-        "14-Day commercial grace period (zero hard lockouts)",
+        "Consolidated portfolio aggregation across multiple assets",
         "Maker-checker approvals & custom institutional RBAC",
-        "REST APIs & webhooks with enterprise SSO (SAML 2.0)",
+        "Occupant self-service portal & digital lease contracts",
       ],
     },
   ];

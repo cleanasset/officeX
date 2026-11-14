@@ -139,9 +139,7 @@ export default function OperatePricingSection({
   };
 
   const calcRentRollPrice = () => {
-    if (safeSqft <= 25000) return Math.round(standalone.rentRoll.starterMonthly * annualMultiplier);
-    if (safeSqft <= 100000) return Math.round(standalone.rentRoll.growthMonthly * annualMultiplier);
-    return Math.round(standalone.rentRoll.enterpriseMonthly * annualMultiplier);
+    return Math.round(safeSqft * 1.0 * annualMultiplier);
   };
 
   // Per Sq.Ft formatter

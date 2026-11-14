@@ -13,11 +13,11 @@ import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
 
 export interface SubscriptionPlanTier {
-  id: "starter" | "techpark" | "reit-mega";
+  id: string;
   name: string;
   badge: string;
   popular?: boolean;
-  price: number; // in INR/month (50, 100, 200)
+  price: number; // in INR/month: 1
   period: string;
   scope: string;
   target: string;
@@ -27,54 +27,24 @@ export interface SubscriptionPlanTier {
 
 export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
   {
-    id: "starter",
-    name: "Commercial Starter",
-    badge: "50k Sq.Ft Cap",
-    popular: false,
+    id: "commercial-suite",
+    name: "Commercial Operating Suite",
+    badge: "Fixed ₹1 / Sq.Ft",
+    popular: true,
     price: 1,
     period: "/mo",
-    scope: "Up to 50,000 sq.ft",
-    target: "Standalone Commercial Tower",
-    description: "Essential contract registers & step escalations for single towers.",
+    scope: "Covers entire managed leasable area",
+    target: "Commercial Real Estate Assets & Portfolios",
+    description: "All-in-one commercial license covering Rent Roll, Step Escalations, CAM Pooling, and Invoicing.",
     features: [
       "39-Point canonical lease contract master & live register",
       "Automated step escalations with 90-day anniversary alerts",
-      "Bulk Excel/CSV data importer with auto-column mapper",
-      "Audit-ready exports (WALE, rollover & board MIS sheets)",
-    ],
-  },
-  {
-    id: "techpark",
-    name: "Commercial Growth / Campus",
-    badge: "Most Popular",
-    popular: true,
-    price: 2,
-    period: "/mo",
-    scope: "Up to 2,50,000 sq.ft",
-    target: "Multi-Floor Commercial Asset",
-    description: "Complete lease-to-cash billing, CAM expense pooling & statutory compliance.",
-    features: [
       "Full Lease-to-Cash billing centre with monthly batch runs",
       "Automated CAM pooling & utility sub-meter ingestion",
       "Statutory 18% GST (SAC 997212) & Section 194I TDS ledgers",
-      "Occupant self-service portal & legal default notices (§106)",
-    ],
-  },
-  {
-    id: "reit-mega",
-    name: "Portfolio Enterprise / REIT",
-    badge: "Enterprise Scale",
-    popular: false,
-    price: 3,
-    period: "/mo",
-    scope: "Up to 50,00,00,000 sq.ft",
-    target: "Institutional Funds & REITs",
-    description: "Mega-portfolio governance with maker-checker approvals and REST APIs.",
-    features: [
-      "Up to 50,00,00,000 Sq.Ft licensed capacity allocation",
-      "14-Day commercial grace period (zero hard lockouts)",
-      "Maker-checker approvals & custom institutional RBAC",
-      "REST APIs & webhooks with enterprise SSO (SAML 2.0)",
+      "Audit-ready exports (WALE, rollover & board MIS sheets)",
+      "NOI & Property P&L with owner statements & approvals",
+      "Occupant self-service portal & digital lease contracts",
     ],
   },
 ];
@@ -108,8 +78,8 @@ export default function SubscriptionGate({
   const [isRoleDecided, setIsRoleDecided] = useState<boolean>(true);
   const [selectedPersonaKey, setSelectedPersonaKey] = useState<string>("owner");
 
-  // Selected Pricing Plan state (default: "techpark" ₹2, user can pick "starter" ₹1 or "reit-mega" ₹3)
-  const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
+  // Selected Pricing Plan state (default: "commercial-suite" ₹1)
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("commercial-suite");
   const { minAllowedSqft: universalFloor, totalPortfolioSqft } = useUniversalPortfolioSqft(10000);
 
   const [minAllowedSqft, setMinAllowedSqft] = useState<number>(() => {
@@ -156,7 +126,7 @@ export default function SubscriptionGate({
   const [selectedDurationMonths, setSelectedDurationMonths] = useState<number>(1);
 
   // Active Plan & Dynamic Pricing Calculations
-  const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[1];
+  const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[0];
   const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
 
   const durationDiscountPct =
@@ -598,18 +568,35 @@ export default function SubscriptionGate({
                 <button
                   onClick={handleLogout}
                   className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                  title="Sign Out"
                 >
                   <LogOut size={13} />
-                  <span>Sign Out</span>
+                  <span className="hidden sm:inline">Sign Out</span>
                 </button>
+                <Link
+                  href="/dashboard/owner"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                  title="Close"
+                >
+                  <X size={16} />
+                </Link>
               </div>
             ) : (
-              <Link
-                href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
-                className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors"
-              >
-                <span>Existing Subscriber Sign In →</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
+                  className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors"
+                >
+                  <span>Existing Subscriber Sign In →</span>
+                </Link>
+                <Link
+                  href="/dashboard/owner"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                  title="Close"
+                >
+                  <X size={16} />
+                </Link>
+              </div>
             )}
           </div>
 
@@ -897,75 +884,40 @@ export default function SubscriptionGate({
             </div>
           </div>
 
-          {/* ──── 3 CLEAN PLAN CARDS ──── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+          {/* ──── UNIFIED COMMERCIAL LICENSE (FIXED ₹1 / SQ.FT) ──── */}
+          <div className="mb-4">
             {SUBSCRIPTION_PLAN_OPTIONS.map((plan) => {
-              const isSelected = selectedPlan.id === plan.id;
               const planTotal = effectiveSqft * plan.price;
               return (
-                <button
+                <div
                   key={plan.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPlanId(plan.id);
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("officex_selected_plan", plan.id);
-                      sessionStorage.setItem("officex_selected_plan", plan.id);
-                    }
-                  }}
-                  className={`relative rounded-2xl p-3 text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    isSelected
-                      ? "bg-teal-50/70 border-2 border-[#0F8B7D] shadow-sm ring-1 ring-[#0F8B7D]/20"
-                      : "bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs"
-                  }`}
+                  className="rounded-2xl p-4 bg-teal-50/70 border-2 border-[#0F8B7D] shadow-sm ring-1 ring-[#0F8B7D]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  {/* Badge */}
-                  {plan.popular ? (
-                    <div className="absolute -top-2 right-2.5 px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[8px] font-black uppercase tracking-wider shadow-2xs">
-                      {plan.badge}
-                    </div>
-                  ) : (
-                    <div className="absolute -top-2 right-2.5 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[8px] font-bold uppercase">
-                      {plan.badge}
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between gap-1 mb-1 mt-0.5">
-                      <span className="text-xs font-black text-slate-900 tracking-tight">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black text-slate-900 tracking-tight">
                         {plan.name}
                       </span>
-                      <div
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
-                          isSelected ? "bg-[#0F8B7D] text-white" : "border border-slate-300"
-                        }`}
-                      >
-                        {isSelected && <Check size={9} strokeWidth={3} />}
-                      </div>
-                    </div>
-
-                    <div className="text-[10px] text-slate-500 font-semibold mb-1.5">
-                      {plan.scope}
-                    </div>
-
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-base font-black text-slate-900">
-                        ₹{plan.price}
+                      <span className="px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-wider">
+                        {plan.badge}
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-500">
-                        / sq.ft
-                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium">{plan.description}</p>
+                    <div className="text-[11px] text-[#0F8B7D] font-bold">
+                      {plan.scope} · Single Fixed Rate across all features
                     </div>
                   </div>
 
-                  <div className="mt-2 pt-1.5 border-t border-slate-200/70 text-[10px] text-slate-600 font-medium">
-                    {is100PercentDiscount ? (
-                      <span className="text-emerald-700 font-bold">₹0 FREE</span>
-                    ) : (
-                      <span>Est: ₹{planTotal.toLocaleString("en-IN")}</span>
-                    )}
+                  <div className="text-left sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-teal-200/60">
+                    <div className="flex sm:justify-end items-baseline gap-1">
+                      <span className="text-2xl font-black text-slate-900">₹{plan.price}</span>
+                      <span className="text-xs font-bold text-slate-500">/ sq.ft / mo</span>
+                    </div>
+                    <div className="text-[11px] font-bold text-teal-800">
+                      ₹{planTotal.toLocaleString("en-IN")} / month ({effectiveSqft.toLocaleString("en-IN")} sq.ft)
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

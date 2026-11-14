@@ -9324,11 +9324,11 @@ export default function PropertyHierarchyModal({
           const userEnteredSqft = subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft;
           const isBelowPortfolio = userEnteredSqft < effectivePortfolioSqft;
           const currentChosenSqft = Math.max(userEnteredSqft, effectivePortfolioSqft);
-          const ratePerSqft = subscribeBillingCycle === "annual" ? 1.2 : 1.5;
+          const ratePerSqft = 1.0;
           const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
-          const minCyclePayable = minMonthlyPayable * (subscribeBillingCycle === "annual" ? 12 : 1);
+          const minCyclePayable = subscribeBillingCycle === "annual" ? Math.round(minMonthlyPayable * 12 * 0.8) : minMonthlyPayable;
           const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
-          const chosenCyclePayable = monthlyEst * (subscribeBillingCycle === "annual" ? 12 : 1);
+          const chosenCyclePayable = subscribeBillingCycle === "annual" ? Math.round(monthlyEst * 12 * 0.8) : monthlyEst;
 
           return (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -9365,7 +9365,7 @@ export default function PropertyHierarchyModal({
                     <div className="bg-white p-2.5 rounded-xl border border-teal-200">
                       <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
                       <span className="text-sm font-black text-teal-800 font-mono">
-                        ₹{ratePerSqft} / sqft / mo
+                        ₹1.00 / sqft / mo
                       </span>
                     </div>
                   </div>
@@ -9386,7 +9386,7 @@ export default function PropertyHierarchyModal({
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 pt-0.5">
-                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹{ratePerSqft}/sq.ft {subscribeBillingCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
+                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft {subscribeBillingCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
                     </p>
                   </div>
                 </div>
