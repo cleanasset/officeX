@@ -136,24 +136,80 @@ export async function POST(request: Request) {
       }
     }
 
-    const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com';
+    const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com' || norm === 'medistationlifecare@gmail.com';
     const effectiveUserId = String(supaUser?.id || userId || `usr_${Date.now()}`);
+    const shortId = effectiveUserId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'active';
 
-    const memberships = [
-      {
-        id: `mem_${effectiveUserId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'active'}`,
-        orgId: isSuperAdmin ? 'org_admin' : 'org_officex',
-        orgName: isSuperAdmin ? 'OfficeX Platform Governance' : 'Commercial Asset Management',
-        role: userRole,
-        roleCode: isSuperAdmin ? 'SUPER_ADMIN' : ((supaUser?.user_metadata?.roleCode as any) || 'OWNER'),
-        workspaceTitle: isSuperAdmin ? 'Master Control Center' : 'Commercial Rent Roll Desk',
-        workspaceUrl: isSuperAdmin ? '/admin' : '/properties/rent-roll',
-        propertyScope: isSuperAdmin ? 'All Global Portfolios' : 'Active Commercial Portfolio',
-        badge: isSuperAdmin ? 'Super Admin' : 'Owner',
-        badgeColor: isSuperAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' : 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-        isLastUsed: true
-      }
-    ];
+    const memberships = isSuperAdmin
+      ? [
+          {
+            id: 'mem_admin',
+            orgId: 'org_admin',
+            orgName: 'OfficeX Platform Governance',
+            role: 'Super Administrator',
+            roleCode: 'SUPER_ADMIN',
+            workspaceTitle: 'Master Control Center',
+            workspaceUrl: '/admin',
+            propertyScope: 'All Global Portfolios',
+            badge: 'Super Admin',
+            badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/30',
+            isLastUsed: true
+          }
+        ]
+      : [
+          {
+            id: `mem_rent_roll_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Commercial Asset Management',
+            role: userRole,
+            roleCode: 'OWNER',
+            workspaceTitle: 'Commercial Rent Roll & Leases Desk',
+            workspaceUrl: '/properties/rent-roll',
+            propertyScope: 'Active Leases & Rent Roll Governance',
+            badge: 'Rent Roll',
+            badgeColor: 'bg-emerald-500/20 text-emerald-700 border-emerald-400/30',
+            isLastUsed: true
+          },
+          {
+            id: `mem_marketplace_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Commercial Marketplace',
+            role: 'Property Owner / Partner',
+            roleCode: 'PARTNER',
+            workspaceTitle: 'Office Marketplace & Listings',
+            workspaceUrl: '/marketplace',
+            propertyScope: 'Public Office & Coworking Directory',
+            badge: 'Marketplace',
+            badgeColor: 'bg-teal-500/20 text-teal-700 border-teal-400/30',
+            isLastUsed: false
+          },
+          {
+            id: `mem_cafm_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Facility Engineering Operations',
+            role: 'Operations & Maintenance',
+            roleCode: 'OPERATIONS',
+            workspaceTitle: '52-Week CAFM & PPM Suite',
+            workspaceUrl: '/admin?tab=saas&module=cafm',
+            propertyScope: 'Plant, DG & Maintenance Schedules',
+            badge: 'CAFM Operations',
+            badgeColor: 'bg-blue-500/20 text-blue-700 border-blue-400/30',
+            isLastUsed: false
+          },
+          {
+            id: `mem_visitor_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Campus Security & Life Safety',
+            role: 'Security & Access Control',
+            roleCode: 'SECURITY',
+            workspaceTitle: 'Visitor Flow & Security Gate',
+            workspaceUrl: '/admin?tab=saas&module=visitor',
+            propertyScope: 'Turnstile Relays & WhatsApp Passes',
+            badge: 'Visitor Flow',
+            badgeColor: 'bg-indigo-500/20 text-indigo-700 border-indigo-400/30',
+            isLastUsed: false
+          }
+        ];
 
     const response = NextResponse.json({
       success: true,
@@ -164,8 +220,8 @@ export async function POST(request: Request) {
         role: userRole
       },
       memberships,
-      needs_context_choice: false,
-      redirect_url: isSuperAdmin ? '/admin' : '/properties/rent-roll'
+      needs_context_choice: !isSuperAdmin,
+      redirect_url: isSuperAdmin ? '/admin' : null
     });
 
     // Secure HttpOnly session cookie

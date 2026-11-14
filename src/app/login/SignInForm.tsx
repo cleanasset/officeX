@@ -443,20 +443,33 @@ export default function SignInForm({
       }
 
       const normInput = identifier.trim().toLowerCase();
-      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+      const isSuperAdmin =
+        normInput === "admin@gmail.com" ||
+        normInput === "medistationlifecare@gmail.com" ||
+        data.user?.role === "super_admin" ||
+        data.user?.role === "Super Administrator";
+
+      if (isSuperAdmin) {
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_admin", "1");
           localStorage.setItem("officex_role", "super_admin");
-          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          localStorage.setItem("officex_user_email", normInput);
           sessionStorage.setItem("officex_admin", "1");
           document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
           document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
         }
         setStep("signed_in_success");
         setTimeout(() => {
-          window.location.href = data.redirect_url || "/admin";
+          window.location.href = "/admin";
         }, 300);
         return;
+      }
+
+      // Standard commercial users: clear any leftover admin flag
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("officex_admin");
+        sessionStorage.removeItem("officex_admin");
+        document.cookie = "officex_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       }
 
       if (data.memberships && data.memberships.length > 0) {
@@ -592,20 +605,33 @@ export default function SignInForm({
       }
 
       const normInput = identifier.trim().toLowerCase();
-      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+      const isSuperAdmin =
+        normInput === "admin@gmail.com" ||
+        normInput === "medistationlifecare@gmail.com" ||
+        data.user?.role === "super_admin" ||
+        data.user?.role === "Super Administrator";
+
+      if (isSuperAdmin) {
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_admin", "1");
           localStorage.setItem("officex_role", "super_admin");
-          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          localStorage.setItem("officex_user_email", normInput);
           sessionStorage.setItem("officex_admin", "1");
           document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
           document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
         }
         setStep("signed_in_success");
         setTimeout(() => {
-          window.location.href = data.redirect_url || "/admin";
+          window.location.href = "/admin";
         }, 300);
         return;
+      }
+
+      // Standard commercial users: clear any leftover admin flag
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("officex_admin");
+        sessionStorage.removeItem("officex_admin");
+        document.cookie = "officex_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       }
 
       if (data.memberships && data.memberships.length > 0) {
@@ -678,20 +704,33 @@ export default function SignInForm({
       }
 
       const normInput = identifier.trim().toLowerCase();
-      if (data.redirect_url || normInput === "admin@gmail.com" || normInput === "medistationlifecare@gmail.com" || data.user?.role === "super_admin") {
+      const isSuperAdmin =
+        normInput === "admin@gmail.com" ||
+        normInput === "medistationlifecare@gmail.com" ||
+        data.user?.role === "super_admin" ||
+        data.user?.role === "Super Administrator";
+
+      if (isSuperAdmin) {
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_admin", "1");
           localStorage.setItem("officex_role", "super_admin");
-          localStorage.setItem("officex_user_email", identifier.trim().toLowerCase());
+          localStorage.setItem("officex_user_email", normInput);
           sessionStorage.setItem("officex_admin", "1");
           document.cookie = "officex_admin=1; path=/; max-age=604800; SameSite=Lax";
           document.cookie = "officex_role=super_admin; path=/; max-age=604800; SameSite=Lax";
         }
         setStep("signed_in_success");
         setTimeout(() => {
-          window.location.href = data.redirect_url || "/admin";
+          window.location.href = "/admin";
         }, 300);
         return;
+      }
+
+      // Standard commercial users: clear any leftover admin flag
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("officex_admin");
+        sessionStorage.removeItem("officex_admin");
+        document.cookie = "officex_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       }
 
       if (data.memberships && data.memberships.length > 0) {
@@ -699,7 +738,7 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Super Admin", data.memberships);
+      handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Commercial Member", data.memberships);
     } catch (err) {
       setError("Failed to verify authenticator code.");
     } finally {

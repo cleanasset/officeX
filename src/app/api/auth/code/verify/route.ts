@@ -99,20 +99,95 @@ export async function POST(request: Request) {
       }
     }
 
-    const defaultRole = 'Property Owner & Asset Manager';
+    const isSuperAdmin = norm === 'admin@gmail.com' || norm === 'medistationlifecare@gmail.com';
+    const effectiveUserId = String(supaUserId || `usr_${Date.now()}`);
+    const shortId = effectiveUserId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'active';
+
+    const defaultRole = isSuperAdmin ? 'Super Administrator' : 'Property Owner & Asset Manager';
+
+    const memberships = isSuperAdmin
+      ? [
+          {
+            id: 'mem_admin',
+            orgId: 'org_admin',
+            orgName: 'OfficeX Platform Governance',
+            role: 'Super Administrator',
+            roleCode: 'SUPER_ADMIN',
+            workspaceTitle: 'Master Control Center',
+            workspaceUrl: '/admin',
+            propertyScope: 'All Global Portfolios',
+            badge: 'Super Admin',
+            badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/30',
+            isLastUsed: true
+          }
+        ]
+      : [
+          {
+            id: `mem_rent_roll_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Commercial Asset Management',
+            role: defaultRole,
+            roleCode: 'OWNER',
+            workspaceTitle: 'Commercial Rent Roll & Leases Desk',
+            workspaceUrl: '/properties/rent-roll',
+            propertyScope: 'Active Leases & Rent Roll Governance',
+            badge: 'Rent Roll',
+            badgeColor: 'bg-emerald-500/20 text-emerald-700 border-emerald-400/30',
+            isLastUsed: true
+          },
+          {
+            id: `mem_marketplace_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Commercial Marketplace',
+            role: 'Property Owner / Partner',
+            roleCode: 'PARTNER',
+            workspaceTitle: 'Office Marketplace & Listings',
+            workspaceUrl: '/marketplace',
+            propertyScope: 'Public Office & Coworking Directory',
+            badge: 'Marketplace',
+            badgeColor: 'bg-teal-500/20 text-teal-700 border-teal-400/30',
+            isLastUsed: false
+          },
+          {
+            id: `mem_cafm_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Facility Engineering Operations',
+            role: 'Operations & Maintenance',
+            roleCode: 'OPERATIONS',
+            workspaceTitle: '52-Week CAFM & PPM Suite',
+            workspaceUrl: '/admin?tab=saas&module=cafm',
+            propertyScope: 'Plant, DG & Maintenance Schedules',
+            badge: 'CAFM Operations',
+            badgeColor: 'bg-blue-500/20 text-blue-700 border-blue-400/30',
+            isLastUsed: false
+          },
+          {
+            id: `mem_visitor_${shortId}`,
+            orgId: 'org_officex',
+            orgName: 'Campus Security & Life Safety',
+            role: 'Security & Access Control',
+            roleCode: 'SECURITY',
+            workspaceTitle: 'Visitor Flow & Security Gate',
+            workspaceUrl: '/admin?tab=saas&module=visitor',
+            propertyScope: 'Turnstile Relays & WhatsApp Passes',
+            badge: 'Visitor Flow',
+            badgeColor: 'bg-indigo-500/20 text-indigo-700 border-indigo-400/30',
+            isLastUsed: false
+          }
+        ];
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: supaUserId || `usr_${Date.now()}`,
+        id: effectiveUserId,
         name: userFullName || norm.split('@')[0] || 'Member',
         identifier: norm,
         role: defaultRole
       },
-      memberships: [],
-      needs_context_choice: false,
+      memberships,
+      needs_context_choice: !isSuperAdmin,
       needs_onboarding: false,
-      redirect_url: '/operate'
+      redirect_url: isSuperAdmin ? '/admin' : null
     });
 
     response.cookies.set('officex_auth', '1', {
