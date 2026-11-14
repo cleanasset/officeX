@@ -22,7 +22,7 @@ import {
 } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
-import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
+import { eq, and, sql, desc, or, ilike, ne } from "drizzle-orm";
 
 /**
  * RR-CONT-01: Create Contract (Wizard Steps 1–7)
@@ -354,7 +354,9 @@ export async function POST(req: Request) {
         .where(
           and(
             eq(contract.org_id, orgId),
-            eq(contract.space_id, payload.space_id)
+            eq(contract.space_id, payload.space_id),
+            sql`${contract.deleted_at} IS NULL`,
+            ne(contract.contract_status, "terminated")
           )
         );
 

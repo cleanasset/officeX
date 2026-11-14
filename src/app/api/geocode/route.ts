@@ -379,10 +379,10 @@ export async function GET(request: Request) {
 
   const fetchTasks: Promise<any>[] = [];
 
-  // A) Global Photon Geocoder (Fast Elasticsearch, no strict rate limit)
-  const photonQ = targetCity ? `${cleanQ}, ${targetCity}` : cleanQ;
+  // A) Indian-Prioritized Photon Geocoder (Fast Elasticsearch, bounded to India)
+  const photonQ = targetCity ? `${cleanQ}, ${targetCity}, India` : `${cleanQ}, India`;
   fetchTasks.push(
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(photonQ)}&limit=15`, {
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(photonQ)}&bbox=68.1,6.7,97.4,37.1&limit=15`, {
       headers: { "Accept-Language": "en" },
       signal: AbortSignal.timeout(2000),
       next: { revalidate: 3600 }
@@ -395,7 +395,7 @@ export async function GET(request: Request) {
   // Also query raw query on Photon if city was added
   if (targetCity) {
     fetchTasks.push(
-      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&limit=10`, {
+      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&bbox=68.1,6.7,97.4,37.1&limit=10`, {
         headers: { "Accept-Language": "en" },
         signal: AbortSignal.timeout(2000),
         next: { revalidate: 3600 }
@@ -406,13 +406,13 @@ export async function GET(request: Request) {
     );
   }
 
-  // B) Global Nominatim Geocoder (Single targeted query with strict 2s timeout)
+  // B) Indian-Prioritized Nominatim Geocoder (countrycodes=in strictly prioritizes India)
   const nomQ = targetCity ? `${cleanQ}, ${targetCity}` : cleanQ;
   fetchTasks.push(
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nomQ)}&addressdetails=1&limit=12`, {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&viewbox=68.1,37.1,97.4,6.7&bounded=0&q=${encodeURIComponent(nomQ)}&addressdetails=1&limit=15`, {
       headers: {
-        "User-Agent": "OfficeX-Global-Commercial-System/1.0",
-        "Accept-Language": "en"
+        "User-Agent": "OfficeX-India-Commercial-System/1.0",
+        "Accept-Language": "en-IN,en;q=0.9"
       },
       signal: AbortSignal.timeout(2000),
       next: { revalidate: 3600 }
@@ -609,10 +609,18 @@ export async function GET(request: Request) {
       score += 10.0;
     }
 
-    // Priority boost for matching target city & state if provided
     const itemCity = (item.city || "").toLowerCase();
     const itemState = (item.state || "").toLowerCase();
     const fullText = (item.fullAddress || item.displayName || "").toLowerCase();
+
+    // Strict Indian Priority: massive boost for Indian locations, heavy demotion for foreign
+    const itemCountry = (item.country || "").toLowerCase();
+    const isIndia = itemCountry === "india" || itemCountry === "in" || /\b[1-9][0-9]{5}\b/.test(item.pincode || "") || /\b(gujarat|maharashtra|delhi|karnataka|tamil nadu|telangana|uttar pradesh|haryana|rajasthan|madhya pradesh|west bengal|kerala|punjab|odisha|andhra pradesh)\b/i.test(fullText);
+    if (isIndia) {
+      score += 50.0;
+    } else if (itemCountry && itemCountry !== "india" && itemCountry !== "in") {
+      score -= 80.0; // Strictly demote international locations (Philippines, US, etc.)
+    }
 
     if (normCity) {
       if (itemCity.includes(normCity) || fullText.includes(normCity)) {

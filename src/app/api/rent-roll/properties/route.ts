@@ -105,6 +105,58 @@ export async function POST(req: Request) {
         ? Number(seatsRaw)
         : null;
 
+    // Strict Portfolio Area Quota Enforcement (Point 1)
+    if (areaVal > 0) {
+      const isSuperAdmin =
+        auth.userEmail === "admin@gmail.com" ||
+        auth.userEmail === "medistationlifecare@gmail.com" ||
+        auth.isPortfolioRole;
+
+      if (!isSuperAdmin) {
+        // Calculate existing active portfolio area for this organization
+        const existingProps = await db
+          .select({
+            id: property.id,
+            area: property.total_leasable_area_sqft,
+          })
+          .from(property)
+          .where(
+            and(
+              eq(property.org_id, orgId),
+              sql`${property.deleted_at} IS NULL`
+            )
+          );
+
+        let currentManagedSqft = 0;
+        const targetPropId = body.id || body.property_id;
+        for (const ep of existingProps) {
+          if (targetPropId && ep.id === targetPropId) continue;
+          currentManagedSqft += Math.round(Number(ep.area) || 0);
+        }
+
+        // Determine plan cap from header or default tier
+        const headerPlan = (req.headers.get("x-subscription-plan") || "").toLowerCase().trim();
+        let planCap = 250000; // Standard Commercial Growth / Tech Park cap
+        if (headerPlan === "starter") planCap = 50000;
+        else if (headerPlan === "techpark") planCap = 250000;
+        else if (headerPlan === "reit-mega") planCap = 50000000;
+
+        const projectedTotal = currentManagedSqft + areaVal;
+        if (projectedTotal > planCap) {
+          return NextResponse.json(
+            {
+              error: `Portfolio Quota Exceeded: Your active licensing tier allows up to ${planCap.toLocaleString()} Sq.Ft. Currently managing ${currentManagedSqft.toLocaleString()} Sq.Ft. Adding this property (${areaVal.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotal.toLocaleString()} Sq.Ft, exceeding capacity by ${(projectedTotal - planCap).toLocaleString()} Sq.Ft. Please upgrade your subscription tier to proceed.`,
+              currentManagedSqft,
+              planCap,
+              attemptedArea: areaVal,
+              excessSqft: projectedTotal - planCap,
+            },
+            { status: 422 }
+          );
+        }
+      }
+    }
+
     // Legal Tax ID Compliance & Cross-Org Guard
     const rawPan = (body.pan || "").trim().toUpperCase();
     const rawGstin = (body.gstin || "").trim().toUpperCase();

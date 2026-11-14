@@ -195,6 +195,78 @@ export async function DELETE(
         .where(inArray(contract.space_id, spIds));
     }
 
+    // 3b. Cascade soft-delete occupants whose only leases belonged to this deleted property (Point 3)
+    const affectedOccupantIds = Array.from(
+      new Set(activeContracts.map((c) => c.occupant_id).filter(Boolean))
+    );
+
+    for (const occId of affectedOccupantIds) {
+      // Check if this occupant has any surviving active contracts on OTHER non-deleted properties
+      const surviving = await db
+        .select({ id: contract.id })
+        .from(contract)
+        .where(
+          and(
+            eq(contract.occupant_id, occId),
+            sql`${contract.deleted_at} IS NULL`,
+            ne(contract.contract_status, "terminated")
+          )
+        )
+        .limit(1);
+
+      if (surviving.length === 0) {
+        await db
+          .update(occupant)
+          .set({
+            deleted_at: new Date(),
+            occupant_status: "inactive",
+          })
+          .where(eq(occupant.id, occId));
+      }
+    }
+
+    // Also check and deactivate occupants registered specifically under this property with no surviving contracts
+    try {
+      const orgOccupants = await db
+        .select({ id: occupant.id, source_row_id: occupant.source_row_id })
+        .from(occupant)
+        .where(
+          and(
+            eq(occupant.org_id, auth.orgId),
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        );
+
+      for (const occ of orgOccupants) {
+        let meta: any = {};
+        if (occ.source_row_id && typeof occ.source_row_id === "string" && occ.source_row_id.startsWith("{")) {
+          try { meta = JSON.parse(occ.source_row_id); } catch {}
+        }
+        if (meta.property_id === id) {
+          const surviving = await db
+            .select({ id: contract.id })
+            .from(contract)
+            .where(
+              and(
+                eq(contract.occupant_id, occ.id),
+                sql`${contract.deleted_at} IS NULL`,
+                ne(contract.contract_status, "terminated")
+              )
+            )
+            .limit(1);
+
+          if (surviving.length === 0) {
+            await db
+              .update(occupant)
+              .set({ deleted_at: new Date(), occupant_status: "inactive" })
+              .where(eq(occupant.id, occ.id));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Orphaned occupant cascade check:", e);
+    }
+
     // 4. Cascade delete spaces and buildings
     if (bldgIds.length > 0) {
       if (spIds.length > 0) {

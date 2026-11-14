@@ -519,12 +519,16 @@ export default function PropertyHierarchyModal({
     camType: "Per Sq.Ft", // "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals"
     camRate: "",
     camMonthly: "",
-    // Electricity & Utilities Billing
-    electricityBillingType: "sub_metered", // "sub_metered" | "direct_discom" | "included_in_cam" | "fixed_monthly"
+    // Electricity & Utilities Billing (Point 10)
+    electricityBillingType: "sub_metered", // "sub_metered" | "free_24_7" | "free_days_fitout" | "direct_discom" | "fixed_monthly"
     gridRatePerKwh: "11.00",
     dgBackupRatePerKwh: "22.00",
+    freeUtilityDays: "",
     fixedMonthlyUtility: "",
     hvacOperatingHours: "8:00 AM - 8:00 PM (Included in CAM)",
+    hvacStartTime: "08:00",
+    hvacEndTime: "20:00",
+    hasOvertimeHvac: false,
     overtimeHvacRatePerHour: "1500",
     // Parking Allocations (Free vs Paid) - Left blank until detected or filled by user
     carParkingFreeSlots: "",
@@ -540,6 +544,7 @@ export default function PropertyHierarchyModal({
     depositMonths: "6",
     fitoutDays: "0",
     lockInMonths: "12",
+    lockInEndDate: "",
     noticeDays: "90",
     // Escalation
     escalationPct: "5",
@@ -870,8 +875,12 @@ export default function PropertyHierarchyModal({
       electricityBillingType: "sub_metered",
       gridRatePerKwh: "11.00",
       dgBackupRatePerKwh: "22.00",
+      freeUtilityDays: "",
       fixedMonthlyUtility: "",
       hvacOperatingHours: "8:00 AM - 8:00 PM (Included in CAM)",
+      hvacStartTime: "08:00",
+      hvacEndTime: "20:00",
+      hasOvertimeHvac: false,
       overtimeHvacRatePerHour: "1500",
       carParkingFreeSlots: "",
       carParkingPaidSlots: "",
@@ -885,6 +894,7 @@ export default function PropertyHierarchyModal({
       depositMonths: "6",
       fitoutDays: "0",
       lockInMonths: "12",
+      lockInEndDate: "",
       noticeDays: "90",
       escalationPct: "5",
       escalationStartDate: "",
@@ -1502,6 +1512,20 @@ export default function PropertyHierarchyModal({
         return;
       }
     }
+
+    // Strict Portfolio Area Quota Check (Point 1)
+    const effectiveCap = subscribedCapacity > 0 ? subscribedCapacity : 250000;
+    const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+    const projectedTotalArea = currentPortfolioArea + enteredArea;
+    if (projectedTotalArea > effectiveCap) {
+      showToast(
+        `Portfolio Quota Exceeded: Your active plan allows up to ${effectiveCap.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${(projectedTotalArea - effectiveCap).toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
+        "error"
+      );
+      setSubscriptionGateReason("Portfolio Area Quota Exceeded");
+      setSubscriptionGateModalOpen(true);
+      return;
+    }
     setLoading(true);
     try {
       const authHeaders = getClientAuthHeaders();
@@ -1567,6 +1591,7 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
+        clearWizardDraft();
         const effectivePropId: string = data.data?.id || propForm.existingPropId;
         setLastSavedPropName(propForm.propertyName.trim());
         setPropForm((prev) => ({ ...prev, propertyCode: uniqueCodeToUse, existingPropId: effectivePropId }));
@@ -2505,46 +2530,9 @@ export default function PropertyHierarchyModal({
           link: inviteUrl,
         });
 
-        // Auto-provision initial lease contract so tenant immediately appears on Rent Roll Register
-        const resolvedSpaceId = selectedTenantSuites[0] || contractForm.spaceId || (spacesList.length > 0 ? spacesList[0].id : null);
-        if (data.data?.id && resolvedSpaceId) {
-          try {
-            const today = new Date();
-            const startD = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-            const endD = `${today.getFullYear() + 3}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-            const autoCode = `LEAS-${(tenantForm.companyName || effectiveContactName).replace(/[^a-zA-Z0-9]/g, "").slice(0, 5).toUpperCase()}-${Date.now().toString().slice(-4)}`;
-
-            await fetch("/api/contracts", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...authHeaders,
-              },
-              body: JSON.stringify({
-                occupant_id: data.data.id,
-                space_id: resolvedSpaceId,
-                space_ids: selectedTenantSuites.length > 0 ? selectedTenantSuites : [resolvedSpaceId],
-                contract_code: autoCode,
-                start_date: startD,
-                end_date: endD,
-                commencement_date: startD,
-                contract_type: "lease",
-                base_rent_rate: Number(contractForm.monthlyRent) || 65,
-                billing_model: "area",
-                escalation_type: "percentage",
-                escalation_value: 5,
-                has_escalation: true,
-                deposit_amount_inr: 0,
-                lock_in_period_days: 365,
-                notice_period_days: 90,
-              }),
-            });
-          } catch {
-            // Non-blocking auto-provisioning fallback
-          }
-        }
-
-        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled and linked to property! You can fine-tune lease terms below or finish setup.`);
+        // Points 9 & 14: Do NOT auto-create a hidden contract here.
+        // Spaces remain available so the user can define their actual contract terms in Step 5 without false occupancy warnings or conflicts.
+        showToast(`✓ Tenant "${tenantForm.companyName || effectiveContactName}" enrolled successfully! Proceed to define contract terms.`);
         await loadHierarchyDropdowns();
 
         // RR-22: Do NOT mark space occupied here. Spaces only become occupied upon active contract creation.
@@ -7197,6 +7185,11 @@ export default function PropertyHierarchyModal({
                           Occupant / Tenant <span className="text-rose-500">*</span>
                         </label>
                         <div className="flex items-center gap-2">
+                          {contractForm.occupantId && (
+                            <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                              Enrolled Context
+                            </span>
+                          )}
                           {changedFieldKeys.has("occupantName") && (
                             <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
                               Updated
@@ -7224,11 +7217,19 @@ export default function PropertyHierarchyModal({
                           "w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
                         )}
                       >
-                        {tenantsList.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} {t.company && t.company !== t.name ? `(${t.company})` : ""}
-                          </option>
-                        ))}
+                        {(() => {
+                          // Sort enrolled tenant to the very top so the user always sees their active tenant
+                          const sortedTenants = [...tenantsList].sort((a, b) => {
+                            if (a.id === contractForm.occupantId) return -1;
+                            if (b.id === contractForm.occupantId) return 1;
+                            return 0;
+                          });
+                          return sortedTenants.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.id === contractForm.occupantId ? "⭐ [Active Enrolled Tenant] " : ""}{t.name} {t.company && t.company !== t.name ? `(${t.company})` : ""}
+                            </option>
+                          ));
+                        })()}
                         {tenantsList.length === 0 && <option value="">No occupants registered yet</option>}
                       </select>
                     </div>
@@ -7719,19 +7720,20 @@ export default function PropertyHierarchyModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div>
                       <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                        Electricity Billing Method *
+                        Electricity &amp; Utilities Billing Method *
                       </label>
                       <select
                         value={contractForm.electricityBillingType}
                         onChange={(e) =>
                           setContractForm({ ...contractForm, electricityBillingType: e.target.value })
                         }
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-medium outline-none focus:border-teal-600"
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-medium outline-none focus:border-teal-600 cursor-pointer shadow-2xs"
                       >
-                        <option value="sub_metered">⚡ Sub-Metered (Actuals: Check Meter Units)</option>
-                        <option value="direct_discom">🏢 Direct Discom Meter (Tenant pays Board)</option>
+                        <option value="sub_metered">⚡ Paid / Sub-Metered (Actuals: Rate per Unit)</option>
+                        <option value="free_24_7">🆓 24x7 Free / Included in Lease (₹0)</option>
+                        <option value="free_days_fitout">🎁 Free for Selected Days (Fitout Grace Period)</option>
+                        <option value="direct_discom">🏢 Direct Discom Meter (Tenant pays Board directly)</option>
                         <option value="fixed_monthly">💵 Fixed Monthly Utility Fee</option>
-                        <option value="included_in_cam">📦 Included in CAM / Base Rent</option>
                       </select>
                     </div>
 
@@ -7739,7 +7741,7 @@ export default function PropertyHierarchyModal({
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
-                            Grid Tariff (₹/kWh)
+                            Grid Tariff (₹/kWh) <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
@@ -7749,12 +7751,12 @@ export default function PropertyHierarchyModal({
                             onChange={(e) =>
                               setContractForm({ ...contractForm, gridRatePerKwh: e.target.value })
                             }
-                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600 font-bold"
                           />
                         </div>
                         <div>
                           <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
-                            DG Backup (₹/kWh)
+                            DG Backup (₹/kWh) <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="number"
@@ -7764,9 +7766,36 @@ export default function PropertyHierarchyModal({
                             onChange={(e) =>
                               setContractForm({ ...contractForm, dgBackupRatePerKwh: e.target.value })
                             }
-                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
+                            className="w-full px-2 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600 font-bold"
                           />
                         </div>
+                      </div>
+                    )}
+
+                    {contractForm.electricityBillingType === "free_24_7" && (
+                      <div className="flex items-center text-[11px] text-teal-900 bg-teal-50 p-2.5 rounded-xl border border-teal-200">
+                        ⚡ <strong>24x7 Free Electricity:</strong> Utilities are completely inclusive (₹0 extra charge) for the tenant around the clock.
+                      </div>
+                    )}
+
+                    {contractForm.electricityBillingType === "free_days_fitout" && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                          Free Utility Grace Duration (Days) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 45 or 60 (Days)"
+                          value={contractForm.freeUtilityDays || contractForm.fitoutDays}
+                          onChange={(e) =>
+                            setContractForm({ ...contractForm, freeUtilityDays: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-teal-300 font-mono text-xs outline-none focus:border-teal-600 font-bold"
+                        />
+                        <span className="text-[10px] text-teal-700 block mt-0.5">
+                          🎁 Utilities free for first {contractForm.freeUtilityDays || contractForm.fitoutDays || "N"} days. Standard sub-metered billing begins automatically afterwards.
+                        </span>
                       </div>
                     )}
 
@@ -7792,44 +7821,70 @@ export default function PropertyHierarchyModal({
                         Tenant has independent Discom connection / consumer account number. Billed directly by utility provider.
                       </div>
                     )}
-
-                    {contractForm.electricityBillingType === "included_in_cam" && (
-                      <div className="flex items-center text-[11px] text-teal-800 bg-teal-50 p-2 rounded-xl border border-teal-200">
-                        Electricity &amp; normal HVAC running are bundled inside Common Area Maintenance (CAM).
-                      </div>
-                    )}
                   </div>
 
-                  {/* HVAC Operating Hours & Overtime Rate */}
-                  <div className="pt-2 border-t border-amber-200/60 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* HVAC Operating Hours & Overtime Rate (Point 10) */}
+                  <div className="pt-2 border-t border-amber-200/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                     <div>
                       <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
-                        Standard HVAC Operating Hours
+                        Standard HVAC Operating Window
                       </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 8:00 AM - 8:00 PM (Mon-Sat)"
-                        value={contractForm.hvacOperatingHours}
-                        onChange={(e) =>
-                          setContractForm({ ...contractForm, hvacOperatingHours: e.target.value })
-                        }
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-teal-600"
-                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="time"
+                          value={contractForm.hvacStartTime || "08:00"}
+                          onChange={(e) =>
+                            setContractForm({ ...contractForm, hvacStartTime: e.target.value })
+                          }
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs outline-none"
+                        />
+                        <span className="text-slate-400 font-bold text-xs">to</span>
+                        <input
+                          type="time"
+                          value={contractForm.hvacEndTime || "20:00"}
+                          onChange={(e) =>
+                            setContractForm({ ...contractForm, hvacEndTime: e.target.value })
+                          }
+                          className="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs outline-none"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
-                        Overtime HVAC Rate (₹/Hour)
+                        Overtime HVAC Billing
                       </label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 1500"
-                        value={contractForm.overtimeHvacRatePerHour}
-                        onChange={(e) =>
-                          setContractForm({ ...contractForm, overtimeHvacRatePerHour: e.target.value })
-                        }
-                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600"
-                      />
+                      <label className="flex items-center gap-1.5 mt-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={contractForm.hasOvertimeHvac || Number(contractForm.overtimeHvacRatePerHour) > 0}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              hasOvertimeHvac: e.target.checked,
+                              overtimeHvacRatePerHour: e.target.checked ? (contractForm.overtimeHvacRatePerHour || "1500") : "0",
+                            })
+                          }
+                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                        <span className="text-xs font-semibold text-slate-700">Bill After-Hours Usage</span>
+                      </label>
                     </div>
+                    {(contractForm.hasOvertimeHvac || Number(contractForm.overtimeHvacRatePerHour) > 0) && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                          After-Hours Rate (₹/Hour or TR-Hr)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 1500"
+                          value={contractForm.overtimeHvacRatePerHour}
+                          onChange={(e) =>
+                            setContractForm({ ...contractForm, overtimeHvacRatePerHour: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600 font-bold"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -8083,18 +8138,26 @@ export default function PropertyHierarchyModal({
                     <input
                       type="number"
                       min="0"
-                      placeholder="e.g. 30 (Days)"
+                      placeholder="e.g. 40, 60, or 80 (Days)"
                       value={contractForm.fitoutDays}
                       onChange={(e) => setContractForm({ ...contractForm, fitoutDays: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
                     />
                     {contractForm.startDate && Number(contractForm.fitoutDays) > 0 && (() => {
-                      const d = new Date(contractForm.startDate);
-                      d.setDate(d.getDate() + Number(contractForm.fitoutDays));
+                      const startD = new Date(contractForm.startDate);
+                      const rcd = new Date(startD);
+                      rcd.setDate(rcd.getDate() + Number(contractForm.fitoutDays));
+                      const rcdStr = rcd.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
                       return (
-                        <p className="text-[11px] text-teal-700 font-medium mt-1">
-                          Rent starts: <strong className="font-bold">{d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong> (after {contractForm.fitoutDays}d fit-out)
-                        </p>
+                        <div className="mt-2 p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 text-[11px] space-y-1 animate-in fade-in">
+                          <div className="flex items-center justify-between">
+                            <span>🏢 <strong>Rent Commencement Date (RCD):</strong></span>
+                            <span className="font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">{rcdStr}</span>
+                          </div>
+                          <p className="text-slate-600">
+                            <strong>Payment Impact:</strong> Tenant pays <strong>₹0 Base Rent</strong> for the first {contractForm.fitoutDays} days (during fit-out). Regular base rent invoicing begins strictly on <strong>{rcdStr}</strong>.
+                          </p>
+                        </div>
                       );
                     })()}
                   </div>
@@ -8177,7 +8240,7 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* Lock-in Period */}
+                {/* Lock-in Period (Auto-Calculated bidirectionally) (Point 12) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-slate-700">Lock-in Period (Months)</label>
@@ -8190,25 +8253,36 @@ export default function PropertyHierarchyModal({
                   <input
                     type="number"
                     min="0"
-                    placeholder="e.g. 12"
+                    placeholder="e.g. 12 or 24"
                     value={contractForm.lockInMonths}
                     onClick={() => clearFieldHighlight("lockInMonths")}
                     onFocus={() => clearFieldHighlight("lockInMonths")}
                     onChange={(e) => {
                       clearFieldHighlight("lockInMonths");
-                      setContractForm({ ...contractForm, lockInMonths: e.target.value });
+                      const m = e.target.value;
+                      setContractForm((prev) => {
+                        const updated = { ...prev, lockInMonths: m };
+                        if (prev.startDate && Number(m) > 0) {
+                          const baseD = new Date(prev.startDate);
+                          baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                          baseD.setMonth(baseD.getMonth() + Number(m));
+                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                        }
+                        return updated;
+                      });
                     }}
                     className={getHighlightClass(
                       "lockInMonths",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
                     )}
                   />
                   {contractForm.startDate && Number(contractForm.lockInMonths) > 0 && (() => {
-                    const d = new Date(contractForm.startDate);
-                    d.setMonth(d.getMonth() + Number(contractForm.lockInMonths));
+                    const baseD = new Date(contractForm.startDate);
+                    baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
+                    baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
                     return (
                       <p className="text-[11px] text-teal-700 font-medium mt-1">
-                        Lock-in until: <strong className="font-bold">{d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
+                        🔒 Lock-in until: <strong className="font-bold">{baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
                       </p>
                     );
                   })()}
@@ -8230,61 +8304,108 @@ export default function PropertyHierarchyModal({
                 </div>
               </div>
 
-              {/* ──── SECTION 6: ESCALATION TERMS ──── */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                {/* Escalation % */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">Escalation %</label>
-                    {changedFieldKeys.has("escalationPct") && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                        Updated
-                      </span>
-                    )}
+              {/* ──── SECTION 6: ESCALATION TERMS (Point 13) ──── */}
+              <div className="p-3.5 rounded-2xl bg-teal-50/50 border border-teal-200/80 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between border-b border-teal-200 pb-1.5">
+                  <span className="font-bold text-teal-950">📈 Rent Step Escalation Schedule</span>
+                  <span className="text-[10px] text-teal-800 font-medium">Auto-applied in batch billing runs</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Escalation % */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700">Escalation Rate (%)</label>
+                      {changedFieldKeys.has("escalationPct") && (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                          Updated
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="e.g. 5"
+                      value={contractForm.escalationPct}
+                      onClick={() => clearFieldHighlight("escalationPct")}
+                      onFocus={() => clearFieldHighlight("escalationPct")}
+                      onChange={(e) => {
+                        clearFieldHighlight("escalationPct");
+                        setContractForm({ ...contractForm, escalationPct: e.target.value });
+                      }}
+                      className={getHighlightClass(
+                        "escalationPct",
+                        "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
+                      )}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g. 5"
-                    value={contractForm.escalationPct}
-                    onClick={() => clearFieldHighlight("escalationPct")}
-                    onFocus={() => clearFieldHighlight("escalationPct")}
-                    onChange={(e) => {
-                      clearFieldHighlight("escalationPct");
-                      setContractForm({ ...contractForm, escalationPct: e.target.value });
-                    }}
-                    className={getHighlightClass(
-                      "escalationPct",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
-                    )}
-                  />
+
+                  {/* Escalation Frequency */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Escalation Frequency</label>
+                    <select
+                      value={contractForm.escalationFrequency}
+                      onChange={(e) => setContractForm({ ...contractForm, escalationFrequency: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer bg-white"
+                    >
+                      <option value="Annual">Annual (Every 12 Months)</option>
+                      <option value="Biannual">Biannual (Every 24 Months)</option>
+                      <option value="Triennial">Triennial (Every 36 Months)</option>
+                      <option value="Quarterly">Quarterly (Every 3 Months)</option>
+                    </select>
+                  </div>
+
+                  {/* Escalation Start Date */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">First Escalation Date</label>
+                    <input
+                      type="date"
+                      value={(() => {
+                        if (contractForm.escalationStartDate) return contractForm.escalationStartDate;
+                        if (contractForm.startDate) {
+                          const base = new Date(contractForm.startDate);
+                          base.setDate(base.getDate() + (Number(contractForm.fitoutDays) || 0));
+                          const stepMonths =
+                            contractForm.escalationFrequency === "Quarterly" ? 3 :
+                            contractForm.escalationFrequency === "Biannual" ? 24 :
+                            contractForm.escalationFrequency === "Triennial" ? 36 : 12;
+                          base.setMonth(base.getMonth() + stepMonths);
+                          return base.toISOString().slice(0, 10);
+                        }
+                        return "";
+                      })()}
+                      onChange={(e) => setContractForm({ ...contractForm, escalationStartDate: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
+                    />
+                  </div>
                 </div>
 
-                {/* Escalation Frequency */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation Frequency</label>
-                  <select
-                    value={contractForm.escalationFrequency}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationFrequency: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="Annual">Annual (Every 12 Months)</option>
-                    <option value="Biannual">Biannual (Every 24 Months)</option>
-                    <option value="Triennial">Triennial (Every 36 Months)</option>
-                    <option value="Quarterly">Quarterly (Every 3 Months)</option>
-                  </select>
-                </div>
+                {/* Escalation Schedule Preview Callout */}
+                {contractForm.startDate && Number(contractForm.escalationPct) > 0 && (() => {
+                  const base = new Date(contractForm.startDate);
+                  base.setDate(base.getDate() + (Number(contractForm.fitoutDays) || 0));
+                  const stepMonths =
+                    contractForm.escalationFrequency === "Quarterly" ? 3 :
+                    contractForm.escalationFrequency === "Biannual" ? 24 :
+                    contractForm.escalationFrequency === "Triennial" ? 36 : 12;
+                  base.setMonth(base.getMonth() + stepMonths);
+                  const firstEscStr = base.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+                  const curRent = Number(contractForm.monthlyRent) || 0;
+                  const escPct = Number(contractForm.escalationPct) || 5;
+                  const steppedRent = curRent > 0 ? Math.round(curRent * (1 + escPct / 100)) : 0;
 
-                {/* Escalation Start Date */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation Start Date</label>
-                  <input
-                    type="date"
-                    value={contractForm.escalationStartDate}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationStartDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
+                  return (
+                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 text-teal-950 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span>📅 <strong>First Escalation Milestone:</strong></span>
+                        <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{firstEscStr}</span>
+                      </div>
+                      <p className="text-slate-600">
+                        <strong>Billing Impact:</strong> On <strong>{firstEscStr}</strong>, base rent will automatically step up by <strong>{escPct}%</strong>{steppedRent > 0 ? ` (from ₹${curRent.toLocaleString()} to ₹${steppedRent.toLocaleString()}/month)` : ""}. OfficeX batch billing will automatically apply this stepped rate.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ──── SECTION 7: STATUTORY & INVOICING TERMS ──── */}

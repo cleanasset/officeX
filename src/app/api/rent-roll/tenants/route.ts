@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { occupant, contract, space, building, property, contractCharge } from "@/db/schema";
+import { occupant, contract, space, building, property, contractCharge, organization, billingEntity } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
@@ -225,15 +225,108 @@ export async function POST(req: Request) {
     const name = body.tenant_name || body.occupant_name || "New Commercial Tenant";
     const panToTest = (body.pan || body.pan_number || "").trim().toUpperCase();
     const gstToTest = (body.gstin || body.gst_number || "").trim().toUpperCase();
+    const tenantEmail = (body.email || "").trim().toLowerCase();
+    const userEmail = (auth.userEmail || "").trim().toLowerCase();
 
-    // RR-21: Check for duplicate tenant by PAN or GSTIN within the organization
+    // 1. Anti-Self-Leasing Safeguards (Point 5: Landlord cannot lease to themselves)
+    if (tenantEmail && userEmail && tenantEmail === userEmail) {
+      return NextResponse.json(
+        {
+          error: `Self-Leasing Restriction: Tenant contact email (${tenantEmail}) cannot match the landlord account email. Commercial leases require an independent counterparty tenant.`
+        },
+        { status: 422 }
+      );
+    }
+
     if (panToTest || gstToTest) {
+      // Check landlord organization's registered tax credentials
+      try {
+        const [landlordOrg] = await db
+          .select()
+          .from(organization)
+          .where(eq(organization.id, orgId))
+          .limit(1);
+
+        if (landlordOrg) {
+          let landlordMeta: any = {};
+          if (landlordOrg.source_row_id && typeof landlordOrg.source_row_id === "string" && landlordOrg.source_row_id.startsWith("{")) {
+            try { landlordMeta = JSON.parse(landlordOrg.source_row_id); } catch {}
+          }
+          const landlordPan = (landlordMeta.pan || "").trim().toUpperCase();
+          const landlordGst = (landlordMeta.gstin || "").trim().toUpperCase();
+
+          if (panToTest && landlordPan && panToTest === landlordPan) {
+            return NextResponse.json(
+              {
+                error: `Self-Leasing Restriction: Tenant PAN (${panToTest}) matches the landlord organization's registered PAN. A property owner cannot execute a lease with their own tax entity.`
+              },
+              { status: 422 }
+            );
+          }
+
+          if (gstToTest && landlordGst && gstToTest === landlordGst) {
+            return NextResponse.json(
+              {
+                error: `Self-Leasing Restriction: Tenant GSTIN (${gstToTest}) matches the landlord organization's registered GSTIN. Commercial leases require an independent legal counterparty.`
+              },
+              { status: 422 }
+            );
+          }
+        }
+
+        // Check landlord billing entities
+        if (gstToTest) {
+          const [ownBillingGst] = await db
+            .select({ id: billingEntity.id, name: billingEntity.entity_name })
+            .from(billingEntity)
+            .where(
+              and(
+                eq(billingEntity.org_id, orgId),
+                eq(billingEntity.gst_number, gstToTest),
+                sql`${billingEntity.deleted_at} IS NULL`
+              )
+            )
+            .limit(1);
+
+          if (ownBillingGst) {
+            return NextResponse.json(
+              {
+                error: `Self-Leasing Restriction: Tenant GSTIN (${gstToTest}) matches landlord billing entity '${ownBillingGst.name}'. A landlord cannot execute a commercial lease with their own billing entity.`
+              },
+              { status: 422 }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Landlord self-lease check notice:", err);
+      }
+
+      // 2. Embedded PAN in GSTIN Validation (Point 4)
+      if (panToTest && gstToTest && gstToTest.length >= 12) {
+        const embeddedPan = gstToTest.slice(2, 12);
+        if (embeddedPan !== panToTest) {
+          return NextResponse.json(
+            {
+              error: `Corporate GSTIN and PAN mismatch: Characters 3–12 of GSTIN (${embeddedPan}) must match the entered PAN (${panToTest}).`
+            },
+            { status: 422 }
+          );
+        }
+      }
+
+      // 3. Duplicate tenant check with precise field attribution (Point 4)
       const dupConditions = [];
       if (panToTest) dupConditions.push(eq(occupant.pan_number, panToTest));
       if (gstToTest) dupConditions.push(eq(occupant.gst_number, gstToTest));
 
       const existingDups = await db
-        .select({ id: occupant.id, name: occupant.occupant_name, code: occupant.occupant_code })
+        .select({
+          id: occupant.id,
+          name: occupant.occupant_name,
+          code: occupant.occupant_code,
+          pan: occupant.pan_number,
+          gst: occupant.gst_number,
+        })
         .from(occupant)
         .where(
           and(
@@ -244,10 +337,20 @@ export async function POST(req: Request) {
         );
 
       if (existingDups.length > 0) {
+        const dup = existingDups[0];
+        const collidedOnGst = gstToTest && dup.gst === gstToTest;
+        const collidedOnPan = panToTest && dup.pan === panToTest;
+        const collisionLabel =
+          collidedOnGst && collidedOnPan
+            ? `PAN (${panToTest}) & GSTIN (${gstToTest})`
+            : collidedOnGst
+            ? `GSTIN (${gstToTest})`
+            : `PAN (${panToTest})`;
+
         return NextResponse.json(
           {
-            error: `A tenant with the same ${panToTest ? `PAN (${panToTest})` : `GSTIN (${gstToTest})`} already exists: '${existingDups[0].name}' (${existingDups[0].code}). Duplicate corporate tax identifiers are not permitted.`,
-            existingTenant: existingDups[0],
+            error: `A tenant with the same ${collisionLabel} already exists: '${dup.name}' (${dup.code}). Duplicate corporate tax identifiers are not permitted.`,
+            existingTenant: dup,
           },
           { status: 409 }
         );
