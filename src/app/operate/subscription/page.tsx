@@ -473,12 +473,22 @@ export default function SubscriptionAndQuotaPage() {
             <p className="text-[11px] text-slate-400 mt-0.5">
               When you onboard properties in the Property Registry, their area automatically tallies against this quota.
             </p>
-            <Link
-              href="/properties/registry"
-              className="mt-3 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c6e63] transition"
-            >
-              <Plus size={13} /> Add Property
-            </Link>
+            {remainingSqft <= 0 ? (
+              <button
+                type="button"
+                onClick={() => setUpgradeModalOpen(true)}
+                className="mt-3 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs hover:bg-teal-700 transition cursor-pointer"
+              >
+                <Sparkles size={13} /> Upgrade Plan to Add Properties
+              </button>
+            ) : (
+              <Link
+                href="/operate/properties?action=add_property"
+                className="mt-3 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c6e63] transition"
+              >
+                <Plus size={13} /> Add Property
+              </Link>
+            )}
           </div>
         )}
       </div>

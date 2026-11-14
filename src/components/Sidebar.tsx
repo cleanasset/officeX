@@ -46,7 +46,12 @@ import {
   Building2,
   Coins,
   Store,
-  CheckCircle2
+  CheckCircle2,
+  Wrench,
+  FileCheck2,
+  Laptop,
+  QrCode,
+  MessageSquare
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -352,20 +357,77 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Vendor Commission & Rates", href: "/admin?tab=pricing&sub=fm", tabKey: "rate_cards", icon: Coins }
       ]
     },
-    // 4. All SaaS Modules
+    // 4. Individual Dedicated SaaS Modules + Master Suite
     {
-      name: "SaaS Asset Modules",
-      href: "/admin?tab=saas",
-      icon: Building,
+      name: "All SaaS Suite (Master)",
+      href: "/admin?tab=saas&module=package",
+      icon: Layers,
       section: "SaaS Modules",
       subItems: [
-        { name: "All SaaS Overview & Packages", href: "/admin?tab=saas&sub=overview", tabKey: "overview", icon: Layers },
-        { name: "Properties & Verification", href: "/admin?tab=saas&sub=properties", tabKey: "properties", icon: Building },
-        { name: "Active Lease Contracts", href: "/admin?tab=saas&sub=contracts", tabKey: "contracts", icon: FileText },
-        { name: "Tenant Directory & KYC", href: "/admin?tab=saas&sub=tenants", tabKey: "tenants", icon: Users },
-        { name: "Property Delegations", href: "/admin?tab=saas&sub=delegations", tabKey: "delegations", icon: Briefcase },
-        { name: "Invoices & Billing Audit", href: "/admin?tab=saas&sub=invoices", tabKey: "invoices", icon: DollarSign },
-        { name: "Enterprise Organizations & Quotas", href: "/admin?tab=saas&sub=orgs", tabKey: "orgs", icon: ShieldCheck }
+        { name: "All SaaS Overview & Packages", href: "/admin?tab=saas&module=package&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "Enterprise Organizations & Quotas", href: "/admin?tab=saas&module=package&sub=orgs", tabKey: "orgs", icon: ShieldCheck },
+        { name: "Multi-SaaS Pricing Matrix", href: "/admin?tab=pricing&sub=saas", tabKey: "pricing", icon: Coins },
+        { name: "Global Invoices & GTV Billing", href: "/admin?tab=saas&module=package&sub=invoices", tabKey: "invoices", icon: DollarSign }
+      ]
+    },
+    {
+      name: "Rent Roll & Leases (SaaS)",
+      href: "/admin?tab=saas&module=rent_roll",
+      icon: Building,
+      subItems: [
+        { name: "Rent Roll Overview", href: "/admin?tab=saas&module=rent_roll&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "Properties & Demarcated Units", href: "/admin?tab=saas&module=rent_roll&sub=properties", tabKey: "properties", icon: Building },
+        { name: "Active Lease Contracts", href: "/admin?tab=saas&module=rent_roll&sub=contracts", tabKey: "contracts", icon: FileText },
+        { name: "Tenant Directory & KYC", href: "/admin?tab=saas&module=rent_roll&sub=tenants", tabKey: "tenants", icon: Users },
+        { name: "Property Delegations", href: "/admin?tab=saas&module=rent_roll&sub=delegations", tabKey: "delegations", icon: Briefcase },
+        { name: "Pending Property Deletions", href: "/admin?tab=saas&module=rent_roll&sub=pending_deletions", tabKey: "pending_deletions", icon: AlertTriangle },
+        { name: "Invoices & Billing Reconciliation", href: "/admin?tab=saas&module=rent_roll&sub=invoices", tabKey: "invoices", icon: DollarSign }
+      ]
+    },
+    {
+      name: "52-Week CAFM & PPM (SaaS)",
+      href: "/admin?tab=saas&module=cafm",
+      icon: Wrench,
+      subItems: [
+        { name: "CAFM Command Overview", href: "/admin?tab=saas&module=cafm&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "52-Week PPM Schedule", href: "/admin?tab=saas&module=cafm&sub=cafm_ppm", tabKey: "cafm_ppm", icon: Calendar },
+        { name: "Equipment Passports & QR Codes", href: "/admin?tab=saas&module=cafm&sub=cafm_assets", tabKey: "cafm_assets", icon: QrCode },
+        { name: "Breakdown Tickets & MTTR", href: "/admin?tab=saas&module=cafm&sub=cafm_breakdowns", tabKey: "cafm_breakdowns", icon: Wrench },
+        { name: "Vendor AMC & SLA Contracts", href: "/admin?tab=saas&module=cafm&sub=cafm_amc", tabKey: "cafm_amc", icon: ShieldCheck }
+      ]
+    },
+    {
+      name: "Visitor Flow & Security (SaaS)",
+      href: "/admin?tab=saas&module=visitor",
+      icon: ShieldCheck,
+      subItems: [
+        { name: "Visitor Security Overview", href: "/admin?tab=saas&module=visitor&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "Visitor Passes & Check-in", href: "/admin?tab=saas&module=visitor&sub=visitor_logs", tabKey: "visitor_logs", icon: Users },
+        { name: "Lobby Turnstile Relays", href: "/admin?tab=saas&module=visitor&sub=turnstiles", tabKey: "turnstiles", icon: Zap },
+        { name: "Security Guard Gate Console", href: "/admin?tab=saas&module=visitor&sub=guard_console", tabKey: "guard_console", icon: Laptop },
+        { name: "Emergency Evacuation Roster", href: "/admin?tab=saas&module=visitor&sub=evacuation", tabKey: "evacuation", icon: AlertTriangle }
+      ]
+    },
+    {
+      name: "Statutory Compliance (SaaS)",
+      href: "/admin?tab=saas&module=compliance",
+      icon: FileCheck2,
+      subItems: [
+        { name: "Compliance Health Overview", href: "/admin?tab=saas&module=compliance&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "48 Commercial Licenses & NOCs", href: "/admin?tab=saas&module=compliance&sub=compliance_licenses", tabKey: "compliance_licenses", icon: FileCheck2 },
+        { name: "Expiry Alerts & Renewals", href: "/admin?tab=saas&module=compliance&sub=compliance_renewals", tabKey: "compliance_renewals", icon: Clock },
+        { name: "Auditor Certificate Vault", href: "/admin?tab=saas&module=compliance&sub=compliance_vault", tabKey: "compliance_vault", icon: ShieldCheck }
+      ]
+    },
+    {
+      name: "Lease CRM & Stacking (SaaS)",
+      href: "/admin?tab=saas&module=crm",
+      icon: Users,
+      subItems: [
+        { name: "Leasing CRM Overview", href: "/admin?tab=saas&module=crm&sub=overview", tabKey: "overview", icon: Layers },
+        { name: "Spatial Stacking Plan & Vacancy", href: "/admin?tab=saas&module=crm&sub=crm_stacking", tabKey: "crm_stacking", icon: Layers },
+        { name: "Tenant QR Helpdesk & Tickets", href: "/admin?tab=saas&module=crm&sub=crm_helpdesk", tabKey: "crm_helpdesk", icon: MessageSquare },
+        { name: "Amenity & Room Bookings", href: "/admin?tab=saas&module=crm&sub=crm_amenities", tabKey: "crm_amenities", icon: Calendar }
       ]
     },
     // 5. All Settings
@@ -704,7 +766,10 @@ function SidebarInner() {
           {activeMenu.map((item, idx) => {
             const hasSubItems = Boolean(item.subItems && item.subItems.length > 0);
             const itemPath = item.href.split("?")[0];
-            const itemTab = new URLSearchParams(item.href.split("?")[1] || "").get("tab");
+            const itemQuery = item.href.split("?")[1] || "";
+            const itemParams = new URLSearchParams(itemQuery);
+            const itemTab = itemParams.get("tab");
+            const itemModule = itemParams.get("module");
 
             const isSubItemActive = Boolean(item.subItems?.some((sub) => {
               const subBase = sub.href.split("?")[0];
@@ -712,10 +777,15 @@ function SidebarInner() {
               const subParams = new URLSearchParams(subQuery);
               const subTab = subParams.get("tab");
               const subSub = subParams.get("sub");
+              const subModule = subParams.get("module");
               if (pathname !== subBase) return false;
               if (subTab) {
                 const curTab = searchParams.get("tab") || (pathname === "/admin" ? "overview" : "");
                 if (curTab !== subTab) return false;
+              }
+              if (subModule) {
+                const curModule = searchParams.get("module") || (pathname === "/admin" && searchParams.get("tab") === "saas" ? "package" : "");
+                if (curModule !== subModule) return false;
               }
               if (subSub) {
                 const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "overview") ? "" : "");
@@ -725,11 +795,10 @@ function SidebarInner() {
             }));
 
             const isItemActive = hasSubItems
-              ? (pathname === itemPath && (
-                  !itemTab || 
-                  searchParams.get("tab") === itemTab || 
-                  (!searchParams.get("tab") && (itemTab === "overview" || !itemTab) && pathname === "/admin")
-                )) || isSubItemActive
+              ? isSubItemActive || (pathname === itemPath && (
+                  (!itemTab && pathname === "/admin") ||
+                  (searchParams.get("tab") === itemTab && (!itemModule || searchParams.get("module") === itemModule || (!searchParams.get("module") && itemModule === "package")))
+                ))
               : (pathname === itemPath && (
                   !itemTab || 
                   searchParams.get("tab") === itemTab ||
@@ -823,6 +892,7 @@ function SidebarInner() {
                           const subParams = new URLSearchParams(subQuery);
                           const subTab = subParams.get("tab");
                           const subSub = subParams.get("sub");
+                          const subModule = subParams.get("module");
 
                           let isSubActive = pathname === subPath;
                           if (pathname === "/properties/rent-roll") {
@@ -836,6 +906,10 @@ function SidebarInner() {
                             if (subTab) {
                               const curTab = searchParams.get("tab") || (pathname === "/admin" ? "marketplace" : "");
                               if (curTab !== subTab) isSubActive = false;
+                            }
+                            if (subModule) {
+                              const curModule = searchParams.get("module") || (pathname === "/admin" && searchParams.get("tab") === "saas" ? "package" : "");
+                              if (curModule !== subModule) isSubActive = false;
                             }
                             if (subSub) {
                               const curSub = searchParams.get("sub") || (pathname === "/admin" && (!searchParams.get("tab") || searchParams.get("tab") === "marketplace") ? "listings" : "");

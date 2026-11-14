@@ -14,7 +14,8 @@ import {
   Users, Layers, Zap, Briefcase, RefreshCw, Lock, Unlock, Edit3,
   SlidersHorizontal, Download, Plus, CheckCircle2, ChevronLeft,
   Database, Table, Coins, Save, Trash2, Copy, FileJson, Info,
-  Sliders, ArrowUpDown, CreditCard
+  Sliders, ArrowUpDown, CreditCard,
+  Calendar, QrCode, Wrench, FileCheck2, Laptop, MessageSquare
 } from "lucide-react";
 
 function SuperAdminDashboardContent() {
@@ -45,7 +46,12 @@ function SuperAdminDashboardContent() {
       setActiveTab(tabParam as any);
     }
 
-    if (subParam && ["overview", "properties", "contracts", "tenants", "delegations", "invoices", "orgs"].includes(subParam)) {
+    const moduleParam = searchParams.get("module");
+    if (moduleParam && ["package", "rent_roll", "marketplace", "cafm", "visitor", "compliance", "crm"].includes(moduleParam)) {
+      setSelectedSaasModule(moduleParam as any);
+    }
+
+    if (subParam) {
       setSaasSubTab(subParam as any);
       if (!tabParam) setActiveTab("saas");
     }
@@ -147,8 +153,33 @@ function SuperAdminDashboardContent() {
   // =========================================================================
   // TAB 7: SAAS PORTFOLIOS STATE
   // =========================================================================
-  const [saasSubTab, setSaasSubTab] = useState<"overview" | "properties" | "pending_deletions" | "contracts" | "tenants" | "delegations" | "invoices" | "orgs">("overview");
-  const [selectedSaasModule, setSelectedSaasModule] = useState<"package" | "rent_roll" | "marketplace" | "cafm" | "visitor">("package");
+  const [saasSubTab, setSaasSubTab] = useState<
+    | "overview"
+    | "properties"
+    | "pending_deletions"
+    | "contracts"
+    | "tenants"
+    | "delegations"
+    | "invoices"
+    | "orgs"
+    | "cafm_ppm"
+    | "cafm_assets"
+    | "cafm_breakdowns"
+    | "cafm_amc"
+    | "visitor_logs"
+    | "turnstiles"
+    | "guard_console"
+    | "evacuation"
+    | "compliance_licenses"
+    | "compliance_renewals"
+    | "compliance_vault"
+    | "crm_stacking"
+    | "crm_helpdesk"
+    | "crm_amenities"
+  >("overview");
+  const [selectedSaasModule, setSelectedSaasModule] = useState<
+    "package" | "rent_roll" | "marketplace" | "cafm" | "visitor" | "compliance" | "crm"
+  >("package");
   const [userFilterRole, setUserFilterRole] = useState<string>("all");
   const [inspectingUser, setInspectingUser] = useState<any | null>(null);
   const [inspectingTargetEmail, setInspectingTargetEmail] = useState<any | null>(null);
@@ -2278,14 +2309,20 @@ function SuperAdminDashboardContent() {
               <span className="font-bold text-slate-700">Module Scope:</span>
               <select
                 value={selectedSaasModule}
-                onChange={(e) => setSelectedSaasModule(e.target.value as any)}
+                onChange={(e) => {
+                  const newMod = e.target.value as any;
+                  setSelectedSaasModule(newMod);
+                  setSaasSubTab("overview");
+                }}
                 className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
-                <option value="package">📦 Master Enterprise Institutional Package (All 5 SaaS Included)</option>
+                <option value="package">📦 Master Enterprise Institutional Package (All SaaS Suites Included)</option>
                 <option value="rent_roll">🏢 Standalone Rent Roll &amp; Lease-to-Cash SaaS</option>
-                <option value="marketplace">🌐 Commercial Space &amp; Coworking Marketplace SaaS</option>
                 <option value="cafm">⚡ 52-Week CAFM &amp; Asset Maintenance SaaS</option>
                 <option value="visitor">🛡️ Visitor Kiosks &amp; Lobby Security Compliance SaaS</option>
+                <option value="compliance">📜 Statutory Compliance &amp; Audit Vault SaaS</option>
+                <option value="crm">📊 Commercial Lease CRM &amp; Stacking SaaS</option>
+                <option value="marketplace">🌐 Commercial Space &amp; Coworking Marketplace SaaS</option>
               </select>
             </div>
 
@@ -2301,43 +2338,86 @@ function SuperAdminDashboardContent() {
 
           {/* SaaS Sub-Tab Navigation Switcher */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-100 text-xs font-bold scrollbar-none">
-            {[
-              { id: "overview", label: "Master Suite & Packages", icon: Layers },
-              { id: "properties", label: "Properties & Verification", icon: Building2 },
-              {
-                id: "pending_deletions",
-                label: "Deletion & Security Approvals",
-                icon: AlertTriangle,
-              },
-              { id: "contracts", label: "Active Lease Contracts", icon: FileText },
-              { id: "tenants", label: "Tenant Directory & KYC", icon: Users },
-              { id: "delegations", label: "Property Delegations", icon: Briefcase },
-              { id: "invoices", label: "Invoices & Billing Audit", icon: DollarSign },
-              { id: "orgs", label: "Organizations & Quotas", icon: ShieldCheck },
-            ].map((tab) => {
-              const TabIcon = tab.icon;
-              const isActive = saasSubTab === tab.id;
-              const pendingCount = tab.id === "pending_deletions" ? saasProperties.filter((p) => p.pendingDeletion).length : 0;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setSaasSubTab(tab.id as any)}
-                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                    isActive
-                      ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                  }`}
-                >
-                  <TabIcon size={13} />
-                  <span>{tab.label}</span>
-                  {pendingCount > 0 && (
-                    <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {(() => {
+              let moduleTabs: Array<{ id: any; label: string; icon: any }> = [];
+              if (selectedSaasModule === "rent_roll") {
+                moduleTabs = [
+                  { id: "overview", label: "Rent Roll Overview", icon: Layers },
+                  { id: "properties", label: "Properties & Floor Demarcation", icon: Building2 },
+                  { id: "pending_deletions", label: "Deletion & Security Approvals", icon: AlertTriangle },
+                  { id: "contracts", label: "Active Lease Contracts", icon: FileText },
+                  { id: "tenants", label: "Tenant Directory & KYC", icon: Users },
+                  { id: "delegations", label: "Property Delegations", icon: Briefcase },
+                  { id: "invoices", label: "Rent Invoices & Billing", icon: DollarSign },
+                ];
+              } else if (selectedSaasModule === "cafm") {
+                moduleTabs = [
+                  { id: "overview", label: "CAFM Operations Overview", icon: Layers },
+                  { id: "cafm_ppm", label: "52-Week PPM Schedule", icon: Calendar },
+                  { id: "cafm_assets", label: "Equipment Passports & QR", icon: QrCode },
+                  { id: "cafm_breakdowns", label: "Breakdown Tickets & MTTR", icon: Wrench },
+                  { id: "cafm_amc", label: "Vendor AMC & SLA Contracts", icon: ShieldCheck },
+                ];
+              } else if (selectedSaasModule === "visitor") {
+                moduleTabs = [
+                  { id: "overview", label: "Visitor Security Overview", icon: Layers },
+                  { id: "visitor_logs", label: "Passes & Visitor Logs", icon: Users },
+                  { id: "turnstiles", label: "Lobby Turnstiles & Relays", icon: Zap },
+                  { id: "guard_console", label: "Security Guard Gate Console", icon: Laptop },
+                  { id: "evacuation", label: "Emergency Evacuation Roster", icon: AlertTriangle },
+                ];
+              } else if (selectedSaasModule === "compliance") {
+                moduleTabs = [
+                  { id: "overview", label: "Compliance Health Overview", icon: Layers },
+                  { id: "compliance_licenses", label: "48 Commercial Licenses & NOCs", icon: FileCheck2 },
+                  { id: "compliance_renewals", label: "Expiry Alerts & Renewals", icon: Clock },
+                  { id: "compliance_vault", label: "Auditor Certificate Vault", icon: ShieldCheck },
+                ];
+              } else if (selectedSaasModule === "crm") {
+                moduleTabs = [
+                  { id: "overview", label: "Lease CRM Overview", icon: Layers },
+                  { id: "crm_stacking", label: "Spatial Stacking Plan & Vacancy", icon: Layers },
+                  { id: "crm_helpdesk", label: "Tenant QR Helpdesk", icon: MessageSquare },
+                  { id: "crm_amenities", label: "Amenity & Room Bookings", icon: Calendar },
+                ];
+              } else {
+                moduleTabs = [
+                  { id: "overview", label: "Master Suite & Packages", icon: Layers },
+                  { id: "properties", label: "Properties & Verification", icon: Building2 },
+                  { id: "pending_deletions", label: "Deletion & Security Approvals", icon: AlertTriangle },
+                  { id: "contracts", label: "Active Lease Contracts", icon: FileText },
+                  { id: "tenants", label: "Tenant Directory & KYC", icon: Users },
+                  { id: "delegations", label: "Property Delegations", icon: Briefcase },
+                  { id: "invoices", label: "Invoices & Billing Audit", icon: DollarSign },
+                  { id: "orgs", label: "Organizations & Quotas", icon: ShieldCheck },
+                ];
+              }
+
+              return moduleTabs.map((tab) => {
+                const TabIcon = tab.icon;
+                const isActive = saasSubTab === tab.id;
+                const pendingCount = tab.id === "pending_deletions" ? saasProperties.filter((p) => p.pendingDeletion).length : 0;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSaasSubTab(tab.id as any)}
+                    className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                      isActive
+                        ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    <TabIcon size={13} />
+                    <span>{tab.label}</span>
+                    {pendingCount > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              });
+            })()}
           </div>
 
           {/* Metric Tiles */}
@@ -3285,6 +3365,688 @@ function SuperAdminDashboardContent() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {/* 7. STANDALONE CAFM & 52-WEEK PPM SUB-TABS */}
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {saasSubTab === "cafm_ppm" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-blue-50/70 border border-blue-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar className="text-blue-600" size={16} />
+                    <span>52-Week Preventative Maintenance (PPM) Annual Matrix</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Statutory scheduled maintenance across DG Sets, Chillers, STP, Lifts, and Transformers to prevent downtime.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-blue-100 text-blue-800 text-xs font-bold font-mono">
+                    52 Active Service Weeks
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Asset &amp; System</th>
+                      <th className="p-3">Schedule Week</th>
+                      <th className="p-3">Frequency</th>
+                      <th className="p-3">Checklist &amp; Task Scope</th>
+                      <th className="p-3">Assigned Vendor</th>
+                      <th className="p-3">Execution Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { asset: "Cummins 750kVA DG Set 01", week: "Week 46 (Current)", freq: "Monthly", scope: "Lubricant change, B-Check, battery load test, fuel filter swap", vendor: "Sterling Generators Pvt Ltd", status: "In Progress" },
+                      { asset: "York 250 TR Centrifugal Chiller A", week: "Week 47", freq: "Fortnightly", scope: "Condenser descaling, refrigerant pressure audit, oil analysis", vendor: "Johnson Controls India", status: "Scheduled" },
+                      { asset: "100 KLD MBBR Sewage Treatment Plant", week: "Week 48", freq: "Weekly", scope: "Blower belt tension, dosing pump calibration, MLSS testing", vendor: "Thermax Onsite Services", status: "Scheduled" },
+                      { asset: "Otis High-Speed Passenger Elevators (8 Units)", week: "Week 49", freq: "Monthly", scope: "Governor trip test, wire rope lubrication, brake liner check", vendor: "Otis Elevator Company", status: "Scheduled" },
+                      { asset: "1500 kVA Dry Type Transformer 01", week: "Week 50", freq: "Quarterly", scope: "BDV oil breakdown test, winding temp calibration, earthing pit test", vendor: "ABB Power Grids", status: "Scheduled" },
+                      { asset: "Wet Riser & Fire Sprinkler Jockey Pumps", week: "Week 51", freq: "Bi-Weekly", scope: "Auto cut-in pressure check, gland packing, diesel engine test", vendor: "Minimax Fire Protection", status: "Scheduled" },
+                    ].map((ppm, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-bold text-slate-900">{ppm.asset}</td>
+                        <td className="p-3 font-mono text-[11px] font-bold text-slate-700">{ppm.week}</td>
+                        <td className="p-3 font-medium text-slate-600">{ppm.freq}</td>
+                        <td className="p-3 text-slate-600 max-w-xs">{ppm.scope}</td>
+                        <td className="p-3 font-medium text-slate-800">{ppm.vendor}</td>
+                        <td className="p-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            ppm.status === "In Progress" ? "bg-amber-100 text-amber-800 animate-pulse" : "bg-blue-50 text-blue-800 border border-blue-200"
+                          }`}>
+                            {ppm.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "cafm_assets" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-blue-50/70 border border-blue-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <QrCode className="text-blue-600" size={16} />
+                    <span>Equipment Asset Passports &amp; Dynamic QR Registry</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Scan-to-inspect QR tags placed on critical machinery for instant maintenance histories and breakdown tickets.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                    ✓ 248 Machinery QR Passports Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Equipment Tag &amp; Model</th>
+                      <th className="p-3">Asset Category</th>
+                      <th className="p-3">Floor / Location</th>
+                      <th className="p-3">Capacity &amp; Rating</th>
+                      <th className="p-3">Assigned AMC Vendor</th>
+                      <th className="p-3">QR Passport Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { tag: "EQ-DG-01", name: "Cummins QSK23-G3 Diesel Generator", cat: "Power Backup", loc: "Basement 2, Sub-Station Room", cap: "750 kVA", vendor: "Sterling Generators Pvt Ltd" },
+                      { tag: "EQ-HVAC-01", name: "York YMC2 Magnetic Bearing Chiller", cat: "HVAC Plant", loc: "Basement 1, Chiller Yard", cap: "250 TR", vendor: "Johnson Controls India" },
+                      { tag: "EQ-STP-01", name: "Thermax Fluidized MBBR Bioreactor", cat: "Water Treatment", loc: "Basement 2, Utility Area", cap: "100 KLD", vendor: "Thermax Onsite Services" },
+                      { tag: "EQ-LIFT-01", name: "Otis SkyRise High-Speed Elevator", cat: "Vertical Transport", loc: "Core Tower A, Shaft 1-4", cap: "20 Passenger / 2.5 m/s", vendor: "Otis Elevator Company" },
+                      { tag: "EQ-TX-01", name: "ABB Cast Resin Dry Type Transformer", cat: "Electrical HT", loc: "Basement 1, HT Substation", cap: "1500 kVA", vendor: "ABB Power Grids" },
+                    ].map((asset, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{asset.name}</div>
+                          <span className="font-mono text-xs text-blue-700 font-bold">{asset.tag}</span>
+                        </td>
+                        <td className="p-3 font-medium text-slate-600">{asset.cat}</td>
+                        <td className="p-3 text-slate-600">{asset.loc}</td>
+                        <td className="p-3 font-mono font-bold text-slate-800">{asset.cap}</td>
+                        <td className="p-3 font-medium text-slate-700">{asset.vendor}</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 font-bold text-[11px]">
+                            <QrCode size={12} className="text-teal-700" />
+                            <span>QR Verified</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "cafm_breakdowns" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-rose-50/70 border border-rose-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Wrench className="text-rose-600" size={16} />
+                    <span>Mean-Time-To-Repair (MTTR) Breakdown Work Orders</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Live breakdown response telemetry. Escalates automatically when work order exceeds contracted SLA resolution time.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    Avg MTTR: 38 Minutes
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Ticket ID</th>
+                      <th className="p-3">Equipment Affected</th>
+                      <th className="p-3">Issue Reported</th>
+                      <th className="p-3">Severity &amp; SLA</th>
+                      <th className="p-3">Assigned Technician</th>
+                      <th className="p-3">Resolution Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { id: "WO-2026-114", asset: "AHU-Level 4-North", issue: "Blower belt slipped off pulley, reduced airflow", prio: "P2 - High (2h SLA)", tech: "Ramesh Sharma (HVAC)", status: "RESOLVED" },
+                      { id: "WO-2026-115", asset: "Elevator Car B3", issue: "Door sensor alignment trip on Floor 7", prio: "P1 - Critical (30m SLA)", tech: "Otis Onsite Resident", status: "RESOLVED" },
+                      { id: "WO-2026-116", asset: "Basement Dewatering Sump Pump 2", issue: "Float switch stuck in low position", prio: "P2 - High (2h SLA)", tech: "Mahesh Patel (Plumbing)", status: "RESOLVED" },
+                    ].map((wo) => (
+                      <tr key={wo.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-mono font-bold text-slate-900">{wo.id}</td>
+                        <td className="p-3 font-bold text-slate-800">{wo.asset}</td>
+                        <td className="p-3 text-slate-600">{wo.issue}</td>
+                        <td className="p-3 font-mono text-[11px] font-bold text-slate-700">{wo.prio}</td>
+                        <td className="p-3 text-slate-800 font-medium">{wo.tech}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            {wo.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "cafm_amc" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-purple-50/70 border border-purple-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <ShieldCheck className="text-purple-600" size={16} />
+                    <span>Vendor Annual Maintenance Contracts (AMC) &amp; SLA Penalties</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Institutional contractor oversight, annual values, penalty clauses, and scheduled renewal triggers.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-purple-100 text-purple-800 text-xs font-bold">
+                    6 Active Vendor AMCs
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Contractor / Vendor</th>
+                      <th className="p-3">Service Scope</th>
+                      <th className="p-3">Contract Validity</th>
+                      <th className="p-3">Annual Contract Value</th>
+                      <th className="p-3">SLA Compliance</th>
+                      <th className="p-3">Contract Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { vendor: "Johnson Controls India Pvt Ltd", scope: "Central Chiller Plant & BMS Automation", period: "01 Apr 2026 – 31 Mar 2027", acv: "₹14,50,000", sla: "99.4%", status: "ACTIVE" },
+                      { vendor: "Otis Elevator Company (India) Ltd", scope: "Comprehensive Elevator & Escalator AMC", period: "01 Jul 2026 – 30 Jun 2027", acv: "₹18,20,000", sla: "99.8%", status: "ACTIVE" },
+                      { vendor: "Sterling Generators Pvt Ltd", scope: "DG Sets Comprehensive Parts & Labor", period: "01 Jan 2026 – 31 Dec 2026", acv: "₹6,80,000", sla: "98.9%", status: "ACTIVE" },
+                      { vendor: "Minimax Fire Safety Systems", scope: "Hydrant, Sprinklers & Gas Flooding AMC", period: "01 May 2026 – 30 Apr 2027", acv: "₹5,40,000", sla: "100.0%", status: "ACTIVE" },
+                    ].map((amc, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-bold text-slate-900">{amc.vendor}</td>
+                        <td className="p-3 text-slate-600 font-medium">{amc.scope}</td>
+                        <td className="p-3 font-mono text-[11px] text-slate-700">{amc.period}</td>
+                        <td className="p-3 font-mono font-bold text-slate-900">{amc.acv}</td>
+                        <td className="p-3 font-mono font-bold text-emerald-700">{amc.sla}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            {amc.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {/* 8. VISITOR FLOW & GATE SECURITY SUB-TABS */}
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {saasSubTab === "visitor_logs" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-purple-50/70 border border-purple-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Users className="text-purple-600" size={16} />
+                    <span>Real-Time Visitor Passes &amp; Lobby Transit Telemetry</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Pre-invited WhatsApp barcode passes, facial transit logs, and host tenant verification.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-purple-100 text-purple-800 text-xs font-bold font-mono">
+                    Today: 142 Visitors Checked-In
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Visitor Name &amp; Company</th>
+                      <th className="p-3">Host Tenant &amp; Floor</th>
+                      <th className="p-3">Pass Delivery &amp; Mode</th>
+                      <th className="p-3">Transit Gate</th>
+                      <th className="p-3">Entry Timestamp</th>
+                      <th className="p-3">Transit Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { name: "Rohit Deshmukh", comp: "Tata Consultancy Services", host: "Deloitte Digital (Floor 8)", pass: "WhatsApp QR Pass", gate: "Turnstile Bank A - Lane 2", time: "10:14 AM Today", status: "INSIDE PREMISES" },
+                      { name: "Pooja Singhania", comp: "Amazon Web Services", host: "KPMG Global (Floor 12)", pass: "Pre-Invite Barcode", gate: "Turnstile Bank B - Lane 1", time: "10:32 AM Today", status: "INSIDE PREMISES" },
+                      { name: "Vikram Sethi", comp: "Cisco Systems India", host: "Goldman Sachs (Floor 15)", pass: "Self-Checkin Kiosk", gate: "Main Revolving Door 1", time: "11:05 AM Today", status: "INSIDE PREMISES" },
+                    ].map((v, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{v.name}</div>
+                          <span className="text-slate-400 text-[10px]">{v.comp}</span>
+                        </td>
+                        <td className="p-3 font-medium text-slate-700">{v.host}</td>
+                        <td className="p-3 font-mono text-[11px] text-teal-700 font-bold">{v.pass}</td>
+                        <td className="p-3 text-slate-600 font-mono">{v.gate}</td>
+                        <td className="p-3 font-mono text-slate-700">{v.time}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            {v.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "turnstiles" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-purple-50/70 border border-purple-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Zap className="text-purple-600" size={16} />
+                    <span>Lobby Speedgates &amp; Hardware Controller Relays</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Boon Edam &amp; Gunnebo optical turnstile IP controller integration with instant emergency break-glass relay.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold font-mono">
+                    8 / 8 Gates Online · 18s Avg Transit
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { name: "Turnstile Bank A - Lane 1", ip: "192.168.10.41", vendor: "Gunnebo SpeedStile FL", ping: "2ms" },
+                  { name: "Turnstile Bank A - Lane 2", ip: "192.168.10.42", vendor: "Gunnebo SpeedStile FL", ping: "3ms" },
+                  { name: "Turnstile Bank B - Lane 1", ip: "192.168.10.43", vendor: "Boon Edam Speedlane", ping: "2ms" },
+                  { name: "Turnstile Bank B - Lane 2", ip: "192.168.10.44", vendor: "Boon Edam Speedlane", ping: "4ms" },
+                ].map((g, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900">{g.name}</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">{g.vendor}</div>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between font-mono text-[10px] text-slate-600">
+                      <span>IP: {g.ip}</span>
+                      <span className="text-emerald-700 font-bold">{g.ping}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "guard_console" && (
+            <div className="space-y-4">
+              <div className="p-6 bg-slate-900 text-white rounded-3xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Laptop size={18} className="text-teal-400" />
+                    <span className="font-bold text-sm">Security Guard Touchscreen Terminal Simulation</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-mono font-bold">
+                    Terminal ID: SEC-LOBBY-01
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                  <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                    <QrCode size={32} className="mx-auto text-teal-400" />
+                    <h5 className="font-bold text-xs">Scan WhatsApp Pass</h5>
+                    <p className="text-[10px] text-slate-400">Aim 2D barcode scanner at visitor mobile device</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                    <Users size={32} className="mx-auto text-blue-400" />
+                    <h5 className="font-bold text-xs">Manual Walk-In Entry</h5>
+                    <p className="text-[10px] text-slate-400">Capture OTP, government ID proof, and webcam photograph</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                    <AlertTriangle size={32} className="mx-auto text-amber-400" />
+                    <h5 className="font-bold text-xs">Overstay Verification</h5>
+                    <p className="text-[10px] text-slate-400">Audit visitors on premises exceeding 8 hours</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "evacuation" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-rose-900 flex items-center gap-2">
+                    <AlertTriangle className="text-rose-600" size={16} />
+                    <span>Real-Time Life-Safety Emergency Evacuation Roster</span>
+                  </h4>
+                  <p className="text-xs text-rose-700">
+                    Calculated headcounts of all tenants, visitors, and contractors currently past turnstile perimeter.
+                  </p>
+                </div>
+                <button
+                  onClick={() => alert("🚨 Emergency Evacuation Drill Alert Broadcast Triggered to all building occupants via WhatsApp and SMS.")}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md cursor-pointer"
+                >
+                  Broadcast Emergency WhatsApp Drill
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center">
+                  <span className="text-xs text-slate-500 font-bold uppercase">Corporate Occupants</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1 font-mono">1,842</div>
+                  <p className="text-[11px] text-emerald-700 font-semibold mt-1">Badge-in verified</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center">
+                  <span className="text-xs text-slate-500 font-bold uppercase">Guests &amp; Visitors</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1 font-mono">142</div>
+                  <p className="text-[11px] text-purple-700 font-semibold mt-1">QR Pass active</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center">
+                  <span className="text-xs text-slate-500 font-bold uppercase">Facility Contractors</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1 font-mono">38</div>
+                  <p className="text-[11px] text-blue-700 font-semibold mt-1">Vendor badges active</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {/* 9. STATUTORY COMPLIANCE & AUDIT VAULT SUB-TABS */}
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {saasSubTab === "compliance_licenses" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-amber-50/70 border border-amber-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <FileCheck2 className="text-amber-700" size={16} />
+                    <span>48 Pre-Configured Indian Commercial Statutory Licenses Matrix</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Pre-seeded regulatory requirements for commercial business parks and high-rise commercial towers.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold font-mono">
+                    ✓ 48 / 48 Statutory Licenses Monitored
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Statutory License &amp; Title</th>
+                      <th className="p-3">Issuing Government Authority</th>
+                      <th className="p-3">Current Validity</th>
+                      <th className="p-3">Renewal Period</th>
+                      <th className="p-3">Compliance Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { title: "NOC for Fire Safety & Protection", auth: "State Directorate of Fire Services", valid: "Valid until 31 Dec 2026", renew: "Annual", status: "VALID & COMPLIANT" },
+                      { title: "Consent to Operate (CTO - Air & Water)", auth: "State Pollution Control Board (SPCB)", valid: "Valid until 31 Mar 2028", renew: "5-Year", status: "VALID & COMPLIANT" },
+                      { title: "Passenger Lift Inspectorate Licenses", auth: "Chief Electrical Inspectorate to Govt", valid: "Valid until 30 Sep 2027", renew: "Annual", status: "VALID & COMPLIANT" },
+                      { title: "Diesel Storage & HSD Petroleum Class B License", auth: "Petroleum & Explosives Safety Org (PESO)", valid: "Valid until 31 Dec 2027", renew: "3-Year", status: "VALID & COMPLIANT" },
+                      { title: "Building Occupancy Certificate (OC)", auth: "Urban Development Authority / Municipal Corp", valid: "Perpetual Commercial OC", renew: "Perpetual", status: "COMPLIANT" },
+                    ].map((lic, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-bold text-slate-900">{lic.title}</td>
+                        <td className="p-3 text-slate-600 font-medium">{lic.auth}</td>
+                        <td className="p-3 font-mono text-[11px] text-slate-700 font-bold">{lic.valid}</td>
+                        <td className="p-3 font-mono text-slate-600">{lic.renew}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            {lic.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "compliance_renewals" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-amber-50/70 border border-amber-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Clock className="text-amber-700" size={16} />
+                    <span>90, 60 &amp; 30-Day Automated Alert Escalation Engine</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Automated email and portal escalations sent to Chief Compliance Officer and Asset Managers before deadlines.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">90-Day Early Warning</span>
+                  <div className="text-lg font-black text-slate-900">3 Licenses in Horizon</div>
+                  <p className="text-[11px] text-slate-500">Initiate agency quote requests</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-amber-700">60-Day Active Renewal</span>
+                  <div className="text-lg font-black text-amber-900">1 License Under Renewal</div>
+                  <p className="text-[11px] text-amber-700">Application submitted to Fire Dept</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-emerald-700">Critical 30-Day Floor</span>
+                  <div className="text-lg font-black text-emerald-900">0 Overdue Licenses</div>
+                  <p className="text-[11px] text-emerald-700">Zero penalty exposure</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "compliance_vault" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-amber-50/70 border border-amber-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <ShieldCheck className="text-amber-700" size={16} />
+                    <span>Tamper-Proof Auditor Certificate Vault &amp; REIT Compliance Disclosures</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Immutable certificate repository with SHA-256 integrity verification for institutional audits.
+                  </p>
+                </div>
+                <button
+                  onClick={() => alert("✓ REIT Compliance Disclosure Pack generated. Audit ledger downloaded.")}
+                  className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  Generate REIT Audit Pack (ZIP)
+                </button>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+                <span className="font-bold text-slate-900 block">Cryptographic Integrity Stamp:</span>
+                <p className="font-mono text-[11px] bg-white p-2.5 rounded-xl border border-slate-200 text-slate-700 select-all">
+                  SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 · Last Verified by Big-4 Auditor: 14 Nov 2026
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {/* 10. LEASING CRM & SPATIAL STACKING SUB-TABS */}
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {saasSubTab === "crm_stacking" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Layers className="text-teal-700" size={16} />
+                    <span>Multi-Floor Spatial Stacking Plan &amp; Vacancy Heatmap</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Floor-by-floor occupancy visualizations, leasable demised blocks, and tenant lease roll horizons.
+                  </p>
+                </div>
+                <Link
+                  href="/operate/stacking"
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c6e63] text-white text-xs font-bold transition shadow-xs"
+                >
+                  Open Full Interactive Stacking Studio →
+                </Link>
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+                {[
+                  { floor: "Floor 12", area: "25,000 sq.ft", occupant: "Deloitte Digital", rate: "₹95/sq.ft", status: "Occupied", expiry: "2029-08-31" },
+                  { floor: "Floor 11", area: "25,000 sq.ft", occupant: "KPMG Global Delivery", rate: "₹92/sq.ft", status: "Occupied", expiry: "2028-11-30" },
+                  { floor: "Floor 10", area: "12,500 sq.ft", occupant: "Microsoft R&D India", rate: "₹98/sq.ft", status: "Occupied", expiry: "2030-03-31" },
+                  { floor: "Floor 10 (Unit B)", area: "12,500 sq.ft", occupant: "— VACANT SPACE —", rate: "₹95/sq.ft ask", status: "Vacant", expiry: "Available Now" },
+                  { floor: "Floor 9", area: "25,000 sq.ft", occupant: "Scalezix Technologies", rate: "₹90/sq.ft", status: "Occupied", expiry: "2029-05-31" },
+                ].map((st, idx) => (
+                  <div key={idx} className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold text-xs shrink-0 font-mono">
+                        {st.floor.replace("Floor ", "L")}
+                      </div>
+                      <div>
+                        <h5 className="font-bold text-xs text-slate-900">{st.occupant}</h5>
+                        <span className="text-[11px] text-slate-500 font-mono">{st.area} · {st.rate}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        st.status === "Occupied" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800 font-extrabold"
+                      }`}>
+                        {st.status}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">{st.expiry}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "crm_helpdesk" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <MessageSquare className="text-teal-700" size={16} />
+                    <span>Corporate Tenant 10-Second QR Work Order Helpdesk</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Direct tenant-to-facility service tickets with SLA timer tracking and resolution dispatch.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold font-mono">
+                    100% On-Time SLA Resolution
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Ticket ID</th>
+                      <th className="p-3">Tenant &amp; Demised Floor</th>
+                      <th className="p-3">Issue Category</th>
+                      <th className="p-3">Reported Details</th>
+                      <th className="p-3">SLA Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { id: "HD-8841", tenant: "Deloitte Digital (Floor 8)", cat: "HVAC Temperature", desc: "Server room thermostat reading 24C, requires 20C cooling", sla: "RESOLVED (28m)" },
+                      { id: "HD-8842", tenant: "KPMG Global (Floor 12)", cat: "Access Keycards", desc: "Batch of 10 RFID NFC cards configured for new onboarding", sla: "RESOLVED (15m)" },
+                    ].map((hd) => (
+                      <tr key={hd.id} className="hover:bg-slate-50/60 transition">
+                        <td className="p-3 font-mono font-bold text-slate-900">{hd.id}</td>
+                        <td className="p-3 font-bold text-slate-800">{hd.tenant}</td>
+                        <td className="p-3 font-medium text-slate-700">{hd.cat}</td>
+                        <td className="p-3 text-slate-600">{hd.desc}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            {hd.sla}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {saasSubTab === "crm_amenities" && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar className="text-teal-700" size={16} />
+                    <span>Shared Campus Amenity &amp; Conference Reservations</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Townhall auditoriums, boardroom bookings, and electric vehicle charging bays across tenant organizations.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { name: "Executive Boardroom (24-Seater)", loc: "Level 14 Terrace", bookedBy: "Deloitte Strategy Meeting", time: "2:00 PM – 4:00 PM Today", status: "CONFIRMED" },
+                  { name: "Townhall Auditorium (200-Seater)", loc: "Ground Floor Atrium", bookedBy: "KPMG All-Hands", time: "4:30 PM – 6:00 PM Today", status: "CONFIRMED" },
+                  { name: "EV Fast Charger Bay 03", loc: "Basement 1 Parking", bookedBy: "Microsoft Corporate Fleet", time: "11:00 AM – 1:00 PM Today", status: "CHARGING" },
+                ].map((am, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900">{am.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">{am.status}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">{am.loc}</div>
+                    <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-700">
+                      <strong>{am.bookedBy}</strong>
+                      <span className="block font-mono text-[10px] text-teal-700 mt-0.5">{am.time}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

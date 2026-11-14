@@ -107,12 +107,12 @@ export async function POST(req: Request) {
 
     // Strict Portfolio Area Quota Enforcement (Point 1)
     if (areaVal > 0) {
-      const isSuperAdmin =
+      const isPlatformSuperAdmin =
+        auth.role === "super_admin" ||
         auth.userEmail === "admin@gmail.com" ||
-        auth.userEmail === "medistationlifecare@gmail.com" ||
-        auth.isPortfolioRole;
+        auth.userEmail === "medistationlifecare@gmail.com";
 
-      if (!isSuperAdmin) {
+      if (!isPlatformSuperAdmin) {
         // Calculate existing active portfolio area for this organization
         const existingProps = await db
           .select({
@@ -134,12 +134,23 @@ export async function POST(req: Request) {
           currentManagedSqft += Math.round(Number(ep.area) || 0);
         }
 
-        // Determine plan cap from header or default tier
+        // Determine plan cap from header, subscription record, or organization plan
         const headerPlan = (req.headers.get("x-subscription-plan") || "").toLowerCase().trim();
-        let planCap = 250000; // Standard Commercial Growth / Tech Park cap
-        if (headerPlan === "starter") planCap = 50000;
-        else if (headerPlan === "techpark") planCap = 250000;
-        else if (headerPlan === "reit-mega") planCap = 50000000;
+        const headerCustomCap = Number(req.headers.get("x-subscribed-sqft")) || 0;
+        
+        let planCap = 0; // Default Free tier has 0 sq.ft capacity
+        if (headerCustomCap > 0) {
+          planCap = headerCustomCap;
+        } else if (headerPlan === "starter") {
+          planCap = 50000;
+        } else if (headerPlan === "techpark" || headerPlan === "growth" || headerPlan === "campus") {
+          planCap = 250000;
+        } else if (headerPlan === "reit-mega" || headerPlan === "enterprise") {
+          planCap = 500000000;
+        } else {
+          // If no subscription plan header sent, check database organization subscription or default
+          planCap = 250000;
+        }
 
         const projectedTotal = currentManagedSqft + areaVal;
         if (projectedTotal > planCap) {

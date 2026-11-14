@@ -724,9 +724,18 @@ export default function PropertyHierarchyModal({
 
         // Subscribed Capacity
         const storedCap = Number(localStorage.getItem("officex_subscribed_sqft"));
+        const storedPlan = (localStorage.getItem("officex_subscription_plan") || localStorage.getItem("officex_selected_plan") || "").toLowerCase();
+        let planCap = 0;
         if (storedCap && !isNaN(storedCap) && storedCap > 0) {
-          setSubscribedCapacity(storedCap);
+          planCap = storedCap;
+        } else if (storedPlan === "starter") {
+          planCap = 50000;
+        } else if (storedPlan === "techpark" || storedPlan === "growth" || storedPlan === "campus") {
+          planCap = 250000;
+        } else if (storedPlan === "reit-mega" || storedPlan === "enterprise") {
+          planCap = 500000000;
         }
+        setSubscribedCapacity(planCap);
       }
     } else {
       setIsDraftRestored(false);
@@ -1514,15 +1523,19 @@ export default function PropertyHierarchyModal({
     }
 
     // Strict Portfolio Area Quota Check (Point 1)
-    const effectiveCap = subscribedCapacity > 0 ? subscribedCapacity : 250000;
+    const isSub = checkIsOwnerSubscribed();
+    const effectiveCap = isSub ? (subscribedCapacity > 0 ? subscribedCapacity : 250000) : 0;
     const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
     const projectedTotalArea = currentPortfolioArea + enteredArea;
-    if (projectedTotalArea > effectiveCap) {
+    if (effectiveCap === 0 || projectedTotalArea > effectiveCap) {
+      const excess = effectiveCap === 0 ? enteredArea : projectedTotalArea - effectiveCap;
       showToast(
-        `Portfolio Quota Exceeded: Your active plan allows up to ${effectiveCap.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${(projectedTotalArea - effectiveCap).toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
+        effectiveCap === 0
+          ? `Subscription Required: Free operational tier has 0 Sq.Ft licensed capacity. Please upgrade to a commercial plan to onboard properties.`
+          : `Portfolio Quota Exceeded: Your active plan allows up to ${effectiveCap.toLocaleString()} Sq.Ft. Currently managing ${currentPortfolioArea.toLocaleString()} Sq.Ft. Adding this property (${enteredArea.toLocaleString()} Sq.Ft) would bring your portfolio to ${projectedTotalArea.toLocaleString()} Sq.Ft, exceeding capacity by ${excess.toLocaleString()} Sq.Ft. Please upgrade your subscription tier.`,
         "error"
       );
-      setSubscriptionGateReason("Portfolio Area Quota Exceeded");
+      setSubscriptionGateReason(effectiveCap === 0 ? "Subscription Required to Add Properties" : "Portfolio Area Quota Exceeded");
       setSubscriptionGateModalOpen(true);
       return;
     }

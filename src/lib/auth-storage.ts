@@ -158,6 +158,10 @@ export function getClientAuthHeaders(): Record<string, string> {
     if (orgId) headers["x-org-id"] = orgId;
     const clientAccId = localStorage.getItem("officex_client_account_id") || getAuthCookie("officex_client_account_id");
     if (clientAccId) headers["x-client-account-id"] = clientAccId;
+    const plan = localStorage.getItem("officex_subscription_plan") || localStorage.getItem("officex_selected_plan");
+    if (plan) headers["x-subscription-plan"] = plan;
+    const sqft = localStorage.getItem("officex_subscribed_sqft");
+    if (sqft) headers["x-subscribed-sqft"] = sqft;
   }
   return headers;
 }
