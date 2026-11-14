@@ -217,10 +217,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Calculate exact start and expiration dates
+    // Calculate exact start and expiration dates (30 days/mo, 365 days for 1 year)
     const startsAt = new Date();
-    // 30 days per month calendar approximation
-    const endsAt = new Date(startsAt.getTime() + durationMonths * 30 * 24 * 60 * 60 * 1000);
+    const daysToAdd = durationMonths === 12 ? 365 : durationMonths * 30;
+    const endsAt = new Date(startsAt.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
 
     // 1. Persist directly to PostgreSQL user_subscriptions table
     try {

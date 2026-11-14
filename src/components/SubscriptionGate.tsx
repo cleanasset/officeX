@@ -132,7 +132,8 @@ export default function SubscriptionGate({
   const durationDiscountPct =
     selectedDurationMonths === 12 ? 20 :
     selectedDurationMonths === 6 ? 10 :
-    selectedDurationMonths === 3 ? 5 : 0;
+    selectedDurationMonths === 4 ? 7 :
+    selectedDurationMonths === 2 ? 3 : 0;
 
   const effectiveSqft = Math.max(customSqft, minAllowedSqft);
   const baseCalculatedPrice = effectiveSqft * selectedPlan.price * selectedDurationMonths;
@@ -231,7 +232,7 @@ export default function SubscriptionGate({
           plan: planId || "techpark",
           plan_name: selectedPlan.name,
           duration_months: durationMonths,
-          billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 3 ? "quarterly" : "monthly",
+          billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 4 ? "4_months" : durationMonths === 2 ? "bimonthly" : "monthly",
           amount: finalPriceInRupees
         })
       });
@@ -858,12 +859,13 @@ export default function SubscriptionGate({
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {[
-                { months: 1, label: "1 Month", tag: "Monthly", discount: 0 },
-                { months: 3, label: "3 Months", tag: "Quarterly", discount: 5 },
-                { months: 6, label: "6 Months", tag: "Half-Year", discount: 10 },
-                { months: 12, label: "12 Months", tag: "Annual · Best Value", discount: 20 },
+                { months: 1, days: "30 Days", label: "1 Month", tag: "Monthly", discount: 0 },
+                { months: 2, days: "60 Days", label: "2 Months", tag: "Bi-Monthly", discount: 3 },
+                { months: 4, days: "120 Days", label: "4 Months", tag: "4 Months", discount: 7 },
+                { months: 6, days: "180 Days", label: "6 Months", tag: "Half-Year", discount: 10 },
+                { months: 12, days: "365 Days", label: "1 Year", tag: "Annual · Best Value", discount: 20 },
               ].map((d) => (
                 <button
                   key={d.months}
@@ -875,7 +877,14 @@ export default function SubscriptionGate({
                       : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-bold"
                   }`}
                 >
-                  <span className="text-xs">{d.label}</span>
+                  <span className="text-xs font-bold">{d.label}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full mt-0.5 ${
+                    selectedDurationMonths === d.months
+                      ? "bg-white/20 text-white"
+                      : "bg-teal-50 text-teal-800"
+                  }`}>
+                    {d.days}
+                  </span>
                   <span className={`text-[9px] mt-0.5 ${selectedDurationMonths === d.months ? "text-teal-100 font-semibold" : "text-slate-400 font-medium"}`}>
                     {d.discount > 0 ? `${d.discount}% OFF` : d.tag}
                   </span>
@@ -994,7 +1003,7 @@ export default function SubscriptionGate({
                 <div className="text-2xl font-black text-[#0F8B7D]">
                   ₹{finalPriceInRupees.toLocaleString("en-IN")}
                   <span className="text-xs font-semibold text-slate-500 ml-1">
-                    ({customSqft.toLocaleString("en-IN")} sq.ft · {selectedDurationMonths} Month{selectedDurationMonths > 1 ? "s" : ""}{durationDiscountPct > 0 ? ` · ${durationDiscountPct}% Off` : ""})
+                    ({customSqft.toLocaleString("en-IN")} sq.ft · {selectedDurationMonths === 12 ? "1 Year (365 Days)" : `${selectedDurationMonths} Month${selectedDurationMonths > 1 ? "s" : ""} (${selectedDurationMonths * 30} Days)`}{durationDiscountPct > 0 ? ` · ${durationDiscountPct}% Off` : ""})
                   </span>
                 </div>
               )}

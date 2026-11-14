@@ -142,7 +142,8 @@ export default function SubscriptionAndQuotaPage() {
   const durationDiscountPct =
     durationMonths === 12 ? 20 :
     durationMonths === 6 ? 10 :
-    durationMonths === 3 ? 5 : 0;
+    durationMonths === 4 ? 7 :
+    durationMonths === 2 ? 3 : 0;
 
   const effectiveSubscribeSqft = Math.max(customSqft, minAllowedSqft);
   const baseMonthlyPrice = effectiveSubscribeSqft * RATE_PER_SQFT;
@@ -219,7 +220,7 @@ export default function SubscriptionAndQuotaPage() {
             plan_name: planName,
             subscribed_sqft: effectiveSubscribeSqft,
             duration_months: durationMonths,
-            billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 3 ? "quarterly" : "monthly",
+            billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 4 ? "4_months" : durationMonths === 2 ? "bimonthly" : "monthly",
             amount: finalPayableRupees,
           }),
         }).catch(() => {});
@@ -229,7 +230,7 @@ export default function SubscriptionAndQuotaPage() {
           plan: planId,
           plan_name: planName,
           subscribed_sqft: effectiveSubscribeSqft,
-          days_remaining: durationMonths * 30,
+          days_remaining: durationMonths === 12 ? 365 : durationMonths * 30,
         });
 
         setSuccessToast(`🎉 Subscription to ${planName} (${effectiveSubscribeSqft.toLocaleString("en-IN")} sq.ft) activated successfully!`);
@@ -521,12 +522,13 @@ export default function SubscriptionAndQuotaPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {[
-              { months: 1, label: "1 Month", tag: "Monthly", discount: 0 },
-              { months: 3, label: "3 Months", tag: "Quarterly", discount: 5 },
-              { months: 6, label: "6 Months", tag: "Half-Year", discount: 10 },
-              { months: 12, label: "12 Months", tag: "Annual (Best Value)", discount: 20 },
+              { months: 1, days: "30 Days", label: "1 Month", tag: "Monthly", discount: 0 },
+              { months: 2, days: "60 Days", label: "2 Months", tag: "Bi-Monthly", discount: 3 },
+              { months: 4, days: "120 Days", label: "4 Months", tag: "4 Months", discount: 7 },
+              { months: 6, days: "180 Days", label: "6 Months", tag: "Half-Year", discount: 10 },
+              { months: 12, days: "365 Days", label: "1 Year", tag: "Annual · Best Value", discount: 20 },
             ].map((d) => (
               <button
                 key={d.months}
@@ -539,7 +541,14 @@ export default function SubscriptionAndQuotaPage() {
                 }`}
               >
                 <span className="text-xs sm:text-sm font-black">{d.label}</span>
-                <span className={`text-[10px] font-bold mt-0.5 ${d.discount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${
+                  durationMonths === d.months
+                    ? "bg-[#0F8B7D] text-white"
+                    : "bg-slate-100 text-slate-700"
+                }`}>
+                  {d.days}
+                </span>
+                <span className={`text-[10px] font-bold mt-1 ${d.discount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
                   {d.discount > 0 ? `${d.discount}% OFF` : d.tag}
                 </span>
               </button>
@@ -581,9 +590,9 @@ export default function SubscriptionAndQuotaPage() {
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Duration Multiplier:</span>
-              <span className="font-mono text-slate-400">
-                × {durationMonths} Month{durationMonths > 1 ? "s" : ""}
+              <span>Duration Commitment:</span>
+              <span className="font-mono text-teal-300 font-bold">
+                × {durationMonths === 12 ? "1 Year (365 Days)" : `${durationMonths} Month${durationMonths > 1 ? "s" : ""} (${durationMonths * 30} Days)`}
               </span>
             </div>
 

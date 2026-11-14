@@ -215,6 +215,7 @@ export default function PropertyHierarchyModal({
   // Rent Roll Subscription Form State (Cannot subscribe below totalPortfolioSqft)
   const [subscribeSqftInput, setSubscribeSqftInput] = useState<number>(0);
   const [subscribeBillingCycle, setSubscribeBillingCycle] = useState<"monthly" | "annual">("annual");
+  const [subscribeBillingMonths, setSubscribeBillingMonths] = useState<number>(1);
   const [subscribeLoading, setSubscribeLoading] = useState(false);
 
   // Tracking last saved property and occupant in current workflow session
@@ -9325,10 +9326,11 @@ export default function PropertyHierarchyModal({
           const isBelowPortfolio = userEnteredSqft < effectivePortfolioSqft;
           const currentChosenSqft = Math.max(userEnteredSqft, effectivePortfolioSqft);
           const ratePerSqft = 1.0;
+          const discountPct = subscribeBillingMonths === 12 ? 20 : subscribeBillingMonths === 6 ? 10 : subscribeBillingMonths === 4 ? 7 : subscribeBillingMonths === 2 ? 3 : 0;
           const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
-          const minCyclePayable = subscribeBillingCycle === "annual" ? Math.round(minMonthlyPayable * 12 * 0.8) : minMonthlyPayable;
+          const minCyclePayable = Math.round(minMonthlyPayable * subscribeBillingMonths * (1 - discountPct / 100));
           const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
-          const chosenCyclePayable = subscribeBillingCycle === "annual" ? Math.round(monthlyEst * 12 * 0.8) : monthlyEst;
+          const chosenCyclePayable = Math.round(monthlyEst * subscribeBillingMonths * (1 - discountPct / 100));
 
           return (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -9379,14 +9381,14 @@ export default function PropertyHierarchyModal({
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
                       <span className="font-black text-teal-950">
-                        Minimum Total Payable ({subscribeBillingCycle === "annual" ? "Annual - 12 Months" : "Monthly - 1 Month"}):
+                        Minimum Total Payable ({subscribeBillingMonths === 12 ? "1 Year (365 Days)" : `${subscribeBillingMonths} Month${subscribeBillingMonths > 1 ? "s" : ""} (${subscribeBillingMonths * 30} Days)`}):
                       </span>
                       <span className="font-black text-[#0F8B7D] font-mono text-base">
                         ₹{minCyclePayable.toLocaleString("en-IN")}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 pt-0.5">
-                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft {subscribeBillingCycle === "annual" ? "× 12 months (20% annual discount applied)" : "× 1 month"}
+                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft × {subscribeBillingMonths} month{subscribeBillingMonths > 1 ? "s" : ""} {discountPct > 0 ? `(${discountPct}% discount applied)` : ""}
                     </p>
                   </div>
                 </div>
@@ -9449,42 +9451,55 @@ export default function PropertyHierarchyModal({
                       ))}
                   </div>
 
-                  {/* Billing Cycle Selector */}
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setSubscribeBillingCycle("annual")}
-                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                        subscribeBillingCycle === "annual"
-                          ? "border-[#0F8B7D] bg-teal-50/50 ring-1 ring-teal-500"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="font-bold text-slate-900 text-xs flex items-center justify-between">
-                        <span>Annual Plan</span>
-                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">Save 20%</span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">₹1.2 / sqft / mo</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSubscribeBillingCycle("monthly")}
-                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                        subscribeBillingCycle === "monthly"
-                          ? "border-[#0F8B7D] bg-teal-50/50 ring-1 ring-teal-500"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="font-bold text-slate-900 text-xs">Monthly Plan</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">₹1.5 / sqft / mo</div>
-                    </button>
+                  {/* Duration Selector */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-slate-800 text-[11px]">Select Subscription Duration:</span>
+                      {discountPct > 0 && (
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                          Save {discountPct}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                      {[
+                        { months: 1, days: "30 Days", label: "1 Month", discount: 0 },
+                        { months: 2, days: "60 Days", label: "2 Months", discount: 3 },
+                        { months: 4, days: "120 Days", label: "4 Months", discount: 7 },
+                        { months: 6, days: "180 Days", label: "6 Months", discount: 10 },
+                        { months: 12, days: "365 Days", label: "1 Year", discount: 20 },
+                      ].map((d) => (
+                        <button
+                          key={d.months}
+                          type="button"
+                          onClick={() => {
+                            setSubscribeBillingMonths(d.months);
+                            setSubscribeBillingCycle(d.months === 12 ? "annual" : "monthly");
+                          }}
+                          className={`p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                            subscribeBillingMonths === d.months
+                              ? "border-[#0F8B7D] bg-teal-50 text-slate-900 ring-1 ring-teal-500 font-black"
+                              : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold">{d.label}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full mt-0.5 ${
+                            subscribeBillingMonths === d.months ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {d.days}
+                          </span>
+                          <span className={`text-[8.5px] mt-0.5 ${d.discount > 0 ? "text-emerald-700 font-extrabold" : "text-slate-400 font-medium"}`}>
+                            {d.discount > 0 ? `${d.discount}% OFF` : "Standard"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-600">Total for Selected Capacity:</span>
                     <span className="font-black text-slate-900 font-mono text-sm">
-                      ₹{chosenCyclePayable.toLocaleString("en-IN")} {subscribeBillingCycle === "annual" ? "for 1 Year" : "for 1 Month"}
+                      ₹{chosenCyclePayable.toLocaleString("en-IN")} ({subscribeBillingMonths === 12 ? "365 Days" : `${subscribeBillingMonths * 30} Days`})
                     </span>
                   </div>
                 </div>
@@ -9517,8 +9532,8 @@ export default function PropertyHierarchyModal({
                             email,
                             plan: "pro",
                             plan_name: "Rent Roll & Financial Pro Suite",
-                            billing_cycle: subscribeBillingCycle,
-                            duration_months: subscribeBillingCycle === "annual" ? 12 : 1,
+                            billing_cycle: subscribeBillingMonths === 12 ? "annual" : subscribeBillingMonths === 6 ? "half_yearly" : subscribeBillingMonths === 4 ? "4_months" : subscribeBillingMonths === 2 ? "bimonthly" : "monthly",
+                            duration_months: subscribeBillingMonths,
                             amount: chosenCyclePayable,
                           }),
                         }).catch(() => {});
