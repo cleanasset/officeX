@@ -1,6 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function PortalDocumentRoute() {
-  redirect("/portal/documents");
-}
-
+export { default } from "../documents/page";

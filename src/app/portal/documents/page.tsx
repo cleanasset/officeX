@@ -124,9 +124,9 @@ export default function TenantDocumentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Lease Documents & Repository</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Documents &amp; Statutory NOCs</h1>
           <p className="text-xs font-medium text-slate-500 mt-1">
-            Access signed legal agreements, handover letters, and submit compliance certificates.
+            Access signed commercial lease agreements, handover letters, and statutory NOC certificates.
           </p>
         </div>
 
