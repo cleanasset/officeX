@@ -207,10 +207,12 @@ export default function SpaceAndBuildingRegistryPage() {
   const handleOpenRegisterProperty = () => {
     // Check licensed portfolio quota
     const effectiveCap = Number(localStorage.getItem("officex_subscribed_sqft")) || 250000;
-    const currentTotalSqft = properties.reduce(
-      (acc, p) => acc + Number(p.total_leasable_area_sqft || p.area_sqft || 0),
-      0
-    );
+    const currentTotalSqft = properties
+      .filter((p) => !p.is_pending_deletion)
+      .reduce(
+        (acc, p) => acc + Number(p.total_leasable_area_sqft || p.area_sqft || 0),
+        0
+      );
     if (currentTotalSqft >= effectiveCap) {
       if (
         confirm(

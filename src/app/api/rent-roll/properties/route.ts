@@ -124,6 +124,7 @@ export async function POST(req: Request) {
           .select({
             id: property.id,
             area: property.total_leasable_area_sqft,
+            source_row_id: property.source_row_id,
           })
           .from(property)
           .where(
@@ -137,6 +138,11 @@ export async function POST(req: Request) {
         const targetPropId = body.id || body.property_id;
         for (const ep of existingProps) {
           if (targetPropId && ep.id === targetPropId) continue;
+          let meta: any = {};
+          if (ep.source_row_id && typeof ep.source_row_id === "string" && ep.source_row_id.startsWith("{")) {
+            try { meta = JSON.parse(ep.source_row_id); } catch {}
+          }
+          if (meta.pending_deletion) continue;
           currentManagedSqft += Math.round(Number(ep.area) || 0);
         }
 
@@ -285,10 +291,21 @@ export async function POST(req: Request) {
 
     if (existingProperties.length > 0) {
       const existing = existingProperties[0];
+      let meta: any = {};
+      if (existing.source_row_id && typeof existing.source_row_id === "string" && existing.source_row_id.startsWith("{")) {
+        try { meta = JSON.parse(existing.source_row_id); } catch {}
+      }
+      delete meta.pending_deletion;
+      delete meta.requested_by;
+      delete meta.requested_at;
+      delete meta.reason;
+      delete meta.active_contracts_count;
+
       const [updated] = await db
         .update(property)
         .set({
           property_name: propertyName,
+          source_row_id: JSON.stringify(meta),
           property_code: providedCode || existing.property_code,
           address: body.address || body.address_line1 || existing.address,
           city: body.city || existing.city,

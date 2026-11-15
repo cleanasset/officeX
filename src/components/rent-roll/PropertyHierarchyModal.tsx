@@ -949,11 +949,13 @@ export default function PropertyHierarchyModal({
       const pRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
       if (pRes.ok) {
         const pData = await pRes.json();
-        const pArr = (Array.isArray(pData.data) ? pData.data : []).map((p: any) => ({
-          id: p.id,
-          name: p.property_name,
-          area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
-        }));
+        const pArr = (Array.isArray(pData.data) ? pData.data : [])
+          .filter((p: any) => !p.is_pending_deletion)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.property_name,
+            area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
+          }));
         setPropertiesList(pArr);
         const targetPropId = initialPropertyId || "";
         if (targetPropId) {
@@ -1544,7 +1546,9 @@ export default function PropertyHierarchyModal({
     // Portfolio Area Quota Check for subscribed accounts with an active licensed capacity ceiling
     const isSub = checkIsOwnerSubscribed();
     if (isSub && subscribedCapacity > 0) {
-      const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+      const currentPortfolioArea = propertiesList
+        .filter((p) => p.id !== propForm.existingPropId)
+        .reduce((acc, p) => acc + (Number(p.area) || 0), 0);
       const projectedTotalArea = currentPortfolioArea + enteredArea;
       if (projectedTotalArea > subscribedCapacity) {
         const excess = projectedTotalArea - subscribedCapacity;
@@ -3790,7 +3794,9 @@ export default function PropertyHierarchyModal({
               {/* Capacity Exhausted Banner (Point 5 & 12) */}
               {(() => {
                 const effCap = subscribedCapacity > 0 ? subscribedCapacity : 250000;
-                const currArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                const currArea = propertiesList
+                  .filter((p) => p.id !== propForm.existingPropId)
+                  .reduce((acc, p) => acc + (Number(p.area) || 0), 0);
                 const isExhausted = currArea >= effCap;
                 if (!isExhausted) return null;
                 return (
@@ -3994,7 +4000,9 @@ export default function PropertyHierarchyModal({
                   <div>
                     {(() => {
                       const enteredAreaNum = Number(propForm.areaSqft) || 0;
-                      const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                      const currentPortfolioArea = propertiesList
+        .filter((p) => p.id !== propForm.existingPropId)
+        .reduce((acc, p) => acc + (Number(p.area) || 0), 0);
                       const projectedPortfolioArea = currentPortfolioArea + enteredAreaNum;
                       const isExceedingCapacity = isOwnerSubscribed && subscribedCapacity > 0 && projectedPortfolioArea > subscribedCapacity;
                       const excessSqft = isExceedingCapacity ? projectedPortfolioArea - subscribedCapacity : 0;
@@ -4898,7 +4906,9 @@ export default function PropertyHierarchyModal({
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 {(() => {
                   const enteredAreaNum = Number(propForm.areaSqft) || 0;
-                  const currentPortfolioArea = propertiesList.reduce((acc, p) => acc + (Number(p.area) || 0), 0);
+                  const currentPortfolioArea = propertiesList
+        .filter((p) => p.id !== propForm.existingPropId)
+        .reduce((acc, p) => acc + (Number(p.area) || 0), 0);
                   const projectedPortfolioArea = currentPortfolioArea + enteredAreaNum;
                   const isExceedingCapacity = isOwnerSubscribed && subscribedCapacity > 0 && projectedPortfolioArea > subscribedCapacity;
                   const excessSqft = isExceedingCapacity ? projectedPortfolioArea - subscribedCapacity : 0;
