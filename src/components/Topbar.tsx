@@ -188,6 +188,47 @@ export default function Topbar() {
     }
   }, [searchQuery]);
 
+  // Fetch live notifications from API and sync with local event bus
+  const fetchLiveNotifications = async () => {
+    try {
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/notifications", { headers: authHeaders }).catch(() => null);
+      if (res && res.ok) {
+        const json = await res.json();
+        const serverData = Array.isArray(json.data) ? json.data : [];
+
+        let localData: any[] = [];
+        try {
+          const stored = localStorage.getItem("officex_notifications");
+          if (stored) localData = JSON.parse(stored);
+        } catch {}
+
+        const serverIds = new Set(serverData.map((s: any) => s.id));
+        const merged = [...serverData, ...localData.filter((l: any) => !serverIds.has(l.id))];
+
+        setNotifications(merged);
+        try {
+          localStorage.setItem("officex_notifications", JSON.stringify(merged));
+        } catch {}
+      }
+    } catch (e) {
+      console.warn("Failed to fetch live notifications:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveNotifications();
+    const handleRefresh = () => fetchLiveNotifications();
+    window.addEventListener("officex-notification-refresh", handleRefresh);
+    window.addEventListener("focus", handleRefresh);
+    const interval = setInterval(fetchLiveNotifications, 45000);
+    return () => {
+      window.removeEventListener("officex-notification-refresh", handleRefresh);
+      window.removeEventListener("focus", handleRefresh);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Fetch Multi-Client accounts
   useEffect(() => {
     fetch("/api/multi-client/clients", { headers: getClientAuthHeaders() })
@@ -249,14 +290,49 @@ export default function Topbar() {
     }
   };
 
-  const handleMarkAllNotificationsRead = () => {
+  const handleMarkAllNotificationsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    try {
+      const stored = localStorage.getItem("officex_notifications");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem(
+          "officex_notifications",
+          JSON.stringify(parsed.map((n: any) => ({ ...n, unread: false })))
+        );
+      }
+      const authHeaders = getClientAuthHeaders();
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      }).catch(() => null);
+    } catch {}
   };
 
-  const handleNotificationClick = (n: any) => {
+  const handleNotificationClick = async (n: any) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === n.id ? { ...item, unread: false } : item))
     );
+    try {
+      const stored = localStorage.getItem("officex_notifications");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem(
+          "officex_notifications",
+          JSON.stringify(
+            parsed.map((item: any) => (item.id === n.id ? { ...item, unread: false } : item))
+          )
+        );
+      }
+      const authHeaders = getClientAuthHeaders();
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: n.id }),
+      }).catch(() => null);
+    } catch {}
+
     setIsNotificationOpen(false);
     if (n.route) {
       router.push(n.route);
@@ -372,12 +448,14 @@ export default function Topbar() {
           <button
             type="button"
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            className="relative text-slate-500 hover:text-teal-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
-            title="Notifications"
+            className="relative text-slate-500 hover:text-teal-600 transition-colors p-2 rounded-xl hover:bg-slate-100 cursor-pointer"
+            title="Notifications & Governance Alerts"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white shadow-xs animate-pulse">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
             )}
           </button>
 
@@ -386,9 +464,9 @@ export default function Topbar() {
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-fadeIn text-slate-800">
               <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs text-slate-900">Rent Roll Notifications</span>
+                  <span className="font-bold text-xs text-slate-900">Rent Roll &amp; Admin Alerts</span>
                   {unreadCount > 0 ? (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
                       {unreadCount} new
                     </span>
                   ) : (
@@ -416,7 +494,7 @@ export default function Topbar() {
                     </div>
                     <span className="text-xs font-bold text-slate-800">No New Notifications</span>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-[240px] leading-relaxed">
-                      You are all caught up! Real notifications will appear here when administrative notices or alerts are dispatched.
+                      You are all caught up! Real notifications will appear here when administrative notices, deletion requests, or expiry alerts are dispatched.
                     </p>
                   </div>
                 ) : (
@@ -425,20 +503,34 @@ export default function Topbar() {
                       key={n.id}
                       onClick={() => handleNotificationClick(n)}
                       className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${
-                        n.unread ? "bg-teal-50/20" : ""
+                        n.unread ? (n.severity === "critical" ? "bg-rose-50/30" : "bg-teal-50/20") : ""
                       }`}
                     >
                       <div className="pt-0.5 shrink-0">
                         <span
-                          className={`w-2 h-2 rounded-full inline-block ${
-                            n.unread ? "bg-teal-600 ring-2 ring-teal-200" : "bg-slate-300"
+                          className={`w-2.5 h-2.5 rounded-full inline-block ${
+                            n.severity === "critical"
+                              ? "bg-rose-500 ring-2 ring-rose-200"
+                              : n.severity === "warning"
+                              ? "bg-amber-500 ring-2 ring-amber-200"
+                              : n.unread
+                              ? "bg-teal-600 ring-2 ring-teal-200"
+                              : "bg-slate-300"
                           }`}
                         ></span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider truncate border-slate-200 text-slate-600">
-                            {n.tag}
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider truncate ${
+                              n.severity === "critical"
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : n.severity === "warning"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-teal-50 text-teal-700 border-teal-200"
+                            }`}
+                          >
+                            {n.tag || "NOTICE"}
                           </span>
                           <span className="text-[10px] text-slate-400 shrink-0 font-medium">{n.time}</span>
                         </div>
@@ -450,13 +542,21 @@ export default function Topbar() {
                 )}
               </div>
 
-              <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-around text-center">
+                <Link
+                  href="/properties/registry?tab=approvals"
+                  onClick={() => setIsNotificationOpen(false)}
+                  className="text-xs font-semibold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1"
+                >
+                  Governance Approvals
+                </Link>
+                <span className="text-slate-300">•</span>
                 <Link
                   href="/properties/rent-roll?tab=contracts"
                   onClick={() => setIsNotificationOpen(false)}
                   className="text-xs font-semibold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1"
                 >
-                  View Rent Roll Pipeline <ArrowRight size={12} />
+                  Rent Roll Pipeline <ArrowRight size={12} />
                 </Link>
               </div>
             </div>
