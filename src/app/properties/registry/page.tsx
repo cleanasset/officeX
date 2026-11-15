@@ -34,7 +34,6 @@ import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImpo
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
-  const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
   const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
   const [registerRows, setRegisterRows] = useState<any[]>([]);
