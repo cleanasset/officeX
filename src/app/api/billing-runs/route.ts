@@ -14,9 +14,11 @@ import {
   meters,
   billingRuns,
   rentStep,
+  billingEntities,
 } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { getFiscalYear } from "@/lib/rent-roll/jobs/invoice-generation";
+import { sendInvoiceNotificationEmail } from "@/lib/email-service";
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 
 /**
@@ -478,33 +480,33 @@ export async function POST(req: Request) {
       });
     }
 
-    if (action === "issue") {
-      await db
-        .update(invoice)
-        .set({ status: "issued", sent_at: new Date() })
+    // Query primary billing entity for bank coordinates stamped on invoice & emails
+    let primaryBankName = "";
+    let primaryBankAcc = "";
+    let primaryBankIfsc = "";
+    let primaryBeneficiary = "";
+    try {
+      const [primaryBe] = await db
+        .select()
+        .from(billingEntities)
         .where(
           and(
-            eq(invoice.org_id, auth.orgId),
-            eq(invoice.status, "draft")
+            eq(billingEntities.orgId, auth.orgId),
+            eq(billingEntities.isDefault, true)
           )
-        );
-      
-      const isBuffer = dispatch_mode === "buffer";
-      return NextResponse.json({
-        success: true,
-        message: isBuffer
-          ? `✓ Invoices generated & queued for dispatch. 2-Hour Review Buffer active. Notice dispatched to Owner via WhatsApp/Email. Invoices will automatically release to tenants in 120 minutes.`
-          : `✓ Invoices issued and immediately dispatched to Tenant Dashboard & WhatsApp/Email!`,
-        buffer_active: isBuffer,
-        buffer_hours: isBuffer ? 2 : 0,
-        owner_notified: true,
-      });
-    }
+        )
+        .limit(1);
+      if (primaryBe) {
+        primaryBankName = primaryBe.bankName || "";
+        primaryBankAcc = primaryBe.bankAccountNumber || "";
+        primaryBankIfsc = primaryBe.bankIfsc || "";
+        primaryBeneficiary = primaryBe.legalName || "";
+      }
+    } catch (e) {}
 
-    // If generating fresh draft invoices, clean up previous draft runs for this period to avoid duplicate drafts
-    if (action === "generate") {
+    if (action === "issue") {
       const existingDrafts = await db
-        .select({ id: invoice.id })
+        .select()
         .from(invoice)
         .where(
           and(
@@ -513,10 +515,76 @@ export async function POST(req: Request) {
             sql`to_char(COALESCE(${invoice.period_start}, ${invoice.invoice_date}), 'YYYY-MM') = ${yyyyMm}`
           )
         );
-      for (const d of existingDrafts) {
-        await db.delete(invoice_line).where(eq(invoice_line.invoice_id, d.id)).catch(() => {});
-        await db.delete(invoice).where(eq(invoice.id, d.id)).catch(() => {});
+
+      if (existingDrafts.length > 0) {
+        await db
+          .update(invoice)
+          .set({ status: "issued", sent_at: new Date() })
+          .where(
+            and(
+              eq(invoice.org_id, auth.orgId),
+              eq(invoice.status, "draft"),
+              sql`to_char(COALESCE(${invoice.period_start}, ${invoice.invoice_date}), 'YYYY-MM') = ${yyyyMm}`
+            )
+          );
+
+        // Dispatch emails to each tenant
+        for (const d of existingDrafts) {
+          if (d.occupant_id) {
+            try {
+              const [occ] = await db
+                .select({ email: occupant.email, name: occupant.occupant_name })
+                .from(occupant)
+                .where(eq(occupant.id, d.occupant_id));
+              const recipientEmail = occ?.email || "admin.cleanasset@gmail.com";
+              await sendInvoiceNotificationEmail({
+                to: recipientEmail,
+                tenantName: occ?.name || "Commercial Tenant",
+                invoiceNumber: d.invoice_number,
+                grossTotal: d.gross_total,
+                dueDate: d.due_date ? String(d.due_date).split("T")[0] : "31-Oct-2026",
+                invoiceDate: d.invoice_date ? String(d.invoice_date).split("T")[0] : new Date().toISOString().split("T")[0],
+                bankName: primaryBankName,
+                bankAccountNumber: primaryBankAcc,
+                bankIfsc: primaryBankIfsc,
+                beneficiaryName: primaryBeneficiary,
+                portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+              }).catch((e) => console.warn("[Email dispatch notice]:", e?.message));
+            } catch (e) {}
+          }
+        }
+
+        const isBuffer = dispatch_mode === "buffer";
+        return NextResponse.json({
+          success: true,
+          message: isBuffer
+            ? `✓ Invoices generated & queued for dispatch. 2-Hour Review Buffer active. Notice dispatched to Owner via WhatsApp/Email. Invoices will automatically release to tenants in 120 minutes.`
+            : `✓ Invoices issued and immediately dispatched to Tenant Dashboard & Email!`,
+          buffer_active: isBuffer,
+          buffer_hours: isBuffer ? 2 : 0,
+          owner_notified: true,
+          count: existingDrafts.length,
+        });
       }
+      // If no drafts exist yet, proceed below to generate and issue them in one pass!
+    }
+
+    const targetStatus = action === "issue" ? "issued" : "draft";
+
+    // Clean up any stale draft runs for this period
+    const existingDrafts = await db
+      .select({ id: invoice.id })
+      .from(invoice)
+      .where(
+        and(
+          eq(invoice.org_id, auth.orgId),
+          eq(invoice.status, "draft"),
+          sql`to_char(COALESCE(${invoice.period_start}, ${invoice.invoice_date}), 'YYYY-MM') = ${yyyyMm}`
+        )
+      );
+    for (const d of existingDrafts) {
+      await db.delete(invoice_line).where(eq(invoice_line.invoice_id, d.id)).catch(() => {});
+      await db.delete(invoice).where(eq(invoice.id, d.id)).catch(() => {});
     }
 
     // 1. Fetch active contracts to bill along with property location and occupant GSTIN
@@ -531,11 +599,14 @@ export async function POST(req: Request) {
         commencement_date: contract.commencement_date,
         occupant_id: contract.occupant_id,
         occupant_name: occupant.occupant_name,
+        occupant_email: occupant.email,
         occupant_gst: occupant.gst_number,
         deposit_amount_inr: contract.deposit_amount_inr,
         space_id: contract.space_id,
+        space_name: space.space_name,
         area_sqft: space.chargeable_area_sqft,
         property_id: property.id,
+        property_name: property.property_name,
         property_state: property.state,
       })
       .from(contract)
@@ -698,7 +769,8 @@ export async function POST(req: Request) {
             gross_total: String(gross),
             net_payable: String(gross),
             balance_due: String(gross),
-            status: "draft",
+            status: targetStatus,
+            sent_at: targetStatus === "issued" ? new Date() : null,
           } as any)
           .returning();
 
@@ -765,6 +837,25 @@ export async function POST(req: Request) {
         }
 
         generatedInvoices.push(createdInv);
+
+        if (targetStatus === "issued") {
+          const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+          sendInvoiceNotificationEmail({
+            to: recipientEmail,
+            tenantName: c.occupant_name || "Commercial Tenant",
+            invoiceNumber: invNum,
+            propertyName: c.property_name || "Commercial Centre",
+            spaceName: c.space_name || "Commercial Space",
+            grossTotal: gross,
+            dueDate: calculatedDueDate,
+            invoiceDate: invoice_date,
+            bankName: primaryBankName,
+            bankAccountNumber: primaryBankAcc,
+            bankIfsc: primaryBankIfsc,
+            beneficiaryName: primaryBeneficiary,
+            portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+          }).catch((err) => console.warn("[Billing Email Dispatch Notice]:", err?.message));
+        }
       } else {
         // SPLIT INVOICES MODE: Separate invoices for Rent, CAM, and Utility
         if (include_groups.includes("rent")) {
@@ -794,7 +885,8 @@ export async function POST(req: Request) {
               gross_total: String(gross),
               net_payable: String(gross),
               balance_due: String(gross),
-              status: "draft",
+              status: targetStatus,
+              sent_at: targetStatus === "issued" ? new Date() : null,
             } as any)
             .returning();
 
@@ -813,6 +905,25 @@ export async function POST(req: Request) {
           });
 
           generatedInvoices.push(rentInv);
+
+          if (targetStatus === "issued") {
+            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+            sendInvoiceNotificationEmail({
+              to: recipientEmail,
+              tenantName: c.occupant_name || "Commercial Tenant",
+              invoiceNumber: invRentNum,
+              propertyName: c.property_name || "Commercial Centre",
+              spaceName: c.space_name || "Commercial Space",
+              grossTotal: gross,
+              dueDate: calculatedDueDate,
+              invoiceDate: invoice_date,
+              bankName: primaryBankName,
+              bankAccountNumber: primaryBankAcc,
+              bankIfsc: primaryBankIfsc,
+              beneficiaryName: primaryBeneficiary,
+              portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+            }).catch((err) => console.warn("[Billing Email Dispatch Notice]:", err?.message));
+          }
         }
 
         if (include_groups.includes("cam")) {
@@ -840,7 +951,8 @@ export async function POST(req: Request) {
               gross_total: String(gross),
               net_payable: String(gross),
               balance_due: String(gross),
-              status: "draft",
+              status: targetStatus,
+              sent_at: targetStatus === "issued" ? new Date() : null,
             } as any)
             .returning();
 
@@ -859,6 +971,25 @@ export async function POST(req: Request) {
           });
 
           generatedInvoices.push(camInv);
+
+          if (targetStatus === "issued") {
+            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+            sendInvoiceNotificationEmail({
+              to: recipientEmail,
+              tenantName: c.occupant_name || "Commercial Tenant",
+              invoiceNumber: invCamNum,
+              propertyName: c.property_name || "Commercial Centre",
+              spaceName: c.space_name || "Commercial Space",
+              grossTotal: gross,
+              dueDate: calculatedDueDate,
+              invoiceDate: invoice_date,
+              bankName: primaryBankName,
+              bankAccountNumber: primaryBankAcc,
+              bankIfsc: primaryBankIfsc,
+              beneficiaryName: primaryBeneficiary,
+              portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+            }).catch((err) => console.warn("[Billing Email Dispatch Notice]:", err?.message));
+          }
         }
 
         if (include_groups.includes("electricity")) {
@@ -886,7 +1017,8 @@ export async function POST(req: Request) {
               gross_total: String(gross),
               net_payable: String(gross),
               balance_due: String(gross),
-              status: "draft",
+              status: targetStatus,
+              sent_at: targetStatus === "issued" ? new Date() : null,
             } as any)
             .returning();
 
@@ -905,6 +1037,25 @@ export async function POST(req: Request) {
           });
 
           generatedInvoices.push(utilInv);
+
+          if (targetStatus === "issued") {
+            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+            sendInvoiceNotificationEmail({
+              to: recipientEmail,
+              tenantName: c.occupant_name || "Commercial Tenant",
+              invoiceNumber: invUtilNum,
+              propertyName: c.property_name || "Commercial Centre",
+              spaceName: c.space_name || "Commercial Space",
+              grossTotal: gross,
+              dueDate: calculatedDueDate,
+              invoiceDate: invoice_date,
+              bankName: primaryBankName,
+              bankAccountNumber: primaryBankAcc,
+              bankIfsc: primaryBankIfsc,
+              beneficiaryName: primaryBeneficiary,
+              portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro"}/portal/invoices`,
+            }).catch((err) => console.warn("[Billing Email Dispatch Notice]:", err?.message));
+          }
         }
       }
     }

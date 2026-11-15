@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  ArrowLeft,
   TrendingDown,
   TrendingUp,
   Percent,
@@ -179,22 +180,36 @@ export default function CreditNotesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-3.5 sm:p-6 pb-28 md:pb-16 space-y-4 sm:space-y-6">
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/operate/invoices"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 shadow-xs transition group cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Invoices &amp; Billing Hub</span>
+        </Link>
+        <span className="text-[11px] font-bold text-slate-400">
+          OFFICEX Finance &middot; Billing Adjustments
+        </span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-700 rounded-full border border-amber-200">
-              Credit &amp; Debit Adjustments
+              Tenant Discounts &amp; Waivers
             </span>
-            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              Rule 53 Compliant
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+              Automatic GST Adjustment
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Credit & Debit Note Register & Drawer
+            Discounts &amp; Credit Notes
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Statutory GST adjustment notes with reverse tax calculations, parent invoice balance offsets (Formula F-12), and reason codes.
+            Issue billing discounts, rent waivers, or fee reductions directly to a tenant. It instantly reduces their outstanding invoice balance and adjusts GST.
           </p>
         </div>
 
@@ -203,26 +218,19 @@ export default function CreditNotesPage() {
             onClick={() => {
               setIsDrawerOpen(true);
             }}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm"
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Issue Note
+            <Plus className="w-4 h-4" /> + Give Discount / Credit Note
           </button>
 
           <button
             onClick={fetchNotes}
             disabled={loading}
-            className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition border border-slate-200"
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition border border-slate-200 cursor-pointer"
             title="Refresh Notes"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
-
-          <Link
-            href="/operate/invoices"
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition border border-slate-200"
-          >
-            Invoices
-          </Link>
         </div>
       </div>
 

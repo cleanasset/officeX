@@ -204,6 +204,10 @@ export interface SendInvoiceEmailOptions {
   brandName?: string;
   brandLogo?: string;
   portalUrl?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  beneficiaryName?: string;
 }
 
 /**
@@ -220,6 +224,10 @@ export async function sendInvoiceNotificationEmail({
   invoiceDate = new Date().toISOString().split("T")[0],
   brandName = "OfficeX Asset Management",
   portalUrl = "https://www.officex.pro/portal/invoices",
+  bankName,
+  bankAccountNumber,
+  bankIfsc,
+  beneficiaryName,
 }: SendInvoiceEmailOptions): Promise<SendEmailResult> {
   const transporter = getTransporter();
   const formattedAmount = Number(grossTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -300,8 +308,8 @@ export async function sendInvoiceNotificationEmail({
               <!-- Remittance Instructions -->
               <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 12px; color: #065f46;">
                 <strong>Bank Wire Remittance (Corporate RTGS/NEFT):</strong><br>
-                Bank: <strong>HDFC Bank Ltd</strong> &middot; Account: <strong>50200088991234</strong> &middot; IFSC: <strong>HDFC0000060</strong><br>
-                Beneficiary: <strong>${brandName}</strong> &middot; SAC: 997212 (TDS §194-I Applicable)
+                Bank: <strong>${bankName || "Registered Commercial Bank"}</strong> &middot; Account: <strong>${bankAccountNumber || "Provided on Tenant Portal"}</strong> &middot; IFSC: <strong>${bankIfsc || "N/A"}</strong><br>
+                Beneficiary: <strong>${beneficiaryName || brandName}</strong> &middot; SAC: 997212 (TDS §194-I Applicable)
               </div>
 
               <!-- Button CTA -->

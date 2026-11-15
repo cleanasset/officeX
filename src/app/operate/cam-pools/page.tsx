@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  ArrowLeft,
   RefreshCw,
   Plus,
   DollarSign,
@@ -163,29 +164,43 @@ export default function CamPoolsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-3.5 sm:p-6 pb-28 md:pb-16 space-y-4 sm:space-y-6">
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/operate/invoices"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 shadow-xs transition group cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Invoices &amp; Billing Hub</span>
+        </Link>
+        <span className="text-[11px] font-bold text-slate-400">
+          OFFICEX Facilities &middot; Annual CAM Reconciliations
+        </span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-teal-50 text-teal-700 rounded-full border border-teal-200">
-              Formula F-22 &middot; True-Up Engine
+              Building Maintenance Expenses
             </span>
             <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-              RR-FMC-06 Compliant
+              Annual Balancing
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            CAM Pool Budgeting & Year-End True-Up
+            CAM Budgeting &amp; Year-End True-Up
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Area-weighted reconciliation of budgeted vs. audited actual CAM expenditures, auto-generating balancing credit and debit notes.
+            Compare actual maintenance expenses (power, security, housekeeping, diesel) against monthly CAM collected from tenants to balance year-end differences.
           </p>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <button
             onClick={() => setIsNewPoolOpen(true)}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Create Pool
           </button>
@@ -193,16 +208,16 @@ export default function CamPoolsPage() {
           {activePool && (
             <button
               onClick={() => handleOpenTrueUpModal(activePool)}
-              className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm"
+              className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
             >
-              <Zap className="w-4 h-4" /> Run True-Up
+              <Zap className="w-4 h-4" /> Run Year-End Balancing
             </button>
           )}
 
           <button
             onClick={fetchPools}
             disabled={loading}
-            className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition border border-slate-200"
+            className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition border border-slate-200 cursor-pointer"
             title="Refresh Pools"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  ArrowLeft,
   Download,
   Calendar,
   Layers,
@@ -175,67 +176,73 @@ export default function InvoiceListPage() {
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-            <Link href="/dashboard" className="hover:text-blue-600 transition">Dashboard</Link>
+            <Link href="/dashboard/owner" className="inline-flex items-center gap-1.5 hover:text-teal-700 font-semibold transition">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Owner Dashboard
+            </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <Link href="/properties/rent-roll" className="hover:text-blue-600 transition">Rent Roll</Link>
+            <Link href="/properties/rent-roll" className="hover:text-teal-700 transition">Rent Roll Register</Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-slate-900 font-medium">Invoicing & Billing (§S-12)</span>
+            <span className="text-slate-900 font-bold">Invoices &amp; Billing Hub</span>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Invoicing & Billing Register
+                Invoices &amp; Billing Hub
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Generate, approve, and track commercial rent & flex workspace invoices with GST compliance.
+                Generate monthly rent bills, approve drafts, track payments, and review tenant receipts.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
               <Link
                 href="/operate/billing-runs"
-                className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                title="Open Advanced Billing Engine to generate consolidated or split rent/CAM invoices"
+                className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <Layers className="w-4 h-4 text-indigo-600" />
-                S-40 Billing Run (Split Mode)
+                Monthly Billing Run
               </Link>
 
               <Link
                 href="/operate/credit-notes"
-                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                title="Give tenant discounts, rent waivers, or fee reductions"
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <TrendingDown className="w-4 h-4 text-amber-600" />
-                S-42 Credit Notes
+                Discounts &amp; Credit Notes
               </Link>
 
               <Link
                 href="/operate/cam-pools"
-                className="px-3.5 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                title="Reconcile annual common area maintenance expenses"
+                className="px-3.5 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <SlidersHorizontal className="w-4 h-4 text-teal-600" />
-                F-22 CAM True-Up
+                Annual CAM True-Up
               </Link>
 
               <button
                 onClick={handleGenerateBatch}
                 disabled={batchLoading}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2"
+                className="px-4 py-2.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {batchLoading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <Plus className="w-4 h-4" />
                 )}
-                Run Batch
+                + Auto-Generate Invoices
               </button>
 
               <button
                 onClick={fetchInvoices}
-                className="p-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-sm transition"
-                title="Refresh"
+                className="p-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+                title="Refresh Invoice List"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-teal-600" : ""}`} />
               </button>
             </div>
           </div>
