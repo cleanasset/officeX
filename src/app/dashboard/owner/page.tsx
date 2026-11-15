@@ -408,6 +408,19 @@ export default function OwnerDashboardPage() {
 
       setProperties(liveProps);
 
+      // Auto-heal stale property scope if selected property no longer exists
+      if (typeof window !== "undefined") {
+        const curScope = localStorage.getItem("officex_selected_property");
+        if (curScope && curScope !== "all") {
+          const exists = liveProps.some((p) => p.id === curScope || p.name.toLowerCase().trim() === curScope.toLowerCase().trim());
+          if (!exists) {
+            localStorage.setItem("officex_selected_property", "all");
+            localStorage.setItem("officex_selected_property_name", "All Properties");
+            setScope("all");
+          }
+        }
+      }
+
       // Universal Portfolio Floor: sync cumulative sq.ft across all properties
       if (liveProps.length > 0) {
         const cumulativeSqft = liveProps.reduce((sum, p) => sum + (p.areaSqft || 0), 0);
@@ -580,7 +593,10 @@ export default function OwnerDashboardPage() {
 
 
   // Header KPI Computations (Clean, live computations with zero fake data)
-  const displayedProperties = scope === "all" ? properties : properties.filter((p) => p.id === scope);
+  const displayedProperties =
+    scope === "all" || !properties.some((p) => p.id === scope)
+      ? properties
+      : properties.filter((p) => p.id === scope);
   const totalPropertiesCount = displayedProperties.length;
   const totalLeasableArea = displayedProperties.reduce((acc, p) => acc + p.areaSqft, 0);
   const totalOccupiedArea = displayedProperties.reduce((acc, p) => acc + p.occupiedSqft, 0);

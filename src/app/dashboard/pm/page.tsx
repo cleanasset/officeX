@@ -138,6 +138,17 @@ export default function PropertyManagerDashboardPage() {
           ? data
           : data.properties || [];
         setPropertiesList(list);
+        if (list.length > 0 && typeof window !== "undefined") {
+          const curSaved = localStorage.getItem("officex_selected_property") || localStorage.getItem("officex_active_property");
+          if (curSaved && curSaved !== "all") {
+            const exists = list.some((p: any) => p.id === curSaved || (p.property_name && p.property_name.toLowerCase().trim() === curSaved.toLowerCase().trim()));
+            if (!exists) {
+              setSelectedProperty("all");
+              localStorage.setItem("officex_selected_property", "all");
+              localStorage.setItem("officex_selected_property_name", "All Properties");
+            }
+          }
+        }
       })
       .catch(() => {});
 
@@ -342,9 +353,12 @@ export default function PropertyManagerDashboardPage() {
   const filteredTasks = activeTasks.filter((t) => {
     if (filterPriority !== "all" && t.priority !== filterPriority) return false;
     if (selectedProperty !== "all") {
-      const matchId = t.propertyId === selectedProperty;
-      const matchName = t.property?.toLowerCase().includes(selectedProperty.toLowerCase());
-      if (!matchId && !matchName) return false;
+      const propExists = propertiesList.some((p: any) => p.id === selectedProperty || (p.property_name && p.property_name.toLowerCase() === selectedProperty.toLowerCase()));
+      if (propExists) {
+        const matchId = t.propertyId === selectedProperty;
+        const matchName = t.property?.toLowerCase().includes(selectedProperty.toLowerCase());
+        if (!matchId && !matchName) return false;
+      }
     }
     return true;
   });
@@ -352,7 +366,7 @@ export default function PropertyManagerDashboardPage() {
   const isAll = selectedProperty === "all";
   const activeProp = propertiesList.find(
     (p) => p.id === selectedProperty || (p.property_name && p.property_name.toLowerCase() === selectedProperty.toLowerCase())
-  );
+  ) || propertiesList[0];
 
   return (
     <div className="space-y-6 pb-24">

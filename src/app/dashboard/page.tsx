@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function WorkspaceHubPage() {
   const router = useRouter();
@@ -152,8 +153,9 @@ export default function WorkspaceHubPage() {
         setIsRentRollSubscribed(subActive);
 
         // Fetch properties or contracts count for active Rent Roll users
+        const authHeaders = getClientAuthHeaders();
         try {
-          const propRes = await fetch("/api/rent-roll/properties");
+          const propRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
           if (propRes.ok) {
             const propData = await propRes.json();
             if (Array.isArray(propData?.data) && propData.data.length > 0) {
@@ -163,7 +165,7 @@ export default function WorkspaceHubPage() {
         } catch {}
 
         try {
-          const contRes = await fetch("/api/rent-roll/contracts");
+          const contRes = await fetch("/api/rent-roll/contracts", { headers: authHeaders });
           if (contRes.ok) {
             const contData = await contRes.json();
             if (Array.isArray(contData?.data)) {

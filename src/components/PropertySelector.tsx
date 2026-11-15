@@ -68,6 +68,17 @@ export default function PropertySelector() {
                   detail: { propertyId: found.id, propertyName: found.name },
                 })
               );
+            } else {
+              // Self-heal: selected property was deleted or not in list - reset to "all" immediately
+              setSelectedPropertyId("all");
+              setSelectedPropertyName("All Properties");
+              localStorage.setItem("officex_selected_property", "all");
+              localStorage.setItem("officex_selected_property_name", "All Properties");
+              window.dispatchEvent(
+                new CustomEvent("officex-property-change", {
+                  detail: { propertyId: "all", propertyName: "All Properties" },
+                })
+              );
             }
           }
         }
