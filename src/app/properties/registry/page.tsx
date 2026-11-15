@@ -234,7 +234,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
     if (
       !confirm(
-        `Commercial Property Removal:\n\nAre you sure you want to delete "${propertyName}"?\n\n• If this property has no active tenant leases, it will be deleted immediately.\n• If it has active leases, it will be submitted for Super Admin approval and moved to the "Pending Deletions & Approvals" tab.`
+        `Commercial Property Removal:\n\nAre you sure you want to delete "${propertyName}"?\n\n⚠️ IMPORTANT CAPACITY NOTICE:\nDeleting this property will NOT restore or refund your licensed Sq.Ft quota. Once utilized, licensed area remains consumed under your current subscription. Adding any new or replacement property in the future will require upgrading your licensed capacity.\n\n• If this property has no active tenant leases, it will be deleted immediately.\n• If it has active leases, it will be submitted for Super Admin approval and moved to the "Pending Deletions & Approvals" tab.`
       )
     ) {
       return;

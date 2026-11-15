@@ -949,13 +949,11 @@ export default function PropertyHierarchyModal({
       const pRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
       if (pRes.ok) {
         const pData = await pRes.json();
-        const pArr = (Array.isArray(pData.data) ? pData.data : [])
-          .filter((p: any) => !p.is_pending_deletion)
-          .map((p: any) => ({
-            id: p.id,
-            name: p.property_name,
-            area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
-          }));
+        const pArr = (Array.isArray(pData.data) ? pData.data : []).map((p: any) => ({
+          id: p.id,
+          name: p.property_name,
+          area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
+        }));
         setPropertiesList(pArr);
         const targetPropId = initialPropertyId || "";
         if (targetPropId) {
@@ -3810,7 +3808,7 @@ export default function PropertyHierarchyModal({
                           Portfolio Capacity Limit Reached (100% Used)
                         </h4>
                         <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5 leading-relaxed">
-                          You are currently managing <strong>{currArea.toLocaleString("en-IN")} Sq.Ft</strong> out of your <strong>{effCap.toLocaleString("en-IN")} Sq.Ft</strong> licensed capacity limit. Adding new properties is locked.
+                          You have utilized <strong>{currArea.toLocaleString("en-IN")} Sq.Ft</strong> out of your <strong>{effCap.toLocaleString("en-IN")} Sq.Ft</strong> licensed capacity. Note: Deleting previous properties does not refund or replenish licensed square footage. Please upgrade your capacity to add new properties.
                         </p>
                       </div>
                     </div>
@@ -4039,7 +4037,7 @@ export default function PropertyHierarchyModal({
                                 <div>
                                   <span className="font-black text-rose-950 block">Hard Stop: Exceeds Licensed Capacity!</span>
                                   <span className="text-[11px] text-rose-800">
-                                    Projected total ({projectedPortfolioArea.toLocaleString("en-IN")} Sq.Ft) exceeds your {subscribedCapacity.toLocaleString("en-IN")} Sq.Ft limit by <strong>{excessSqft.toLocaleString("en-IN")} Sq.Ft</strong>. Adding this property is blocked.
+                                    Projected total ({projectedPortfolioArea.toLocaleString("en-IN")} Sq.Ft) exceeds your {subscribedCapacity.toLocaleString("en-IN")} Sq.Ft limit by <strong>{excessSqft.toLocaleString("en-IN")} Sq.Ft</strong>. Note: Previously registered assets consumed your quota and deletion does not refund square footage. Please upgrade your quota to add this property.
                                   </span>
                                 </div>
                               </div>

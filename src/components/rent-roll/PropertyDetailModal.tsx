@@ -1085,6 +1085,22 @@ export default function PropertyDetailModal({
                 </div>
               )}
 
+              {/* Licensed Capacity & Quota Warning */}
+              <div className="p-4 bg-orange-50/90 rounded-2xl border border-orange-200 text-xs text-orange-950 space-y-2">
+                <div className="font-extrabold flex items-center gap-1.5 text-orange-900">
+                  <AlertTriangle size={15} className="text-orange-600 shrink-0" />
+                  <span>Licensed Capacity &amp; Quota Warning</span>
+                </div>
+                <p className="text-[11px] text-orange-900 leading-relaxed">
+                  Deleting this property <strong>does NOT restore or refund your licensed square footage quota</strong>. The{" "}
+                  <strong>{Number(property?.total_leasable_area_sqft || property?.area_sqft || 0).toLocaleString("en-IN")} Sq.Ft</strong>{" "}
+                  utilized by this asset remains consumed under your current subscription plan.
+                </p>
+                <p className="text-[11px] text-orange-850 font-bold leading-relaxed">
+                  To register any new or replacement property in the future, you will need to <strong>upgrade your licensed capacity</strong> before adding more square footage.
+                </p>
+              </div>
+
               {/* Explicit Safeguard Checkbox & Confirmation Text */}
               <div className="space-y-3 pt-1">
                 <label className="flex items-start gap-2.5 cursor-pointer select-none">
@@ -1095,7 +1111,7 @@ export default function PropertyDetailModal({
                     className="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
                   />
                   <span className="text-[11px] text-slate-700 font-medium leading-snug">
-                    I acknowledge that deleting this property will terminate all active tenant contracts, revoke tenant and manager portal access, and permanently remove all spaces.
+                    I acknowledge that deleting this property will terminate all active tenant contracts, revoke portal access, and that <strong>consumed Sq.Ft quota will not be refunded</strong> (an upgrade is required before adding any new properties).
                   </span>
                 </label>
 
