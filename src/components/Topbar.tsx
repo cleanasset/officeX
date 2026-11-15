@@ -558,23 +558,7 @@ export default function Topbar() {
                 )}
               </div>
 
-              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-around text-center">
-                <Link
-                  href="/properties/registry?tab=approvals"
-                  onClick={() => setIsNotificationOpen(false)}
-                  className="text-xs font-semibold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1"
-                >
-                  Governance Approvals
-                </Link>
-                <span className="text-slate-300">•</span>
-                <Link
-                  href="/properties/rent-roll?tab=contracts"
-                  onClick={() => setIsNotificationOpen(false)}
-                  className="text-xs font-semibold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1"
-                >
-                  Rent Roll Pipeline <ArrowRight size={12} />
-                </Link>
-              </div>
+
             </div>
           )}
         </div>
