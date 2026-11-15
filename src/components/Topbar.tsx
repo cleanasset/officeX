@@ -195,13 +195,29 @@ export default function Topbar() {
       const res = await fetch("/api/notifications", { headers: authHeaders }).catch(() => null);
       if (res && res.ok) {
         const json = await res.json();
-        const serverData = Array.isArray(json.data) ? json.data : [];
+        let serverData = Array.isArray(json.data) ? json.data : [];
 
         let localData: any[] = [];
         try {
           const stored = localStorage.getItem("officex_notifications");
           if (stored) localData = JSON.parse(stored);
         } catch {}
+
+        const isAdmin =
+          currentRoleKey === "super_admin" ||
+          currentRoleKey === "admin" ||
+          pathname.startsWith("/admin") ||
+          (userEmail && userEmail.toLowerCase().includes("admin"));
+
+        // If not admin, strictly purge any admin approval tasks from client view
+        if (!isAdmin) {
+          localData = localData.filter(
+            (l: any) => l.tag !== "APPROVAL" && !l.id?.startsWith("prop-del-") && !l.id?.startsWith("admin-")
+          );
+          serverData = serverData.filter(
+            (s: any) => s.tag !== "APPROVAL" && !s.id?.startsWith("prop-del-") && !s.id?.startsWith("admin-")
+          );
+        }
 
         const serverIds = new Set(serverData.map((s: any) => s.id));
         const merged = [...serverData, ...localData.filter((l: any) => !serverIds.has(l.id))];
