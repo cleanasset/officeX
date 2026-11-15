@@ -1231,23 +1231,43 @@ export default function OwnerBankingAndERPPage() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Bank Name <span className="text-rose-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="indian-commercial-banks"
+                    required
                     value={bankDetails.bank_name}
                     onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                    placeholder="Type or select any bank in India..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C]"
-                  >
-                    {!bankDetails.bank_name && (
-                      <option value="" disabled>-- Select Your Commercial Bank --</option>
-                    )}
-                    <option value="HDFC Bank">HDFC Bank</option>
-                    <option value="ICICI Bank">ICICI Bank</option>
-                    <option value="State Bank of India">State Bank of India (SBI)</option>
-                    <option value="Axis Bank">Axis Bank</option>
-                    <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                    <option value="IndusInd Bank">IndusInd Bank</option>
-                    <option value="Yes Bank">Yes Bank</option>
-                    <option value="Other">Other Bank...</option>
-                  </select>
+                  />
+                  <datalist id="indian-commercial-banks">
+                    <option value="HDFC Bank" />
+                    <option value="ICICI Bank" />
+                    <option value="State Bank of India (SBI)" />
+                    <option value="Axis Bank" />
+                    <option value="Kotak Mahindra Bank" />
+                    <option value="Bank of Baroda" />
+                    <option value="Punjab National Bank (PNB)" />
+                    <option value="Canara Bank" />
+                    <option value="Union Bank of India" />
+                    <option value="Federal Bank" />
+                    <option value="IDFC FIRST Bank" />
+                    <option value="IndusInd Bank" />
+                    <option value="Yes Bank" />
+                    <option value="Bank of India" />
+                    <option value="Central Bank of India" />
+                    <option value="Indian Bank" />
+                    <option value="UCO Bank" />
+                    <option value="RBL Bank" />
+                    <option value="South Indian Bank" />
+                    <option value="Standard Chartered Bank" />
+                    <option value="HSBC India" />
+                    <option value="Citibank" />
+                    <option value="DBS Bank" />
+                    <option value="Bandhan Bank" />
+                    <option value="Karur Vysya Bank" />
+                    <option value="Saraswat Bank" />
+                  </datalist>
                 </div>
 
                 <div>
@@ -1316,12 +1336,43 @@ export default function OwnerBankingAndERPPage() {
                     required
                     maxLength={11}
                     value={bankDetails.ifsc_code}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newIfsc = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "");
+                      let detectedBank = bankDetails.bank_name;
+                      if (!detectedBank && newIfsc.length >= 4) {
+                        const prefix = newIfsc.slice(0, 4);
+                        const ifscMap: Record<string, string> = {
+                          HDFC: "HDFC Bank",
+                          ICIC: "ICICI Bank",
+                          SBIN: "State Bank of India (SBI)",
+                          UTIB: "Axis Bank",
+                          KKBK: "Kotak Mahindra Bank",
+                          BARB: "Bank of Baroda",
+                          PUNB: "Punjab National Bank (PNB)",
+                          CNRB: "Canara Bank",
+                          UBIN: "Union Bank of India",
+                          FDRL: "Federal Bank",
+                          IDFB: "IDFC FIRST Bank",
+                          INDB: "IndusInd Bank",
+                          YESB: "Yes Bank",
+                          BKID: "Bank of India",
+                          CBIN: "Central Bank of India",
+                          IDIB: "Indian Bank",
+                          UCBA: "UCO Bank",
+                          RATN: "RBL Bank",
+                          SCBL: "Standard Chartered Bank",
+                          HSBC: "HSBC India",
+                        };
+                        if (ifscMap[prefix]) {
+                          detectedBank = ifscMap[prefix];
+                        }
+                      }
                       setBankDetails({
                         ...bankDetails,
-                        ifsc_code: e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ""),
-                      })
-                    }
+                        ifsc_code: newIfsc,
+                        bank_name: detectedBank,
+                      });
+                    }}
                     placeholder="e.g. HDFC0000060"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C]"
                   />
