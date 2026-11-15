@@ -8465,23 +8465,6 @@ export default function PropertyHierarchyModal({
                       onChange={(e) => setContractForm({ ...contractForm, fitoutDays: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
                     />
-                    {contractForm.startDate && Number(contractForm.fitoutDays) > 0 && (() => {
-                      const startD = new Date(contractForm.startDate);
-                      const rcd = new Date(startD);
-                      rcd.setDate(rcd.getDate() + Number(contractForm.fitoutDays));
-                      const rcdStr = rcd.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-                      return (
-                        <div className="mt-2 p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 text-[11px] space-y-1 animate-in fade-in">
-                          <div className="flex items-center justify-between">
-                            <span>🏢 <strong>Rent Commencement Date (RCD):</strong></span>
-                            <span className="font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">{rcdStr}</span>
-                          </div>
-                          <p className="text-slate-600">
-                            <strong>Payment Impact:</strong> Tenant pays <strong>₹0 Base Rent</strong> for the first {contractForm.fitoutDays} days (during fit-out). Regular base rent invoicing begins strictly on <strong>{rcdStr}</strong>.
-                          </p>
-                        </div>
-                      );
-                    })()}
                   </div>
                 </div>
               </div>
