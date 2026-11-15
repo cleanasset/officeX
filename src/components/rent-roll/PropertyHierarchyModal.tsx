@@ -203,6 +203,7 @@ export default function PropertyHierarchyModal({
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
   const [hasSavedOnboarding, setHasSavedOnboarding] = useState(false);
   const [isDraftRestored, setIsDraftRestored] = useState(false);
+  const [isDraftBannerDismissed, setIsDraftBannerDismissed] = useState(false);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setFeedback({ type, text });
@@ -1529,8 +1530,18 @@ export default function PropertyHierarchyModal({
       return;
     }
 
+    // Auto-balance single-tenant floors
+    if (propForm.leasingModel === "single_tenant" && enteredArea > 0 && floorBreakdown.length > 0) {
+      const flCount = floorBreakdown.length;
+      const each = Math.floor(enteredArea / flCount);
+      const rem = enteredArea - each * flCount;
+      floorBreakdown.forEach((fl, idx) => {
+        fl.areaSqft = String(each + (idx === 0 ? rem : 0));
+      });
+    }
+
     // Capacity Sanity: Floor schedule cannot exceed total property leasable area
-    if (floorBreakdown.length > 0) {
+    if (propForm.leasingModel !== "single_tenant" && floorBreakdown.length > 0) {
       const sumFloorArea = floorBreakdown.reduce((sum, fl) => sum + (Number(fl.areaSqft) || 0), 0);
       if (sumFloorArea > enteredArea) {
         showToast(
@@ -2584,8 +2595,11 @@ export default function PropertyHierarchyModal({
           setContractForm((prev) => ({
             ...prev,
             occupantId: data.data.id,
+            propertyId: propForm.existingPropId || prev.propertyId,
             spaceId: selectedTenantSuites[0] || prev.spaceId,
-            areaSqft: effectiveArea > 0 ? String(effectiveArea) : prev.areaSqft,
+            areaSqft: effectiveArea > 0 ? String(effectiveArea) : (propForm.areaSqft || prev.areaSqft),
+            fitoutDays: propForm.defaultFitoutDays || prev.fitoutDays || "60",
+            billingEntity: propForm.spvName || propForm.propertyName || prev.billingEntity,
           }));
         }
 
@@ -3628,32 +3642,40 @@ export default function PropertyHierarchyModal({
         )}
 
         {/* Draft Auto-Saved Indicator Banner */}
-        {isDraftRestored && (
-          <div className="mx-5 sm:mx-7 mt-3 p-3 rounded-2xl bg-teal-50/90 border border-teal-200 text-teal-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in">
+        {isDraftRestored && !isDraftBannerDismissed && (
+          <div className="mx-5 sm:mx-7 mt-3 p-3 rounded-2xl bg-teal-50/90 border border-teal-200 text-teal-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in shadow-2xs">
             <div className="flex items-center gap-2">
               <Sparkles size={15} className="text-[#0F8B7D] shrink-0" />
               <span>
                 <strong>Draft Restored:</strong> Resumed at {
                   activeTab === "property"
-                    ? "Step 1: Property"
-                    : activeTab === "space"
-                    ? "Step 2: Space Demised Studio"
-                    : activeTab === "tenant"
-                    ? "Step 3: Tenant Master"
+                    ? "Step 1: Property & Facility"
+                    : activeTab === "space" || activeTab === "tenant"
+                    ? "Step 2: Tenant & Demised Premises"
                     : activeTab === "contract"
-                    ? "Step 4: Lease Contract"
-                    : "Step 5: Delegation"
+                    ? "Step 3: Commercial Lease Contract"
+                    : "Step 4: Assign Management"
                 }{propForm.propertyName ? ` for "${propForm.propertyName}"` : ""}. All your previously entered details have been preserved.
               </span>
             </div>
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline shrink-0 cursor-pointer flex items-center gap-1"
-            >
-              <RotateCcw size={12} />
-              <span>Discard &amp; Start Over</span>
-            </button>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw size={12} />
+                <span>Discard &amp; Start Over</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDraftBannerDismissed(true)}
+                className="p-1 rounded-lg text-teal-700 hover:text-teal-900 hover:bg-teal-100 transition cursor-pointer"
+                title="Dismiss Banner"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -4346,7 +4368,24 @@ export default function PropertyHierarchyModal({
                       </div>
 
                       {/* Dynamic Space / Floor / Bay Breakdown Table */}
-                      {floorBreakdown.length > 0 && (
+                      {propForm.leasingModel === "single_tenant" ? (
+                        <div className="sm:col-span-2 p-3.5 bg-teal-50/80 rounded-2xl border border-teal-200 text-teal-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+                              <Building2 size={16} />
+                            </div>
+                            <div>
+                              <span className="font-bold text-xs text-teal-950 block">Single Occupier Asset (100% Leased)</span>
+                              <span className="text-[11px] text-teal-800 leading-snug">
+                                Entire building ({propForm.floorsCount} floors, {Number(propForm.areaSqft || 0).toLocaleString("en-IN")} Sq.Ft) is leased to 1 single corporate tenant. Demarcated floor and suite breakdown is skipped.
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-600 text-white shadow-2xs shrink-0 self-start sm:self-auto">
+                            Unified Building
+                          </span>
+                        </div>
+                      ) : floorBreakdown.length > 0 && (
                         <div className="sm:col-span-2 p-3.5 bg-slate-50/90 rounded-2xl border border-teal-200 space-y-3 animate-in fade-in">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
                             <div>
@@ -6132,8 +6171,35 @@ export default function PropertyHierarchyModal({
                       </span>
                     </div>
 
-                    {/* Requirement 4: Existing Tenant Auto-Fill */}
-                    {tenantsList.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {propForm.propertyName && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTenantForm((prev) => ({
+                              ...prev,
+                              companyName: propForm.spvName || propForm.propertyName,
+                              tradeName: propForm.propertyName,
+                              companyType: (propForm.ownershipStructure as any) || "pvt_ltd",
+                              pan: propForm.panNumber || prev.pan,
+                              cinNumber: propForm.cinNumber || prev.cinNumber,
+                              gst: propForm.gstin || prev.gst,
+                              billingAddress: propForm.address || prev.billingAddress,
+                              occupantName: propForm.contactName || prev.occupantName,
+                              signatoryName: propForm.contactName || prev.signatoryName,
+                              phone: propForm.contactPhone || prev.phone,
+                            }));
+                            showToast("✓ Auto-filled tenant info from Step 1 Property & SPV details!");
+                          }}
+                          className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                        >
+                          <Sparkles size={12} />
+                          <span>Same as Property Owner / SPV</span>
+                        </button>
+                      )}
+
+                      {/* Requirement 4: Existing Tenant Auto-Fill */}
+                      {tenantsList.length > 0 && (
                       <div className="flex items-center gap-1.5 text-xs">
                         <span className="text-[11px] font-semibold text-slate-600">Existing Tenant:</span>
                         <select
@@ -6174,6 +6240,7 @@ export default function PropertyHierarchyModal({
                         </select>
                       </div>
                     )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -6527,13 +6594,21 @@ export default function PropertyHierarchyModal({
 
                     {/* Primary Phone */}
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Primary Phone *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Primary Phone *</label>
+                        {tenantForm.phone && (
+                          <span className={`text-[10px] font-mono ${tenantForm.phone.replace(/\D/g, "").length === 10 ? "text-emerald-600 font-bold" : "text-amber-600 font-semibold"}`}>
+                            ({tenantForm.phone.replace(/\D/g, "").length}/10)
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="tel"
                         required
-                        placeholder="+91 98450 12345"
+                        maxLength={10}
+                        placeholder="10-digit mobile (e.g. 9825358617)"
                         value={tenantForm.phone}
-                        onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
+                        onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                       />
                     </div>
@@ -6554,14 +6629,20 @@ export default function PropertyHierarchyModal({
 
                     {/* Alternate Contact Phone */}
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">
-                        Alternate Contact Phone
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Alternate Contact Phone</label>
+                        {tenantForm.altContactPhone && (
+                          <span className={`text-[10px] font-mono ${tenantForm.altContactPhone.replace(/\D/g, "").length === 10 ? "text-emerald-600 font-bold" : "text-amber-600 font-semibold"}`}>
+                            ({tenantForm.altContactPhone.replace(/\D/g, "").length}/10)
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="tel"
-                        placeholder="+91 99000 88776"
+                        maxLength={10}
+                        placeholder="10-digit mobile number"
                         value={tenantForm.altContactPhone}
-                        onChange={(e) => setTenantForm({ ...tenantForm, altContactPhone: e.target.value })}
+                        onChange={(e) => setTenantForm({ ...tenantForm, altContactPhone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                       />
                     </div>
@@ -6739,7 +6820,7 @@ export default function PropertyHierarchyModal({
                       >
                         {displayBuildings.map((b) => (
                           <option key={b.id} value={b.id}>
-                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                            {b.name} ({b.floors || 1}F • {Number(b.totalAreaSqft || propForm.areaSqft || 0).toLocaleString()} Sq.Ft)
                           </option>
                         ))}
                       </select>
@@ -7283,7 +7364,7 @@ export default function PropertyHierarchyModal({
                       >
                         {displayBuildings.map((b) => (
                           <option key={b.id} value={b.id}>
-                            {b.name} ({b.floors || 1} Floors{b.totalAreaSqft ? ` • ${b.totalAreaSqft.toLocaleString()} Sq.Ft` : ""})
+                            {b.name} ({b.floors || 1}F • {Number(b.totalAreaSqft || propForm.areaSqft || 0).toLocaleString()} Sq.Ft)
                           </option>
                         ))}
                         {displayBuildings.length === 0 && <option value="">No buildings created</option>}
@@ -7999,19 +8080,19 @@ export default function PropertyHierarchyModal({
                   </div>
 
                   {/* HVAC Operating Hours & Overtime Rate (Point 10) */}
-                  <div className="pt-2 border-t border-amber-200/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                  <div className="pt-2.5 border-t border-amber-200/60 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-xs">
+                    <div className="shrink-0">
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-1">
                         Standard HVAC Operating Window
                       </label>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <input
                           type="time"
                           value={contractForm.hvacStartTime || "08:00"}
                           onChange={(e) =>
                             setContractForm({ ...contractForm, hvacStartTime: e.target.value })
                           }
-                          className="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs outline-none"
+                          className="w-28 px-2 py-1.5 rounded-lg border border-slate-300 text-xs outline-none bg-white font-mono"
                         />
                         <span className="text-slate-400 font-bold text-xs">to</span>
                         <input
@@ -8020,15 +8101,12 @@ export default function PropertyHierarchyModal({
                           onChange={(e) =>
                             setContractForm({ ...contractForm, hvacEndTime: e.target.value })
                           }
-                          className="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs outline-none"
+                          className="w-28 px-2 py-1.5 rounded-lg border border-slate-300 text-xs outline-none bg-white font-mono"
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
-                        Overtime HVAC Billing
-                      </label>
-                      <label className="flex items-center gap-1.5 mt-1 cursor-pointer">
+                    <div className="pt-2 sm:pt-4">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={contractForm.hasOvertimeHvac || Number(contractForm.overtimeHvacRatePerHour) > 0}
@@ -8039,14 +8117,14 @@ export default function PropertyHierarchyModal({
                               overtimeHvacRatePerHour: e.target.checked ? (contractForm.overtimeHvacRatePerHour || "1500") : "0",
                             })
                           }
-                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                         />
-                        <span className="text-xs font-semibold text-slate-700">Bill After-Hours Usage</span>
+                        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">Bill After-Hours Usage</span>
                       </label>
                     </div>
                     {(contractForm.hasOvertimeHvac || Number(contractForm.overtimeHvacRatePerHour) > 0) && (
-                      <div>
-                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                      <div className="shrink-0">
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-1">
                           After-Hours Rate (₹/Hour or TR-Hr)
                         </label>
                         <input
@@ -8056,12 +8134,13 @@ export default function PropertyHierarchyModal({
                           onChange={(e) =>
                             setContractForm({ ...contractForm, overtimeHvacRatePerHour: e.target.value })
                           }
-                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono text-xs outline-none focus:border-teal-600 font-bold"
+                          className="w-36 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono outline-none bg-white"
                         />
                       </div>
                     )}
                   </div>
                 </div>
+              </div>
 
                 {/* Requirement 8: Granular Parking Allocations (Free vs Paid for 4W & 2W) */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
@@ -8187,7 +8266,6 @@ export default function PropertyHierarchyModal({
                     </div>
                   </div>
                 </div>
-              </div>
 
               {/* ──── LIVE GROSS MONTHLY PAYOUT SUMMARY CARD ──── */}
               {Number(contractForm.monthlyRent) > 0 && (
@@ -8256,7 +8334,7 @@ export default function PropertyHierarchyModal({
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[11px] font-semibold text-slate-600 mr-1">Months multiplier:</span>
-                  {["3", "6", "9", "10", "12"].map((m) => (
+                  {["1", "2", "3", "4", "6", "9", "10", "12"].map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -8274,7 +8352,7 @@ export default function PropertyHierarchyModal({
                           : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                       }`}
                     >
-                      {m} Months
+                      {m === "1" ? "1 Month" : m === "12" ? "1 Year (12M)" : `${m} Months`}
                     </button>
                   ))}
                 </div>
@@ -8341,6 +8419,39 @@ export default function PropertyHierarchyModal({
 
               {/* ──── SECTION 5: DATES & LEGAL PERIODS ──── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {/* Standard Commercial Lease Tenure Quick Selector */}
+                <div className="sm:col-span-2 flex flex-wrap items-center gap-1.5 pb-1">
+                  <span className="text-[11px] font-semibold text-slate-600 mr-1">Standard Lease Term:</span>
+                  {[
+                    { label: "1 Year (12M)", months: 12 },
+                    { label: "3 Years (36M)", months: 36 },
+                    { label: "5 Years (60M)", months: 60 },
+                    { label: "9 Years (108M)", months: 108 },
+                  ].map((t) => (
+                    <button
+                      key={t.label}
+                      type="button"
+                      onClick={() => {
+                        const start = contractForm.startDate || new Date().toISOString().slice(0, 10);
+                        const endD = new Date(start);
+                        endD.setMonth(endD.getMonth() + t.months);
+                        endD.setDate(endD.getDate() - 1);
+                        const autoLock = Math.min(Number(contractForm.lockInMonths || 12), t.months);
+                        setContractForm((prev) => ({
+                          ...prev,
+                          startDate: start,
+                          endDate: endD.toISOString().slice(0, 10),
+                          lockInMonths: String(autoLock),
+                        }));
+                        showToast(`✓ Set ${t.label} lease term (Ends: ${endD.toISOString().slice(0, 10)})`);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-600 text-slate-700 hover:text-teal-800 text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Contract Start Date */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -8455,10 +8566,18 @@ export default function PropertyHierarchyModal({
                     const baseD = new Date(contractForm.startDate);
                     baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
                     baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
+                    const isExceedingEnd = contractForm.endDate && baseD > new Date(contractForm.endDate);
                     return (
-                      <p className="text-[11px] text-teal-700 font-medium mt-1">
-                        🔒 Lock-in until: <strong className="font-bold">{baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
-                      </p>
+                      <div className="mt-1">
+                        <p className={`text-[11px] font-medium ${isExceedingEnd ? "text-rose-600 font-bold" : "text-teal-700"}`}>
+                          🔒 Lock-in until: <strong className="font-bold">{baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
+                        </p>
+                        {isExceedingEnd && (
+                          <p className="text-[10px] text-rose-600 leading-tight mt-0.5">
+                            ⚠️ Lock-in date extends past Lease End Date ({contractForm.endDate}). Lock-in cannot exceed total contract duration.
+                          </p>
+                        )}
+                      </div>
                     );
                   })()}
                 </div>
@@ -8568,6 +8687,21 @@ export default function PropertyHierarchyModal({
                   const curRent = Number(contractForm.monthlyRent) || 0;
                   const escPct = Number(contractForm.escalationPct) || 5;
                   const steppedRent = curRent > 0 ? Math.round(curRent * (1 + escPct / 100)) : 0;
+                  const isPostExpiry = contractForm.endDate && base >= new Date(contractForm.endDate);
+
+                  if (isPostExpiry) {
+                    return (
+                      <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-[11px] space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                          <AlertCircle size={14} className="text-amber-700 shrink-0" />
+                          <span>Escalation Milestone Beyond Lease Duration</span>
+                        </div>
+                        <p className="text-amber-800 leading-snug">
+                          Calculated escalation date (<strong>{firstEscStr}</strong>) occurs on or after lease end date ({contractForm.endDate}). Rent escalations only activate on multi-year agreements that extend beyond the first escalation cycle.
+                        </p>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div className="p-2.5 rounded-xl bg-white border border-teal-200 text-teal-950 text-[11px] space-y-1">
