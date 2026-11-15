@@ -89,6 +89,31 @@ const nextConfig: NextConfig = {
         destination: "/operate/helpdesk",
         permanent: false,
       },
+      {
+        source: "/portal/document",
+        destination: "/portal/documents",
+        permanent: false,
+      },
+      {
+        source: "/portal/noc",
+        destination: "/portal/documents",
+        permanent: false,
+      },
+      {
+        source: "/portal/nocs",
+        destination: "/portal/documents",
+        permanent: false,
+      },
+      {
+        source: "/tenant",
+        destination: "/portal",
+        permanent: false,
+      },
+      {
+        source: "/tenant/:path*",
+        destination: "/portal/:path*",
+        permanent: false,
+      },
     ];
   }
 };
