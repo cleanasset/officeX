@@ -21,6 +21,7 @@ import {
   Eye,
   FileSpreadsheet,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -245,7 +246,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
     if (
       !confirm(
-        `Commercial Property Removal:\n\nAre you sure you want to delete "${propertyName}"?\n\n⚠️ IMPORTANT CAPACITY NOTICE:\nDeleting this property will NOT restore or refund your licensed Sq.Ft quota. Once utilized, licensed area remains consumed under your current subscription. Adding any new or replacement property in the future will require upgrading your licensed capacity.\n\n• If this property has no active tenant leases, it will be deleted immediately.\n• If it has active leases, it will be submitted for Super Admin approval and moved to the "Pending Deletions & Approvals" tab.`
+        `Commercial Property Removal:\n\nAre you sure you want to request deletion for "${propertyName}"?\n\n• The property will be moved to the "Pending Deletions & Approvals" tab for Admin governance review.\n• It will NOT be deleted permanently until an Admin approves it.\n\n⚠️ IMPORTANT CAPACITY NOTICE:\nDeleting this property will NOT restore or refund your licensed Sq.Ft quota. Once utilized, licensed area remains consumed under your current subscription.`
       )
     ) {
       return;
@@ -253,30 +254,55 @@ export default function SpaceAndBuildingRegistryPage() {
     try {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${propertyId}?cascade_confirmed=true`, {
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}`, {
         method: "DELETE",
         headers: authHeaders,
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
-        if (d.pending_approval) {
-          alert(`Deletion Request Submitted:\n\n${d.message}`);
-          setActiveTab("approvals");
-        } else {
-          alert(`Property "${propertyName}" has been permanently deleted.`);
-          if (typeof window !== "undefined") {
-            const activeProp = localStorage.getItem("officex_active_property");
-            if (activeProp === propertyName || activeProp === propertyId) {
-              localStorage.removeItem("officex_active_property");
-            }
-          }
-        }
+        alert(`✓ Deletion Request Submitted:\n\nProperty "${propertyName}" has been moved to "Pending Deletions & Approvals" tab for Admin review.`);
+        setActiveTab("approvals");
         await fetchRegistryData();
       } else {
         alert(d.message || d.error || "Failed to process property deletion request");
       }
     } catch {
       alert("Network error requesting property deletion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprovePermanentDelete = async (propertyId: string, propertyName: string) => {
+    if (
+      !confirm(
+        `PERMANENT PURGE CONFIRMATION:\n\nAre you sure you want to permanently delete "${propertyName}"?\n\nThis will permanently purge this property, its demarcated spaces, and terminate any associated contracts. This action CANNOT be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}?action=approve_permanent`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`Property "${propertyName}" has been permanently purged from master database.`);
+        if (typeof window !== "undefined") {
+          const activeProp = localStorage.getItem("officex_active_property");
+          if (activeProp === propertyName || activeProp === propertyId) {
+            localStorage.removeItem("officex_active_property");
+          }
+        }
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to permanently purge property");
+      }
+    } catch {
+      alert("Network error permanently purging property");
     } finally {
       setLoading(false);
     }
@@ -998,16 +1024,23 @@ export default function SpaceAndBuildingRegistryPage() {
                             </td>
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-2">
-                                <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200/80">
-                                  Awaiting Super Admin Approval
-                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprovePermanentDelete(p.id, p.property_name)}
+                                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                  title="Admin Action: Permanently purge this property from database"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Approve &amp; Permanently Delete</span>
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleCancelDeletionRequest(p.id)}
-                                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
-                                  title="Withdraw deletion request and restore to active list"
+                                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                                  title="Cancel deletion request and restore to active registered list"
                                 >
-                                  Cancel Request
+                                  <RotateCcw size={13} />
+                                  <span>Reject / Restore</span>
                                 </button>
                               </div>
                             </td>

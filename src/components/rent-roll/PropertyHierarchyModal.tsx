@@ -6058,7 +6058,29 @@ export default function PropertyHierarchyModal({
 
                   <button
                     type="button"
-                    onClick={() => setTenantOnboardingMode("new")}
+                    onClick={() => {
+                      setTenantOnboardingMode("new");
+                      // Reset tenant form and clear any parsed doc state for a fresh manual entry
+                      setTenantForm({
+                        companyType: "pvt_ltd",
+                        companyName: "",
+                        tradeName: "",
+                        occupantName: "",
+                        cinNumber: "",
+                        gst: "",
+                        pan: "",
+                        billingAddress: "",
+                        email: "",
+                        phone: "",
+                        signatoryName: "",
+                        signatoryDesignation: "",
+                        altContactName: "",
+                        altContactPhone: "",
+                        industryType: "IT / SaaS / Tech",
+                      });
+                      setUploadedTenantFileList([]);
+                      setParsedTenantDocMeta(null);
+                    }}
                     className={`p-3 rounded-xl text-left transition flex items-start gap-3 cursor-pointer ${
                       tenantOnboardingMode === "new"
                         ? "bg-white shadow-xs border border-teal-600 text-teal-950 font-bold"
@@ -6287,8 +6309,8 @@ export default function PropertyHierarchyModal({
                         </button>
                       )}
 
-                      {/* Requirement 4: Existing Tenant Auto-Fill */}
-                      {tenantsList.length > 0 && (
+                      {/* Existing Registered Tenant Auto-Fill (Only shown in Existing Tenant mode) */}
+                      {tenantOnboardingMode === "existing" && tenantsList.length > 0 && (
                       <div className="flex items-center gap-1.5 text-xs">
                         <span className="text-[11px] font-semibold text-slate-600">Existing Tenant:</span>
                         <select
@@ -8428,12 +8450,45 @@ export default function PropertyHierarchyModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="font-bold text-slate-700">Security Deposit Amount (₹)</label>
-                      {changedFieldKeys.has("securityDeposit") && (
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                          Updated
-                        </span>
+                    <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <label className="font-bold text-slate-700">Security Deposit (₹)</label>
+                        {Number(contractForm.monthlyRent) > 0 && Number(contractForm.securityDeposit) > 0 && (
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.2 rounded-md border border-teal-200 font-mono">
+                            {(Number(contractForm.securityDeposit) / Number(contractForm.monthlyRent)).toFixed(1).replace(".0", "")} Months Base Rent
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Clean Multiplier Chips */}
+                      {Number(contractForm.monthlyRent) > 0 && (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 6, 9, 10].map((m) => {
+                            const expectedVal = Math.round(Number(contractForm.monthlyRent) * m);
+                            const isSelected = Number(contractForm.securityDeposit) === expectedVal;
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => {
+                                  clearFieldHighlight("securityDeposit");
+                                  setContractForm((prev) => ({
+                                    ...prev,
+                                    securityDeposit: String(expectedVal),
+                                    depositMonths: String(m),
+                                  }));
+                                }}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                                  isSelected
+                                    ? "bg-teal-700 text-white shadow-2xs"
+                                    : "bg-white hover:bg-slate-200/70 text-slate-600 border border-slate-200"
+                                }`}
+                              >
+                                {m}M
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                     <input
@@ -8445,16 +8500,19 @@ export default function PropertyHierarchyModal({
                       onFocus={() => clearFieldHighlight("securityDeposit")}
                       onChange={(e) => {
                         clearFieldHighlight("securityDeposit");
-                        setContractForm({ ...contractForm, securityDeposit: e.target.value });
+                        const val = e.target.value;
+                        const rent = Number(contractForm.monthlyRent) || 0;
+                        const months = rent > 0 && Number(val) > 0 ? (Number(val) / rent).toFixed(1) : contractForm.depositMonths;
+                        setContractForm({ ...contractForm, securityDeposit: val, depositMonths: months });
                       }}
                       className={getHighlightClass(
                         "securityDeposit",
-                        "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none bg-white"
                       )}
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">
+                    <label className="font-bold text-slate-700 block mb-1.5">
                       Rent-Free Fit-out Period (Days)
                     </label>
                     <input
@@ -8463,7 +8521,7 @@ export default function PropertyHierarchyModal({
                       placeholder="e.g. 40, 60, or 80 (Days)"
                       value={contractForm.fitoutDays}
                       onChange={(e) => setContractForm({ ...contractForm, fitoutDays: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white"
                     />
                   </div>
                 </div>
@@ -8497,17 +8555,26 @@ export default function PropertyHierarchyModal({
                         if (prev.endDate && nextStart && prev.endDate <= nextStart) {
                           updated.endDate = "";
                         }
+                        // Recalculate lock-in end date if set
+                        if (nextStart && Number(prev.lockInMonths) > 0) {
+                          const baseD = new Date(nextStart);
+                          if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                          }
+                          baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
+                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                        }
                         return updated;
                       });
                     }}
                     className={getHighlightClass(
                       "startDate",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
                     )}
                   />
                 </div>
 
-                {/* Contract End Date (Must be strictly after Start Date) */}
+                {/* Contract End Date */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-slate-700">
@@ -8540,7 +8607,7 @@ export default function PropertyHierarchyModal({
                     }}
                     className={getHighlightClass(
                       "endDate",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
                     )}
                   />
                   {contractForm.startDate && contractForm.endDate && (() => {
@@ -8558,145 +8625,152 @@ export default function PropertyHierarchyModal({
                   })()}
                 </div>
 
-                {/* Lock-in Period (Constrained by Contract Tenure) */}
+                {/* Lock-in Period (Reverse Selection by Months -> Auto-detects Value & Date) */}
                 <div>
-                  {(() => {
-                    const diffDays = contractForm.startDate && contractForm.endDate
-                      ? Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24))
-                      : 0;
-                    const maxTenureMonths = diffDays > 0 ? Math.round(diffDays / 30.4375) : 0;
-                    return (
-                      <>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="font-bold text-slate-700">Lock-in Period (Months)</label>
-                          {maxTenureMonths > 0 ? (
-                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                              Max: {maxTenureMonths} Months
-                            </span>
-                          ) : changedFieldKeys.has("lockInMonths") ? (
-                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                              Updated
-                            </span>
-                          ) : null}
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max={maxTenureMonths || undefined}
-                          placeholder={maxTenureMonths > 0 ? `Max ${maxTenureMonths}` : "e.g. 12"}
-                          value={contractForm.lockInMonths}
-                          onClick={() => clearFieldHighlight("lockInMonths")}
-                          onFocus={() => clearFieldHighlight("lockInMonths")}
-                          onChange={(e) => {
-                            clearFieldHighlight("lockInMonths");
-                            const m = e.target.value;
-                            if (maxTenureMonths > 0 && Number(m) > maxTenureMonths) {
-                              showToast(`Lock-in period cannot exceed total lease tenure (${maxTenureMonths} months)`, "error");
-                              return;
-                            }
-                            setContractForm((prev) => {
-                              const updated = { ...prev, lockInMonths: m };
-                              if (prev.startDate && Number(m) > 0) {
-                                const baseD = new Date(prev.startDate);
-                                if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                                  baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Lock-in Period</label>
+                    {/* Clean Month Quick Selectors */}
+                    <div className="flex items-center gap-1">
+                      {[0, 6, 12, 24, 36].map((m) => {
+                        const isSel = Number(contractForm.lockInMonths) === m;
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              clearFieldHighlight("lockInMonths");
+                              const mStr = String(m);
+                              setContractForm((prev) => {
+                                const updated = { ...prev, lockInMonths: mStr };
+                                if (prev.startDate && m > 0) {
+                                  const baseD = new Date(prev.startDate);
+                                  if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                                    baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                                  }
+                                  baseD.setMonth(baseD.getMonth() + m);
+                                  const computedDate = baseD.toISOString().slice(0, 10);
+                                  updated.lockInEndDate = computedDate;
+                                  // Reverse auto-detect: align lease end date if not set or shorter
+                                  if (!prev.endDate || new Date(prev.endDate) < baseD) {
+                                    updated.endDate = computedDate;
+                                  }
+                                } else if (m === 0) {
+                                  updated.lockInEndDate = "";
                                 }
-                                baseD.setMonth(baseD.getMonth() + Number(m));
-                                updated.lockInEndDate = baseD.toISOString().slice(0, 10);
-                              }
-                              return updated;
-                            });
-                          }}
-                          className={getHighlightClass(
-                            "lockInMonths",
-                            "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
-                          )}
-                        />
-                      </>
-                    );
-                  })()}
-                  {/* Commences from toggle */}
-                  <div className="flex items-center gap-1.5 mt-1.5 text-[10px]">
-                    <span className="text-slate-500 font-semibold">Starts:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setContractForm((prev) => {
-                          const updated = { ...prev, lockInCommencement: "handover" as const };
-                          if (prev.startDate && Number(prev.lockInMonths) > 0) {
-                            const baseD = new Date(prev.startDate);
-                            baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
-                            updated.lockInEndDate = baseD.toISOString().slice(0, 10);
-                          }
-                          return updated;
-                        });
-                      }}
-                      className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
-                        contractForm.lockInCommencement !== "rcd"
-                          ? "bg-teal-700 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      From Handover Date
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setContractForm((prev) => {
-                          const updated = { ...prev, lockInCommencement: "rcd" as const };
-                          if (prev.startDate && Number(prev.lockInMonths) > 0) {
-                            const baseD = new Date(prev.startDate);
-                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                            baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
-                            updated.lockInEndDate = baseD.toISOString().slice(0, 10);
-                          }
-                          return updated;
-                        });
-                      }}
-                      className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
-                        contractForm.lockInCommencement === "rcd"
-                          ? "bg-teal-700 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      From RCD (Post Fit-out)
-                    </button>
+                                return updated;
+                              });
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                              isSel
+                                ? "bg-teal-700 text-white shadow-2xs"
+                                : "bg-white hover:bg-slate-200/70 text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            {m === 0 ? "0" : `${m}M`}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {contractForm.startDate && Number(contractForm.lockInMonths) > 0 && (() => {
-                    const baseD = new Date(contractForm.startDate);
-                    if (contractForm.lockInCommencement === "rcd") {
-                      baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
-                    }
-                    baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
-                    const isExceedingEnd = contractForm.endDate && baseD > new Date(contractForm.endDate);
-                    return (
-                      <div className="mt-1">
-                        <p className={`text-[11px] font-medium ${isExceedingEnd ? "text-rose-600 font-bold" : "text-teal-700"}`}>
-                          🔒 Lock-in until: <strong className="font-bold">{baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
-                        </p>
-                        {isExceedingEnd && (
-                          <div className="mt-1 space-y-1">
-                            <p className="text-[10px] text-rose-600 leading-tight">
-                              ⚠️ Lock-in date extends past Lease End Date ({contractForm.endDate}). Lock-in cannot exceed total contract duration.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setContractForm((prev) => ({
-                                  ...prev,
-                                  endDate: baseD.toISOString().slice(0, 10),
-                                }));
-                                showToast(`✓ Aligned Lease End Date to Lock-in expiry: ${baseD.toISOString().slice(0, 10)}`);
-                              }}
-                              className="px-2 py-0.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-bold border border-rose-300 transition cursor-pointer flex items-center gap-1"
-                            >
-                              <span>⚡ Fix: Extend Lease to {baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Months (e.g. 12)"
+                    value={contractForm.lockInMonths}
+                    onClick={() => clearFieldHighlight("lockInMonths")}
+                    onFocus={() => clearFieldHighlight("lockInMonths")}
+                    onChange={(e) => {
+                      clearFieldHighlight("lockInMonths");
+                      const m = e.target.value;
+                      setContractForm((prev) => {
+                        const updated = { ...prev, lockInMonths: m };
+                        if (prev.startDate && Number(m) > 0) {
+                          const baseD = new Date(prev.startDate);
+                          if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                          }
+                          baseD.setMonth(baseD.getMonth() + Number(m));
+                          const computedDate = baseD.toISOString().slice(0, 10);
+                          updated.lockInEndDate = computedDate;
+                          if (!prev.endDate || new Date(prev.endDate) < baseD) {
+                            updated.endDate = computedDate;
+                          }
+                        } else {
+                          updated.lockInEndDate = "";
+                        }
+                        return updated;
+                      });
+                    }}
+                    className={getHighlightClass(
+                      "lockInMonths",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white"
+                    )}
+                  />
+
+                  {/* Clean Auto-detected Lock-in Date & Anchor Toggle */}
+                  <div className="mt-1 flex items-center justify-between gap-1 flex-wrap">
+                    {contractForm.startDate && Number(contractForm.lockInMonths) > 0 ? (() => {
+                      const baseD = new Date(contractForm.startDate);
+                      if (contractForm.lockInCommencement === "rcd" && (Number(contractForm.fitoutDays) || 0) > 0) {
+                        baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
+                      }
+                      baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
+                      return (
+                        <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                          🔒 Until {baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                      );
+                    })() : (
+                      <span className="text-[10px] text-slate-400">No lock-in commitment</span>
+                    )}
+
+                    <div className="flex items-center gap-0.5 text-[9px] bg-slate-100 p-0.5 rounded-md border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContractForm((prev) => {
+                            const updated = { ...prev, lockInCommencement: "handover" as const };
+                            if (prev.startDate && Number(prev.lockInMonths) > 0) {
+                              const baseD = new Date(prev.startDate);
+                              baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
+                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            }
+                            return updated;
+                          });
+                        }}
+                        className={`px-1 py-0.5 rounded font-bold cursor-pointer transition ${
+                          contractForm.lockInCommencement !== "rcd"
+                            ? "bg-teal-700 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        From Start
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContractForm((prev) => {
+                            const updated = { ...prev, lockInCommencement: "rcd" as const };
+                            if (prev.startDate && Number(prev.lockInMonths) > 0) {
+                              const baseD = new Date(prev.startDate);
+                              baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                              baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
+                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            }
+                            return updated;
+                          });
+                        }}
+                        className={`px-1 py-0.5 rounded font-bold cursor-pointer transition ${
+                          contractForm.lockInCommencement === "rcd"
+                            ? "bg-teal-700 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        From RCD
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Notice Period */}
@@ -8710,7 +8784,7 @@ export default function PropertyHierarchyModal({
                     placeholder="e.g. 90 (Days)"
                     value={contractForm.noticeDays}
                     onChange={(e) => setContractForm({ ...contractForm, noticeDays: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none bg-white"
                   />
                 </div>
               </div>

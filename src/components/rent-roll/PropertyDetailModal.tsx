@@ -1175,7 +1175,7 @@ export default function PropertyDetailModal({
                   className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md shadow-rose-600/20 disabled:opacity-40 cursor-pointer flex items-center gap-1.5"
                 >
                   <Trash2 size={13} />
-                  <span>{deleting ? "Terminating & Deleting..." : "Permanently Delete Property"}</span>
+                  <span>{deleting ? "Submitting Deletion..." : "Submit Deletion for Approval"}</span>
                 </button>
               </div>
             </div>

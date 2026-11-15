@@ -39,6 +39,7 @@ function InviteContent() {
   const [managerName, setManagerName] = useState(mgrParam);
   const [managerEmail, setManagerEmail] = useState(emailParam);
   const [ownerSubscribed, setOwnerSubscribed] = useState<boolean | null>(null);
+  const [hasActiveContract, setHasActiveContract] = useState<boolean>(true);
   const isTenant = roleParam === "tenant" || roleParam === "occupant";
 
   // Initial property details resolution with local storage fallbacks
@@ -211,11 +212,19 @@ function InviteContent() {
         if (tenantMatch.tenant_name) localStorage.setItem("officex_tenant_name", tenantMatch.tenant_name);
       }
 
+      // Check if this corporate occupant has an executed contract saved in the database
+      const tenantHasContract = contracts.some((c: any) =>
+        (foundProp ? (c.property_id === foundProp.id || c.property_name?.toLowerCase() === foundProp.property_name?.toLowerCase()) : true) &&
+        ((tenantMatch && c.occupant_id === tenantMatch.id) || (mgrParam && c.occupant_name?.toLowerCase().includes(mgrParam.toLowerCase()))) &&
+        (c.contract_status === "active" || Number(c.base_rent_rate || c.monthly_rent || 0) > 0)
+      );
+      setHasActiveContract(tenantHasContract);
+
       setPropertyDetails({
         name: effName,
         location: effLocation,
         totalArea: effArea,
-        occupancyPct: matchedTenants.length > 0 || isTenant ? 100 : 0,
+        occupancyPct: matchedTenants.length > 0 ? 100 : (isTenant ? (tenantHasContract ? 100 : 0) : 0),
         monthlyRevenue: matchedTenants.reduce((s: number, t: any) => s + t.monthlyRent, 0),
         tenants: matchedTenants,
       });
@@ -236,6 +245,11 @@ function InviteContent() {
   const handleAcceptInvite = () => {
     if (ownerSubscribed === false) {
       alert("This invitation cannot be opened or accepted because the property owner has not yet subscribed to OfficeX Rent Roll. Both third-party property management assignment and corporate tenant portal links require an active property owner subscription.");
+      return;
+    }
+
+    if (isTenant && !hasActiveContract) {
+      alert("Pre-Lease Onboarding Acknowledged!\n\nYour corporate occupant profile has been confirmed. The property owner is currently completing the commercial lease agreement terms in Step 3.\n\nYour tenant dashboard will activate automatically as soon as the lease contract is saved.");
       return;
     }
 
@@ -546,8 +560,8 @@ function InviteContent() {
                     <ShieldCheck size={14} className="text-[#0F8B7D]" />
                     Corporate Demised Premises Allocation
                   </span>
-                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
-                    Active Commercial Lease
+                  <span className={hasActiveContract ? "text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]" : "text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px]"}>
+                    {hasActiveContract ? "Active Commercial Lease" : "Pre-Lease Onboarding (Contract Pending)"}
                   </span>
                 </div>
 
@@ -564,11 +578,15 @@ function InviteContent() {
                         )}
                       </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">
-                        Institutional Lease at <strong className="text-slate-800">{propertyDetails.name}</strong>
+                        {hasActiveContract ? (
+                          <>Institutional Lease at <strong className="text-slate-800">{propertyDetails.name}</strong></>
+                        ) : (
+                          <>Enrolled Occupant at <strong className="text-slate-800">{propertyDetails.name}</strong> (Lease Contract in Preparation)</>
+                        )}
                       </div>
                     </div>
-                    <span className="text-[10px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
-                      Verified &amp; Active
+                    <span className={hasActiveContract ? "text-[10px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full" : "text-[10px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full"}>
+                      {hasActiveContract ? "Verified & Active" : "Contract in Preparation"}
                     </span>
                   </div>
 
@@ -581,9 +599,9 @@ function InviteContent() {
                     </div>
                     <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
                       <span className="text-[9.5px] text-slate-400 font-bold uppercase block">Occupancy Status</span>
-                      <span className="font-bold text-emerald-700 text-xs flex items-center gap-1">
-                        <CheckCircle2 size={12} className="text-emerald-600" />
-                        100% Leased
+                      <span className={`font-bold text-xs flex items-center gap-1 ${hasActiveContract ? "text-emerald-700" : "text-amber-700"}`}>
+                        <CheckCircle2 size={12} className={hasActiveContract ? "text-emerald-600" : "text-amber-600"} />
+                        {hasActiveContract ? "100% Leased" : "Pending Lease Contract"}
                       </span>
                     </div>
                   </div>
@@ -739,6 +757,11 @@ function InviteContent() {
               <>
                 <Loader2 size={15} className="animate-spin" />
                 <span>Activating Your Management Portal...</span>
+              </>
+            ) : isTenant && !hasActiveContract ? (
+              <>
+                <span>Acknowledge Pre-Lease Onboarding (Contract Pending)</span>
+                <ArrowRight size={14} />
               </>
             ) : (
               <>

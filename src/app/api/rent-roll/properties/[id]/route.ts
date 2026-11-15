@@ -224,19 +224,20 @@ export async function DELETE(
       }
     }
 
-    // Commercial Property Security Protocol:
-    // If property has active contracts AND the requester is NOT an admin AND not forcing:
-    // Require Super Admin approval and move under the "Pending Approvals" tab.
-    // BUT IF IT HAS ZERO ACTIVE CONTRACTS (Vacant asset) -> Delete immediately!
-    if (activeContracts.length > 0 && !isPlatformAdmin && !forceDelete) {
+    // Commercial Property Security Protocol (Two-Step Admin Governance):
+    // All property deletion requests are held in "Pending Deletions & Approvals" queue.
+    // Permanent deletion only executes when action === "approve_permanent" or force === true.
+    if (action !== "approve_permanent" && !forceDelete) {
       let meta: any = {};
       if (propRecord[0].source_row_id && typeof propRecord[0].source_row_id === "string" && propRecord[0].source_row_id.startsWith("{")) {
         try { meta = JSON.parse(propRecord[0].source_row_id); } catch {}
       }
       meta.pending_deletion = true;
-      meta.requested_by = userEmail || auth.userId;
+      meta.requested_by = userEmail || auth.userId || "User";
       meta.requested_at = new Date().toISOString();
-      meta.reason = `Deletion requested with ${activeContracts.length} active lease contract(s)`;
+      meta.reason = activeContracts.length > 0
+        ? `Deletion requested with ${activeContracts.length} active lease contract(s)`
+        : "User requested property deletion (Held in governance queue for Admin approval)";
       meta.active_contracts_count = activeContracts.length;
 
       await db
@@ -251,25 +252,8 @@ export async function DELETE(
       return NextResponse.json({
         success: true,
         pending_approval: true,
-        message: `Deletion request submitted for Super Admin approval for "${propRecord[0].name}". This property has ${activeContracts.length} active lease contract(s) and has been moved to the "Pending Approvals" tab until verified.`,
+        message: `Deletion request submitted. Property "${propRecord[0].name}" has been moved to the "Pending Deletions & Approvals" tab for Admin governance review.`,
       });
-    }
-
-    // 2. Strict Safety Safeguard: If property has active tenant leases and user hasn't explicitly confirmed cascade
-    if (activeContracts.length > 0 && !cascadeConfirmed && !forceDelete) {
-      return NextResponse.json(
-        {
-          error: `Property has ${activeContracts.length} active tenant lease contract(s). Deletion will terminate all contracts, stop active billing, and revoke tenant and third-party portal access. Explicit confirmation required.`,
-          requires_confirmation: true,
-          active_contracts_count: activeContracts.length,
-          contracts: activeContracts.map((c) => ({
-            id: c.id,
-            code: c.contract_code,
-            tenant_name: c.occupant_name || "Commercial Tenant",
-          })),
-        },
-        { status: 409 }
-      );
     }
 
     // 3. Deactivate all active tenant contracts associated with this property
