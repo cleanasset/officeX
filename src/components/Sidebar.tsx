@@ -43,6 +43,7 @@ import {
   Plus,
   ExternalLink,
   X,
+  Receipt,
   Building2,
   Coins,
   Store,
@@ -88,6 +89,7 @@ const ownerMenuItems: MenuItem[] = [
     section: "Pro Suite",
     subItems: [
       { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: DollarSign },
+      { name: "Invoices & Billing Hub", href: "/operate/invoices", tabKey: "invoices", icon: Receipt },
       { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
       { name: "Banking & ERP Invoicing", href: "/dashboard/owner/banking", tabKey: "banking", icon: Landmark },
       { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: FileText },
@@ -567,6 +569,7 @@ function SidebarInner() {
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
   const [orgLogo, setOrgLogo] = useState<string>("");
+  const [hasBankSetup, setHasBankSetup] = useState<boolean>(true);
   const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({ "Rent Roll & Financials": true });
 
   // Synchronously compute active portal from URL first
@@ -606,6 +609,10 @@ function SidebarInner() {
         const saved = localStorage.getItem("officex_expanded_submenus");
         if (saved) setExpandedSubMenus(JSON.parse(saved));
       } catch (e) {}
+
+      // Bank Account verification alert check
+      const bankAcc = localStorage.getItem("officex_bank_account");
+      setHasBankSetup(Boolean(bankAcc && bankAcc.trim().length >= 8));
 
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
       if (storedName && !/^\d+$/.test(storedName.replace(/\D/g, ""))) {
@@ -1013,10 +1020,17 @@ function SidebarInner() {
                               <div className="flex items-center gap-2 truncate">
                                 <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D] shrink-0" : "text-slate-400 shrink-0"} />
                                 <span className="truncate">{sub.name}</span>
+                                {sub.tabKey === "banking" && !hasBankSetup && (
+                                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" title="Bank account setup required" />
+                                )}
                               </div>
-                              {!isAdminPortal && item.requiresSubscription && !isSubscribed && (
+                              {sub.tabKey === "banking" && !hasBankSetup ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                                  Setup
+                                </span>
+                              ) : !isAdminPortal && item.requiresSubscription && !isSubscribed ? (
                                 <Lock size={10} className="text-slate-400 shrink-0" />
-                              )}
+                              ) : null}
                             </Link>
                           );
                         })}

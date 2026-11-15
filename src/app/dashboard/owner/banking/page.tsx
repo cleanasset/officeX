@@ -28,7 +28,8 @@ import {
   Layers,
   CheckCircle,
   Cloud,
-  Receipt
+  Receipt,
+  PlusCircle
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import SubscriptionGate from "@/components/SubscriptionGate";
@@ -45,7 +46,7 @@ export default function OwnerBankingAndERPPage() {
   // Bank Account State
   const [bankDetails, setBankDetails] = useState({
     beneficiary_name: "",
-    bank_name: "HDFC Bank",
+    bank_name: "",
     custom_bank_name: "",
     account_number: "",
     confirm_account_number: "",
@@ -118,7 +119,7 @@ export default function OwnerBankingAndERPPage() {
       // 1. Read from localStorage for instant browser continuity
       let localBankAcc = "";
       let localBankIfsc = "";
-      let localBankName = "HDFC Bank";
+      let localBankName = "";
       let localBeneficiary = "";
       let localBankType = "current";
       let localBranch = "";
@@ -126,11 +127,10 @@ export default function OwnerBankingAndERPPage() {
       if (typeof window !== "undefined") {
         localBankAcc = localStorage.getItem("officex_bank_account") || "";
         localBankIfsc = localStorage.getItem("officex_bank_ifsc") || "";
-        localBankName = localStorage.getItem("officex_bank_name") || "HDFC Bank";
+        localBankName = localStorage.getItem("officex_bank_name") || "";
         localBeneficiary =
           localStorage.getItem("officex_bank_beneficiary") ||
           localStorage.getItem("officex_property_spv") ||
-          localStorage.getItem("officex_company_name") ||
           "";
         localBankType = localStorage.getItem("officex_bank_account_type") || "current";
         localBranch = localStorage.getItem("officex_bank_branch") || "";
@@ -286,6 +286,7 @@ export default function OwnerBankingAndERPPage() {
         localStorage.setItem("officex_bank_account_type", bankDetails.account_type);
         localStorage.setItem("officex_bank_branch", bankDetails.branch_name.trim());
         localStorage.setItem("officex_bank_setup_completed", "1");
+        window.dispatchEvent(new Event("storage"));
       }
 
       setEditBankModalOpen(false);
@@ -372,7 +373,7 @@ export default function OwnerBankingAndERPPage() {
   };
 
   const formatMaskedAccount = (num: string) => {
-    if (!num) return "•••• •••• •••• ••••";
+    if (!num) return "— Not Configured —";
     if (showAccountNumber) return num;
     const len = num.length;
     if (len <= 4) return num;
@@ -449,11 +450,18 @@ export default function OwnerBankingAndERPPage() {
       <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Active Primary Account
-              </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {bankDetails.account_number ? (
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Active Primary Account
+                </span>
+              ) : (
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1.5 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-rose-600" />
+                  Action Required: Bank Account Not Linked
+                </span>
+              )}
               <span className="text-[10px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                 Tenant Portal Remittance Coordinates
               </span>
@@ -479,13 +487,44 @@ export default function OwnerBankingAndERPPage() {
             <button
               type="button"
               onClick={() => setEditBankModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                bankDetails.account_number
+                  ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white"
+                  : "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200 shadow-md"
+              }`}
             >
               <Edit3 size={13} />
-              <span>Update Bank Details</span>
+              <span>{bankDetails.account_number ? "Update Bank Details" : "+ Add Bank Details Now"}</span>
             </button>
           </div>
         </div>
+
+        {/* Warning Banner if Bank Account Not Configured */}
+        {!bankDetails.account_number && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-800 mt-0.5">
+                <AlertCircle size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-900">
+                  Official Remittance Bank Account Not Configured
+                </h4>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Tenants cannot remit rent or download official Rule 46 CGST tax invoices with valid settlement coordinates until your verified company bank account is added.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditBankModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold shrink-0 transition shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <PlusCircle size={13} />
+              <span>Add Real Bank Account</span>
+            </button>
+          </div>
+        )}
 
         {/* Bank Cheque / Remittance Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -504,15 +543,22 @@ export default function OwnerBankingAndERPPage() {
                     Official Remittance Account
                   </span>
                   <h3 className="text-base font-black text-white">
-                    {bankDetails.bank_name || "Commercial Bank"}
+                    {bankDetails.bank_name || "— No Bank Linked —"}
                   </h3>
                 </div>
               </div>
 
-              <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
-                <ShieldCheck size={13} />
-                RBI &amp; Rule 46 Compliant
-              </span>
+              {bankDetails.account_number ? (
+                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                  <ShieldCheck size={13} />
+                  RBI &amp; Rule 46 Compliant
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono font-bold text-rose-300 bg-rose-500/20 px-2.5 py-1 rounded-full border border-rose-500/30 flex items-center gap-1">
+                  <AlertCircle size={13} />
+                  Unverified / Pending Setup
+                </span>
+              )}
             </div>
 
             {/* Mid Grid */}
@@ -522,7 +568,7 @@ export default function OwnerBankingAndERPPage() {
                   Beneficiary Legal Name / SPV
                 </span>
                 <span className="text-sm font-bold text-white break-words mt-0.5 block">
-                  {bankDetails.beneficiary_name || "Official Landlord SPV"}
+                  {bankDetails.beneficiary_name || "— Not Configured —"}
                 </span>
               </div>
 
@@ -531,7 +577,7 @@ export default function OwnerBankingAndERPPage() {
                   Account Type
                 </span>
                 <span className="text-sm font-bold text-white capitalize mt-0.5 block">
-                  {bankDetails.account_type} Account
+                  {bankDetails.account_number ? `${bankDetails.account_type} Account` : "— Not Configured —"}
                 </span>
               </div>
 
@@ -540,27 +586,31 @@ export default function OwnerBankingAndERPPage() {
                   <span className="text-[10px] text-teal-300/70 font-sans block uppercase font-bold tracking-wider">
                     Account Number
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowAccountNumber(!showAccountNumber)}
-                    className="text-[10px] text-teal-300 hover:text-white flex items-center gap-1 font-sans cursor-pointer"
-                  >
-                    {showAccountNumber ? <EyeOff size={11} /> : <Eye size={11} />}
-                    <span>{showAccountNumber ? "Mask" : "Show"}</span>
-                  </button>
+                  {bankDetails.account_number && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAccountNumber(!showAccountNumber)}
+                      className="text-[10px] text-teal-300 hover:text-white flex items-center gap-1 font-sans cursor-pointer"
+                    >
+                      {showAccountNumber ? <EyeOff size={11} /> : <Eye size={11} />}
+                      <span>{showAccountNumber ? "Mask" : "Show"}</span>
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-sm sm:text-base font-black text-white tracking-wider">
                     {formatMaskedAccount(bankDetails.account_number)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(bankDetails.account_number, "acc")}
-                    className="p-1 rounded hover:bg-white/10 text-teal-300 hover:text-white transition cursor-pointer"
-                    title="Copy Account Number"
-                  >
-                    {copiedKey === "acc" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  </button>
+                  {bankDetails.account_number && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(bankDetails.account_number, "acc")}
+                      className="p-1 rounded hover:bg-white/10 text-teal-300 hover:text-white transition cursor-pointer"
+                      title="Copy Account Number"
+                    >
+                      {copiedKey === "acc" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -570,16 +620,18 @@ export default function OwnerBankingAndERPPage() {
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-sm sm:text-base font-black text-teal-300 tracking-wider">
-                    {bankDetails.ifsc_code || "•••••••••••"}
+                    {bankDetails.ifsc_code || "— Not Configured —"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(bankDetails.ifsc_code, "ifsc")}
-                    className="p-1 rounded hover:bg-white/10 text-teal-300 hover:text-white transition cursor-pointer"
-                    title="Copy IFSC Code"
-                  >
-                    {copiedKey === "ifsc" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  </button>
+                  {bankDetails.ifsc_code && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(bankDetails.ifsc_code, "ifsc")}
+                      className="p-1 rounded hover:bg-white/10 text-teal-300 hover:text-white transition cursor-pointer"
+                      title="Copy IFSC Code"
+                    >
+                      {copiedKey === "ifsc" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -587,7 +639,7 @@ export default function OwnerBankingAndERPPage() {
             {/* Bottom Footnote */}
             <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-teal-200/80">
               <span className="truncate">
-                Branch: <strong>{bankDetails.branch_name || "Commercial Branch"}</strong>
+                Branch: <strong>{bankDetails.branch_name || "— Not Configured —"}</strong>
               </span>
               <span className="font-mono text-[10px] text-white/50">
                 Rule 46 CGST Tax Remittance Coordinates
@@ -1184,6 +1236,9 @@ export default function OwnerBankingAndERPPage() {
                     onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0D7B6C]"
                   >
+                    {!bankDetails.bank_name && (
+                      <option value="" disabled>-- Select Your Commercial Bank --</option>
+                    )}
                     <option value="HDFC Bank">HDFC Bank</option>
                     <option value="ICICI Bank">ICICI Bank</option>
                     <option value="State Bank of India">State Bank of India (SBI)</option>
