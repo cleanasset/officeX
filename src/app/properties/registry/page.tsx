@@ -34,7 +34,7 @@ import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImpo
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
-  const [activeTab, setActiveTab] = useState<"properties" | "units" | "approvals">("properties");
+  const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
   const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
   const [registerRows, setRegisterRows] = useState<any[]>([]);
@@ -43,6 +43,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("all");
+  const [activeTab, setActiveTab] = useState<"properties" | "units" | "approvals">("properties");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
 
@@ -134,8 +135,8 @@ export default function SpaceAndBuildingRegistryPage() {
                 matchedTenant?.tenant_name ||
                 matchedTenant?.occupant_name ||
                 (matchedRow?.occupant_name &&
-                !matchedRow.occupant_name.includes("Vacant") &&
-                matchedRow.occupant_name !== "—"
+                  !matchedRow.occupant_name.includes("Vacant") &&
+                  matchedRow.occupant_name !== "—"
                   ? matchedRow.occupant_name
                   : null);
               const isOccupied = Boolean(occName) || s.occupancy_status === "occupied" || (matchedTenant && matchedTenant.lease_status !== "Unassigned");
@@ -201,7 +202,7 @@ export default function SpaceAndBuildingRegistryPage() {
           prev.map((s) => (s.id === spaceId ? { ...s, status: nextStatus } : s))
         );
       }
-    } catch {}
+    } catch { }
   };
 
   const handleOpenRegisterProperty = () => {
@@ -286,41 +287,6 @@ export default function SpaceAndBuildingRegistryPage() {
       }
     } catch {
       alert("Network error cancelling deletion request");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForceDeleteProperty = async (propertyId: string, propertyName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to PERMANENTLY delete "${propertyName}"?\n\nThis will terminate any active tenant leases and remove all demarcated spaces immediately. This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
-    try {
-      setLoading(true);
-      const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${propertyId}?force=true&cascade_confirmed=true`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok) {
-        alert(`Property "${propertyName}" has been permanently deleted.`);
-        if (typeof window !== "undefined") {
-          const activeProp = localStorage.getItem("officex_active_property");
-          if (activeProp === propertyName || activeProp === propertyId) {
-            localStorage.removeItem("officex_active_property");
-          }
-        }
-        await fetchRegistryData();
-      } else {
-        alert(d.message || d.error || "Failed to permanently delete property");
-      }
-    } catch {
-      alert("Network error permanently deleting property");
     } finally {
       setLoading(false);
     }
@@ -454,33 +420,30 @@ export default function SpaceAndBuildingRegistryPage() {
           <div className="flex items-center gap-3 border-b border-slate-200">
             <button
               onClick={() => setActiveTab("properties")}
-              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
-                activeTab === "properties"
-                  ? "border-[#0F8B7D] text-[#0F8B7D]"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${activeTab === "properties"
+                ? "border-[#0F8B7D] text-[#0F8B7D]"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
             >
               <Building2 size={16} />
               <span>Registered Properties ({registeredProperties.length})</span>
             </button>
             <button
               onClick={() => setActiveTab("units")}
-              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
-                activeTab === "units"
-                  ? "border-[#0F8B7D] text-[#0F8B7D]"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${activeTab === "units"
+                ? "border-[#0F8B7D] text-[#0F8B7D]"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
             >
               <Layers size={16} />
               <span>Demarcated Units &amp; Spaces ({spaces.length})</span>
             </button>
             <button
               onClick={() => setActiveTab("approvals")}
-              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
-                activeTab === "approvals"
-                  ? "border-amber-500 text-amber-700"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${activeTab === "approvals"
+                ? "border-amber-500 text-amber-700"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
             >
               <AlertTriangle size={16} className={pendingDeletionProperties.length > 0 ? "text-amber-500" : ""} />
               <span>Pending Deletions &amp; Approvals</span>
@@ -502,8 +465,8 @@ export default function SpaceAndBuildingRegistryPage() {
                   activeTab === "properties"
                     ? "Search property name, city, code..."
                     : activeTab === "units"
-                    ? "Search unit number, wing, or tower..."
-                    : "Search pending properties..."
+                      ? "Search unit number, wing, or tower..."
+                      : "Search pending properties..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -516,8 +479,8 @@ export default function SpaceAndBuildingRegistryPage() {
                 {activeTab === "properties"
                   ? `${filteredProperties.length} Properties`
                   : activeTab === "units"
-                  ? `${filteredSpaces.length} Units Demarcated`
-                  : `${filteredPendingProperties.length} Pending Approval`}
+                    ? `${filteredSpaces.length} Units Demarcated`
+                    : `${filteredPendingProperties.length} Pending Approval`}
               </span>
             </div>
           </div>
@@ -608,14 +571,14 @@ export default function SpaceAndBuildingRegistryPage() {
 
                         const occupiedSqft = uniqueOccupants.length > 0
                           ? (
-                              propTenants.reduce((sum, t) => sum + (Number(t.area_sqft) || 0), 0) ||
-                              propRegRows
-                                .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
-                                .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
-                              propSpaces
-                                .filter((s) => s.status === "occupied" && Boolean(s.occupant_name))
-                                .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0)
-                            )
+                            propTenants.reduce((sum, t) => sum + (Number(t.area_sqft) || 0), 0) ||
+                            propRegRows
+                              .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
+                              .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
+                            propSpaces
+                              .filter((s) => s.status === "occupied" && Boolean(s.occupant_name))
+                              .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0)
+                          )
                           : 0;
 
                         const totalPropArea =
@@ -635,8 +598,8 @@ export default function SpaceAndBuildingRegistryPage() {
                             : tenantWithRate && Number(tenantWithRate.area_sqft) > 0
                               ? Math.round(Number(tenantWithRate.base_rent_rate) / Number(tenantWithRate.area_sqft))
                               : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
-                                propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
-                                null;
+                              propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
+                              null;
 
                         return (
                           <tr
@@ -857,18 +820,16 @@ export default function SpaceAndBuildingRegistryPage() {
                               type="button"
                               onClick={() => handleToggleSpaceOccupancy(space.id, space.status)}
                               title="Click to toggle Vacant / Occupied"
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition cursor-pointer flex items-center gap-1.5 shadow-2xs ${
-                                space.status === "occupied" || space.status === "leased"
-                                  ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
-                                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                              }`}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition cursor-pointer flex items-center gap-1.5 shadow-2xs ${space.status === "occupied" || space.status === "leased"
+                                ? "bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100"
+                                : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                }`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  space.status === "occupied" || space.status === "leased"
-                                    ? "bg-blue-600"
-                                    : "bg-emerald-600"
-                                }`}
+                                className={`w-1.5 h-1.5 rounded-full ${space.status === "occupied" || space.status === "leased"
+                                  ? "bg-blue-600"
+                                  : "bg-emerald-600"
+                                  }`}
                               />
                               <span>
                                 {space.status === "occupied" || space.status === "leased"
@@ -1003,22 +964,16 @@ export default function SpaceAndBuildingRegistryPage() {
                             </td>
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-2">
+                                <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200/80">
+                                  Awaiting Super Admin Approval
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleCancelDeletionRequest(p.id)}
                                   className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
-                                  title="Cancel deletion and restore to active list"
+                                  title="Withdraw deletion request and restore to active list"
                                 >
                                   Cancel Request
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleForceDeleteProperty(p.id, p.property_name)}
-                                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                                  title="Permanently delete property"
-                                >
-                                  <Trash2 size={13} />
-                                  <span>Delete Permanently</span>
                                 </button>
                               </div>
                             </td>

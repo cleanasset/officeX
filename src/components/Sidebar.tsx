@@ -597,6 +597,7 @@ function SidebarInner() {
   const currentPortalKey = isDelegatedSession
     ? selectedRole
     : (matchedFromPath || (selectedRole === "properties" ? "owner" : selectedRole) || "owner");
+  const isAdminPortal = pathname.startsWith("/admin") || currentPortalKey === "admin";
 
   useEffect(() => {
     setIsMounted(true);
@@ -827,9 +828,11 @@ function SidebarInner() {
             <User size={13} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">User</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+              {isAdminPortal ? "Platform Scope" : "User"}
+            </span>
             <span className="text-[11px] font-black text-slate-900 truncate">
-              {userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : "Commercial Member"}
+              {isAdminPortal ? "Super Admin Governance" : (userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : "Commercial Member")}
             </span>
           </div>
         </div>
@@ -951,7 +954,7 @@ function SidebarInner() {
                     {/* Dropdown Sub-Items List */}
                     {isExpanded && item.subItems && (
                       <div className="ml-3 pl-2.5 border-l-2 border-slate-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
-                        {item.requiresSubscription && !isSubscribed && (
+                        {!isAdminPortal && item.requiresSubscription && !isSubscribed && (
                           <div className="p-2 mb-1.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[10px] text-amber-950 font-medium">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-extrabold text-amber-900">Requires Pro Plan:</span>
@@ -1000,7 +1003,7 @@ function SidebarInner() {
                           return (
                             <Link
                               key={sub.name}
-                              href={item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(sub.name)}` : sub.href}
+                              href={!isAdminPortal && item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(sub.name)}` : sub.href}
                               className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
                                 isSubActive
                                   ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
@@ -1011,7 +1014,7 @@ function SidebarInner() {
                                 <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D] shrink-0" : "text-slate-400 shrink-0"} />
                                 <span className="truncate">{sub.name}</span>
                               </div>
-                              {item.requiresSubscription && !isSubscribed && (
+                              {!isAdminPortal && item.requiresSubscription && !isSubscribed && (
                                 <Lock size={10} className="text-slate-400 shrink-0" />
                               )}
                             </Link>
@@ -1022,19 +1025,19 @@ function SidebarInner() {
                   </div>
                 ) : (
                   <Link
-                    href={item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(item.name)}` : item.href}
+                    href={!isAdminPortal && item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(item.name)}` : item.href}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all relative group ${
                       isItemActive
                         ? "bg-[#0F8B7D] text-white font-bold shadow-xs"
-                        : item.requiresSubscription && !isSubscribed
+                        : !isAdminPortal && item.requiresSubscription && !isSubscribed
                         ? "text-slate-600 hover:bg-amber-50/60 hover:text-slate-900"
                         : "text-slate-700 font-semibold hover:bg-slate-100/80 hover:text-slate-900"
                     }`}
                     style={isItemActive ? { backgroundColor: "var(--brand-color, #0F8B7D)" } : undefined}
                   >
-                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
+                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : !isAdminPortal && item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
                     <span className="truncate flex-1 tracking-tight">{item.name}</span>
-                    {item.requiresSubscription && !isSubscribed ? (
+                    {!isAdminPortal && item.requiresSubscription && !isSubscribed ? (
                       <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
                         <Lock size={9} className="text-amber-600" />
                         <span>PRO</span>

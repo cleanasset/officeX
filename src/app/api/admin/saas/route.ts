@@ -7,46 +7,41 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Fetch SaaS Properties (query both property and properties tables to guarantee full coverage)
+    // 1. Fetch SaaS Properties (query property table directly to guarantee full coverage)
     let rawProps: any[] = [];
     try {
-      const dbRes: any = await db.execute(sql`
-        SELECT 
-          id,
-          org_id as "orgId",
-          COALESCE(property_name, name) as name,
-          COALESCE(property_code, 'PROP') as code,
-          COALESCE(property_type::text, type, 'office') as type,
-          COALESCE(city, 'Gurgaon') as city,
-          COALESCE(state, 'Haryana') as state,
-          COALESCE(address, 'Commercial District') as address,
-          COALESCE(postal_code, pincode, '122002') as "postalCode",
-          COALESCE(total_leasable_area_sqft, 75000)::numeric as "totalAreaSqft",
-          COALESCE(total_leasable_seats, 350) as "totalSeats",
-          source_row_id as "sourceRowId",
-          created_at as "createdAt"
-        FROM (
-          SELECT id, org_id, property_name, property_code, property_type::text, city, state, address, postal_code, total_leasable_area_sqft, total_leasable_seats, source_row_id, created_at, deleted_at, NULL as name, NULL as type, NULL as pincode 
-          FROM public.property 
-          WHERE deleted_at IS NULL
-          UNION ALL
-          SELECT id, org_id, NULL as property_name, NULL as property_code, NULL as property_type, city, state, address, NULL as postal_code, NULL as total_leasable_area_sqft, NULL as total_leasable_seats, NULL as source_row_id, created_at, NULL as deleted_at, name, type, pincode 
-          FROM public.properties 
-          WHERE id NOT IN (SELECT id FROM public.property WHERE deleted_at IS NULL)
-        ) combined_props
-        ORDER BY "createdAt" DESC
-        LIMIT 100
-      `);
-      rawProps = Array.from(dbRes || []);
+      const propList = await db
+        .select()
+        .from(property)
+        .where(sql`${property.deleted_at} IS NULL`)
+        .orderBy(desc(property.created_at))
+        .limit(200);
+
+      rawProps = propList.map((p) => ({
+        id: p.id,
+        orgId: p.org_id,
+        name: p.property_name,
+        code: p.property_code,
+        type: p.property_type || "office",
+        city: p.city || "Ahmedabad",
+        state: p.state || "Gujarat",
+        address: p.address || "",
+        postalCode: p.postal_code || "",
+        totalAreaSqft: Number(p.total_leasable_area_sqft || 0),
+        totalSeats: p.total_leasable_seats || 0,
+        sourceRowId: p.source_row_id,
+        createdAt: p.created_at,
+      }));
     } catch (e) {
-      console.error("Error loading properties:", e);
+      console.error("Error loading properties from property table:", e);
     }
 
     const propRows = rawProps.map((p) => {
       let meta: any = {};
-      if (p.sourceRowId && typeof p.sourceRowId === "string" && p.sourceRowId.startsWith("{")) {
+      const sId = p.sourceRowId || (p as any).source_row_id;
+      if (sId && typeof sId === "string" && sId.startsWith("{")) {
         try {
-          meta = JSON.parse(p.sourceRowId);
+          meta = JSON.parse(sId);
         } catch {}
       }
       return {

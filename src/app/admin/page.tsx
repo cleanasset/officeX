@@ -2517,12 +2517,16 @@ function SuperAdminDashboardContent() {
                     </ul>
                     <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold text-slate-700">₹6,999/mo base</span>
-                      <Link
-                        href="/ops"
-                        className="text-[11px] font-bold text-blue-700 hover:underline"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSaasModule("cafm");
+                          setSaasSubTab("overview");
+                        }}
+                        className="text-[11px] font-bold text-blue-700 hover:underline cursor-pointer"
                       >
-                        Open Ops Console →
-                      </Link>
+                        Inspect CAFM Suite →
+                      </button>
                     </div>
                   </div>
 
@@ -2548,12 +2552,16 @@ function SuperAdminDashboardContent() {
                     </ul>
                     <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold text-slate-700">₹4,999/mo base</span>
-                      <Link
-                        href="/visitor-compliance"
-                        className="text-[11px] font-bold text-purple-700 hover:underline"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSaasModule("visitor");
+                          setSaasSubTab("overview");
+                        }}
+                        className="text-[11px] font-bold text-purple-700 hover:underline cursor-pointer"
                       >
-                        Open Visitor Desk →
-                      </Link>
+                        Inspect Visitor Flow →
+                      </button>
                     </div>
                   </div>
 
@@ -2579,12 +2587,16 @@ function SuperAdminDashboardContent() {
                     </ul>
                     <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold text-slate-700">Built-in Suite</span>
-                      <Link
-                        href="/compliance"
-                        className="text-[11px] font-bold text-amber-800 hover:underline"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSaasModule("compliance");
+                          setSaasSubTab("overview");
+                        }}
+                        className="text-[11px] font-bold text-amber-800 hover:underline cursor-pointer"
                       >
-                        Open Vault →
-                      </Link>
+                        Inspect Compliance →
+                      </button>
                     </div>
                   </div>
 
@@ -2610,12 +2622,16 @@ function SuperAdminDashboardContent() {
                     </ul>
                     <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold text-slate-700">Included in Growth</span>
-                      <Link
-                        href="/operate/stacking"
-                        className="text-[11px] font-bold text-emerald-800 hover:underline"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSaasModule("crm");
+                          setSaasSubTab("overview");
+                        }}
+                        className="text-[11px] font-bold text-emerald-800 hover:underline cursor-pointer"
                       >
-                        Open Stacking Plan →
-                      </Link>
+                        Inspect Lease CRM →
+                      </button>
                     </div>
                   </div>
                 </div>
