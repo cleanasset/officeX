@@ -7760,14 +7760,10 @@ export default function PropertyHierarchyModal({
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthlyRent;
-                            const newDeposit = contractForm.depositMonths && Number(calcRent) > 0
-                              ? String(Math.round(Number(calcRent) * Number(contractForm.depositMonths)))
-                              : contractForm.securityDeposit;
                             setContractForm({
                               ...contractForm,
                               ratePerSqft: rate,
                               monthlyRent: calcRent,
-                              securityDeposit: newDeposit,
                             });
                           }}
                           className={getHighlightClass(
@@ -7810,14 +7806,10 @@ export default function PropertyHierarchyModal({
                             }
                             const rate = Number(contractForm.ratePerSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(rate * Number(area))) : contractForm.monthlyRent;
-                            const newDeposit = contractForm.depositMonths && Number(calcRent) > 0
-                              ? String(Math.round(Number(calcRent) * Number(contractForm.depositMonths)))
-                              : contractForm.securityDeposit;
                             setContractForm({
                               ...contractForm,
                               areaSqft: area,
                               monthlyRent: calcRent,
-                              securityDeposit: newDeposit,
                             });
                           }}
                           className={getHighlightClass(
@@ -7926,15 +7918,11 @@ export default function PropertyHierarchyModal({
                         const seats = Number(contractForm.seatCount) || 0;
                         const newRatePsf = (area > 0 && Number(val) > 0) ? (Number(val) / area).toFixed(2) : contractForm.ratePerSqft;
                         const newRateSeat = (seats > 0 && Number(val) > 0) ? Math.round(Number(val) / seats).toString() : contractForm.ratePerSeat;
-                        const newDeposit = contractForm.depositMonths && Number(val) > 0
-                          ? String(Math.round(Number(val) * Number(contractForm.depositMonths)))
-                          : contractForm.securityDeposit;
                         setContractForm((prev) => ({
                           ...prev,
                           monthlyRent: val,
                           ratePerSqft: prev.billingModel === "Area-based" ? newRatePsf : prev.ratePerSqft,
                           ratePerSeat: prev.billingModel === "Seat-based" ? newRateSeat : prev.ratePerSeat,
-                          securityDeposit: newDeposit,
                         }));
                       }}
                       className={getHighlightClass(
@@ -8431,41 +8419,11 @@ export default function PropertyHierarchyModal({
                 </div>
               )}
 
-              {/* ──── SECTION 4: SECURITY DEPOSIT (IFRSD) ──── */}
+              {/* ──── SECTION 4: SECURITY DEPOSIT & FIT-OUT PERIOD ──── */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/70 pb-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <ShieldCheck size={14} className="text-teal-700" />
-                    <span>Interest-Free Refundable Security Deposit (IFRSD)</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    Quick multi-month rent multipliers
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-semibold text-slate-600 mr-1">Months multiplier:</span>
-                  {["1", "2", "3", "4", "6", "9", "10", "12"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        const rent = Number(contractForm.monthlyRent) || 0;
-                        setContractForm({
-                          ...contractForm,
-                          depositMonths: m,
-                          securityDeposit: rent > 0 ? String(Math.round(Number(m) * rent)) : contractForm.securityDeposit,
-                        });
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
-                        contractForm.depositMonths === m
-                          ? "bg-teal-700 text-white border-teal-700"
-                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {m === "1" ? "1 Month" : m === "12" ? "1 Year (12M)" : `${m} Months`}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-1.5">
+                  <ShieldCheck size={14} className="text-teal-700" />
+                  <span>Security Deposit &amp; Fit-out Period</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
