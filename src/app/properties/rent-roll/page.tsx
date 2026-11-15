@@ -515,6 +515,20 @@ export default function RentRollRegisterPage() {
                   )}
                 </div>
 
+                {/* Add Property CTA */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreloadSpaceId(undefined);
+                    setHierarchyTab("property");
+                    setMasterDataOpen(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Building2 size={14} className="text-[#0F8B7D]" />
+                  <span>Add Property</span>
+                </button>
+
                 {/* Add Tenant CTA */}
                 <button
                   type="button"

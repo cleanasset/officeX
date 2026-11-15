@@ -367,7 +367,9 @@ export async function POST(req: Request) {
     const carpetAreaPerUnit = propData.carpetAreaSqft
       ? Math.round(Number(propData.carpetAreaSqft) / totalUnits)
       : Math.round(areaPerUnit * 0.72);
-    const askingRate = Number(propData.askingRatePerSqft) || 120.0;
+    const askingRate = propData.askingRatePerSqft && Number(propData.askingRatePerSqft) > 0 
+      ? Number(propData.askingRatePerSqft) 
+      : null;
 
     const formatOrdinalFloor = (n: number) => {
       if (n === 0) return "Ground Floor";

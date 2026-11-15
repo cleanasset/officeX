@@ -1144,7 +1144,7 @@ export default function RentRollOnboardingWizard({
                     type="text"
                     value={propertyName}
                     onChange={(e) => handlePropertyNameChange(e.target.value)}
-                    placeholder="e.g. Apex Business Tower"
+                    placeholder="Enter property name"
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white"
                   />
                 </div>
@@ -1320,7 +1320,7 @@ export default function RentRollOnboardingWizard({
                     type="text"
                     value={microMarket}
                     onChange={(e) => setMicroMarket(e.target.value)}
-                    placeholder="e.g. Whitefield, BKC, SG Highway, OMR"
+                    placeholder="Enter micro-market or business district"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white placeholder:text-slate-400"
                   />
                 </div>
@@ -1334,7 +1334,7 @@ export default function RentRollOnboardingWizard({
                     maxLength={6}
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
-                    placeholder="e.g. 380015"
+                    placeholder="Enter 6-digit PIN code"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] bg-white placeholder:text-slate-400"
                   />
                 </div>
@@ -1471,7 +1471,7 @@ export default function RentRollOnboardingWizard({
                         setAskingRatePerSqft(isNaN(num) ? "" : num);
                       }
                     }}
-                    placeholder="e.g. 85"
+                    placeholder="Enter asking rate (₹/sq.ft)"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D] font-semibold"
                   />
                 </div>

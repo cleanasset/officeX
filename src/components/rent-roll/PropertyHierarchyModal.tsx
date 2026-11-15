@@ -4005,7 +4005,7 @@ export default function PropertyHierarchyModal({
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Divi Towers / Prestige Tech Park"
+                      placeholder="Enter commercial property name"
                       value={propForm.propertyName}
                       onChange={(e) => {
                         const name = e.target.value;
@@ -4703,7 +4703,7 @@ export default function PropertyHierarchyModal({
                     <label className="font-semibold text-slate-700 block mb-1">Postal Pincode</label>
                     <input
                       type="text"
-                      placeholder="e.g. 560066"
+                      placeholder="Enter 6-digit PIN code"
                       maxLength={10}
                       value={propForm.pincode}
                       onChange={(e) => setPropForm({ ...propForm, pincode: e.target.value })}
@@ -4716,7 +4716,7 @@ export default function PropertyHierarchyModal({
                     <label className="font-semibold text-slate-700 block mb-1">Micro-Market / Sub-Market</label>
                     <input
                       type="text"
-                      placeholder="e.g. Whitefield / Outer Ring Road"
+                      placeholder="Enter micro-market / locality"
                       value={propForm.microMarket}
                       onChange={(e) => setPropForm({ ...propForm, microMarket: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-[#0F8B7D] outline-none"
