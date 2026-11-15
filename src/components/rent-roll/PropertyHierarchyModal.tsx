@@ -1513,7 +1513,7 @@ export default function PropertyHierarchyModal({
   };
 
   // ──── SUBMIT 1: PROPERTY MASTER ────
-  const handleSaveProperty = async (e: React.FormEvent) => {
+  const handleSaveProperty = async (e: React.FormEvent, isVacantOnly = false) => {
     e.preventDefault();
     if (!propForm.propertyName.trim()) {
       showToast("Property Name is required", "error");
@@ -1932,8 +1932,25 @@ export default function PropertyHierarchyModal({
           } catch (e) {
             console.error("Error creating single-tenant space:", e);
           }
+          if (isVacantOnly) {
+            clearWizardDraft();
+            showToast(`✓ Property "${propForm.propertyName.trim()}" registered successfully as Vacant Asset!`);
+            await loadHierarchyDropdowns();
+            onSuccess?.();
+            onClose();
+            return;
+          }
           await loadHierarchyDropdowns();
           setActiveTab("tenant");
+          return;
+        }
+
+        if (isVacantOnly) {
+          clearWizardDraft();
+          showToast(`✓ Property "${propForm.propertyName.trim()}" registered successfully as Vacant Asset!`);
+          await loadHierarchyDropdowns();
+          onSuccess?.();
+          onClose();
           return;
         }
 
@@ -4951,24 +4968,34 @@ export default function PropertyHierarchyModal({
                   const excessSqft = isExceedingCapacity ? projectedPortfolioArea - subscribedCapacity : 0;
 
                   return (
-                    <button
-                      type="submit"
-                      disabled={loading || isExceedingCapacity}
-                      className={`px-6 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 ${
-                        isExceedingCapacity
-                          ? "bg-rose-400 text-white cursor-not-allowed opacity-80"
-                          : "bg-[#0F8B7D] hover:bg-[#0c7367] cursor-pointer disabled:opacity-60"
-                      }`}
-                    >
-                      {isExceedingCapacity ? <Lock size={13} /> : loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                      <span>
-                        {isExceedingCapacity
-                          ? `Locked: Exceeds Quota by ${excessSqft.toLocaleString("en-IN")} Sq.Ft`
-                          : shouldSkipSpaceStep
-                          ? "Save Property & Next (Add Tenants) →"
-                          : "Save Property & Next (Spaces & Units) →"}
-                      </span>
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-2.5">
+                      <button
+                        type="button"
+                        disabled={loading || isExceedingCapacity}
+                        onClick={(e) => handleSaveProperty(e, true)}
+                        className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        title="Register this property and demarcated spaces as vacant without tenants"
+                      >
+                        <CheckCircle2 size={14} className="text-teal-600" />
+                        <span>Save as Vacant Property</span>
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading || isExceedingCapacity}
+                        className={`px-6 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 ${
+                          isExceedingCapacity
+                            ? "bg-rose-400 text-white cursor-not-allowed opacity-80"
+                            : "bg-[#0F8B7D] hover:bg-[#0c7367] cursor-pointer disabled:opacity-60"
+                        }`}
+                      >
+                        {isExceedingCapacity ? <Lock size={13} /> : loading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                        <span>
+                          {isExceedingCapacity
+                            ? `Locked: Exceeds Quota by ${excessSqft.toLocaleString("en-IN")} Sq.Ft`
+                            : "Save & Onboard Tenant →"}
+                        </span>
+                      </button>
+                    </div>
                   );
                 })()}
               </div>
@@ -7176,8 +7203,8 @@ export default function PropertyHierarchyModal({
                   )}
                   <span>
                     {tenantOnboardingMode === "existing"
-                      ? "Save Existing Tenant & Proceed to Contract →"
-                      : "Save New Tenant & Proceed to Contract →"}
+                      ? "Save Tenant & Continue to Lease Contract (Step 3) →"
+                      : "Save Tenant & Continue to Lease Contract (Step 3) →"}
                   </span>
                 </button>
               </div>

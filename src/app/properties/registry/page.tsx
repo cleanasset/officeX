@@ -231,6 +231,17 @@ export default function SpaceAndBuildingRegistryPage() {
     setHierarchyModalOpen(true);
   };
 
+  const handleOpenAddTenantForProperty = (p: any) => {
+    setSelectedPropertyIdForHierarchy(p.id);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_selected_property", p.id);
+      localStorage.setItem("officex_selected_property_name", p.property_name);
+      localStorage.setItem("officex_active_property", p.property_name);
+    }
+    setHierarchyTab("tenant");
+    setHierarchyModalOpen(true);
+  };
+
   const handleDeleteProperty = async (propertyId: string, propertyName: string) => {
     if (
       !confirm(
@@ -557,14 +568,29 @@ export default function SpaceAndBuildingRegistryPage() {
                             ))
                         );
 
+                        // STRICT RULE: Only show tenant names and compute leased sq.ft if an active/executed contract exists!
+                        const activeContracts = propRegRows.filter(
+                          (r) =>
+                            Boolean(r.contract_id) &&
+                            r.occupant_name &&
+                            !r.occupant_name.includes("Vacant") &&
+                            r.occupant_name !== "—"
+                        );
+
+                        const contractedTenants = propTenants.filter(
+                          (t) =>
+                            Boolean(t.contract_id) &&
+                            t.lease_status !== "Unassigned" &&
+                            String(t.lease_status || "").toLowerCase() !== "pending"
+                        );
+
                         const rawOccupants = [
-                          ...propTenants.map((t) => t.tenant_name || t.occupant_name || t.trade_name),
-                          ...propRegRows.map((r) => r.occupant_name),
-                          ...propSpaces.map((s) => s.occupant_name),
+                          ...activeContracts.map((r) => r.occupant_name),
+                          ...contractedTenants.map((t) => t.tenant_name || t.occupant_name || t.trade_name),
                         ].filter((name) => name && !name.includes("Vacant") && name !== "—");
 
                         const uniqueOccupants = Array.from(new Set(rawOccupants));
-                        const hasPendingLease = propTenants.some(
+                        const hasPendingLease = !uniqueOccupants.length && propTenants.some(
                           (t) =>
                             String(t.lease_status || "").toLowerCase().includes("pending") ||
                             String(t.status || "").toLowerCase().includes("pending")
@@ -572,13 +598,8 @@ export default function SpaceAndBuildingRegistryPage() {
 
                         const occupiedSqft = uniqueOccupants.length > 0
                           ? (
-                            propTenants.reduce((sum, t) => sum + (Number(t.area_sqft) || 0), 0) ||
-                            propRegRows
-                              .filter((r) => r.occupant_name && !r.occupant_name.includes("Vacant") && r.occupant_name !== "—")
-                              .reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
-                            propSpaces
-                              .filter((s) => s.status === "occupied" && Boolean(s.occupant_name))
-                              .reduce((sum, s) => sum + (Number(s.chargeable_area) || 0), 0)
+                            activeContracts.reduce((sum, r) => sum + (Number(r.area_sqft) || 0), 0) ||
+                            contractedTenants.reduce((sum, t) => sum + (Number(t.area_sqft) || 0), 0)
                           )
                           : 0;
 
@@ -591,16 +612,17 @@ export default function SpaceAndBuildingRegistryPage() {
                           : 0;
                         const isFullyLeased = uniqueOccupants.length > 0 && occupancyPct >= 99;
 
-                        // Effective Base Rate PSF
-                        const tenantWithRate = propTenants.find((t) => Number(t.base_rent_rate) > 0);
+                        // Effective Base Rate PSF (only from contracted leases)
+                        const tenantWithRate = contractedTenants.find((t) => Number(t.base_rent_rate) > 0);
                         const effectivePsf =
-                          Number(p.price_per_sqft) > 0
-                            ? Number(p.price_per_sqft)
-                            : tenantWithRate && Number(tenantWithRate.area_sqft) > 0
-                              ? Math.round(Number(tenantWithRate.base_rent_rate) / Number(tenantWithRate.area_sqft))
-                              : propRegRows.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
-                              propSpaces.find((s) => Number(s.standard_rate_psf) > 0)?.standard_rate_psf ||
-                              null;
+                          uniqueOccupants.length > 0
+                            ? (Number(p.price_per_sqft) > 0
+                                ? Number(p.price_per_sqft)
+                                : tenantWithRate && Number(tenantWithRate.area_sqft) > 0
+                                  ? Math.round(Number(tenantWithRate.base_rent_rate) / Number(tenantWithRate.area_sqft))
+                                  : activeContracts.find((r) => Number(r.current_rate_per_sqft) > 0)?.current_rate_per_sqft ||
+                                  null)
+                            : (Number(p.price_per_sqft) > 0 ? Number(p.price_per_sqft) : null);
 
                         return (
                           <tr
@@ -705,6 +727,17 @@ export default function SpaceAndBuildingRegistryPage() {
                                   <Edit2 size={13} />
                                   <span>Edit</span>
                                 </button>
+
+                                {!isFullyLeased && (
+                                  <button
+                                    onClick={() => handleOpenAddTenantForProperty(p)}
+                                    className="px-2.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap shadow-2xs"
+                                    title="Onboard Tenant & Commercial Lease for this Property"
+                                  >
+                                    <Plus size={13} />
+                                    <span>Add Lease</span>
+                                  </button>
+                                )}
 
                                 <Link
                                   href={`/properties/rent-roll?property=${encodeURIComponent(p.id)}`}
@@ -1008,6 +1041,7 @@ export default function SpaceAndBuildingRegistryPage() {
           onClose={() => setSelectedPropertyForDetail(null)}
           onPropertyUpdated={fetchRegistryData}
           initialMode={propertyDetailMode}
+          onAddLease={(prop) => handleOpenAddTenantForProperty(prop)}
         />
 
         {/* Bulk Excel Importer Modal */}

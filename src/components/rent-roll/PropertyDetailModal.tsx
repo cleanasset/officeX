@@ -32,6 +32,7 @@ interface PropertyDetailModalProps {
   onClose: () => void;
   onPropertyUpdated?: () => void;
   initialMode?: "view" | "edit";
+  onAddLease?: (property: any) => void;
 }
 
 export default function PropertyDetailModal({
@@ -40,6 +41,7 @@ export default function PropertyDetailModal({
   onClose,
   onPropertyUpdated,
   initialMode = "view",
+  onAddLease,
 }: PropertyDetailModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "spaces" | "tenants" | "management">("overview");
   const [isEditing, setIsEditing] = useState(initialMode === "edit");
@@ -769,21 +771,48 @@ export default function PropertyDetailModal({
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Active Leases &amp; Occupants</h3>
                   <p className="text-[11px] text-slate-500">Commercial agreements and occupant allocations</p>
                 </div>
-                <Link
-                  href="/properties/rent-roll"
-                  className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5"
-                >
-                  <Plus size={13} />
-                  <span>Create Contract</span>
-                </Link>
+                {onAddLease ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onAddLease(property);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Plus size={13} />
+                    <span>Create Contract</span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/properties/rent-roll"
+                    className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition flex items-center gap-1.5"
+                  >
+                    <Plus size={13} />
+                    <span>Create Contract</span>
+                  </Link>
+                )}
               </div>
 
               {contracts.length === 0 ? (
-                <div className="p-8 text-center bg-amber-50/60 border border-amber-200 rounded-2xl">
+                <div className="p-8 text-center bg-amber-50/60 border border-amber-200 rounded-2xl space-y-3">
                   <p className="text-xs font-bold text-amber-900">0 Active Leases for this Property</p>
                   <p className="text-[11px] text-amber-700 mt-0.5">
                     No corporate tenants or contracts have been registered yet for this property.
                   </p>
+                  {onAddLease && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onAddLease(property);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7064] transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus size={13} />
+                      <span>Onboard Tenant &amp; Add Lease Contract</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="border border-slate-200 rounded-2xl overflow-hidden">
