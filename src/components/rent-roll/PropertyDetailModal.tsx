@@ -23,8 +23,15 @@ import {
   Landmark,
   Trash2,
   AlertTriangle,
+  Download,
+  Eye,
+  Printer,
+  Calendar,
+  DollarSign,
+  Scale,
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { downloadLeaseContractPdf, LeaseContractPdfData } from "@/lib/pdf/lease-contract-pdf";
 
 interface PropertyDetailModalProps {
   property: any | null;
@@ -77,6 +84,57 @@ export default function PropertyDetailModal({
   const [deRegFloor, setDeRegFloor] = useState("");
   const [deRegReason, setDeRegReason] = useState("");
   const [deRegLoading, setDeRegLoading] = useState(false);
+
+  // Selected Contract for viewing full details & generating PDF deed
+  const [selectedContractForView, setSelectedContractForView] = useState<any | null>(null);
+
+  const handleDownloadContractPdf = (c: any) => {
+    const landlordName =
+      property?.asset_holding_entity ||
+      property?.spv_name ||
+      property?.owner_name ||
+      property?.name ||
+      property?.property_name ||
+      "Commercial Asset Owner";
+
+    const effMonthlyRent = Number(c.monthly_rent || c.monthlyRent || c.base_rent_rate || 0);
+    const effArea = Number(c.chargeable_area_sqft || c.chargeable_area || property?.total_leasable_area_sqft || property?.area_sqft || 50000);
+    const effRatePsf = effArea > 0 && effMonthlyRent > 0 ? Number((effMonthlyRent / effArea).toFixed(2)) : undefined;
+
+    const data: LeaseContractPdfData = {
+      contractCode: c.contract_code || `LEAS-${c.id?.slice(0, 5) || "01"}`,
+      executionDate: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+      landlordName,
+      landlordAddress: property?.address || "",
+      landlordPan: property?.pan_number || "",
+      landlordGstin: property?.gstin || "",
+      tenantName: c.occupant_name || c.tenant_name || "Corporate Occupant",
+      tenantTradeName: c.trade_name || c.occupant_name || c.tenant_name || "",
+      tenantCompanyType: c.company_type || "Private Limited Company",
+      tenantCin: c.cin_number || "",
+      tenantPan: c.pan || "",
+      tenantGstin: c.gstin || "",
+      tenantAddress: c.billing_address || "",
+      signatoryName: c.signatory_name || c.occupant_name || "",
+      propertyName: property?.property_name || property?.name || c.property_name || "Commercial Centre",
+      buildingName: c.building_name || "",
+      spaceName: c.space_name || "Entire Building / Designated Space",
+      chargeableAreaSqft: effArea,
+      monthlyRent: effMonthlyRent,
+      ratePerSqft: effRatePsf,
+      camMonthly: Number(c.cam_monthly || 0),
+      securityDeposit: Number(c.deposit_amount_inr || c.security_deposit || 0),
+      startDate: c.start_date ? new Date(c.start_date).toLocaleDateString("en-IN") : "",
+      endDate: c.end_date ? new Date(c.end_date).toLocaleDateString("en-IN") : "",
+      lockInMonths: c.lock_in_period_days ? Math.round(c.lock_in_period_days / 30) : (c.lock_in_months || 0),
+      noticePeriodDays: c.notice_period_days || 90,
+      fitoutPeriodDays: c.fitout_period_days || 0,
+      escalationPct: Number(c.escalation_pct || c.escalation_value || 5),
+      escalationFrequency: c.escalation_frequency || "Annual",
+    };
+
+    downloadLeaseContractPdf(data, true);
+  };
 
   const distinctFloors = React.useMemo(() => {
     const list: string[] = [];
@@ -824,24 +882,59 @@ export default function PropertyDetailModal({
                         <th className="py-2.5 px-3">Demarcated Unit</th>
                         <th className="py-2.5 px-3">Monthly Rent</th>
                         <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3 text-right">Lease Agreement (PDF)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {contracts.map((c, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/60">
-                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{c.contract_code || "LEAS-01"}</td>
-                          <td className="py-2.5 px-3 font-bold text-slate-800">{c.occupant_name || c.tenant_name || "Corporate Occupant"}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{c.space_name || "Demised Unit"}</td>
-                          <td className="py-2.5 px-3 font-bold text-teal-800">
-                            ₹{Number(c.base_rent_rate || 0).toLocaleString("en-IN")}/mo
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
-                              {c.contract_status || "Active"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {contracts.map((c, idx) => {
+                        const rentVal = Number(c.monthly_rent || c.monthlyRent || c.base_rent_rate || 0);
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/60 transition">
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedContractForView(c)}
+                                className="hover:text-teal-700 underline font-mono text-left cursor-pointer"
+                                title="Click to view full contract details & PDF"
+                              >
+                                {c.contract_code || "LEAS-01"}
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-slate-800">{c.occupant_name || c.tenant_name || "Corporate Occupant"}</td>
+                            <td className="py-2.5 px-3 text-slate-600">{c.space_name || "Demised Unit"}</td>
+                            <td className="py-2.5 px-3 font-bold text-teal-800 font-mono">
+                              ₹{rentVal.toLocaleString("en-IN")}/mo
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                                {c.contract_status || "Active"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadContractPdf(c)}
+                                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                                  title="View & Download Official Lease Agreement PDF"
+                                >
+                                  <FileText size={13} className="text-[#0F8B7D] shrink-0" />
+                                  <span>Lease PDF</span>
+                                  <Download size={11} className="text-[#0F8B7D] shrink-0 opacity-70" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedContractForView(c)}
+                                  className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                                  title="View Full Contract Terms"
+                                >
+                                  <Eye size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1176,6 +1269,187 @@ export default function PropertyDetailModal({
                 >
                   <Trash2 size={13} />
                   <span>{deleting ? "Submitting Deletion..." : "Submit Deletion for Approval"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONTRACT DETAIL & PDF PREVIEW MODAL */}
+        {selectedContractForView && (
+          <div className="fixed inset-0 z-[120] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-slate-50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-slate-900 text-sm">
+                        Lease Contract: {selectedContractForView.contract_code || "LEAS-01"}
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        {selectedContractForView.contract_status || "Active"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Commercial Lease Deed &amp; Tenancy Allocation
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedContractForView(null)}
+                  className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition border border-slate-200 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 overflow-y-auto space-y-4 text-xs">
+                {/* 1. Parties Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Landlord / SPV Entity
+                    </span>
+                    <div className="font-bold text-slate-900 text-sm">
+                      {property?.asset_holding_entity || property?.spv_name || property?.owner_name || property?.name || "Asset Owner"}
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      Asset: <strong className="text-slate-800">{property?.property_name || property?.name}</strong>
+                    </div>
+                    {property?.address && (
+                      <div className="text-[11px] text-slate-500 truncate">
+                        {property.address}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-teal-50/50 border border-teal-200/80 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 block">
+                      Corporate Tenant
+                    </span>
+                    <div className="font-bold text-teal-950 text-sm">
+                      {selectedContractForView.occupant_name || selectedContractForView.tenant_name || "Corporate Tenant"}
+                    </div>
+                    <div className="text-[11px] text-teal-800">
+                      Demised Space: <strong className="text-teal-950">{selectedContractForView.space_name || "Entire Building / Designated Space"}</strong>
+                    </div>
+                    {selectedContractForView.chargeable_area_sqft && (
+                      <div className="text-[11px] text-teal-700 font-mono font-bold">
+                        {Number(selectedContractForView.chargeable_area_sqft).toLocaleString("en-IN")} Sq.Ft
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Commercial Financials */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Commercial Rental Terms
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Base Rent</span>
+                      <span className="text-sm font-black text-slate-900">
+                        ₹{Number(selectedContractForView.monthly_rent || selectedContractForView.monthlyRent || selectedContractForView.base_rent_rate || 0).toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-sans block">/ month</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">CAM Charges</span>
+                      <span className="text-sm font-bold text-slate-800">
+                        ₹{Number(selectedContractForView.cam_monthly || 0).toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-sans block">/ month</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Security Deposit</span>
+                      <span className="text-sm font-bold text-slate-800">
+                        ₹{Number(selectedContractForView.deposit_amount_inr || selectedContractForView.security_deposit || 0).toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-sans block">Refundable</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Billing Model</span>
+                      <span className="text-xs font-bold text-slate-800 uppercase">
+                        {selectedContractForView.billing_model || "Area-based"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Legal & Tenure Dates */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Tenure &amp; Legal Terms
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Start Date</span>
+                      <span className="font-semibold text-slate-800 font-mono">
+                        {selectedContractForView.start_date || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">End Date</span>
+                      <span className="font-semibold text-slate-800 font-mono">
+                        {selectedContractForView.end_date || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Lock-in Period</span>
+                      <span className="font-semibold text-slate-800">
+                        {selectedContractForView.lock_in_period_days ? `${Math.round(selectedContractForView.lock_in_period_days / 30)} Months` : (selectedContractForView.lock_in_months ? `${selectedContractForView.lock_in_months} Months` : "None")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Notice Period</span>
+                      <span className="font-semibold text-slate-800">
+                        {selectedContractForView.notice_period_days || 90} Days
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Escalation Rate</span>
+                      <span className="font-semibold text-teal-700">
+                        {selectedContractForView.escalation_pct || selectedContractForView.escalation_value || 5}% ({selectedContractForView.escalation_frequency || "Annual"})
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Fit-out Period</span>
+                      <span className="font-semibold text-slate-800">
+                        {selectedContractForView.fitout_period_days || 0} Days (Rent-Free)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 bg-slate-50 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedContractForView(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-white cursor-pointer transition"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadContractPdf(selectedContractForView)}
+                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition shadow-teal-900/10"
+                >
+                  <Printer size={15} />
+                  <span>Print / Download Official Lease Agreement (PDF)</span>
                 </button>
               </div>
             </div>

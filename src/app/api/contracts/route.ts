@@ -670,12 +670,21 @@ export async function GET(req: Request) {
         total_seats: building.total_seats,
         building_name: building.building_name,
         property_name: property.property_name,
+        base_rent_charge: contractCharge.rate,
       })
       .from(contract)
       .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
+      .leftJoin(
+        contractCharge,
+        and(
+          eq(contractCharge.contract_id, contract.id),
+          eq(contractCharge.component, "base_rent"),
+          sql`${contractCharge.deleted_at} IS NULL`
+        )
+      )
       .where(and(...conditions))
       .orderBy(desc(contract.created_at))
       .limit(limit)
@@ -687,12 +696,22 @@ export async function GET(req: Request) {
       .from(contract)
       .where(and(...conditions));
 
-    const formattedContracts = contractsList.map((item) => ({
-      ...item.contract,
-      ...item,
-      contract: item.contract,
-      base_rent_rate: Number((item.contract as any)?.base_rent_rate || 0),
-    }));
+    const formattedContracts = contractsList.map((item: any) => {
+      let resolvedRent = Number(item.base_rent_charge || (item.contract as any)?.base_rent_rate || 0);
+      if (resolvedRent === 0 && item.contract?.remarks) {
+        const m = item.contract.remarks.match(/Base Rent:\s*₹?([0-9,]+)/i) || item.contract.remarks.match(/Rent:\s*₹?([0-9,]+)/i);
+        if (m && m[1]) {
+          resolvedRent = Number(m[1].replace(/,/g, "")) || 0;
+        }
+      }
+      return {
+        ...item.contract,
+        ...item,
+        contract: item.contract,
+        base_rent_rate: resolvedRent,
+        monthly_rent: resolvedRent,
+      };
+    });
 
     return NextResponse.json({
       success: true,
