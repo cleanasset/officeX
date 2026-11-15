@@ -12,6 +12,7 @@ import SubscriptionGate from "@/components/SubscriptionGate";
 // inside the internal application Sidebar or Topbar.
 const MARKETING_LANDING_ROUTES = new Set([
   "/operate",
+  "/operate/pricing",
   "/operate/rent-roll",
   "/operate/rent-roll/pricing",
   "/operate/helpdesk",

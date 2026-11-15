@@ -848,7 +848,7 @@ export default function OperatePricingSection({
                   18-second lobby transit with WhatsApp QR passes and optical turnstile integration (Boon Edam &amp; Gunnebo).
                 </p>
 
-                {/* PRICE BOX: MAIN IS PER MONTH, PER SQ FT SHOWN RIGHT BELOW */}
+                {/* PRICE BOX: FLAT PER SPEED-GATE / MONTH (NO SQ.FT) */}
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 mb-5 space-y-2">
                   {/* Main: Per Month */}
                   <div className="flex items-baseline gap-1">
@@ -858,13 +858,12 @@ export default function OperatePricingSection({
                     <span className="text-xs font-semibold text-slate-500">/ gate / mo</span>
                   </div>
 
-                  {/* Below: Per Sq.Ft Rate */}
+                  {/* Below: Flat per gate info (NO SQ FT) */}
                   <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-xs font-black font-mono text-blue-700">
-                      ₹{formatSqftRate(Math.round(standalone.visitor.monthly * annualMultiplier))}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700">
+                      Per Turnstile Gate
                     </span>
-                    <span className="text-[11px] font-bold text-slate-700">/ sq.ft / mo</span>
-                    <span className="text-[10px] text-slate-400">({safeSqft.toLocaleString()} sq.ft)</span>
+                    <span className="text-[11px] text-slate-600 font-medium">Unlimited visitor QR passes &amp; WhatsApp logs</span>
                   </div>
                 </div>
 
@@ -892,7 +891,7 @@ export default function OperatePricingSection({
                   planName: "Visitor Flow & Speed-Gates",
                   edition: "standalone",
                   monthlyPrice: Math.round(standalone.visitor.monthly * annualMultiplier),
-                  sqftRate: formatSqftRate(Math.round(standalone.visitor.monthly * annualMultiplier)),
+                  sqftRate: "Per Gate",
                 })}
                 className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >

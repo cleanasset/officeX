@@ -858,53 +858,18 @@ export default function SignInForm({
       (document.cookie.includes("officex_onboarding_completed=1") && hasActiveProperty)
     );
 
-    // Only prompt for workspace if the user genuinely has multiple distinct corporate memberships
-    if (memList.length > 1) {
-      setMemberships(memList);
-      setSelectedMembershipId(memList[0].id);
-      setStep("workspace_chooser");
-      return;
-    }
-
-    if (memList.length === 1 && isAlreadyOnboarded) {
-      handleSelectWorkspace(memList[0]);
-      return;
-    }
-
-    // Determine destination based on user role and onboarding status
-    const storedRoleKey = typeof window !== "undefined"
-      ? (localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key") || "")
-      : "";
-
-    const roleDashboards: Record<string, string> = {
-      owner: "/dashboard/owner",
-      org_admin: "/dashboard/owner",
-      client_principal: "/dashboard/owner",
-      asset_manager: "/dashboard/owner",
-      property_manager: "/dashboard/pm",
-      facility_manager: "/dashboard/fm",
-      leasing_manager: "/dashboard/leasing",
-      finance_manager: "/dashboard/finance",
-      tenant: "/portal",
-      occupant: "/portal",
-      flex_operator: "/operate/head-leases",
-      auditor: "/reporting/mis",
-    };
-    const determinedRoleDashboard = (storedRoleKey && roleDashboards[storedRoleKey])
-      ? roleDashboards[storedRoleKey]
-      : "/dashboard/owner";
-
+    // Determine destination - go straight to destination or dashboard without prompting twice
     let destination = "";
     if (safeRedirect && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
       destination = safeRedirect;
     } else {
-      destination = determinedRoleDashboard;
+      destination = "/dashboard";
     }
 
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
-    }, 500);
+    }, 400);
     return;
   };
 

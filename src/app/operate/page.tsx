@@ -377,6 +377,7 @@ export default function OperatePage() {
                             alt={`${product.title} Mockup`}
                             width={960}
                             height={540}
+                            unoptimized
                             className="w-full max-h-[300px] object-contain rounded-lg"
                           />
                         </div>
