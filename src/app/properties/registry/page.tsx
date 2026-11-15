@@ -93,6 +93,24 @@ export default function SpaceAndBuildingRegistryPage() {
         if (Array.isArray(json.data)) {
           loadedProps = json.data;
           setProperties(json.data);
+
+          // Auto-heal stale selected property scope if property was deleted or doesn't exist
+          if (typeof window !== "undefined") {
+            const curScope = localStorage.getItem("officex_selected_property");
+            if (curScope && curScope !== "all") {
+              const exists = json.data.some(
+                (p: any) =>
+                  p.id === curScope ||
+                  (p.property_name && p.property_name.toLowerCase().trim() === curScope.toLowerCase().trim())
+              );
+              if (!exists) {
+                localStorage.setItem("officex_selected_property", "all");
+                localStorage.setItem("officex_selected_property_name", "All Properties");
+                setSelectedPropertyScope("all");
+                setSelectedPropertyScopeName("All Properties");
+              }
+            }
+          }
         }
       }
 
@@ -356,28 +374,19 @@ export default function SpaceAndBuildingRegistryPage() {
   const pendingDeletionProperties = properties.filter((p) => Boolean(p.is_pending_deletion));
 
   const filteredProperties = registeredProperties.filter((p) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q ||
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
       (p.property_name && p.property_name.toLowerCase().includes(q)) ||
       (p.city && p.city.toLowerCase().includes(q)) ||
-      (p.property_code && p.property_code.toLowerCase().includes(q));
-
-    let matchesScope = true;
-    if (selectedPropertyScope && selectedPropertyScope !== "all") {
-      const pId = selectedPropertyScope.toLowerCase();
-      const pName = selectedPropertyScopeName.toLowerCase();
-      const thisId = (p.id || "").toLowerCase();
-      const thisName = (p.property_name || "").toLowerCase();
-      matchesScope = thisId === pId || thisName === pId || thisName === pName || (pName !== "all properties" && thisName.includes(pName));
-    }
-    return matchesSearch && matchesScope;
+      (p.property_code && p.property_code.toLowerCase().includes(q))
+    );
   });
 
   const filteredPendingProperties = pendingDeletionProperties.filter((p) => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
     return (
-      !q ||
       (p.property_name && p.property_name.toLowerCase().includes(q)) ||
       (p.city && p.city.toLowerCase().includes(q)) ||
       (p.property_code && p.property_code.toLowerCase().includes(q))
@@ -385,24 +394,17 @@ export default function SpaceAndBuildingRegistryPage() {
   });
 
   const filteredSpaces = spaces.filter((s) => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
     const matchSearch =
       !q ||
       (s.space_number && s.space_number.toLowerCase().includes(q)) ||
-      (s.building_name && s.building_name.toLowerCase().includes(q));
+      (s.space_name && s.space_name.toLowerCase().includes(q)) ||
+      (s.building_name && s.building_name.toLowerCase().includes(q)) ||
+      (s.property_name && s.property_name.toLowerCase().includes(q));
     const matchBuilding =
-      selectedBuilding === "all" || s.building_name === selectedBuilding;
+      selectedBuilding === "all" || s.building_name === selectedBuilding || s.property_name === selectedBuilding;
 
-    let matchesScope = true;
-    if (selectedPropertyScope && selectedPropertyScope !== "all") {
-      const pId = selectedPropertyScope.toLowerCase();
-      const pName = selectedPropertyScopeName.toLowerCase();
-      const sPropId = (s.property_id || "").toLowerCase();
-      const sBldgName = (s.building_name || "").toLowerCase();
-      matchesScope = sPropId === pId || (pName !== "all properties" && sBldgName.includes(pName));
-    }
-
-    return matchSearch && matchBuilding && matchesScope;
+    return matchSearch && matchBuilding;
   });
 
   return (
@@ -532,31 +534,52 @@ export default function SpaceAndBuildingRegistryPage() {
                   <span>Loading property registry records...</span>
                 </div>
               ) : filteredProperties.length === 0 ? (
-                <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
-                  <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
-                    <Building2 size={28} />
-                  </div>
-                  <h4 className="text-base font-black text-slate-900">No properties registered yet</h4>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    Register your property or business park to manage leases, rent rolls, and tenant allocations.
-                  </p>
-                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                registeredProperties.length > 0 ? (
+                  <div className="p-12 text-center max-w-md mx-auto space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+                      <Search size={22} />
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">
+                      No properties match &quot;{searchQuery}&quot;
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Try clearing your search query to view all {registeredProperties.length} registered properties.
+                    </p>
                     <button
-                      onClick={() => setExcelImporterOpen(true)}
-                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2 shadow-2xs cursor-pointer"
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="px-4 py-2 rounded-xl bg-teal-50 text-[#0F8B7D] font-bold text-xs hover:bg-teal-100 transition cursor-pointer"
                     >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                      <span>Upload via Excel Sheet</span>
-                    </button>
-                    <button
-                      onClick={handleOpenRegisterProperty}
-                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
-                    >
-                      <Plus size={15} />
-                      <span>Register Property Now</span>
+                      Clear Search
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
+                      <Building2 size={28} />
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">No properties registered yet</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Register your property or business park to manage leases, rent rolls, and tenant allocations.
+                    </p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => setExcelImporterOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2 shadow-2xs cursor-pointer"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Upload via Excel Sheet</span>
+                      </button>
+                      <button
+                        onClick={handleOpenRegisterProperty}
+                        className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
+                      >
+                        <Plus size={15} />
+                        <span>Register Property Now</span>
+                      </button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
