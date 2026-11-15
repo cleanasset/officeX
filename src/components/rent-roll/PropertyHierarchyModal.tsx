@@ -8603,7 +8603,20 @@ export default function PropertyHierarchyModal({
                         showToast("Contract End Date must be after Start Date (" + contractForm.startDate + ")", "error");
                         return;
                       }
-                      setContractForm({ ...contractForm, endDate: nextEnd });
+                      setContractForm((prev) => {
+                        const updated = { ...prev, endDate: nextEnd };
+                        if (prev.startDate && nextEnd) {
+                          const diffDays = Math.round((new Date(nextEnd).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                          const totalMonths = Math.max(1, Math.round(diffDays / 30.4375));
+                          const curLock = Number(prev.lockInMonths) || 0;
+                          const effectiveLock = curLock > 0 ? Math.min(curLock, totalMonths) : Math.min(12, totalMonths);
+                          updated.lockInMonths = String(effectiveLock);
+                          const baseD = new Date(prev.startDate);
+                          baseD.setMonth(baseD.getMonth() + effectiveLock);
+                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                        }
+                        return updated;
+                      });
                     }}
                     className={getHighlightClass(
                       "endDate",
@@ -8625,88 +8638,135 @@ export default function PropertyHierarchyModal({
                   })()}
                 </div>
 
-                {/* Lock-in Period (Reverse Selection by Months -> Auto-detects Value & Date) */}
+                {/* Lock-in Period (Two-way Auto Calculation: Months <-> End Date) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-slate-700">Lock-in Period</label>
                     {/* Clean Month Quick Selectors */}
                     <div className="flex items-center gap-1">
-                      {[0, 6, 12, 24, 36].map((m) => {
-                        const isSel = Number(contractForm.lockInMonths) === m;
-                        return (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => {
-                              clearFieldHighlight("lockInMonths");
-                              const mStr = String(m);
-                              setContractForm((prev) => {
-                                const updated = { ...prev, lockInMonths: mStr };
-                                if (prev.startDate && m > 0) {
-                                  const baseD = new Date(prev.startDate);
-                                  if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                                    baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                      {(() => {
+                        const dynamicPills = [0, 6, 12];
+                        if (contractForm.startDate && contractForm.endDate) {
+                          const diffDays = Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                          const tenureM = Math.round(diffDays / 30.4375);
+                          if (tenureM > 0 && !dynamicPills.includes(tenureM)) {
+                            dynamicPills.push(tenureM);
+                          }
+                        } else {
+                          dynamicPills.push(24, 36);
+                        }
+                        const pills = Array.from(new Set(dynamicPills)).sort((a, b) => a - b);
+                        return pills.map((m) => {
+                          const isSel = Number(contractForm.lockInMonths) === m;
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => {
+                                clearFieldHighlight("lockInMonths");
+                                const mStr = String(m);
+                                setContractForm((prev) => {
+                                  const updated = { ...prev, lockInMonths: mStr };
+                                  if (prev.startDate && m > 0) {
+                                    const baseD = new Date(prev.startDate);
+                                    if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                                      baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                                    }
+                                    baseD.setMonth(baseD.getMonth() + m);
+                                    updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                                  } else {
+                                    updated.lockInEndDate = "";
                                   }
-                                  baseD.setMonth(baseD.getMonth() + m);
-                                  const computedDate = baseD.toISOString().slice(0, 10);
-                                  updated.lockInEndDate = computedDate;
-                                  // Reverse auto-detect: align lease end date if not set or shorter
-                                  if (!prev.endDate || new Date(prev.endDate) < baseD) {
-                                    updated.endDate = computedDate;
-                                  }
-                                } else if (m === 0) {
-                                  updated.lockInEndDate = "";
-                                }
-                                return updated;
-                              });
-                            }}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
-                              isSel
-                                ? "bg-teal-700 text-white shadow-2xs"
-                                : "bg-white hover:bg-slate-200/70 text-slate-600 border border-slate-200"
-                            }`}
-                          >
-                            {m === 0 ? "0" : `${m}M`}
-                          </button>
-                        );
-                      })}
+                                  return updated;
+                                });
+                              }}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                                isSel
+                                  ? "bg-teal-700 text-white shadow-2xs"
+                                  : "bg-white hover:bg-slate-200/70 text-slate-600 border border-slate-200"
+                              }`}
+                            >
+                              {m === 0 ? "0" : `${m}M`}
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
 
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Months (e.g. 12)"
-                    value={contractForm.lockInMonths}
-                    onClick={() => clearFieldHighlight("lockInMonths")}
-                    onFocus={() => clearFieldHighlight("lockInMonths")}
-                    onChange={(e) => {
-                      clearFieldHighlight("lockInMonths");
-                      const m = e.target.value;
-                      setContractForm((prev) => {
-                        const updated = { ...prev, lockInMonths: m };
-                        if (prev.startDate && Number(m) > 0) {
-                          const baseD = new Date(prev.startDate);
-                          if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Months (e.g. 12)"
+                        value={contractForm.lockInMonths}
+                        onClick={() => clearFieldHighlight("lockInMonths")}
+                        onFocus={() => clearFieldHighlight("lockInMonths")}
+                        onChange={(e) => {
+                          clearFieldHighlight("lockInMonths");
+                          const m = e.target.value;
+                          setContractForm((prev) => {
+                            const updated = { ...prev, lockInMonths: m };
+                            if (prev.startDate && Number(m) > 0) {
+                              const baseD = new Date(prev.startDate);
+                              if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                                baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                              }
+                              baseD.setMonth(baseD.getMonth() + Number(m));
+                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            } else {
+                              updated.lockInEndDate = "";
+                            }
+                            return updated;
+                          });
+                        }}
+                        className={getHighlightClass(
+                          "lockInMonths",
+                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white text-xs"
+                        )}
+                        title="Lock-in duration in months"
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="date"
+                        min={contractForm.startDate || undefined}
+                        max={contractForm.endDate || undefined}
+                        value={(() => {
+                          if (contractForm.lockInEndDate) return contractForm.lockInEndDate;
+                          if (contractForm.startDate && Number(contractForm.lockInMonths) > 0) {
+                            const baseD = new Date(contractForm.startDate);
+                            if (contractForm.lockInCommencement === "rcd" && (Number(contractForm.fitoutDays) || 0) > 0) {
+                              baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
+                            }
+                            baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
+                            return baseD.toISOString().slice(0, 10);
                           }
-                          baseD.setMonth(baseD.getMonth() + Number(m));
-                          const computedDate = baseD.toISOString().slice(0, 10);
-                          updated.lockInEndDate = computedDate;
-                          if (!prev.endDate || new Date(prev.endDate) < baseD) {
-                            updated.endDate = computedDate;
+                          return "";
+                        })()}
+                        onChange={(e) => {
+                          const selectedD = e.target.value;
+                          if (!selectedD || !contractForm.startDate) {
+                            setContractForm((prev) => ({ ...prev, lockInEndDate: selectedD, lockInMonths: "0" }));
+                            return;
                           }
-                        } else {
-                          updated.lockInEndDate = "";
-                        }
-                        return updated;
-                      });
-                    }}
-                    className={getHighlightClass(
-                      "lockInMonths",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white"
-                    )}
-                  />
+                          const sD = new Date(contractForm.startDate);
+                          const lD = new Date(selectedD);
+                          const diffDays = Math.round((lD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24));
+                          const calculatedMonths = Math.max(0, Math.round(diffDays / 30.4375));
+                          setContractForm((prev) => ({
+                            ...prev,
+                            lockInEndDate: selectedD,
+                            lockInMonths: String(calculatedMonths),
+                          }));
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white text-xs text-slate-800"
+                        title="Lock-in End Date (Auto-calculates Months)"
+                      />
+                    </div>
+                  </div>
 
                   {/* Clean Auto-detected Lock-in Date & Anchor Toggle */}
                   <div className="mt-1 flex items-center justify-between gap-1 flex-wrap">

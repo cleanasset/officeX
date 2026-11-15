@@ -50,10 +50,10 @@ export async function GET(req: NextRequest) {
         property_name: property.property_name,
       })
       .from(occupant)
-      .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`))
-      .leftJoin(space, eq(contract.space_id, space.id))
-      .leftJoin(building, eq(space.building_id, building.id))
-      .leftJoin(property, eq(building.property_id, property.id))
+      .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`, sql`${contract.contract_status} != 'terminated'`))
+      .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
+      .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
+      .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
       .where(and(...occConditions));
 
     // If org-scoped query returned empty and unauthenticated, query non-deleted occupants
@@ -76,10 +76,10 @@ export async function GET(req: NextRequest) {
           property_name: property.property_name,
         })
         .from(occupant)
-        .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`))
-        .leftJoin(space, eq(contract.space_id, space.id))
-        .leftJoin(building, eq(space.building_id, building.id))
-        .leftJoin(property, eq(building.property_id, property.id))
+        .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`, sql`${contract.contract_status} != 'terminated'`))
+        .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
+        .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
+        .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
         .where(
           and(
             sql`${occupant.deleted_at} IS NULL`,
@@ -198,13 +198,16 @@ export async function GET(req: NextRequest) {
         property_name: property.property_name,
       })
       .from(contract)
-      .leftJoin(space, eq(contract.space_id, space.id))
-      .leftJoin(building, eq(space.building_id, building.id))
-      .leftJoin(property, eq(building.property_id, property.id))
+      .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
+      .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
+      .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
       .where(
         and(
           eq(contract.occupant_id, currentOccupant.id),
-          sql`${contract.deleted_at} IS NULL`
+          sql`${contract.deleted_at} IS NULL`,
+          sql`${contract.contract_status} != 'terminated'`,
+          sql`${property.id} IS NOT NULL`,
+          sql`${property.deleted_at} IS NULL`
         )
       );
 

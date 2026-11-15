@@ -272,7 +272,7 @@ export default function SpaceAndBuildingRegistryPage() {
     try {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${propertyId}`, {
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}?action=approve_permanent&force=true&cascade_confirmed=true`, {
         method: "DELETE",
         headers: authHeaders,
       });

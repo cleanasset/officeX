@@ -350,7 +350,7 @@ export default function PropertyDetailModal({
     try {
       setDeleting(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${property.id}?cascade_confirmed=true`, {
+      const res = await fetch(`/api/rent-roll/properties/${property.id}?action=approve_permanent&force=true&cascade_confirmed=true`, {
         method: "DELETE",
         headers: authHeaders,
       });

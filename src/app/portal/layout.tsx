@@ -155,7 +155,7 @@ export default function TenantPortalLayout({
 
   const assignedSpaceName = primaryContract
     ? `${primaryContract.property_name} · ${primaryContract.space_name}`
-    : (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property") : "") || "Demised Commercial Property";
+    : "No Active Commercial Lease";
 
   if (ownerSubscribed === false) {
     const ownerName =

@@ -45,7 +45,9 @@ export default function OperateLayout({
   const pathname = usePathname() || "";
   const cleanPath = pathname.replace(/\/$/, "");
 
-  const isMarketingLanding = MARKETING_LANDING_ROUTES.has(cleanPath);
+  const isMarketingLanding =
+    MARKETING_LANDING_ROUTES.has(cleanPath) ||
+    cleanPath.startsWith("/operate/pricing");
 
   if (isMarketingLanding) {
     return <>{children}</>;

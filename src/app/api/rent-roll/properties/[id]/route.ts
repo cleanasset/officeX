@@ -224,10 +224,9 @@ export async function DELETE(
       }
     }
 
-    // Commercial Property Security Protocol (Two-Step Admin Governance):
-    // All property deletion requests are held in "Pending Deletions & Approvals" queue.
-    // Permanent deletion only executes when action === "approve_permanent" or force === true.
-    if (action !== "approve_permanent" && !forceDelete) {
+    // Commercial Property Security Protocol:
+    // If cascade_confirmed=true, action=approve_permanent, or force=true, delete permanently immediately.
+    if (action !== "approve_permanent" && !forceDelete && !cascadeConfirmed) {
       let meta: any = {};
       if (propRecord[0].source_row_id && typeof propRecord[0].source_row_id === "string" && propRecord[0].source_row_id.startsWith("{")) {
         try { meta = JSON.parse(propRecord[0].source_row_id); } catch {}

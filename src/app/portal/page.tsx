@@ -324,9 +324,7 @@ export default function TenantHomePage() {
             <span>
               {primaryContract
                 ? `${primaryContract.property_name} · ${primaryContract.building_name || "Tower 1"} · ${primaryContract.space_name} (${Number(primaryContract.chargeable_area_sqft || 0).toLocaleString("en-IN")} sq.ft.)`
-                : (typeof window !== "undefined" && (localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property")))
-                ? `${localStorage.getItem("officex_active_property") || localStorage.getItem("officex_selected_property")} · Demised Commercial Premises`
-                : "Demised Commercial Workspace"}
+                : "No Active Lease (Premises Vacated or Pending Contract)"}
             </span>
           </p>
         </div>
