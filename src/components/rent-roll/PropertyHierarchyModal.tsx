@@ -364,6 +364,15 @@ export default function PropertyHierarchyModal({
   // Wrapper for setActiveTab to automatically clear temporary highlight on tab/stage change
   const setActiveTab = (tab: HierarchyTab) => {
     setChangedFieldKeys(new Set());
+    if (tab === "contract") {
+      setContractForm((prev) => ({
+        ...prev,
+        fitoutDays: (prev.fitoutDays && prev.fitoutDays !== "0" && prev.fitoutDays !== "90")
+          ? prev.fitoutDays
+          : (propForm.defaultFitoutDays || "60"),
+        areaSqft: prev.areaSqft || propForm.areaSqft || "",
+      }));
+    }
     setActiveTabState(tab);
   };
 
@@ -546,6 +555,7 @@ export default function PropertyHierarchyModal({
     depositMonths: "6",
     fitoutDays: "0",
     lockInMonths: "12",
+    lockInCommencement: "handover" as "handover" | "rcd",
     lockInEndDate: "",
     noticeDays: "90",
     // Escalation
@@ -923,6 +933,7 @@ export default function PropertyHierarchyModal({
       depositMonths: "6",
       fitoutDays: "0",
       lockInMonths: "12",
+      lockInCommencement: "handover" as "handover" | "rcd",
       lockInEndDate: "",
       noticeDays: "90",
       escalationPct: "5",
@@ -3362,14 +3373,18 @@ export default function PropertyHierarchyModal({
   // ──── SUBMIT 5: CONTRACT / LEASE ────
   const handleSaveContract = async (e: React.FormEvent, targetAction: "finish" | "delegate" = "finish") => {
     e.preventDefault();
-    if (!contractForm.occupantId) {
+    const effectiveOccupantId = contractForm.occupantId || tenantsList[0]?.id;
+    if (!effectiveOccupantId) {
       showToast("Please select an occupant / tenant", "error");
       return;
     }
-    if (!contractForm.spaceId) {
-      showToast("Please select a space / unit", "error");
-      return;
+
+    // Auto-resolve or validate demised space
+    let targetSpaceId = contractForm.spaceId;
+    if (!targetSpaceId && (displaySpaces.length > 0 || spacesList.length > 0)) {
+      targetSpaceId = displaySpaces[0]?.id || spacesList[0]?.id;
     }
+
     if (!contractForm.startDate || !contractForm.endDate) {
       showToast("Start and End dates are compulsory", "error");
       return;
@@ -3380,33 +3395,45 @@ export default function PropertyHierarchyModal({
       return;
     }
 
-    // Security Deposit validation
-    if (contractForm.securityDeposit === "") {
-      showToast("Please enter security deposit amount (enter 0 if no deposit is required)", "error");
-      return;
-    }
+    // Security Deposit: Auto-default if empty
+    const effectiveSecurityDeposit = contractForm.securityDeposit !== ""
+      ? contractForm.securityDeposit
+      : (enteredRent > 0 && contractForm.depositMonths)
+      ? String(Math.round(enteredRent * Number(contractForm.depositMonths)))
+      : "0";
 
-    // Parking validation: cannot complete with unfilled parking terms
-    if (contractForm.carParkingFreeSlots === "" && contractForm.carParkingPaidSlots === "") {
-      showToast("Please specify car parking slots (enter 0 if no car parking is provided)", "error");
-      return;
-    }
-    if (Number(contractForm.carParkingPaidSlots) > 0 && (!contractForm.carParkingRate || Number(contractForm.carParkingRate) <= 0)) {
+    // Parking terms: default to 0 slots if not specified
+    const carFree = contractForm.carParkingFreeSlots !== "" ? Number(contractForm.carParkingFreeSlots) : 0;
+    const carPaid = contractForm.carParkingPaidSlots !== "" ? Number(contractForm.carParkingPaidSlots) : 0;
+    const carRate = Number(contractForm.carParkingRate) || 0;
+    const bikeFree = contractForm.twoWheelerFreeSlots !== "" ? Number(contractForm.twoWheelerFreeSlots) : 0;
+    const bikePaid = contractForm.twoWheelerPaidSlots !== "" ? Number(contractForm.twoWheelerPaidSlots) : 0;
+    const bikeRate = Number(contractForm.twoWheelerRate) || 0;
+
+    if (carPaid > 0 && carRate <= 0) {
       showToast("Please enter monthly rate per paid car parking slot", "error");
       return;
     }
-    if (Number(contractForm.twoWheelerPaidSlots) > 0 && (!contractForm.twoWheelerRate || Number(contractForm.twoWheelerRate) <= 0)) {
+    if (bikePaid > 0 && bikeRate <= 0) {
       showToast("Please enter monthly rate per paid two-wheeler slot", "error");
       return;
     }
 
-    // Capacity Sanity: Leased area cannot exceed unit/space capacity
-    const activeSpaceObj = displaySpaces.find((s) => s.id === contractForm.spaceId);
+    // Capacity Sanity: Leased area cannot exceed property/unit capacity
+    const isWholeBuildingOrMulti =
+      propForm.leasingModel === "single_tenant" ||
+      selectedTenantFloor === "all" ||
+      selectedTenantSuites.length > 1;
+
+    const activeSpaceObj = displaySpaces.find((s) => s.id === (targetSpaceId || contractForm.spaceId));
     const contractedArea = Number(contractForm.areaSqft) || 0;
-    const spaceMaxArea = Number(activeSpaceObj?.area) || 0;
-    if (spaceMaxArea > 0 && contractedArea > spaceMaxArea * 1.05) {
+    const maxAllowedArea = isWholeBuildingOrMulti
+      ? (Number(propForm.areaSqft) || Number(activePropertyObj?.area) || 1000000)
+      : (Number(activeSpaceObj?.area) || Number(propForm.areaSqft) || 0);
+
+    if (maxAllowedArea > 0 && contractedArea > maxAllowedArea * 1.05) {
       showToast(
-        `Area error: Contracted area (${contractedArea.toLocaleString()} Sq.Ft) exceeds demised unit capacity (${spaceMaxArea.toLocaleString()} Sq.Ft).`,
+        `Area error: Contracted area (${contractedArea.toLocaleString()} Sq.Ft) exceeds leasable capacity (${maxAllowedArea.toLocaleString()} Sq.Ft).`,
         "error"
       );
       return;
@@ -3414,6 +3441,39 @@ export default function PropertyHierarchyModal({
 
     setLoading(true);
     try {
+      const authHeaders = getClientAuthHeaders();
+
+      // If targetSpaceId is still missing (e.g. single-tenant asset that skipped space creation), provision it on-the-fly
+      if (!targetSpaceId) {
+        try {
+          const curBId = contractForm.buildingId || displayBuildings[0]?.id;
+          const spRes = await fetch("/api/spaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+              space_name: `${propForm.propertyName.trim() || "Commercial Asset"} - Entire Facility`,
+              space_code: `SP-${propForm.propertyCode || "DG"}-ALL`,
+              building_id: curBId || undefined,
+              property_id: contractForm.propertyId || propForm.existingPropId || undefined,
+              chargeable_area_sqft: contractedArea || Number(propForm.areaSqft) || 500000,
+              floor_name: "All Floors",
+              space_type: propForm.leasingModel === "single_tenant" ? "entire_building" : "suite",
+              occupancy_status: "vacant",
+              fitout_condition: propForm.fitoutCondition || "Warm Shell",
+            }),
+          });
+          if (spRes.ok) {
+            const spJson = await spRes.json();
+            targetSpaceId = spJson.data?.id;
+          }
+        } catch {}
+      }
+
+      if (!targetSpaceId) {
+        showToast("Please select or assign a demised unit / space", "error");
+        setLoading(false);
+        return;
+      }
       const dbBillingModel =
         contractForm.billingModel === "Seat-based"
           ? "seats"
@@ -3456,8 +3516,6 @@ export default function PropertyHierarchyModal({
         .filter(Boolean)
         .join(" | ");
 
-      const authHeaders = getClientAuthHeaders();
-
       // RR-04: Calculate Rent Commencement Date (Fitout days rent-free offset)
       const fitoutDaysNum = Number(contractForm.fitoutDays) || 0;
       let commencementDate: string | null = null;
@@ -3472,6 +3530,9 @@ export default function PropertyHierarchyModal({
       let lockInEndDate: string | null = null;
       if (lockInMonthsNum > 0 && contractForm.startDate) {
         const d = new Date(contractForm.startDate);
+        if (contractForm.lockInCommencement === "rcd" && fitoutDaysNum > 0) {
+          d.setDate(d.getDate() + fitoutDaysNum);
+        }
         d.setMonth(d.getMonth() + lockInMonthsNum);
         lockInEndDate = d.toISOString().split("T")[0];
       }
@@ -3528,9 +3589,9 @@ export default function PropertyHierarchyModal({
           ...authHeaders,
         },
         body: JSON.stringify({
-          occupant_id: contractForm.occupantId,
-          space_id: contractForm.spaceId,
-          space_ids: selectedTenantSuites.length > 0 ? selectedTenantSuites : [contractForm.spaceId].filter(Boolean),
+          occupant_id: effectiveOccupantId,
+          space_id: targetSpaceId,
+          space_ids: selectedTenantSuites.length > 0 ? selectedTenantSuites : [targetSpaceId].filter(Boolean),
           contract_code: `LEAS-${Date.now().toString().slice(-5)}`,
           start_date: contractForm.startDate,
           end_date: contractForm.endDate,
@@ -3542,7 +3603,7 @@ export default function PropertyHierarchyModal({
           escalation_type: "percentage",
           escalation_value: Number(contractForm.escalationPct) || 0,
           has_escalation: Boolean(Number(contractForm.escalationPct) > 0),
-          deposit_amount_inr: Number(contractForm.securityDeposit) || 0,
+          deposit_amount_inr: Number(effectiveSecurityDeposit) || 0,
           lock_in_period_days: lockInMonthsNum * 30,
           lock_in_months: lockInMonthsNum,
           notice_period_days: Number(contractForm.noticeDays) || 90,
@@ -3660,10 +3721,10 @@ export default function PropertyHierarchyModal({
 
         {/* Draft Auto-Saved Indicator Banner */}
         {isDraftRestored && !isDraftBannerDismissed && (
-          <div className="mx-5 sm:mx-7 mt-3 p-3 rounded-2xl bg-teal-50/90 border border-teal-200 text-teal-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in shadow-2xs">
-            <div className="flex items-center gap-2">
+          <div className="mx-5 sm:mx-7 mt-3 p-2.5 sm:p-3 rounded-2xl bg-teal-50/95 border border-teal-200 text-teal-950 text-xs font-medium flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 animate-in fade-in shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
               <Sparkles size={15} className="text-[#0F8B7D] shrink-0" />
-              <span>
+              <span className="truncate sm:whitespace-normal">
                 <strong>Draft Restored:</strong> Resumed at {
                   activeTab === "property"
                     ? "Step 1: Property & Facility"
@@ -3675,11 +3736,11 @@ export default function PropertyHierarchyModal({
                 }{propForm.propertyName ? ` for "${propForm.propertyName}"` : ""}. All your previously entered details have been preserved.
               </span>
             </div>
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
               <button
                 type="button"
                 onClick={handleDiscardDraft}
-                className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-[11px] font-bold text-rose-700 hover:text-rose-900 transition cursor-pointer flex items-center gap-1 shadow-2xs"
               >
                 <RotateCcw size={12} />
                 <span>Discard &amp; Start Over</span>
@@ -3687,10 +3748,11 @@ export default function PropertyHierarchyModal({
               <button
                 type="button"
                 onClick={() => setIsDraftBannerDismissed(true)}
-                className="p-1 rounded-lg text-teal-700 hover:text-teal-900 hover:bg-teal-100 transition cursor-pointer"
+                className="w-6 h-6 rounded-full bg-white hover:bg-slate-100 border border-slate-300 text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
                 title="Dismiss Banner"
+                aria-label="Dismiss Banner"
               >
-                <X size={15} />
+                <X size={13} />
               </button>
             </div>
           </div>
@@ -7698,10 +7760,14 @@ export default function PropertyHierarchyModal({
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthlyRent;
+                            const newDeposit = contractForm.depositMonths && Number(calcRent) > 0
+                              ? String(Math.round(Number(calcRent) * Number(contractForm.depositMonths)))
+                              : contractForm.securityDeposit;
                             setContractForm({
                               ...contractForm,
                               ratePerSqft: rate,
                               monthlyRent: calcRent,
+                              securityDeposit: newDeposit,
                             });
                           }}
                           className={getHighlightClass(
@@ -7744,10 +7810,14 @@ export default function PropertyHierarchyModal({
                             }
                             const rate = Number(contractForm.ratePerSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(rate * Number(area))) : contractForm.monthlyRent;
+                            const newDeposit = contractForm.depositMonths && Number(calcRent) > 0
+                              ? String(Math.round(Number(calcRent) * Number(contractForm.depositMonths)))
+                              : contractForm.securityDeposit;
                             setContractForm({
                               ...contractForm,
                               areaSqft: area,
                               monthlyRent: calcRent,
+                              securityDeposit: newDeposit,
                             });
                           }}
                           className={getHighlightClass(
@@ -7851,7 +7921,21 @@ export default function PropertyHierarchyModal({
                       onFocus={() => clearFieldHighlight("monthlyRent")}
                       onChange={(e) => {
                         clearFieldHighlight("monthlyRent");
-                        setContractForm({ ...contractForm, monthlyRent: e.target.value });
+                        const val = e.target.value;
+                        const area = Number(contractForm.areaSqft) || 0;
+                        const seats = Number(contractForm.seatCount) || 0;
+                        const newRatePsf = (area > 0 && Number(val) > 0) ? (Number(val) / area).toFixed(2) : contractForm.ratePerSqft;
+                        const newRateSeat = (seats > 0 && Number(val) > 0) ? Math.round(Number(val) / seats).toString() : contractForm.ratePerSeat;
+                        const newDeposit = contractForm.depositMonths && Number(val) > 0
+                          ? String(Math.round(Number(val) * Number(contractForm.depositMonths)))
+                          : contractForm.securityDeposit;
+                        setContractForm((prev) => ({
+                          ...prev,
+                          monthlyRent: val,
+                          ratePerSqft: prev.billingModel === "Area-based" ? newRatePsf : prev.ratePerSqft,
+                          ratePerSeat: prev.billingModel === "Seat-based" ? newRateSeat : prev.ratePerSeat,
+                          securityDeposit: newDeposit,
+                        }));
                       }}
                       className={getHighlightClass(
                         "monthlyRent",
@@ -8446,39 +8530,6 @@ export default function PropertyHierarchyModal({
 
               {/* ──── SECTION 5: DATES & LEGAL PERIODS ──── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                {/* Standard Commercial Lease Tenure Quick Selector */}
-                <div className="sm:col-span-2 flex flex-wrap items-center gap-1.5 pb-1">
-                  <span className="text-[11px] font-semibold text-slate-600 mr-1">Standard Lease Term:</span>
-                  {[
-                    { label: "1 Year (12M)", months: 12 },
-                    { label: "3 Years (36M)", months: 36 },
-                    { label: "5 Years (60M)", months: 60 },
-                    { label: "9 Years (108M)", months: 108 },
-                  ].map((t) => (
-                    <button
-                      key={t.label}
-                      type="button"
-                      onClick={() => {
-                        const start = contractForm.startDate || new Date().toISOString().slice(0, 10);
-                        const endD = new Date(start);
-                        endD.setMonth(endD.getMonth() + t.months);
-                        endD.setDate(endD.getDate() - 1);
-                        const autoLock = Math.min(Number(contractForm.lockInMonths || 12), t.months);
-                        setContractForm((prev) => ({
-                          ...prev,
-                          startDate: start,
-                          endDate: endD.toISOString().slice(0, 10),
-                          lockInMonths: String(autoLock),
-                        }));
-                        showToast(`✓ Set ${t.label} lease term (Ends: ${endD.toISOString().slice(0, 10)})`);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-600 text-slate-700 hover:text-teal-800 text-[11px] font-bold transition cursor-pointer shadow-2xs"
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
                 {/* Contract Start Date */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -8551,47 +8602,130 @@ export default function PropertyHierarchyModal({
                       "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                     )}
                   />
+                  {contractForm.startDate && contractForm.endDate && (() => {
+                    const diffDays = Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                    if (diffDays > 0) {
+                      const months = Math.round(diffDays / 30.4375);
+                      const years = (months / 12).toFixed(1).replace(".0", "");
+                      return (
+                        <span className="text-[10px] text-teal-700 font-bold block mt-1">
+                          Tenure: {months} Months ({years} {Number(years) === 1 ? "Year" : "Years"})
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
-                {/* Lock-in Period (Auto-Calculated bidirectionally) (Point 12) */}
+                {/* Lock-in Period (Constrained by Contract Tenure) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700">Lock-in Period (Months)</label>
-                    {changedFieldKeys.has("lockInMonths") && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
-                        Updated
-                      </span>
-                    )}
+                  {(() => {
+                    const diffDays = contractForm.startDate && contractForm.endDate
+                      ? Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24))
+                      : 0;
+                    const maxTenureMonths = diffDays > 0 ? Math.round(diffDays / 30.4375) : 0;
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Lock-in Period (Months)</label>
+                          {maxTenureMonths > 0 ? (
+                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                              Max: {maxTenureMonths} Months
+                            </span>
+                          ) : changedFieldKeys.has("lockInMonths") ? (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          ) : null}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max={maxTenureMonths || undefined}
+                          placeholder={maxTenureMonths > 0 ? `Max ${maxTenureMonths}` : "e.g. 12"}
+                          value={contractForm.lockInMonths}
+                          onClick={() => clearFieldHighlight("lockInMonths")}
+                          onFocus={() => clearFieldHighlight("lockInMonths")}
+                          onChange={(e) => {
+                            clearFieldHighlight("lockInMonths");
+                            const m = e.target.value;
+                            if (maxTenureMonths > 0 && Number(m) > maxTenureMonths) {
+                              showToast(`Lock-in period cannot exceed total lease tenure (${maxTenureMonths} months)`, "error");
+                              return;
+                            }
+                            setContractForm((prev) => {
+                              const updated = { ...prev, lockInMonths: m };
+                              if (prev.startDate && Number(m) > 0) {
+                                const baseD = new Date(prev.startDate);
+                                if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
+                                  baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                                }
+                                baseD.setMonth(baseD.getMonth() + Number(m));
+                                updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                              }
+                              return updated;
+                            });
+                          }}
+                          className={getHighlightClass(
+                            "lockInMonths",
+                            "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
+                          )}
+                        />
+                      </>
+                    );
+                  })()}
+                  {/* Commences from toggle */}
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[10px]">
+                    <span className="text-slate-500 font-semibold">Starts:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setContractForm((prev) => {
+                          const updated = { ...prev, lockInCommencement: "handover" as const };
+                          if (prev.startDate && Number(prev.lockInMonths) > 0) {
+                            const baseD = new Date(prev.startDate);
+                            baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
+                            updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                          }
+                          return updated;
+                        });
+                      }}
+                      className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
+                        contractForm.lockInCommencement !== "rcd"
+                          ? "bg-teal-700 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      From Handover Date
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setContractForm((prev) => {
+                          const updated = { ...prev, lockInCommencement: "rcd" as const };
+                          if (prev.startDate && Number(prev.lockInMonths) > 0) {
+                            const baseD = new Date(prev.startDate);
+                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
+                            baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
+                            updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                          }
+                          return updated;
+                        });
+                      }}
+                      className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
+                        contractForm.lockInCommencement === "rcd"
+                          ? "bg-teal-700 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      From RCD (Post Fit-out)
+                    </button>
                   </div>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 12 or 24"
-                    value={contractForm.lockInMonths}
-                    onClick={() => clearFieldHighlight("lockInMonths")}
-                    onFocus={() => clearFieldHighlight("lockInMonths")}
-                    onChange={(e) => {
-                      clearFieldHighlight("lockInMonths");
-                      const m = e.target.value;
-                      setContractForm((prev) => {
-                        const updated = { ...prev, lockInMonths: m };
-                        if (prev.startDate && Number(m) > 0) {
-                          const baseD = new Date(prev.startDate);
-                          baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                          baseD.setMonth(baseD.getMonth() + Number(m));
-                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
-                        }
-                        return updated;
-                      });
-                    }}
-                    className={getHighlightClass(
-                      "lockInMonths",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold"
-                    )}
-                  />
                   {contractForm.startDate && Number(contractForm.lockInMonths) > 0 && (() => {
                     const baseD = new Date(contractForm.startDate);
-                    baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
+                    if (contractForm.lockInCommencement === "rcd") {
+                      baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
+                    }
                     baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
                     const isExceedingEnd = contractForm.endDate && baseD > new Date(contractForm.endDate);
                     return (
@@ -8600,9 +8734,24 @@ export default function PropertyHierarchyModal({
                           🔒 Lock-in until: <strong className="font-bold">{baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
                         </p>
                         {isExceedingEnd && (
-                          <p className="text-[10px] text-rose-600 leading-tight mt-0.5">
-                            ⚠️ Lock-in date extends past Lease End Date ({contractForm.endDate}). Lock-in cannot exceed total contract duration.
-                          </p>
+                          <div className="mt-1 space-y-1">
+                            <p className="text-[10px] text-rose-600 leading-tight">
+                              ⚠️ Lock-in date extends past Lease End Date ({contractForm.endDate}). Lock-in cannot exceed total contract duration.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setContractForm((prev) => ({
+                                  ...prev,
+                                  endDate: baseD.toISOString().slice(0, 10),
+                                }));
+                                showToast(`✓ Aligned Lease End Date to Lock-in expiry: ${baseD.toISOString().slice(0, 10)}`);
+                              }}
+                              className="px-2 py-0.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-bold border border-rose-300 transition cursor-pointer flex items-center gap-1"
+                            >
+                              <span>⚡ Fix: Extend Lease to {baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
