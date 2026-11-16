@@ -37,8 +37,6 @@ export default function TenantPortalLayout({
 }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [occupantsList, setOccupantsList] = useState<any[]>([]);
-  const [selectedOccupantId, setSelectedOccupantId] = useState<string>("");
   const [currentOccupant, setCurrentOccupant] = useState<any>(null);
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
   const [nextDueDate, setNextDueDate] = useState<string>("31-Oct-2026");
@@ -101,13 +99,9 @@ export default function TenantPortalLayout({
           setOwnerSubscribed(true);
         }
 
-        setOccupantsList(json.occupants_list || []);
         setCurrentOccupant(json.occupant);
-        if (json.contracts && json.contracts.length > 0) {
-          setPrimaryContract(json.contracts[0]);
-        }
+        setPrimaryContract(json.contracts && json.contracts.length > 0 ? json.contracts[0] : null);
         if (json.occupant?.id) {
-          setSelectedOccupantId(json.occupant.id);
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_tenant_occupant_id", json.occupant.id);
             if (json.occupant.occupant_name) {
@@ -124,15 +118,6 @@ export default function TenantPortalLayout({
       console.error("Failed to load portal summary", e);
     } finally {
       setCheckingSubscription(false);
-    }
-  }
-
-  function handleSwitchOccupant(id: string) {
-    setSelectedOccupantId(id);
-    loadPortalSummary(id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_tenant_occupant_id", id);
-      window.dispatchEvent(new CustomEvent("occupantChanged", { detail: { id } }));
     }
   }
 
@@ -285,26 +270,6 @@ export default function TenantPortalLayout({
             <p className="text-[10px] text-slate-400">
               {Number(primaryContract.chargeable_area_sqft).toLocaleString("en-IN")} sq.ft. · Commercial
             </p>
-          )}
-
-          {/* Occupant Switcher Dropdown */}
-          {occupantsList.length > 0 && (
-            <div className="pt-2 border-t border-slate-700/60 space-y-1">
-              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                Switch Tenant Account
-              </label>
-              <select
-                value={selectedOccupantId}
-                onChange={(e) => handleSwitchOccupant(e.target.value)}
-                className="w-full text-xs font-bold text-white bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-600 focus:border-indigo-400 outline-none cursor-pointer"
-              >
-                {occupantsList.map((occ) => (
-                  <option key={occ.id} value={occ.id}>
-                    {occ.occupant_name} {occ.property_name ? `· ${occ.property_name}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
           )}
         </div>
 

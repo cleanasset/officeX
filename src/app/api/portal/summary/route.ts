@@ -390,7 +390,6 @@ export async function GET(req: NextRequest) {
         ? ""
         : "Rent roll is not yet subscribed by the property owner",
       occupant: currentOccupant,
-      occupants_list: filteredOccupantsList,
       contracts: contracts,
       landlord_bank_details: landlordBank,
       summary: {

@@ -142,7 +142,11 @@ function TenantInvoicesContent() {
   async function loadInvoices() {
     try {
       setLoading(true);
-      const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+      const urlOccId = searchParams.get("occupant_id") || "";
+      const savedOccId = urlOccId || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
+      if (urlOccId && typeof window !== "undefined") {
+        localStorage.setItem("officex_tenant_occupant_id", urlOccId);
+      }
       const url = savedOccId
         ? `/api/portal/invoices?status=${filterTab}&occupant_id=${encodeURIComponent(savedOccId)}`
         : `/api/portal/invoices?status=${filterTab}`;
