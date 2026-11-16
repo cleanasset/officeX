@@ -143,7 +143,9 @@ export default function TenantHomePage() {
   const occupant = data?.occupant || {};
   const contracts = data?.contracts || [];
   const primaryContract = contracts[0] || null;
-  const recentInvoices = data?.recent_invoices || [];
+  const recentInvoices = (data?.recent_invoices || []).filter(
+    (inv: any) => inv && inv.status !== "draft" && inv.status !== "cancelled"
+  );
   const primaryInvoice = recentInvoices[0] || null;
   const reminders = data?.reminders || [];
   const latestReminder = reminders[0] || null;

@@ -31,9 +31,7 @@ export async function GET(req: NextRequest) {
         .where(
           and(
             sql`${occupant.deleted_at} IS NULL`,
-            sql`${invoice.status} != 'draft'`,
-            sql`${invoice.status} != 'void'`,
-            sql`${invoice.status} != 'cancelled'`
+            sql`${invoice.status}::text NOT IN ('draft', 'cancelled')`
           )
         )
         .orderBy(desc(invoice.created_at))

@@ -55,13 +55,7 @@ export async function GET(req: NextRequest) {
       const issuedInvoices = await db
         .select({ occupant_id: invoice.occupant_id })
         .from(invoice)
-        .where(
-          and(
-            sql`${invoice.status} != 'draft'`,
-            sql`${invoice.status} != 'void'`,
-            sql`${invoice.status} != 'cancelled'`
-          )
-        );
+        .where(sql`${invoice.status}::text NOT IN ('draft', 'cancelled')`);
       occIdsWithInvoices = new Set(issuedInvoices.map((i) => i.occupant_id).filter(Boolean) as string[]);
     } catch (e) {}
 
@@ -223,7 +217,12 @@ export async function GET(req: NextRequest) {
     const occupantInvoices = await db
       .select()
       .from(invoice)
-      .where(and(...invoiceConditions))
+      .where(
+        and(
+          ...invoiceConditions,
+          sql`${invoice.status}::text NOT IN ('draft', 'cancelled')`
+        )
+      )
       .orderBy(desc(invoice.invoice_date));
 
     // 4. Calculate Financial KPIs
@@ -239,7 +238,7 @@ export async function GET(req: NextRequest) {
 
     const unpaidInvoices = occupantInvoices.filter((inv) => {
       const bal = Number(inv.balance_due) || 0;
-      return bal > 0 && inv.status !== "draft" && inv.status !== "void" && inv.status !== "cancelled";
+      return bal > 0 && inv.status !== "draft" && inv.status !== "cancelled";
     });
 
     for (const inv of unpaidInvoices) {
