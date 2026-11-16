@@ -1519,7 +1519,9 @@ export default function PropertyDetailModal({
             onClose={() => setEditingContractForAgreement(null)}
             onSuccess={() => {
               // Refresh property data
-              if (property?.id) fetchPropertyDetails();
+              if (property?.id) {
+                loadPropertyData(property.id, property.property_name || property.name || "");
+              }
               if (onPropertyUpdated) onPropertyUpdated();
             }}
             isAdmin={true}
