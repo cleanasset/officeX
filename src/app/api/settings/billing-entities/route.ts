@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { billingEntities } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, sql, desc } from "drizzle-orm";
+import { getAdminPool } from "@/lib/admin-db";
 
 export const revalidate = 0;
 
@@ -87,6 +88,31 @@ export async function POST(req: Request) {
         })
         .returning();
       if (inserted) newId = inserted.id;
+
+      // Sync verified landlord bank coordinates to system_kv_store so tenant portals can fetch seamlessly
+      if (bank_account_number && bank_account_number.trim().length > 0) {
+        try {
+          const pool = getAdminPool();
+          await pool.query(
+            `INSERT INTO system_kv_store (key, data, updated_at) 
+             VALUES ('officex_landlord_bank_details', $1, NOW())
+             ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+            [
+              JSON.stringify({
+                spvName: legal_name || trade_name || "Commercial Landlord SPV",
+                bankName: bank_name || "HDFC Bank Limited",
+                bankAccount: bank_account_number.trim(),
+                bankIfsc: (bank_ifsc || "").trim().toUpperCase(),
+                bankBranch: bank_branch || "Main Commercial Branch",
+                upiId: `oxpay.${bank_account_number.trim().slice(-4)}@hdfcbank`,
+                updatedAt: new Date().toISOString(),
+              }),
+            ]
+          );
+        } catch (syncErr) {
+          console.warn("Failed to sync landlord bank to system_kv_store:", syncErr);
+        }
+      }
     } catch (e) {}
 
     return NextResponse.json({

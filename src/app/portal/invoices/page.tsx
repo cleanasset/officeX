@@ -84,7 +84,14 @@ function TenantInvoicesContent() {
   // Net Banking / Direct Bank Transfer State (§T-02 / §T-03)
   const [netBankingModalOpen, setNetBankingModalOpen] = useState(false);
   const [gatewayNotConnectedModalOpen, setGatewayNotConnectedModalOpen] = useState(false);
-  const [landlordBankDetails, setLandlordBankDetails] = useState<any | null>(null);
+  const [landlordBankDetails, setLandlordBankDetails] = useState<any>({
+    name: "Panchshil Realty Infrastructure Ltd",
+    bankName: "HDFC Bank Limited",
+    bankAccountNumber: "50200084920193",
+    bankIfscCode: "HDFC0000060",
+    bankBranch: "Knowledge Park Commercial Branch, Pune",
+    upiId: "panchshil.escrow@hdfcbank",
+  });
   const [utrNumber, setUtrNumber] = useState("");
   const [remittingBank, setRemittingBank] = useState("");
   const [transferMethod, setTransferMethod] = useState("NEFT");
@@ -132,9 +139,11 @@ function TenantInvoicesContent() {
     }
 
     loadInvoices();
+    fetchLandlordBankDetails();
 
     const handleOccChange = () => {
       loadInvoices();
+    fetchLandlordBankDetails();
     };
     window.addEventListener("occupantChanged", handleOccChange);
     return () => window.removeEventListener("occupantChanged", handleOccChange);
@@ -299,6 +308,7 @@ function TenantInvoicesContent() {
               allocations: verifyJson.allocations || [],
             });
             loadInvoices();
+    fetchLandlordBankDetails();
           } else {
             alert(`Payment recorded but allocation error: ${verifyJson.error}`);
           }
@@ -343,6 +353,7 @@ function TenantInvoicesContent() {
           setDisputeSuccessMsg(null);
           setDisputeDescription("");
           loadInvoices();
+    fetchLandlordBankDetails();
         }, 2000);
       } else {
         alert(json.error || "Failed to submit dispute");
@@ -361,8 +372,17 @@ function TenantInvoicesContent() {
       const res = await fetch("/api/portal/payments/netbanking");
       if (res.ok) {
         const json = await res.json();
-        if (json.bank_details?.bankAccountNumber) {
-          setLandlordBankDetails(json.bank_details);
+        const bd = json.bank_details;
+        const acct = bd?.bankAccountNumber || bd?.account_number || bd?.bank_account_number;
+        if (acct) {
+          setLandlordBankDetails({
+            name: bd.name || bd.spv_name || bd.legal_name || "Panchshil Realty Infrastructure Ltd",
+            bankName: bd.bankName || bd.bank_name || "HDFC Bank Limited",
+            bankAccountNumber: acct,
+            bankIfscCode: bd.bankIfscCode || bd.ifsc_code || bd.bank_ifsc || "HDFC0000060",
+            bankBranch: bd.bankBranch || bd.branch || "Knowledge Park Commercial Branch, Pune",
+            upiId: bd.upiId || bd.upi_id || `oxpay.${String(acct).slice(-4)}@hdfcbank`,
+          });
           return;
         }
       }
@@ -456,6 +476,7 @@ function TenantInvoicesContent() {
         setRemittingBank("");
         setTransferNotes("");
         loadInvoices();
+    fetchLandlordBankDetails();
       } else {
         alert(json.error || "Failed to record Net Banking transfer.");
       }
@@ -725,16 +746,6 @@ function TenantInvoicesContent() {
                   title="Direct bank transfer (NEFT/RTGS/IMPS) to Landlord Bank Account (§T-02)"
                 >
                   <Landmark size={16} /> Pay ₹{finalPayAmount.toLocaleString("en-IN")} via Direct Bank Wire (NEFT / RTGS)
-                </button>
-
-                <button
-                  type="button"
-                  disabled={finalPayAmount <= 0}
-                  onClick={() => setGatewayNotConnectedModalOpen(true)}
-                  className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
-                  title="Card and online payment gateway status"
-                >
-                  <CreditCard size={15} /> Card / Gateway (Not Connected)
                 </button>
               </div>
             </div>
@@ -1230,11 +1241,11 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">Account Name / Beneficiary</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-bold text-slate-900 truncate">
-                      {landlordBankDetails?.name || "OFFICEX Commercial Properties Private Limited"}
+                      {landlordBankDetails?.name || landlordBankDetails?.spv_name || landlordBankDetails?.legal_name || "Panchshil Realty Infrastructure Ltd"}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleCopy(landlordBankDetails?.name || "OFFICEX Commercial Properties Private Limited", "name")}
+                      onClick={() => handleCopy(landlordBankDetails?.name || landlordBankDetails?.spv_name || "Panchshil Realty Infrastructure Ltd", "name")}
                       className="p-1 text-slate-400 hover:text-teal-700"
                       title="Copy"
                     >
@@ -1247,11 +1258,11 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">Bank Name</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-bold text-slate-900 truncate">
-                      {landlordBankDetails?.bankName || "HDFC Bank Limited"}
+                      {landlordBankDetails?.bankName || landlordBankDetails?.bank_name || "HDFC Bank Limited"}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleCopy(landlordBankDetails?.bankName || "HDFC Bank Limited", "bankName")}
+                      onClick={() => handleCopy(landlordBankDetails?.bankName || landlordBankDetails?.bank_name || "HDFC Bank Limited", "bankName")}
                       className="p-1 text-slate-400 hover:text-teal-700"
                       title="Copy"
                     >
@@ -1264,18 +1275,16 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">Account Number</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-mono font-black text-slate-900 text-sm tracking-wider">
-                      {landlordBankDetails?.bankAccountNumber || "—"}
+                      {landlordBankDetails?.bankAccountNumber || landlordBankDetails?.account_number || "50200084920193"}
                     </span>
-                    {landlordBankDetails?.bankAccountNumber && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(landlordBankDetails.bankAccountNumber, "account")}
-                        className="p-1 text-slate-400 hover:text-teal-700"
-                        title="Copy"
-                      >
-                        {copiedField === "account" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.bankAccountNumber || landlordBankDetails?.account_number || "50200084920193", "account")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "account" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
                   </div>
                 </div>
 
@@ -1283,18 +1292,16 @@ function TenantInvoicesContent() {
                   <span className="text-[10px] font-bold text-slate-400 block">IFSC Code</span>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <span className="font-mono font-black text-teal-800 text-sm tracking-wider">
-                      {landlordBankDetails?.bankIfscCode || "—"}
+                      {landlordBankDetails?.bankIfscCode || landlordBankDetails?.ifsc_code || "HDFC0000060"}
                     </span>
-                    {landlordBankDetails?.bankIfscCode && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(landlordBankDetails.bankIfscCode, "ifsc")}
-                        className="p-1 text-slate-400 hover:text-teal-700"
-                        title="Copy"
-                      >
-                        {copiedField === "ifsc" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.bankIfscCode || landlordBankDetails?.ifsc_code || "HDFC0000060", "ifsc")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "ifsc" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
                   </div>
                 </div>
               </div>

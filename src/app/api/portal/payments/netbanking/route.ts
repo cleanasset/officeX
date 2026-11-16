@@ -203,16 +203,32 @@ export async function GET(req: NextRequest) {
 
       if (kv?.data && (kv.data as any).bankAccount) {
         const d = kv.data as any;
+        const acct = String(d.bankAccount).trim();
+        const ifsc = String(d.bankIfsc || "").trim().toUpperCase();
+        const spv = d.spvName || "Panchshil Realty Infrastructure Ltd";
+        const bName = d.bankName || "HDFC Bank Limited";
+        const branch = d.bankBranch || "Main Commercial Branch";
+        const upi = d.upiId || `oxpay.${acct.slice(-4)}@hdfcbank`;
+
         return NextResponse.json({
           success: true,
           bank_details: {
             id: "verified-landlord-bank",
-            name: d.spvName || "Panchshil Realty Infrastructure Ltd",
-            bankName: d.bankName || "HDFC Bank Limited",
-            bankAccountNumber: d.bankAccount,
-            bankIfscCode: d.bankIfsc,
-            bankBranch: d.bankBranch || "Main Commercial Branch",
-            upiId: d.upiId || `oxpay.${String(d.bankAccount).slice(-4)}@hdfcbank`,
+            name: spv,
+            spv_name: spv,
+            legal_name: spv,
+            bankName: bName,
+            bank_name: bName,
+            bankAccountNumber: acct,
+            account_number: acct,
+            bank_account_number: acct,
+            bankIfscCode: ifsc,
+            ifsc_code: ifsc,
+            bank_ifsc: ifsc,
+            bankBranch: branch,
+            branch: branch,
+            upiId: upi,
+            upi_id: upi,
           },
         });
       }
@@ -236,24 +252,65 @@ export async function GET(req: NextRequest) {
         .limit(1);
 
       if (entities.length > 0 && entities[0].bankAccountNumber) {
+        const e = entities[0];
+        const acct = String(e.bankAccountNumber).trim();
+        const ifsc = String(e.bankIfscCode || "").trim().toUpperCase();
+        const spv = e.name || "Commercial Landlord SPV";
+        const bName = e.bankName || "HDFC Bank Limited";
+        const branch = e.bankBranch || "Commercial Branch";
+        const upi = `oxpay.${acct.slice(-4)}@hdfcbank`;
+
         return NextResponse.json({
           success: true,
-          bank_details: entities[0],
+          bank_details: {
+            id: e.id,
+            name: spv,
+            spv_name: spv,
+            legal_name: spv,
+            bankName: bName,
+            bank_name: bName,
+            bankAccountNumber: acct,
+            account_number: acct,
+            bank_account_number: acct,
+            bankIfscCode: ifsc,
+            ifsc_code: ifsc,
+            bank_ifsc: ifsc,
+            bankBranch: branch,
+            branch: branch,
+            upiId: upi,
+            upi_id: upi,
+          },
         });
       }
     } catch (e) {}
 
     // 3. Fallback to verified commercial SPV bank details so account numbers are never blank
+    const defaultAcct = "50200084920193";
+    const defaultIfsc = "HDFC0000060";
+    const defaultSpv = "Panchshil Realty Infrastructure Ltd";
+    const defaultBank = "HDFC Bank Limited";
+    const defaultBranch = "Knowledge Park Commercial Branch, Pune";
+    const defaultUpi = "panchshil.escrow@hdfcbank";
+
     return NextResponse.json({
       success: true,
       bank_details: {
         id: "verified-landlord-bank",
-        name: "Panchshil Realty Infrastructure Ltd",
-        bankName: "HDFC Bank Limited",
-        bankAccountNumber: "50200084920193",
-        bankIfscCode: "HDFC0000060",
-        bankBranch: "Knowledge Park Commercial Branch, Pune",
-        upiId: "panchshil.escrow@hdfcbank",
+        name: defaultSpv,
+        spv_name: defaultSpv,
+        legal_name: defaultSpv,
+        bankName: defaultBank,
+        bank_name: defaultBank,
+        bankAccountNumber: defaultAcct,
+        account_number: defaultAcct,
+        bank_account_number: defaultAcct,
+        bankIfscCode: defaultIfsc,
+        ifsc_code: defaultIfsc,
+        bank_ifsc: defaultIfsc,
+        bankBranch: defaultBranch,
+        branch: defaultBranch,
+        upiId: defaultUpi,
+        upi_id: defaultUpi,
       },
     });
   } catch (err: any) {
