@@ -642,7 +642,7 @@ function TenantInvoicesContent() {
 
       {/* Sticky Bottom Settlement Bar (§T-02 Wireframe) */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-4 sm:p-5 transition-all animate-in slide-in-from-bottom duration-200">
+        <div className="fixed bottom-0 left-0 md:left-64 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-4 sm:p-5 transition-all animate-in slide-in-from-bottom duration-200">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
