@@ -239,15 +239,9 @@ export default function SignInForm({
             sessionStorage.setItem("officex_user_name", fullName);
           }
 
-          const isSuperAdminEmail =
-            cleanEmail === "admin@gmail.com" ||
-            cleanEmail === "medistationlifecare@gmail.com" ||
-            cleanEmail === "jiyapatel181224@gmail.com" ||
-            cleanEmail === "jiya.d.patel@tsuniv.edu.in";
-
           handleAuthSuccess(
             cleanEmail || u.phone || identifier,
-            isSuperAdminEmail ? "super_admin" : "owner",
+            "owner",
             [],
             fullName || cleanEmail.split("@")[0] || "Member"
           );
@@ -280,15 +274,9 @@ export default function SignInForm({
           sessionStorage.setItem("officex_user_name", fullName);
         }
 
-        const isSuperAdminEmail =
-          cleanEmail === "admin@gmail.com" ||
-          cleanEmail === "medistationlifecare@gmail.com" ||
-          cleanEmail === "jiyapatel181224@gmail.com" ||
-          cleanEmail === "jiya.d.patel@tsuniv.edu.in";
-
         handleAuthSuccess(
           cleanEmail || u.phone || identifier,
-          isSuperAdminEmail ? "super_admin" : "owner",
+          "owner",
           [],
           fullName || cleanEmail.split("@")[0] || "Member"
         );
@@ -839,14 +827,12 @@ export default function SignInForm({
     }
 
     const normalizedEmail = (userEmailOrPhone || "").trim().toLowerCase();
-    const isSuperAdminEmail =
-      normalizedEmail === "admin@gmail.com" ||
-      normalizedEmail === "medistationlifecare@gmail.com" ||
-      normalizedEmail === "jiyapatel181224@gmail.com" ||
-      normalizedEmail === "jiya.d.patel@tsuniv.edu.in";
+    // Only redirect to /admin if the user explicitly logged in as admin@gmail.com with Super Admin credentials
+    const isStrictSuperAdmin =
+      (normalizedEmail === "admin@gmail.com" || normalizedEmail === "medistationlifecare@gmail.com") &&
+      roleName.toLowerCase().includes("super_admin");
 
-    // If the authenticated user is Super Admin, immediately bypass workspace chooser and go directly to /admin
-    if (isSuperAdminEmail && (roleName.toLowerCase().includes("super_admin") || normalizedEmail === "admin@gmail.com" || normalizedEmail === "medistationlifecare@gmail.com")) {
+    if (isStrictSuperAdmin) {
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_admin", "1");
         localStorage.setItem("officex_role", "super_admin");
@@ -861,8 +847,8 @@ export default function SignInForm({
       return;
     }
 
-    // Standard non-admin users: clear any leftover admin flag from previous admin tests
-    if (!isSuperAdminEmail && typeof window !== "undefined") {
+    // Standard commercial users (including Google sign-in): clear any leftover admin flags
+    if (typeof window !== "undefined") {
       localStorage.removeItem("officex_admin");
       sessionStorage.removeItem("officex_admin");
       if (localStorage.getItem("officex_role") === "super_admin") {
@@ -890,7 +876,7 @@ export default function SignInForm({
     // Determine destination - go straight to destination or dashboard without prompting twice
     let destination = "";
     if (safeRedirect && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
-      if (safeRedirect.startsWith("/admin") && !isSuperAdminEmail) {
+      if (safeRedirect.startsWith("/admin") && !isStrictSuperAdmin) {
         destination = "/dashboard";
       } else {
         destination = safeRedirect;
@@ -1075,8 +1061,8 @@ export default function SignInForm({
       }
 
       const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}${targetDestination.startsWith("/") ? targetDestination : `/${targetDestination}`}`
-        : "https://www.officex.pro";
+        ? `${window.location.origin}/login`
+        : "https://www.officex.pro/login";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",

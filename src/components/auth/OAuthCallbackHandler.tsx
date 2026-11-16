@@ -84,19 +84,17 @@ export default function OAuthCallbackHandler() {
       const isOAuthHashLanding = hasInitialAuthHash || currentHash.includes("access_token=") || window.location.search.includes("code=");
       const isAuthPage = pathname === "/login" || pathname === "/signup";
 
-      // If the user is on the homepage, NEVER redirect away! Clean up any stale redirect artifacts.
-      if (pathname === "/") {
-        if (!isOAuthHashLanding) {
-          clearAuthCookie("officex_oauth_context");
-          clearAuthCookie("officex_oauth_redirect");
-          clearAuthCookie("officex_last_rent_roll");
-          try {
-            localStorage.removeItem("officex_oauth_context");
-            localStorage.removeItem("officex_oauth_redirect");
-            sessionStorage.removeItem("officex_oauth_context");
-            sessionStorage.removeItem("officex_oauth_redirect");
-          } catch {}
-        }
+      // If the user is on the homepage without an OAuth token, NEVER redirect away! Clean up any stale redirect artifacts.
+      if (pathname === "/" && !isOAuthHashLanding) {
+        clearAuthCookie("officex_oauth_context");
+        clearAuthCookie("officex_oauth_redirect");
+        clearAuthCookie("officex_last_rent_roll");
+        try {
+          localStorage.removeItem("officex_oauth_context");
+          localStorage.removeItem("officex_oauth_redirect");
+          sessionStorage.removeItem("officex_oauth_context");
+          sessionStorage.removeItem("officex_oauth_redirect");
+        } catch {}
         return;
       }
 
@@ -115,7 +113,7 @@ export default function OAuthCallbackHandler() {
           sessionStorage.removeItem("officex_oauth_redirect");
         } catch {}
 
-        if (savedRedirect && !savedRedirect.startsWith("/login") && !savedRedirect.startsWith("/signup")) {
+        if (savedRedirect && !savedRedirect.startsWith("/login") && !savedRedirect.startsWith("/signup") && !savedRedirect.startsWith("/admin")) {
           if (savedRedirect !== pathname) {
             window.location.replace(savedRedirect);
           }
@@ -130,18 +128,16 @@ export default function OAuthCallbackHandler() {
             sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
           } catch {}
 
-          const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/operate/rent-roll";
+          const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/properties/rent-roll";
           window.location.replace(targetUrl);
           return;
         }
 
-        // Default post-login destination if on login/signup
-        if (isAuthPage) {
-          const userRoleKey = localStorage.getItem("officex_role_key") || "owner";
-          const defaultDash = userRoleKey === "property_manager" ? "/dashboard/pm" : "/dashboard/owner";
-          window.location.replace(defaultDash);
-          return;
-        }
+        // Default post-login destination
+        const userRoleKey = (typeof window !== "undefined" && localStorage.getItem("officex_role_key")) || "owner";
+        const defaultDash = userRoleKey === "property_manager" ? "/dashboard/pm" : "/dashboard/owner";
+        window.location.replace(defaultDash);
+        return;
       }
     };
 
