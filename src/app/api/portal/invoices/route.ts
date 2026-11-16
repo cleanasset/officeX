@@ -20,6 +20,33 @@ export async function GET(req: NextRequest) {
     const statusFilter = searchParams.get("status") || "all";
     const requestedOccupantId = searchParams.get("occupant_id");
 
+    // 0. Immediate check: If requested occupant is deactivated or property deleted
+    if (requestedOccupantId) {
+      const [specOcc] = await db
+        .select({
+          id: occupant.id,
+          name: occupant.occupant_name,
+          deleted_at: occupant.deleted_at,
+          status: occupant.occupant_status,
+        })
+        .from(occupant)
+        .where(eq(occupant.id, requestedOccupantId))
+        .limit(1);
+
+      if (specOcc && (specOcc.deleted_at || specOcc.status === "inactive")) {
+        return NextResponse.json(
+          {
+            success: false,
+            property_deleted: true,
+            account_deactivated: true,
+            property_name: "Commercial Asset",
+            message: "The property owner has deleted or decommissioned this commercial property. Associated leases and your tenant portal session have been deactivated.",
+          },
+          { status: 410 }
+        );
+      }
+    }
+
     // 1. Determine occupant
     let occupantId = requestedOccupantId;
     if (!occupantId) {

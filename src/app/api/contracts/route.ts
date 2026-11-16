@@ -643,6 +643,8 @@ export async function GET(req: Request) {
 
     if (status && status !== "all") {
       conditions.push(eq(contract.contract_status, status as any));
+    } else {
+      conditions.push(sql`${contract.contract_status} != 'terminated'`);
     }
     const approvalStatus = searchParams.get("approval_status");
     if (approvalStatus && approvalStatus !== "all") {
@@ -688,7 +690,13 @@ export async function GET(req: Request) {
           sql`${contractCharge.deleted_at} IS NULL`
         )
       )
-      .where(and(...conditions))
+      .where(
+        and(
+          ...conditions,
+          sql`(${building.id} IS NULL OR ${building.deleted_at} IS NULL)`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`
+        )
+      )
       .orderBy(desc(contract.created_at))
       .limit(limit)
       .offset(offset);
@@ -697,7 +705,13 @@ export async function GET(req: Request) {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(contract)
-      .where(and(...conditions));
+      .where(
+        and(
+          ...conditions,
+          sql`(${building.id} IS NULL OR ${building.deleted_at} IS NULL)`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`
+        )
+      );
 
     const formattedContracts = contractsList.map((item: any) => {
       let resolvedRent = Number(item.base_rent_charge || (item.contract as any)?.base_rent_rate || 0);

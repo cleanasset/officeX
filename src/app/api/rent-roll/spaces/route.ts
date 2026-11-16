@@ -25,7 +25,13 @@ export async function GET(req: Request) {
       .from(space)
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(and(...conditions))
+      .where(
+        and(
+          ...conditions,
+          sql`(${building.id} IS NULL OR ${building.deleted_at} IS NULL)`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`
+        )
+      )
       .orderBy(desc(space.created_at));
 
     return NextResponse.json({

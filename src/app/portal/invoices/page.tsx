@@ -153,7 +153,15 @@ function TenantInvoicesContent() {
         : `/api/portal/invoices?status=${filterTab}`;
       const authHeaders = getClientAuthHeaders();
       const res = await fetch(url, { headers: authHeaders });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+
+      if (res.status === 410 || json.property_deleted || json.account_deactivated) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("propertyDecommissioned", { detail: json }));
+        }
+        return;
+      }
+
       if (json.success) {
         if (json.occupant_id && typeof window !== "undefined" && !savedOccId) {
           localStorage.setItem("officex_tenant_occupant_id", json.occupant_id);

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { property, building, space, contract, occupant, properties } from "@/db/schema";
+import { property, building, space, contract, occupant, properties, invoice, contractCharge } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, inArray, ne } from "drizzle-orm";
+import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
 
 export async function GET(
   req: Request,
@@ -255,7 +255,21 @@ export async function DELETE(
       });
     }
 
-    // 3. Deactivate all active tenant contracts associated with this property
+    // 3. Deactivate all active tenant contracts associated with this property and cancel invoices
+    const activeContractIds = activeContracts.map((c) => c.id);
+    const invoiceConditions = [eq(invoice.property_id, id)];
+    if (activeContractIds.length > 0) {
+      invoiceConditions.push(sql`${invoice.contract_id} IN ${activeContractIds}`);
+    }
+    await db
+      .update(invoice)
+      .set({
+        status: "cancelled",
+        balance_due: "0.00",
+        updated_at: new Date(),
+      })
+      .where(or(...invoiceConditions));
+
     if (spIds.length > 0 && activeContracts.length > 0) {
       await db
         .update(contract)
@@ -266,6 +280,14 @@ export async function DELETE(
           updated_at: new Date(),
         })
         .where(inArray(contract.space_id, spIds));
+
+      await db
+        .update(contractCharge)
+        .set({
+          deleted_at: new Date(),
+          updated_at: new Date(),
+        })
+        .where(inArray(contractCharge.contract_id, activeContractIds));
     }
 
     // 3b. Cascade soft-delete occupants whose only leases belonged to this deleted property (Point 3)

@@ -97,11 +97,22 @@ export async function GET(req: Request) {
       .from(space)
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(and(...spaceConditions));
+      .where(
+        and(
+          ...spaceConditions,
+          sql`(${building.id} IS NULL OR ${building.deleted_at} IS NULL)`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`
+        )
+      );
 
-    const propertyFilteredSpaces = propertyId && propertyId !== "all"
+    const propertyFilteredSpaces = (propertyId && propertyId !== "all"
       ? spacesList.filter((s) => s.property?.id === propertyId || (s.property?.property_name && s.property.property_name.toLowerCase() === propertyId.toLowerCase()))
-      : spacesList;
+      : spacesList).filter((s) => {
+        if (s.property?.deleted_at) return false;
+        if (s.building?.deleted_at) return false;
+        if (s.space?.deleted_at) return false;
+        return true;
+      });
 
     // 2. Fetch contracts covering org (and client filter)
     const contractConditions = [
@@ -127,7 +138,14 @@ export async function GET(req: Request) {
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(and(...contractConditions));
+      .where(
+        and(
+          ...contractConditions,
+          sql`(${building.id} IS NULL OR ${building.deleted_at} IS NULL)`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`,
+          sql`(${space.id} IS NULL OR ${space.deleted_at} IS NULL)`
+        )
+      );
 
     // Multi-space contract linking from contract_space
     const multiSpaces = await db
@@ -185,7 +203,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // 4. Fetch Outstanding Invoices & Arrears
+    // 4. Fetch Outstanding Invoices & Arrears (Exclude cancelled, terminated, and deleted property invoices)
     const unpaidInvoices = await db
       .select({
         contract_id: invoice.contract_id,
@@ -194,10 +212,16 @@ export async function GET(req: Request) {
         status: invoice.status,
       })
       .from(invoice)
+      .leftJoin(contract, eq(invoice.contract_id, contract.id))
+      .leftJoin(space, eq(contract.space_id, space.id))
+      .leftJoin(building, eq(space.building_id, building.id))
+      .leftJoin(property, or(eq(invoice.property_id, property.id), eq(building.property_id, property.id)))
       .where(
         and(
           eq(invoice.org_id, auth.orgId),
-          sql`${invoice.status} IN ('issued', 'partially_paid', 'overdue')`
+          sql`${invoice.status} IN ('issued', 'partially_paid', 'overdue')`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`,
+          sql`(${contract.id} IS NULL OR (${contract.deleted_at} IS NULL AND ${contract.contract_status} != 'terminated'))`
         )
       );
 

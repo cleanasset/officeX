@@ -47,7 +47,13 @@ export async function GET(req: Request) {
 
     if (statusFilter && statusFilter !== "all") {
       conditions.push(eq(invoice.status, statusFilter as any));
+    } else {
+      conditions.push(sql`${invoice.status} != 'cancelled'`);
     }
+
+    // Exclude invoices tied to deleted properties or terminated contracts
+    conditions.push(sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`);
+    conditions.push(sql`(${contract.id} IS NULL OR (${contract.deleted_at} IS NULL AND ${contract.contract_status} != 'terminated'))`);
 
     if (monthFilter) {
       conditions.push(
@@ -130,7 +136,7 @@ export async function GET(req: Request) {
       .limit(limit)
       .offset(offset);
 
-    // Compute KPI Aggregates for Top Cards (§S-12) strictly scoped to org
+    // Compute KPI Aggregates for Top Cards (§S-12) strictly scoped to org, excluding cancelled and deleted properties
     const allInvoices = await db
       .select({
         gross_total: invoice.gross_total,
@@ -141,9 +147,16 @@ export async function GET(req: Request) {
         due_date: invoice.due_date,
       })
       .from(invoice)
+      .leftJoin(contract, eq(invoice.contract_id, contract.id))
+      .leftJoin(space, eq(contract.space_id, space.id))
+      .leftJoin(building, eq(space.building_id, building.id))
+      .leftJoin(property, or(eq(invoice.property_id, property.id), eq(building.property_id, property.id)))
       .where(
         and(
           eq(invoice.org_id, auth.orgId),
+          sql`${invoice.status} != 'cancelled'`,
+          sql`(${property.id} IS NULL OR ${property.deleted_at} IS NULL)`,
+          sql`(${contract.id} IS NULL OR (${contract.deleted_at} IS NULL AND ${contract.contract_status} != 'terminated'))`,
           auth.isPortfolioRole ? undefined : (auth.clientAccountId ? eq(invoice.client_account_id, auth.clientAccountId) : undefined)
         )
       );

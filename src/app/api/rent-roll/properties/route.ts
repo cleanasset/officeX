@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { supabase } from "@/lib/supabase";
-import { property, building, space, contract, occupant, properties } from "@/db/schema";
+import { property, building, space, contract, occupant, properties, invoice, contractCharge } from "@/db/schema";
 import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
@@ -522,16 +522,84 @@ export async function DELETE(req: Request) {
       for (const propId of ids) {
         const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, propId));
         const bldgIds = bldgs.map((b) => b.id);
+        let spIds: string[] = [];
         if (bldgIds.length > 0) {
           const sps = await db.select({ id: space.id }).from(space).where(inArray(space.building_id, bldgIds));
-          const spIds = sps.map((s) => s.id);
-          if (spIds.length > 0) {
-            await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(inArray(contract.space_id, spIds));
-            await db.update(space).set({ deleted_at: new Date() }).where(inArray(space.id, spIds));
-          }
+          spIds = sps.map((s) => s.id);
+        }
+
+        let contractIds: string[] = [];
+        let occupantIds: string[] = [];
+        if (spIds.length > 0) {
+          const contracts = await db.select({ id: contract.id, occupantId: contract.occupant_id }).from(contract).where(inArray(contract.space_id, spIds));
+          contractIds = contracts.map((c) => c.id);
+          occupantIds = contracts.map((c) => c.occupantId).filter(Boolean) as string[];
+        }
+
+        // Cancel and zero-out all associated invoices
+        const invoiceConditions = [eq(invoice.property_id, propId)];
+        if (contractIds.length > 0) {
+          invoiceConditions.push(sql`${invoice.contract_id} IN ${contractIds}`);
+        }
+        await db.update(invoice).set({
+          status: "cancelled",
+          balance_due: "0.00",
+          updated_at: new Date(),
+        }).where(or(...invoiceConditions));
+
+        if (contractIds.length > 0) {
+          await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(inArray(contract.id, contractIds));
+          await db.update(contractCharge).set({ deleted_at: new Date() }).where(inArray(contractCharge.contract_id, contractIds));
+        }
+
+        if (spIds.length > 0) {
+          await db.update(space).set({ deleted_at: new Date() }).where(inArray(space.id, spIds));
+        }
+        if (bldgIds.length > 0) {
           await db.update(building).set({ deleted_at: new Date() }).where(inArray(building.id, bldgIds));
         }
-        await db.update(property).set({ deleted_at: new Date(), updated_by: auth.userId }).where(and(eq(property.id, propId), eq(property.org_id, auth.orgId)));
+
+        // Deactivate occupants if no other active contracts exist
+        for (const occId of occupantIds) {
+          const remainingActive: any = await db.execute(sql`
+            SELECT c.id
+            FROM contract c
+            JOIN space s ON c.space_id = s.id
+            JOIN building b ON s.building_id = b.id
+            JOIN property p ON b.property_id = p.id
+            WHERE c.occupant_id = ${occId}
+              AND c.deleted_at IS NULL
+              AND c.contract_status != 'terminated'
+              AND p.deleted_at IS NULL
+              AND p.id != ${propId}
+            LIMIT 1
+          `);
+          if (!remainingActive || remainingActive.length === 0) {
+            await db.update(occupant).set({
+              occupant_status: "inactive",
+              deleted_at: new Date(),
+              updated_at: new Date(),
+            }).where(eq(occupant.id, occId));
+          }
+        }
+
+        // Update property source_row_id metadata to clear pending_deletion
+        const propData = await db.select({ sourceRowId: property.source_row_id }).from(property).where(eq(property.id, propId)).limit(1);
+        let meta: any = {};
+        if (propData[0]?.sourceRowId && typeof propData[0].sourceRowId === "string" && propData[0].sourceRowId.startsWith("{")) {
+          try { meta = JSON.parse(propData[0].sourceRowId); } catch {}
+        }
+        meta.pending_deletion = false;
+        meta.deleted_at = new Date().toISOString();
+        meta.deleted_by = auth.userId || "landlord_admin";
+        meta.status = "deleted";
+
+        await db.update(property).set({
+          source_row_id: JSON.stringify(meta),
+          deleted_at: new Date(),
+          updated_by: auth.userId,
+        }).where(and(eq(property.id, propId), eq(property.org_id, auth.orgId)));
+
         try {
           await db.delete(properties).where(eq(properties.id, propId));
         } catch {}
@@ -540,7 +608,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({
         success: true,
         count: ids.length,
-        message: `Successfully purged ${ids.length} properties and terminated associated contracts.`,
+        message: `Successfully purged ${ids.length} properties, terminated contracts, cancelled invoices, and deactivated occupants.`,
       });
     }
 

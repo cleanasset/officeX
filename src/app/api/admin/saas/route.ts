@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { property, contract, occupant, space, building, organizations, invoices, contractDocument } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { property, contract, occupant, space, building, organizations, invoice, invoices, contractCharge, contractDocument } from "@/db/schema";
+import { eq, desc, sql, or, and } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -459,20 +459,140 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { action, id, ids, status, remarks } = body;
 
-    // Helper: Purge a single property and cascade delete its assets
+    // Helper: Purge a single property and cascade deactive all its assets, contracts, invoices, and tenants
     async function purgeSingleProperty(propId: string) {
+      // 1. Identify all buildings
       const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, propId));
       const bldgIds = bldgs.map((b) => b.id);
+
+      // 2. Identify all spaces
+      let spIds: string[] = [];
       if (bldgIds.length > 0) {
         const sps = await db.select({ id: space.id }).from(space).where(sql`${space.building_id} IN ${bldgIds}`);
-        const spIds = sps.map((s) => s.id);
-        if (spIds.length > 0) {
-          await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(sql`${contract.space_id} IN ${spIds}`);
-          await db.update(space).set({ deleted_at: new Date() }).where(sql`${space.id} IN ${spIds}`);
-        }
-        await db.update(building).set({ deleted_at: new Date() }).where(sql`${building.id} IN ${bldgIds}`);
+        spIds = sps.map((s) => s.id);
       }
-      await db.update(property).set({ deleted_at: new Date() }).where(eq(property.id, propId));
+
+      // 3. Identify all contracts & occupants
+      let contractIds: string[] = [];
+      let occupantIds: string[] = [];
+      if (spIds.length > 0) {
+        const contracts = await db
+          .select({ id: contract.id, occupantId: contract.occupant_id })
+          .from(contract)
+          .where(sql`${contract.space_id} IN ${spIds}`);
+        contractIds = contracts.map((c) => c.id);
+        occupantIds = contracts.map((c) => c.occupantId).filter(Boolean) as string[];
+      }
+
+      // 4. Cancel & zero-out all associated invoices
+      const invoiceConditions = [eq(invoice.property_id, propId)];
+      if (contractIds.length > 0) {
+        invoiceConditions.push(sql`${invoice.contract_id} IN ${contractIds}`);
+      }
+      await db
+        .update(invoice)
+        .set({
+          status: "cancelled",
+          balance_due: "0.00",
+          updated_at: new Date(),
+        })
+        .where(or(...invoiceConditions));
+
+      // 5. Terminate and soft-delete all contracts and charges
+      if (contractIds.length > 0) {
+        await db
+          .update(contract)
+          .set({
+            contract_status: "terminated",
+            deleted_at: new Date(),
+            updated_at: new Date(),
+          })
+          .where(sql`${contract.id} IN ${contractIds}`);
+
+        await db
+          .update(contractCharge)
+          .set({
+            deleted_at: new Date(),
+            updated_at: new Date(),
+          })
+          .where(sql`${contractCharge.contract_id} IN ${contractIds}`);
+      }
+
+      // 6. Soft-delete all spaces
+      if (spIds.length > 0) {
+        await db
+          .update(space)
+          .set({
+            deleted_at: new Date(),
+            updated_at: new Date(),
+          })
+          .where(sql`${space.id} IN ${spIds}`);
+      }
+
+      // 7. Soft-delete all buildings
+      if (bldgIds.length > 0) {
+        await db
+          .update(building)
+          .set({
+            deleted_at: new Date(),
+            updated_at: new Date(),
+          })
+          .where(sql`${building.id} IN ${bldgIds}`);
+      }
+
+      // 8. Deactivate occupants if they have no other active contracts on non-deleted properties
+      for (const occId of occupantIds) {
+        const remainingActive: any = await db.execute(sql`
+          SELECT c.id
+          FROM contract c
+          JOIN space s ON c.space_id = s.id
+          JOIN building b ON s.building_id = b.id
+          JOIN property p ON b.property_id = p.id
+          WHERE c.occupant_id = ${occId}
+            AND c.deleted_at IS NULL
+            AND c.contract_status != 'terminated'
+            AND p.deleted_at IS NULL
+            AND p.id != ${propId}
+          LIMIT 1
+        `);
+        if (!remainingActive || remainingActive.length === 0) {
+          await db
+            .update(occupant)
+            .set({
+              occupant_status: "inactive",
+              deleted_at: new Date(),
+              updated_at: new Date(),
+            })
+            .where(eq(occupant.id, occId));
+        }
+      }
+
+      // 9. Update property source_row_id metadata to clear pending_deletion
+      const propData = await db
+        .select({ sourceRowId: property.source_row_id })
+        .from(property)
+        .where(eq(property.id, propId))
+        .limit(1);
+
+      let meta: any = {};
+      if (propData[0]?.sourceRowId && typeof propData[0].sourceRowId === "string" && propData[0].sourceRowId.startsWith("{")) {
+        try { meta = JSON.parse(propData[0].sourceRowId); } catch {}
+      }
+      meta.pending_deletion = false;
+      meta.deleted_at = new Date().toISOString();
+      meta.deleted_by = "super_admin";
+      meta.status = "deleted";
+
+      // 10. Mark property deleted_at
+      await db
+        .update(property)
+        .set({
+          source_row_id: JSON.stringify(meta),
+          deleted_at: new Date(),
+          updated_at: new Date(),
+        })
+        .where(eq(property.id, propId));
+
       try {
         await db.delete(property).where(eq(property.id, propId));
       } catch {}
@@ -493,7 +613,7 @@ export async function PUT(request: NextRequest) {
 
     // E. Bulk Approve All Pending Deletions
     if (action === "approve_all_deletions") {
-      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property).where(sql`${property.deleted_at} IS NULL`);
+      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property);
       const pendingIds: string[] = [];
       for (const p of allProps) {
         if (p.sourceRowId && typeof p.sourceRowId === "string" && p.sourceRowId.startsWith("{")) {
@@ -509,13 +629,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({
         success: true,
         count: pendingIds.length,
-        message: `Successfully approved permanent deletion for all ${pendingIds.length} pending property(ies).`,
+        message: `Successfully approved permanent deletion and cascaded deactivation for all ${pendingIds.length} pending property(ies).`,
       });
     }
 
     // F. Bulk Reject All Pending Deletions
     if (action === "reject_all_deletions") {
-      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property).where(sql`${property.deleted_at} IS NULL`);
+      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property);
       const pendingIds: string[] = [];
       for (const p of allProps) {
         if (p.sourceRowId && typeof p.sourceRowId === "string" && p.sourceRowId.startsWith("{")) {

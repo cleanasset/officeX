@@ -122,7 +122,15 @@ export default function TenantHomePage() {
 
       const url = queryParts.length > 0 ? `/api/portal/summary?${queryParts.join("&")}` : `/api/portal/summary`;
       const res = await fetch(url, { headers: authHeaders });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+
+      if (res.status === 410 || json.property_deleted || json.account_deactivated) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("propertyDecommissioned", { detail: json }));
+        }
+        return;
+      }
+
       if (json.success) {
         setData(json);
         if (json.landlord_bank_details?.account_number) {

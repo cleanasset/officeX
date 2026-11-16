@@ -25,7 +25,8 @@ import {
   FileCheck,
   Download,
   Lock,
-  LifeBuoy
+  LifeBuoy,
+  ShieldAlert
 } from "lucide-react";
 
 import { getClientAuthHeaders } from "@/lib/auth-storage";
@@ -45,6 +46,88 @@ export default function TenantPortalLayout({
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [brandLogo, setBrandLogo] = useState<string>("");
   const [brandName, setBrandName] = useState<string>("");
+
+  const [propertyDecommissioned, setPropertyDecommissioned] = useState<{
+    active: boolean;
+    propertyName: string;
+    message: string;
+    countdown: number;
+  }>({
+    active: false,
+    propertyName: "",
+    message: "",
+    countdown: 5,
+  });
+
+  function triggerPropertyDecommissioned(propertyName?: string, message?: string) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("officex_tenant_occupant_id");
+      localStorage.removeItem("officex_tenant_name");
+      localStorage.removeItem("officex_tenant_email");
+      localStorage.removeItem("officex_active_property");
+      sessionStorage.clear();
+      document.cookie = "officex_tenant_id=; path=/; max-age=0";
+    }
+
+    setPropertyDecommissioned((prev) => {
+      if (prev.active) return prev;
+      return {
+        active: true,
+        propertyName: propertyName || "Commercial Property",
+        message: message || "The property owner has deleted or decommissioned this commercial property. Associated leases and your tenant portal session have been deactivated.",
+        countdown: 5,
+      };
+    });
+  }
+
+  // Live countdown timer for auto-redirect
+  useEffect(() => {
+    if (!propertyDecommissioned.active) return;
+    if (propertyDecommissioned.countdown <= 0) {
+      window.location.href = "/login?reason=property_deleted";
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPropertyDecommissioned((prev) => ({
+        ...prev,
+        countdown: prev.countdown - 1,
+      }));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [propertyDecommissioned.active, propertyDecommissioned.countdown]);
+
+  // Real-time Heartbeat Polling: Every 5s & on tab focus
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      if (!propertyDecommissioned.active) {
+        const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+        loadPortalSummary(savedOccId || undefined);
+      }
+    }, 5000);
+
+    const onRefocus = () => {
+      if (!propertyDecommissioned.active && typeof document !== "undefined" && !document.hidden) {
+        const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+        loadPortalSummary(savedOccId || undefined);
+      }
+    };
+
+    window.addEventListener("focus", onRefocus);
+    document.addEventListener("visibilitychange", onRefocus);
+
+    const onCustomDecommission = (e: any) => {
+      triggerPropertyDecommissioned(e.detail?.property_name, e.detail?.message);
+    };
+    window.addEventListener("propertyDecommissioned", onCustomDecommission);
+
+    return () => {
+      clearInterval(heartbeat);
+      window.removeEventListener("focus", onRefocus);
+      document.removeEventListener("visibilitychange", onRefocus);
+      window.removeEventListener("propertyDecommissioned", onCustomDecommission);
+    };
+  }, [propertyDecommissioned.active]);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -85,7 +168,13 @@ export default function TenantPortalLayout({
 
       const url = queryParts.length > 0 ? `/api/portal/summary?${queryParts.join("&")}` : `/api/portal/summary`;
       const res = await fetch(url, { headers: authHeaders });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+
+      // Immediate detection: Property deleted by owner or tenant deactivated
+      if (res.status === 410 || json.property_deleted || json.account_deactivated) {
+        triggerPropertyDecommissioned(json.property_name, json.message);
+        return;
+      }
       if (json.success) {
         if (json.owner_subscribed === false) {
           setOwnerSubscribed(false);
@@ -466,6 +555,72 @@ export default function TenantPortalLayout({
           <p>© 2026 OFFICEX Rent Roll. Commercial Tenant Portal — Bank-grade 256-bit SSL encrypted.</p>
         </footer>
       </div>
+
+      {/* Real-time Property Deletion / Decommissioning Notice Modal */}
+      {propertyDecommissioned.active && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none pointer-events-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border-2 border-rose-300 text-center space-y-6 animate-scaleUp">
+            {/* Warning Icon Badge */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-rose-500/30 animate-ping" />
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-inner">
+                <AlertTriangle className="w-9 h-9 animate-bounce text-rose-600" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase tracking-wider">
+                <Building2 size={12} />
+                <span>Commercial Asset Decommissioned</span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Property Deleted by Owner
+              </h2>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+                {propertyDecommissioned.message ||
+                  `The property owner has permanently deleted or archived this commercial property (${propertyDecommissioned.propertyName}). In accordance with lease governance protocols, your commercial lease contract has been terminated and portal access deactivated.`}
+              </p>
+            </div>
+
+            {/* Notice Callout */}
+            <div className="p-4 bg-rose-50/80 border border-rose-200 rounded-2xl text-left space-y-1.5">
+              <div className="flex items-center gap-2 text-rose-900 font-extrabold text-xs">
+                <ShieldAlert size={14} className="text-rose-600 shrink-0" />
+                <span>Automated Session Deactivation &amp; Logout</span>
+              </div>
+              <p className="text-[11px] text-rose-700 leading-normal">
+                All recurring billing schedules, invoice generation, and settlement options have ceased for this asset. Your active tenant session has been purged.
+              </p>
+            </div>
+
+            {/* Countdown and Action */}
+            <div className="space-y-3 pt-2">
+              <div className="text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span>
+                  Redirecting to sign-in in{" "}
+                  <span className="font-mono text-rose-600 text-sm font-black">
+                    {propertyDecommissioned.countdown}
+                  </span>{" "}
+                  seconds...
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/login?reason=property_deleted";
+                }}
+                className="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <LogOut size={15} />
+                <span>Acknowledge &amp; Sign Out Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

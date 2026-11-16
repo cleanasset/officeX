@@ -15,6 +15,7 @@ export async function GET(req: Request) {
     const conditions = [
       eq(occupant.org_id, auth.orgId),
       sql`${occupant.deleted_at} IS NULL`,
+      sql`${occupant.occupant_status} != 'inactive'`,
     ];
     if (query) {
       conditions.push(

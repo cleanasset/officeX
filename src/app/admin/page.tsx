@@ -15,7 +15,7 @@ import {
   SlidersHorizontal, Download, Plus, CheckCircle2, ChevronLeft,
   Database, Table, Coins, Save, Trash2, Copy, FileJson, Info,
   Sliders, ArrowUpDown, CreditCard,
-  Calendar, QrCode, Wrench, FileCheck2, Laptop, MessageSquare, RotateCcw
+  Calendar, QrCode, Wrench, FileCheck2, Laptop, MessageSquare, RotateCcw, Loader2, ShieldAlert
 } from "lucide-react";
 
 function SuperAdminDashboardContent() {
@@ -184,8 +184,26 @@ function SuperAdminDashboardContent() {
   const [inspectingUser, setInspectingUser] = useState<any | null>(null);
   const [inspectingTargetEmail, setInspectingTargetEmail] = useState<any | null>(null);
 
+  const [selectedPendingDeletionIds, setSelectedPendingDeletionIds] = useState<string[]>([]);
+  const [bulkGovernanceLoading, setBulkGovernanceLoading] = useState<boolean>(false);
+  const [deletionProcessingState, setDeletionProcessingState] = useState<{
+    active: boolean;
+    title: string;
+    message: string;
+  }>({
+    active: false,
+    title: "",
+    message: "",
+  });
+
   const handleApprovePropertyDeletion = async (propertyId: string) => {
-    if (!confirm("Are you sure you want to approve permanent deletion of this property? This will terminate associated leases.")) return;
+    if (!confirm("Are you sure you want to approve permanent deletion of this property? This will terminate associated leases and cancel invoices.")) return;
+    setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: "Approving Permanent Property Deletion...",
+      message: "Executing cascading deactivation: purging demarcated spaces, terminating lease contracts, cancelling associated invoices, and updating tenant registries. Please wait...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -194,17 +212,26 @@ function SuperAdminDashboardContent() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setToast({ text: "✓ Property deletion approved and permanently deleted.", type: "success" });
+        setToast({ text: "✓ Property deletion approved and permanently purged across all dashboards.", type: "success" });
         await loadSaasData();
       } else {
         setToast({ text: data.error || "Failed to approve deletion", type: "error" });
       }
     } catch {
       setToast({ text: "Network error approving deletion", type: "error" });
+    } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
+      setBulkGovernanceLoading(false);
     }
   };
 
   const handleRejectPropertyDeletion = async (propertyId: string) => {
+    setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: "Rejecting Property Deletion Request...",
+      message: "Restoring commercial property to active verified status...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -220,23 +247,28 @@ function SuperAdminDashboardContent() {
       }
     } catch {
       setToast({ text: "Network error rejecting deletion", type: "error" });
+    } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
+      setBulkGovernanceLoading(false);
     }
   };
-
-  const [selectedPendingDeletionIds, setSelectedPendingDeletionIds] = useState<string[]>([]);
-  const [bulkGovernanceLoading, setBulkGovernanceLoading] = useState<boolean>(false);
 
   const handleApproveAllDeletions = async () => {
     const pendingProps = saasProperties.filter((p) => p.pendingDeletion);
     if (pendingProps.length === 0) return;
     if (
       !confirm(
-        `SUPER ADMIN GOVERNANCE:\n\nAre you sure you want to APPROVE permanent deletion for ALL ${pendingProps.length} pending properties?\n\n• All demarcated spaces will be purged.\n• All active lease contracts will be terminated.\n• This action CANNOT be undone.`
+        `SUPER ADMIN GOVERNANCE:\n\nAre you sure you want to APPROVE permanent deletion for ALL ${pendingProps.length} pending properties?\n\n• All demarcated spaces will be purged.\n• All active lease contracts will be terminated.\n• All associated invoices will be cancelled.\n• Inactive tenant accounts will be decommissioned.\n• This action CANNOT be undone.`
       )
     ) {
       return;
     }
     setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: `Purging & Deactivating All ${pendingProps.length} Commercial Properties...`,
+      message: "Institutional safety protocol in execution: cascading unit deallocation, lease contract termination, invoice cancellation, and clearing tenant registries. This may take a few moments. Please do not close or reload this window...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -245,7 +277,7 @@ function SuperAdminDashboardContent() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setToast({ text: `✓ Successfully approved permanent deletion for all ${data.count || pendingProps.length} properties.`, type: "success" });
+        setToast({ text: `✓ Successfully approved permanent deletion and cascaded deactivations for all ${data.count || pendingProps.length} properties.`, type: "success" });
         setSelectedPendingDeletionIds([]);
         await loadSaasData();
       } else {
@@ -254,6 +286,7 @@ function SuperAdminDashboardContent() {
     } catch {
       setToast({ text: "Network error approving all deletions", type: "error" });
     } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
       setBulkGovernanceLoading(false);
     }
   };
@@ -269,6 +302,11 @@ function SuperAdminDashboardContent() {
       return;
     }
     setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: `Restoring All ${pendingProps.length} Properties...`,
+      message: "Reverting deletion requests and restoring properties to active institutional status...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -286,6 +324,7 @@ function SuperAdminDashboardContent() {
     } catch {
       setToast({ text: "Network error rejecting all deletions", type: "error" });
     } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
       setBulkGovernanceLoading(false);
     }
   };
@@ -294,12 +333,17 @@ function SuperAdminDashboardContent() {
     if (selectedPendingDeletionIds.length === 0) return;
     if (
       !confirm(
-        `Are you sure you want to approve permanent deletion for ${selectedPendingDeletionIds.length} selected properties?\n\nThis will purge units and terminate contracts.`
+        `Are you sure you want to approve permanent deletion for ${selectedPendingDeletionIds.length} selected properties?\n\nThis will purge units, terminate contracts, and cancel invoices.`
       )
     ) {
       return;
     }
     setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: `Purging ${selectedPendingDeletionIds.length} Selected Properties...`,
+      message: "Executing cascading deactivations: terminating lease contracts, cancelling associated invoices, and purging units...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -317,6 +361,7 @@ function SuperAdminDashboardContent() {
     } catch {
       setToast({ text: "Network error approving selected deletions", type: "error" });
     } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
       setBulkGovernanceLoading(false);
     }
   };
@@ -331,6 +376,11 @@ function SuperAdminDashboardContent() {
       return;
     }
     setBulkGovernanceLoading(true);
+    setDeletionProcessingState({
+      active: true,
+      title: `Rejecting ${selectedPendingDeletionIds.length} Deletion Requests...`,
+      message: "Restoring selected properties to active status...",
+    });
     try {
       const res = await fetch("/api/admin/saas", {
         method: "PUT",
@@ -348,9 +398,11 @@ function SuperAdminDashboardContent() {
     } catch {
       setToast({ text: "Network error rejecting selected deletions", type: "error" });
     } finally {
+      setDeletionProcessingState({ active: false, title: "", message: "" });
       setBulkGovernanceLoading(false);
     }
   };
+
   const [saasProperties, setSaasProperties] = useState<any[]>([]);
   const [saasContracts, setSaasContracts] = useState<any[]>([]);
   const [saasTenants, setSaasTenants] = useState<any[]>([]);
@@ -2988,15 +3040,17 @@ function SuperAdminDashboardContent() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     type="button"
+                                    disabled={bulkGovernanceLoading || deletionProcessingState.active}
                                     onClick={() => handleRejectPropertyDeletion(p.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     Reject Request
                                   </button>
                                   <button
                                     type="button"
+                                    disabled={bulkGovernanceLoading || deletionProcessingState.active}
                                     onClick={() => handleApprovePropertyDeletion(p.id)}
-                                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     <Trash2 size={12} />
                                     <span>Approve Permanent Deletion</span>
@@ -6473,6 +6527,41 @@ function SuperAdminDashboardContent() {
               >
                 Close Audit
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      
+      {/* Full-Screen Institutional Deletion Governance Blocking Modal */}
+      {deletionProcessingState.active && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 select-none pointer-events-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 text-center space-y-6 animate-scaleUp">
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-rose-500/20 animate-ping" />
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-inner">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                {deletionProcessingState.title}
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {deletionProcessingState.message}
+              </p>
+            </div>
+
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-rose-500 via-amber-500 to-rose-600 rounded-full animate-pulse w-full" />
+            </div>
+
+            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-left flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-800 font-medium leading-normal">
+                Institutional Safety Lock: Database updates, invoice cancellations, and contract terminations are executing. All actions are blocked until completion.
+              </p>
             </div>
           </div>
         </div>

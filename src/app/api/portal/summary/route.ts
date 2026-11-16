@@ -66,6 +66,68 @@ export async function GET(req: NextRequest) {
       return bWeight - aWeight;
     });
 
+    // 0. Explicit check if requested occupant was deactivated or their property deleted
+    if (requestedOccupantId) {
+      const [specOcc] = await db
+        .select({
+          id: occupant.id,
+          name: occupant.occupant_name,
+          deleted_at: occupant.deleted_at,
+          status: occupant.occupant_status,
+        })
+        .from(occupant)
+        .where(eq(occupant.id, requestedOccupantId))
+        .limit(1);
+
+      if (specOcc) {
+        if (specOcc.deleted_at || specOcc.status === "inactive") {
+          return NextResponse.json(
+            {
+              success: false,
+              property_deleted: true,
+              account_deactivated: true,
+              property_name: "Commercial Asset",
+              message: "The property owner has deleted or decommissioned this commercial property. Associated leases and your tenant portal session have been deactivated.",
+            },
+            { status: 410 }
+          );
+        }
+
+        // Check if all contracts for this occupant belong to deleted properties
+        const allOccupantContracts = await db
+          .select({
+            propName: property.property_name,
+            propDeleted: property.deleted_at,
+            contractDeleted: contract.deleted_at,
+            contractStatus: contract.contract_status,
+          })
+          .from(contract)
+          .leftJoin(space, eq(contract.space_id, space.id))
+          .leftJoin(building, eq(space.building_id, building.id))
+          .leftJoin(property, eq(building.property_id, property.id))
+          .where(eq(contract.occupant_id, requestedOccupantId));
+
+        if (allOccupantContracts.length > 0) {
+          const activeContracts = allOccupantContracts.filter(
+            (c) => !c.propDeleted && !c.contractDeleted && c.contractStatus !== "terminated"
+          );
+          if (activeContracts.length === 0) {
+            const propName = allOccupantContracts[0]?.propName || "Commercial Asset";
+            return NextResponse.json(
+              {
+                success: false,
+                property_deleted: true,
+                account_deactivated: true,
+                property_name: propName,
+                message: `The property owner has deleted or decommissioned this commercial property (${propName}). Associated leases and your tenant portal session have been deactivated.`,
+              },
+              { status: 410 }
+            );
+          }
+        }
+      }
+    }
+
     // Select targeted occupant strictly based on parameters or credentials
     let currentOccupant: any = null;
     if (requestedOccupantId) {
@@ -120,24 +182,24 @@ export async function GET(req: NextRequest) {
     }
 
     if (!currentOccupant) {
-      return NextResponse.json({
-        success: true,
-        occupant: null,
-        occupants_list: [],
-        contracts: [],
-        summary: {
-          total_outstanding_inr: 0,
-          next_due_date: null,
-          overdue_count: 0,
-          overdue_amount_inr: 0,
-          due_7_days_count: 0,
-          due_7_days_amount_inr: 0,
-          open_disputes_count: 0,
+      // Find if any properties were deleted recently
+      const [lastDeleted] = await db
+        .select({ name: property.property_name })
+        .from(property)
+        .where(sql`${property.deleted_at} IS NOT NULL`)
+        .orderBy(desc(property.deleted_at))
+        .limit(1);
+
+      return NextResponse.json(
+        {
+          success: false,
+          property_deleted: true,
+          account_deactivated: true,
+          property_name: lastDeleted?.name || "Commercial Property",
+          message: `The property owner has deleted or decommissioned this commercial property. Associated leases and your tenant portal session have been deactivated.`,
         },
-        recent_invoices: [],
-        notices: [],
-        reminders: [],
-      });
+        { status: 410 }
+      );
     }
 
     // Deduplicate occupants list by name so each tenant appears once in the dropdown switcher
@@ -204,6 +266,41 @@ export async function GET(req: NextRequest) {
           sql`${contract.contract_status} != 'terminated'`
         )
       );
+
+    // If no active contracts exist, check if the tenant's property was decommissioned
+    if (contracts.length === 0) {
+      const [deletedLease] = await db
+        .select({ propName: property.property_name })
+        .from(contract)
+        .leftJoin(space, eq(contract.space_id, space.id))
+        .leftJoin(building, eq(space.building_id, building.id))
+        .leftJoin(property, eq(building.property_id, property.id))
+        .where(
+          and(
+            inArray(contract.occupant_id, matchingOccupantIds),
+            or(
+              sql`${property.deleted_at} IS NOT NULL`,
+              sql`${contract.deleted_at} IS NOT NULL`,
+              eq(contract.contract_status, "terminated")
+            )
+          )
+        )
+        .limit(1);
+
+      if (deletedLease) {
+        const pName = deletedLease.propName || currentOccupant.property_name || "Commercial Property";
+        return NextResponse.json(
+          {
+            success: false,
+            property_deleted: true,
+            account_deactivated: true,
+            property_name: pName,
+            message: `The property owner has deleted or decommissioned this commercial property (${pName}). Associated leases and your tenant portal session have been deactivated.`,
+          },
+          { status: 410 }
+        );
+      }
+    }
 
     // 3. Fetch Invoices for this occupant (by occupant ID or contract ID)
     const contractIds = contracts.map((c) => c.contract_id);
@@ -272,6 +369,41 @@ export async function GET(req: NextRequest) {
           sql`${dispute.deleted_at} IS NULL`
         )
       );
+
+    // If no active contracts exist, check if the tenant's property was decommissioned
+    if (contracts.length === 0) {
+      const [deletedLease] = await db
+        .select({ propName: property.property_name })
+        .from(contract)
+        .leftJoin(space, eq(contract.space_id, space.id))
+        .leftJoin(building, eq(space.building_id, building.id))
+        .leftJoin(property, eq(building.property_id, property.id))
+        .where(
+          and(
+            inArray(contract.occupant_id, matchingOccupantIds),
+            or(
+              sql`${property.deleted_at} IS NOT NULL`,
+              sql`${contract.deleted_at} IS NOT NULL`,
+              eq(contract.contract_status, "terminated")
+            )
+          )
+        )
+        .limit(1);
+
+      if (deletedLease) {
+        const pName = deletedLease.propName || currentOccupant.property_name || "Commercial Property";
+        return NextResponse.json(
+          {
+            success: false,
+            property_deleted: true,
+            account_deactivated: true,
+            property_name: pName,
+            message: `The property owner has deleted or decommissioned this commercial property (${pName}). Associated leases and your tenant portal session have been deactivated.`,
+          },
+          { status: 410 }
+        );
+      }
+    }
 
     // 6. Generate Contextual Notices & Live PM Reminders (§T-01)
     const notices: any[] = [];
