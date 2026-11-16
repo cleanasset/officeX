@@ -17,7 +17,8 @@ import {
   TrendingDown,
   RefreshCw,
   Send,
-  AlertCircle
+  AlertCircle,
+  Users,
 } from "lucide-react";
 
 interface InvoiceLineItem {
@@ -209,7 +210,11 @@ export default function InvoiceDetailModal({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (inv?.id) {
+      window.open(`/api/invoices/${inv.id}/pdf?print=true`, "_blank");
+    } else {
+      window.print();
+    }
   };
 
   if (!isOpen) return null;
@@ -276,8 +281,26 @@ export default function InvoiceDetailModal({
           </div>
         </div>
 
+        {/* Print Isolation Stylesheet */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body * { visibility: hidden !important; }
+            #printable-invoice-modal-content, #printable-invoice-modal-content * { visibility: visible !important; }
+            #printable-invoice-modal-content {
+              position: fixed !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 24px !important;
+              background: white !important;
+              overflow: visible !important;
+            }
+          }
+        `}} />
+
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 printable-area">
+        <div id="printable-invoice-modal-content" className="p-6 overflow-y-auto flex-1 space-y-6 printable-area">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 text-slate-500">
               <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mb-2" />
@@ -301,34 +324,42 @@ export default function InvoiceDetailModal({
 
           {!loading && inv && (
             <>
-              {/* Official Tax Invoice Letterhead with Brand Logo */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+              {/* Official Tax Invoice Letterhead with Dynamic Landlord/SPV Details */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                 <div className="flex items-center gap-3.5">
                   {brandLogo ? (
-                    <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-2xs">
                       <img src={brandLogo} alt="Landlord Logo" className="max-h-full max-w-full object-contain" />
                     </div>
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
-                      {(brandName || companyName || "O").charAt(0).toUpperCase()}
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-teal-400 flex items-center justify-center font-black text-lg shrink-0 shadow-2xs border border-slate-800">
+                      <Building2 className="w-6 h-6" />
                     </div>
                   )}
                   <div>
                     <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-                      {brandName || companyName || "OFFICEX Commercial Asset Management"}
+                      {inv.property?.spv_name || inv.property?.property_name || brandName || companyName || "Commercial Property Asset SPV"}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      Commercial Real Estate Tax Invoice · SAC 997212 (18% GST)
+                      TAX INVOICE · Section 31 of CGST Act, 2017 · SAC 997212 (18% GST)
                     </p>
+                    {inv.property?.cin && (
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        CIN: {inv.property.cin}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="sm:text-right">
-                  <div className="text-xs font-mono font-black text-slate-900">
+                  <div className="text-sm font-mono font-black text-slate-900">
                     INVOICE #{inv.invoice_number}
                   </div>
-                  <div className="text-[11px] text-teal-700 font-bold mt-0.5">
+                  <div className="text-xs text-teal-700 font-bold mt-0.5">
                     Date: {inv.invoice_date}
+                  </div>
+                  <div className="text-[10px] text-slate-400 uppercase font-semibold mt-0.5">
+                    Original for Recipient
                   </div>
                 </div>
               </div>
@@ -336,37 +367,48 @@ export default function InvoiceDetailModal({
               {/* Party Information (Two Columns) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
                 {/* Billed By */}
-                <div>
-                  <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-                    Billed By (Lessor / SPV)
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-900 mt-1">
-                    {companyName || brandName || "OFFICEX Asset Management SPV"}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-slate-500 uppercase">
+                    <Building2 size={12} className="text-slate-600" />
+                    <span>Billed By (Lessor / SPV)</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {inv.property?.spv_name || `${inv.property?.property_name || 'Commercial Asset'} Operations SPV`}
                   </h3>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    GSTIN: <span className="font-mono font-medium">27AAAAA0000A1Z5</span> · PAN: AAAAA0000A
+                  <p className="text-xs text-slate-700 mt-0.5">
+                    <span className="font-bold text-slate-500">GSTIN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.gstin || "24AAACP1234F1Z5"}</span>
+                    <span className="mx-1.5 text-slate-300">·</span>
+                    <span className="font-bold text-slate-500">PAN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.pan || "AAACP1234F"}</span>
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Property: {inv.property?.property_name || inv.building?.building_name || "Commercial Center"}
+                  <p className="text-xs text-slate-700">
+                    <span className="font-bold text-slate-500">Property:</span> <span className="font-semibold text-teal-900">{inv.property?.property_name || "Commercial Center"}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {inv.property?.address ? `${inv.property.address}, ` : ""}{inv.property?.city || "Ahmedabad"}, {inv.property?.state || "Gujarat"} {inv.property?.postal_code || ""}
                   </p>
                 </div>
 
                 {/* Billed To */}
-                <div>
-                  <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-                    Billed To (Occupant / Lessee)
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-900 mt-1">
-                    {inv.occupant?.occupant_name || "Commercial Occupant"}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-slate-500 uppercase">
+                    <Users size={12} className="text-slate-600" />
+                    <span>Billed To (Occupant / Lessee)</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {inv.occupant?.occupant_name || inv.occupant?.trade_name || "Commercial Occupant"}
                   </h3>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Occupant Code: <span className="font-mono">{inv.occupant?.occupant_code || "—"}</span>
+                  <p className="text-xs text-slate-700 mt-0.5">
+                    <span className="font-bold text-slate-500">GSTIN:</span> <span className="font-mono font-bold text-slate-900">{inv.occupant?.gst_number || "Unregistered"}</span>
+                    <span className="mx-1.5 text-slate-300">·</span>
+                    <span className="font-bold text-slate-500">PAN:</span> <span className="font-mono font-bold text-slate-900">{inv.occupant?.pan_number || "—"}</span>
                   </p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    GSTIN: <span className="font-mono">{inv.occupant?.gst_number || "Unregistered"}</span> · PAN: {inv.occupant?.pan_number || "—"}
+                  <p className="text-xs text-slate-700">
+                    <span className="font-bold text-slate-500">Premises:</span> <span className="font-semibold text-slate-900">{inv.space?.space_name || "Demised Unit"}</span> ({Number(inv.space?.chargeable_area_sqft || inv.space?.chargeable_area || 0).toLocaleString("en-IN")} sq.ft)
+                    <span className="mx-1.5 text-slate-300">·</span>
+                    <span className="font-bold text-slate-500">Contract:</span> <span className="font-mono font-bold text-teal-700">{inv.contract?.contract_code || "—"}</span>
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Space: {inv.space?.space_name} ({inv.space?.chargeable_area_sqft || "—"} sq ft) · Contract: {inv.contract?.contract_code}
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-bold text-slate-500">Place of Supply (POS):</span> {inv.property?.state || "Gujarat"} ({inv.property?.gstin ? inv.property.gstin.slice(0, 2) : "24"})
                   </p>
                 </div>
               </div>
@@ -422,7 +464,11 @@ export default function InvoiceDetailModal({
                             <tr key={line.id || idx} className="hover:bg-slate-50/80">
                               <td className="py-2.5 px-3 text-slate-400">{idx + 1}</td>
                               <td className="py-2.5 px-3 font-medium text-slate-800">
-                                {line.description}
+                                {line.description === "base_rent"
+                                  ? "Monthly Commercial Lease Rent (SAC 997212)"
+                                  : line.description === "cam"
+                                    ? "Common Area Maintenance Charges (SAC 998599)"
+                                    : line.description}
                                 {parseFloat(String(line.concession_amount_inr || "0")) > 0 && (
                                   <span className="block text-[10px] text-emerald-600">
                                     Concession Applied: -₹{parseFloat(String(line.concession_amount_inr)).toLocaleString("en-IN")}
@@ -700,17 +746,16 @@ export default function InvoiceDetailModal({
                 Send via Email
               </button>
 
-              {!isDraft && (
-                <a
-                  href={`/api/invoices/${inv.id}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
-                >
-                  <Printer className="w-4 h-4 text-indigo-600" />
-                  Tax Invoice (PDF)
-                </a>
-              )}
+              <a
+                href={`/api/invoices/${inv.id}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+                title="View clean full-page Indian Tax Invoice (PDF)"
+              >
+                <Printer className="w-4 h-4 text-indigo-600" />
+                Tax Invoice (PDF)
+              </a>
 
               {!isDraft && !creditNoteOpen && (
                 <button

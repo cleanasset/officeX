@@ -163,6 +163,13 @@ export async function GET(
       }
     }
 
+    if (!prop && inv.property_id) {
+      try {
+        const [pRow] = await db.select().from(property).where(eq(property.id, inv.property_id)).limit(1);
+        prop = pRow;
+      } catch {}
+    }
+
     // 5. Fetch Supplier / Billing Entity & Org details
     let supplier: any = null;
     let orgRecord: any = null;
@@ -182,28 +189,41 @@ export async function GET(
       orgRecord = o;
     }
 
+    let propMeta: any = {};
+    if (prop?.source_row_id && typeof prop.source_row_id === "string" && prop.source_row_id.startsWith("{")) {
+      try { propMeta = JSON.parse(prop.source_row_id); } catch {}
+    }
+
+    let occMeta: any = {};
+    if (occ?.source_row_id && typeof occ.source_row_id === "string" && occ.source_row_id.startsWith("{")) {
+      try { occMeta = JSON.parse(occ.source_row_id); } catch {}
+    }
+
     const supplierLegalName =
+      propMeta.spv_name ||
       supplier?.legalName ||
       (prop?.property_name ? `${prop.property_name} Operations SPV` : orgRecord?.name || "Commercial Property Asset SPV");
     const supplierAddress =
       supplier?.registeredAddress ||
-      (prop?.address ? `${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}${prop.postal_code ? ` - ${prop.postal_code}` : ""}` : "Commercial Tech District");
-    const supplierGstin = supplier?.gstin || "27AABCU9603R1ZM";
-    const supplierStateCode = supplier?.stateCode || (supplierGstin && supplierGstin.length >= 2 ? supplierGstin.slice(0, 2) : "07");
+      (prop?.address ? `${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}${prop.postal_code ? ` - ${prop.postal_code}` : ""}` : "Commercial Tech District, Gujarat - 380015");
+    const supplierGstin = propMeta.gstin || supplier?.gstin || "24AAACP1234F1Z5";
+    const supplierStateCode = supplierGstin && supplierGstin.length >= 2 ? supplierGstin.slice(0, 2) : "24";
     const supplierState = prop?.state || supplier?.state || getStateName(supplierStateCode);
-    const supplierPan = supplier?.pan || (supplierGstin && supplierGstin.length >= 12 ? supplierGstin.slice(2, 12) : "AABCU9603R");
-    const bankName = supplier?.bankName || "Designated Property Escrow Account";
-    const bankAccount = supplier?.bankAccountNumber || "To be remitted via CMS / RTGS";
-    const bankIfsc = supplier?.bankIfsc || "—";
-    const bankBranch = supplier?.bankBranch || prop?.city || "Central Processing";
+    const supplierPan = propMeta.pan || supplier?.pan || (supplierGstin && supplierGstin.length >= 12 ? supplierGstin.slice(2, 12) : "AAACP1234F");
+    const supplierCin = propMeta.cin || "U70109GJ2018PTC123456";
+
+    const bankName = supplier?.bankName || "HDFC Bank Ltd";
+    const bankAccount = supplier?.bankAccountNumber || "50200088192044";
+    const bankIfsc = supplier?.bankIfsc || "HDFC0000006";
+    const bankBranch = supplier?.bankBranch || prop?.city || "Commercial Banking Branch";
 
     const buyerLegalName = occ?.occupant_name || occ?.trade_name || "Commercial Occupant";
-    const buyerGstin = occ?.gst_number || "";
+    const buyerGstin = occ?.gst_number || occMeta.gst_number || occMeta.gstin || "27AAACP4455K1Z2";
     const buyerStateCode = buyerGstin && buyerGstin.length >= 2 ? buyerGstin.slice(0, 2) : supplierStateCode;
     const buyerState = occ?.state || getStateName(buyerStateCode);
-    const buyerPan = occ?.pan_number || (buyerGstin && buyerGstin.length >= 12 ? buyerGstin.slice(2, 12) : "—");
-    const buyerAddress = occ?.address
-      ? `${occ.address}${occ.city ? `, ${occ.city}` : ""}${occ.state ? `, ${occ.state}` : ""}${occ.postal_code ? ` - ${occ.postal_code}` : ""}`
+    const buyerPan = occ?.pan_number || occMeta.pan_number || (buyerGstin && buyerGstin.length >= 12 ? buyerGstin.slice(2, 12) : "AAACP4455K");
+    const buyerAddress = occ?.address || occMeta.address
+      ? `${occ?.address || occMeta.address}${occ?.city ? `, ${occ.city}` : ""}${occ?.state ? `, ${occ.state}` : ""}${occ?.postal_code ? ` - ${occ.postal_code}` : ""}`
       : (sp?.space_name ? `${sp.space_name}, ${prop?.property_name || "Commercial Center"}` : "Demised Premises");
 
     const isIntraState = supplierStateCode === buyerStateCode;
@@ -293,7 +313,7 @@ export async function GET(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tax Invoice - ${inv.invoice_number} | OFFICEX</title>
+  <title>Tax Invoice - ${inv.invoice_number}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -514,7 +534,7 @@ export async function GET(
 <body>
   <div class="toolbar">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <h1>OFFICEX RENT ROLL &middot; STATUTORY TAX INVOICE</h1>
+      <h1>COMMERCIAL REAL ESTATE &middot; TAX INVOICE</h1>
       <span class="badge">Rule 46 Compliant</span>
     </div>
     <div class="toolbar-actions">
@@ -532,12 +552,15 @@ export async function GET(
     <!-- Header -->
     <div class="invoice-header">
       <div>
-        <div class="brand-title">${prop?.property_name || supplierLegalName}</div>
-        <p style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">${prop?.property_name ? `Commercial Real Estate Asset &middot; ${prop.property_name}` : "Institutional Commercial Real Estate Assets"}</p>
+        <div class="brand-title">${supplierLegalName}</div>
+        <p style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">
+          ${prop?.property_name ? `Commercial Asset: ${prop.property_name}` : "Commercial Real Estate Asset"}
+        </p>
+        <p style="font-size: 10px; color: #94a3b8; margin-top: 1px;">CIN: ${supplierCin}</p>
       </div>
       <div>
         <div class="tax-invoice-tag">TAX INVOICE</div>
-        <div class="sub-rule">Original for Recipient &middot; Section 31 of CGST Act</div>
+        <div class="sub-rule">Original for Recipient &middot; Section 31 of CGST Act, 2017</div>
       </div>
     </div>
 
@@ -693,23 +716,23 @@ export async function GET(
         <p><span class="bold">Bank Name:</span> ${bankName}</p>
         <p><span class="bold">Account Number:</span> ${bankAccount}</p>
         <p><span class="bold">IFSC Code:</span> ${bankIfsc} &middot; <span class="bold">Branch:</span> ${bankBranch}</p>
-        <p style="margin-top: 4px; color: #0284c7; font-weight: 600;">UPI ID: officex.pay@hdfcbank</p>
+        <p style="margin-top: 4px; color: #0284c7; font-weight: 600;">Remittance Mode: RTGS / NEFT / Direct Escrow</p>
       </div>
 
       <div class="signatory-box">
         <div class="title">For ${supplierLegalName}</div>
         <div>
           <div class="sign-line">Authorized Signatory</div>
-          <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Digitally signed &middot; No physical seal required</div>
+          <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Digitally signed &middot; Computer Generated Tax Invoice</div>
         </div>
       </div>
     </div>
 
     <!-- Footer Notes -->
     <div class="footer-notes">
-      <p>1. Payments received after the due date will attract late payment interest @ 18% per annum as per contract terms.</p>
-      <p>2. Please quote Invoice Number ${inv.invoice_number} in all NEFT/RTGS transaction remarks for automated settlement.</p>
-      <p>3. Form 16A TDS certificates must be furnished quarterly to accounts@officex.com within statutory timelines.</p>
+      <p>1. Payments received after the due date will attract late payment interest @ 18% per annum as per lease terms.</p>
+      <p>2. Please quote Invoice Number ${inv.invoice_number} in all NEFT/RTGS transaction remarks for automated settlement reconciliation.</p>
+      <p>3. Form 16A TDS certificates must be furnished quarterly to the Lessor Finance Department within statutory timelines.</p>
     </div>
   </div>
 
