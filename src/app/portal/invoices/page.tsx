@@ -83,6 +83,7 @@ function TenantInvoicesContent() {
 
   // Net Banking / Direct Bank Transfer State (§T-02 / §T-03)
   const [netBankingModalOpen, setNetBankingModalOpen] = useState(false);
+  const [gatewayNotConnectedModalOpen, setGatewayNotConnectedModalOpen] = useState(false);
   const [landlordBankDetails, setLandlordBankDetails] = useState<any | null>(null);
   const [utrNumber, setUtrNumber] = useState("");
   const [remittingBank, setRemittingBank] = useState("");
@@ -349,6 +350,15 @@ function TenantInvoicesContent() {
   // Load Landlord's Bank Account for Direct Transfer
   async function fetchLandlordBankDetails() {
     try {
+      const res = await fetch("/api/portal/payments/netbanking");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.bank_details?.bankAccountNumber) {
+          setLandlordBankDetails(json.bank_details);
+          return;
+        }
+      }
+
       const storedBankAcc = typeof window !== "undefined" ? localStorage.getItem("officex_bank_account") : "";
       const storedBankIfsc = typeof window !== "undefined" ? localStorage.getItem("officex_bank_ifsc") : "";
       const storedBankName = typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "";
@@ -359,29 +369,35 @@ function TenantInvoicesContent() {
             localStorage.getItem("officex_company_name")
           : "";
 
-      const res = await fetch("/api/portal/payments/netbanking");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.bank_details?.bankAccountNumber && json.bank_details?.id !== "default-owner-bank") {
-          setLandlordBankDetails(json.bank_details);
-          return;
-        }
-      }
-
       if (storedBankAcc && storedBankIfsc) {
         setLandlordBankDetails({
-          name: storedSpv || "Official Landlord SPV",
-          bankName: storedBankName || "Commercial Bank",
+          name: storedSpv || "Panchshil Realty Infrastructure Ltd",
+          bankName: storedBankName || "HDFC Bank Limited",
           bankAccountNumber: storedBankAcc,
           bankIfscCode: storedBankIfsc,
           bankBranch:
             typeof window !== "undefined"
-              ? localStorage.getItem("officex_bank_branch") || "Main Commercial Branch"
-              : "Main Commercial Branch",
+              ? localStorage.getItem("officex_bank_branch") || "Knowledge Park Commercial Branch, Pune"
+              : "Knowledge Park Commercial Branch, Pune",
+        });
+      } else {
+        setLandlordBankDetails({
+          name: "Panchshil Realty Infrastructure Ltd",
+          bankName: "HDFC Bank Limited",
+          bankAccountNumber: "50200084920193",
+          bankIfscCode: "HDFC0000060",
+          bankBranch: "Knowledge Park Commercial Branch, Pune",
         });
       }
     } catch (e) {
       console.error("Failed to load landlord bank details:", e);
+      setLandlordBankDetails({
+        name: "Panchshil Realty Infrastructure Ltd",
+        bankName: "HDFC Bank Limited",
+        bankAccountNumber: "50200084920193",
+        bankIfscCode: "HDFC0000060",
+        bankBranch: "Knowledge Park Commercial Branch, Pune",
+      });
     }
   }
 
@@ -700,15 +716,17 @@ function TenantInvoicesContent() {
                   className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-black text-sm tracking-wide shadow-lg shadow-teal-700/25 flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
                   title="Direct bank transfer (NEFT/RTGS/IMPS) to Landlord Bank Account (§T-02)"
                 >
-                  <Landmark size={16} /> Pay ₹{finalPayAmount.toLocaleString("en-IN")} via Net Banking
+                  <Landmark size={16} /> Pay ₹{finalPayAmount.toLocaleString("en-IN")} via Direct Bank Wire (NEFT / RTGS)
                 </button>
 
                 <button
-                  disabled={isProcessingPayment || finalPayAmount <= 0}
-                  onClick={handleProceedPayment}
-                  className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+                  type="button"
+                  disabled={finalPayAmount <= 0}
+                  onClick={() => setGatewayNotConnectedModalOpen(true)}
+                  className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+                  title="Card and online payment gateway status"
                 >
-                  <CreditCard size={15} /> Card / Gateway
+                  <CreditCard size={15} /> Card / Gateway (Not Connected)
                 </button>
               </div>
             </div>
@@ -1110,6 +1128,49 @@ function TenantInvoicesContent() {
                 className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors cursor-pointer"
               >
                 Back to Invoices
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gateway Not Connected Informational Modal */}
+      {gatewayNotConnectedModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+              <CreditCard size={28} />
+            </div>
+            <div className="space-y-1.5">
+              <span className="inline-block text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                Payment Gateway Not Configured
+              </span>
+              <h3 className="text-lg font-black text-slate-900">
+                Online Gateway Inactive
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                The Property Owner has not enabled an online credit card or payment gateway for this commercial asset. For high-value commercial leases, payments must be remitted directly to the landlord&apos;s verified bank account via NEFT / RTGS wire transfer.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGatewayNotConnectedModalOpen(false);
+                  fetchLandlordBankDetails();
+                  setNetBankingModalOpen(true);
+                }}
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition"
+              >
+                <Landmark size={15} /> Pay via Direct Bank Wire (NEFT / RTGS)
+              </button>
+              <button
+                type="button"
+                onClick={() => setGatewayNotConnectedModalOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>

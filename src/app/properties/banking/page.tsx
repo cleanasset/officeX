@@ -28,27 +28,67 @@ export default function LandlordBankingPage() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedSpv = localStorage.getItem("officex_property_spv") || localStorage.getItem("officex_active_org") || "";
-      const storedAcc = localStorage.getItem("officex_bank_account") || "";
-      const storedIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+    async function loadBankInfo() {
+      try {
+        const res = await fetch("/api/properties/banking");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.bank_details) {
+            const b = json.bank_details;
+            if (b.spvName) setSpvName(b.spvName);
+            if (b.bankAccount) {
+              setBankAccount(b.bankAccount);
+              setVirtualAccount(`OXRTGS${String(b.bankAccount).slice(-6)}`);
+            }
+            if (b.bankIfsc) setBankIfsc(b.bankIfsc);
+            if (b.bankName) setBankName(b.bankName);
+            return;
+          }
+        }
+      } catch (e) {}
 
-      setSpvName(storedSpv);
-      setBankAccount(storedAcc);
-      setBankIfsc(storedIfsc);
-      if (storedAcc) {
-        setVirtualAccount(`OXRTGS${storedAcc.slice(-6)}`);
+      if (typeof window !== "undefined") {
+        const storedSpv = localStorage.getItem("officex_property_spv") || localStorage.getItem("officex_active_org") || "";
+        const storedAcc = localStorage.getItem("officex_bank_account") || "";
+        const storedIfsc = localStorage.getItem("officex_bank_ifsc") || "";
+        const storedBank = localStorage.getItem("officex_bank_name") || "";
+
+        if (storedSpv) setSpvName(storedSpv);
+        if (storedAcc) {
+          setBankAccount(storedAcc);
+          setVirtualAccount(`OXRTGS${storedAcc.slice(-6)}`);
+        }
+        if (storedIfsc) setBankIfsc(storedIfsc);
+        if (storedBank) setBankName(storedBank);
       }
     }
+    loadBankInfo();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_property_spv", spvName);
       localStorage.setItem("officex_bank_account", bankAccount);
       localStorage.setItem("officex_bank_ifsc", bankIfsc);
+      localStorage.setItem("officex_bank_name", bankName);
     }
+
+    try {
+      await fetch("/api/properties/banking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spvName,
+          bankName,
+          bankAccount,
+          bankIfsc,
+        }),
+      });
+    } catch (e) {
+      console.warn("Failed to persist banking to server:", e);
+    }
+
     setIsEditing(false);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
