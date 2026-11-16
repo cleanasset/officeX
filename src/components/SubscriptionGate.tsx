@@ -119,15 +119,38 @@ export default function SubscriptionGate({
   // Coupon state (Initially null; user must click apply to activate 100% Free access)
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscountPct, setCouponDiscountPct] = useState<number>(0);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
   // Selected Duration in Months (1, 3, 6, 12 months)
   const [selectedDurationMonths, setSelectedDurationMonths] = useState<number>(1);
 
+  // Dynamic admin-managed rate per sqft
+  const [adminRatePerSqft, setAdminRatePerSqft] = useState<number>(1);
+
+  // Fetch live global pricing configured by Admin
+  useEffect(() => {
+    async function loadAdminPricing() {
+      try {
+        const res = await fetch("/api/pricing");
+        if (res.ok) {
+          const json = await res.json();
+          const rate = json.pricing?.standaloneModules?.rentRoll?.ratePerSqft;
+          if (rate && Number(rate) > 0) {
+            setAdminRatePerSqft(Number(rate));
+          }
+        }
+      } catch (e) {}
+    }
+    loadAdminPricing();
+  }, []);
+
   // Active Plan & Dynamic Pricing Calculations
   const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[0];
-  const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
+  const effectivePricePerSqft = adminRatePerSqft || selectedPlan.price || 1;
+
+  const is100PercentDiscount = couponDiscountPct === 100 || appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
 
   const durationDiscountPct =
     selectedDurationMonths === 12 ? 20 :
@@ -135,9 +158,11 @@ export default function SubscriptionGate({
     selectedDurationMonths === 4 ? 7 :
     selectedDurationMonths === 2 ? 3 : 0;
 
+  const totalDiscountPct = Math.min(100, is100PercentDiscount ? 100 : (durationDiscountPct + couponDiscountPct));
+
   const effectiveSqft = Math.max(customSqft, minAllowedSqft);
-  const baseCalculatedPrice = effectiveSqft * selectedPlan.price * selectedDurationMonths;
-  const discountedCalculatedPrice = Math.round(baseCalculatedPrice * (1 - durationDiscountPct / 100));
+  const baseCalculatedPrice = effectiveSqft * effectivePricePerSqft * selectedDurationMonths;
+  const discountedCalculatedPrice = Math.round(baseCalculatedPrice * (1 - totalDiscountPct / 100));
   const finalPriceInRupees = is100PercentDiscount ? 0 : discountedCalculatedPrice;
   const finalAmountInPaise = is100PercentDiscount ? 0 : discountedCalculatedPrice * 100;
 
@@ -153,9 +178,11 @@ export default function SubscriptionGate({
 
       if (data.valid) {
         setAppliedCoupon(clean);
-        setCouponSuccess(data.message || `🎉 Promo code '${clean}' applied! (${data.discountPct}% OFF)`);
+        const discountValue = Number(data.discountPct) || 0;
+        setCouponDiscountPct(discountValue);
+        setCouponSuccess(data.message || `🎉 Promo code '${clean}' applied! (${discountValue}% OFF)`);
         setCouponError(null);
-        if (data.discountPct === 100 && typeof window !== "undefined") {
+        if (discountValue === 100 && typeof window !== "undefined") {
           localStorage.setItem("officex_applied_coupon", clean);
           sessionStorage.setItem("officex_applied_coupon", clean);
           localStorage.setItem("officex_subscription", "active");
@@ -166,6 +193,7 @@ export default function SubscriptionGate({
       } else {
         setCouponError(data.message || "Invalid or expired coupon code.");
         setCouponSuccess(null);
+        setCouponDiscountPct(0);
       }
     } catch {
       if (clean === "RENTROLL12" || clean === "OFFICEX100" || clean === "FREE100") {

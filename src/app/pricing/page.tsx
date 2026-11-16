@@ -31,8 +31,17 @@ function PricingPageContent() {
   const [slideInOpen, setSlideInOpen] = useState(false);
   const [selectedAudience, setSelectedAudience] = useState<string>("Commercial Property Portfolio");
   const [minPortfolioSqft, setMinPortfolioSqft] = useState<number>(0);
+  const [adminRate, setAdminRate] = useState<number>(1);
 
   useEffect(() => {
+    fetch("/api/pricing")
+      .then((r) => r.json())
+      .then((data) => {
+        const r = data?.pricing?.standaloneModules?.rentRoll?.ratePerSqft;
+        if (r && Number(r) > 0) setAdminRate(Number(r));
+      })
+      .catch(() => {});
+
     if (typeof window !== "undefined") {
       const paramSqft = Number(searchParams?.get("min_sqft") || 0);
       const storedSqft = Number(localStorage.getItem("officex_total_portfolio_sqft") || 0);
@@ -114,7 +123,7 @@ function PricingPageContent() {
 
           {/* Portfolio Scale Banner (When user has registered properties) */}
           {minPortfolioSqft > 0 && (() => {
-            const minMonthly = minPortfolioSqft; // Flat ₹1 per sq.ft / month
+            const minMonthly = Math.round(minPortfolioSqft * adminRate);
             const minAnnualTotal = minMonthly * 12;
 
             return (
@@ -133,10 +142,10 @@ function PricingPageContent() {
                       </span>
                     </div>
                     <p className="text-xs text-teal-900 mt-1 font-semibold">
-                      Fixed Single Rate: <strong className="text-slate-950 font-black">₹1.00 / Sq.Ft / Month</strong> (₹{minMonthly.toLocaleString("en-IN")} / mo).
+                      Rate: <strong className="text-slate-950 font-black">₹{adminRate.toFixed(2)} / Sq.Ft / Month</strong> (₹{minMonthly.toLocaleString("en-IN")} / mo).
                     </p>
                     <p className="text-[11px] text-teal-700 mt-0.5">
-                      Formula: {minPortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00 / sq.ft / month
+                      Formula: {minPortfolioSqft.toLocaleString()} Sq.Ft × ₹{adminRate.toFixed(2)} / sq.ft / month
                     </p>
                   </div>
                 </div>
