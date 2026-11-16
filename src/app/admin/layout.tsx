@@ -33,7 +33,11 @@ function PortalLayoutContent({
       const isAdminLocal = localStorage.getItem("officex_admin") === "1" || sessionStorage.getItem("officex_admin") === "1";
       const isSuperAdminRole = localStorage.getItem("officex_role") === "super_admin" || getAuthCookie("officex_role") === "super_admin";
 
-      const isPermittedAdminEmail = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com";
+      const isPermittedAdminEmail =
+        email === "admin@gmail.com" ||
+        email === "medistationlifecare@gmail.com" ||
+        email === "jiyapatel181224@gmail.com" ||
+        email === "jiya.d.patel@tsuniv.edu.in";
 
       if ((isAdminCookie || isAdminLocal || isSuperAdminRole) && isPermittedAdminEmail) {
         setIsAuthorized(true);

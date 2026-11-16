@@ -239,10 +239,17 @@ export default function SignInForm({
             sessionStorage.setItem("officex_user_name", fullName);
           }
 
+          const isSuperAdminEmail =
+            cleanEmail === "admin@gmail.com" ||
+            cleanEmail === "medistationlifecare@gmail.com" ||
+            cleanEmail === "jiyapatel181224@gmail.com" ||
+            cleanEmail === "jiya.d.patel@tsuniv.edu.in";
+
           handleAuthSuccess(
             cleanEmail || u.phone || identifier,
-            fullName || cleanEmail.split("@")[0] || "Member",
-            []
+            isSuperAdminEmail ? "super_admin" : "owner",
+            [],
+            fullName || cleanEmail.split("@")[0] || "Member"
           );
         }
       } catch (e) {
@@ -273,10 +280,17 @@ export default function SignInForm({
           sessionStorage.setItem("officex_user_name", fullName);
         }
 
+        const isSuperAdminEmail =
+          cleanEmail === "admin@gmail.com" ||
+          cleanEmail === "medistationlifecare@gmail.com" ||
+          cleanEmail === "jiyapatel181224@gmail.com" ||
+          cleanEmail === "jiya.d.patel@tsuniv.edu.in";
+
         handleAuthSuccess(
           cleanEmail || u.phone || identifier,
-          fullName || cleanEmail.split("@")[0] || "Member",
-          []
+          isSuperAdminEmail ? "super_admin" : "owner",
+          [],
+          fullName || cleanEmail.split("@")[0] || "Member"
         );
       } else if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryOpen(true);
@@ -825,9 +839,14 @@ export default function SignInForm({
     }
 
     const normalizedEmail = (userEmailOrPhone || "").trim().toLowerCase();
+    const isSuperAdminEmail =
+      normalizedEmail === "admin@gmail.com" ||
+      normalizedEmail === "medistationlifecare@gmail.com" ||
+      normalizedEmail === "jiyapatel181224@gmail.com" ||
+      normalizedEmail === "jiya.d.patel@tsuniv.edu.in";
 
-    // If the authenticated user is Super Admin, medistationlifecare@gmail.com, or admin@gmail.com, immediately bypass workspace chooser and go directly to /admin
-    if (normalizedEmail === "admin@gmail.com" || normalizedEmail === "medistationlifecare@gmail.com" || roleName.toLowerCase().includes("super_admin")) {
+    // If the authenticated user is Super Admin, immediately bypass workspace chooser and go directly to /admin
+    if (isSuperAdminEmail && (roleName.toLowerCase().includes("super_admin") || normalizedEmail === "admin@gmail.com" || normalizedEmail === "medistationlifecare@gmail.com")) {
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_admin", "1");
         localStorage.setItem("officex_role", "super_admin");
@@ -840,6 +859,16 @@ export default function SignInForm({
         window.location.href = "/admin";
       }, 300);
       return;
+    }
+
+    // Standard non-admin users: clear any leftover admin flag from previous admin tests
+    if (!isSuperAdminEmail && typeof window !== "undefined") {
+      localStorage.removeItem("officex_admin");
+      sessionStorage.removeItem("officex_admin");
+      if (localStorage.getItem("officex_role") === "super_admin") {
+        localStorage.removeItem("officex_role");
+      }
+      document.cookie = "officex_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
     }
 
     const storedName = (typeof window !== "undefined" && (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name"))) || "";
@@ -861,7 +890,11 @@ export default function SignInForm({
     // Determine destination - go straight to destination or dashboard without prompting twice
     let destination = "";
     if (safeRedirect && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
-      destination = safeRedirect;
+      if (safeRedirect.startsWith("/admin") && !isSuperAdminEmail) {
+        destination = "/dashboard";
+      } else {
+        destination = safeRedirect;
+      }
     } else {
       destination = "/dashboard";
     }
@@ -1022,9 +1055,9 @@ export default function SignInForm({
 
     try {
       const activeCtx = isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace";
-      const targetDestination = (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup"))
+      const targetDestination = (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/admin"))
         ? safeRedirect
-        : "/";
+        : "/dashboard";
 
       if (typeof window !== "undefined") {
         setAuthCookie("officex_oauth_context", activeCtx, 7200);
