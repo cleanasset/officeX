@@ -84,23 +84,42 @@ export default function TenantDirectoryPage() {
   // Tenant Sharable Link State & Subscription Verification
   const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
   const [copySuccessToast, setCopySuccessToast] = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState(true);
+  const [subscriptionGateModalOpen, setSubscriptionGateModalOpen] = useState(false);
 
   const checkIsSubscribed = (): boolean => {
     if (typeof window !== "undefined") {
+      const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const isAdmin =
+        email === "admin@gmail.com" ||
+        email === "medistationlifecare@gmail.com" ||
+        email === "jiyapatel181224@gmail.com" ||
+        localStorage.getItem("officex_admin") === "1" ||
+        localStorage.getItem("officex_role") === "super_admin" ||
+        localStorage.getItem("officex_user_role") === "super_admin";
+      if (isAdmin) return true;
+      if (!email) return false;
+
+      const userSub = localStorage.getItem(`officex_sub_${email}`);
+      if (userSub === "inactive" || userSub === "false" || userSub === "none") {
+        return false;
+      }
+      if (userSub === "active") {
+        return true;
+      }
+
       const ownerSub = localStorage.getItem("officex_owner_subscribed");
       const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
       const sub = localStorage.getItem("officex_subscription");
       const subStatus = localStorage.getItem("officex_subscription_status");
       return (
-        ownerSub === "true" ||
-        rentrollSub === "true" ||
-        sub === "active" ||
-        subStatus === "active"
+        sub === "active" &&
+        (subStatus === "active" || ownerSub === "true" || rentrollSub === "true")
       );
     }
-    return true;
+    return false;
   };
+
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => checkIsSubscribed());
 
   useEffect(() => {
     const updateSub = () => setIsSubscribed(checkIsSubscribed());
@@ -174,6 +193,10 @@ export default function TenantDirectoryPage() {
 
   const handleCopyTenantLink = (t: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (!isSubscribed) {
+      setSubscriptionGateModalOpen(true);
+      return;
+    }
     const link = getTenantSharableLink(t);
     if (!link) return;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -518,45 +541,60 @@ export default function TenantDirectoryPage() {
                         <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                             {/* Tenant Portal Link Share Group */}
-                            <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 shadow-2xs">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1 mr-1">
-                                <Share2 size={11} className="text-[#0F8B7D]" />
-                                <span>Portal Link:</span>
-                              </span>
+                            {isSubscribed ? (
+                              <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 shadow-2xs">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1 mr-1">
+                                  <Share2 size={11} className="text-[#0F8B7D]" />
+                                  <span>Portal Link:</span>
+                                </span>
 
-                              {/* WhatsApp Share Button */}
-                              <a
-                                href={getTenantWhatsAppUrl(t)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
-                                title={`Share Tenant Portal link via WhatsApp to ${t.tenant_name || t.occupant_name}`}
-                              >
-                                <MessageCircle size={12} />
-                                <span>WhatsApp</span>
-                              </a>
+                                {/* WhatsApp Share Button */}
+                                <a
+                                  href={getTenantWhatsAppUrl(t)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
+                                  title={`Share Tenant Portal link via WhatsApp to ${t.tenant_name || t.occupant_name}`}
+                                >
+                                  <MessageCircle size={12} />
+                                  <span>WhatsApp</span>
+                                </a>
 
-                              {/* Email Share Button */}
-                              <a
-                                href={getTenantMailtoUrl(t)}
-                                className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
-                                title={`Send Tenant Portal invite email to ${t.email || t.tenant_name}`}
-                              >
-                                <Mail size={12} />
-                                <span>Email</span>
-                              </a>
+                                {/* Email Share Button */}
+                                <a
+                                  href={getTenantMailtoUrl(t)}
+                                  className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
+                                  title={`Send Tenant Portal invite email to ${t.email || t.tenant_name}`}
+                                >
+                                  <Mail size={12} />
+                                  <span>Email</span>
+                                </a>
 
-                              {/* Copy Tenant Portal Link */}
+                                {/* Copy Tenant Portal Link */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyTenantLink(t, e)}
+                                  className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer border border-slate-200 whitespace-nowrap"
+                                  title="Copy Tenant Portal Invite Link"
+                                >
+                                  <Copy size={11} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
+                                  <span>{copiedTenantId === t.id ? "Copied!" : "Copy Link"}</span>
+                                </button>
+                              </div>
+                            ) : (
                               <button
                                 type="button"
-                                onClick={(e) => handleCopyTenantLink(t, e)}
-                                className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer border border-slate-200 whitespace-nowrap"
-                                title="Copy Tenant Portal Invite Link"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSubscriptionGateModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-[11px] transition shadow-2xs cursor-pointer whitespace-nowrap"
+                                title="Tenant Portal dispatching is a Pro feature. Click to unlock."
                               >
-                                <Copy size={11} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
-                                <span>{copiedTenantId === t.id ? "Copied!" : "Copy Link"}</span>
+                                <Lock size={12} className="text-amber-700" />
+                                <span>Portal Link: Pro Locked</span>
                               </button>
-                            </div>
+                            )}
 
                             {/* View Executed Contract Modal */}
                             <button
@@ -644,33 +682,46 @@ export default function TenantDirectoryPage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap pt-1">
-                  <a
-                    href={getTenantWhatsAppUrl(selectedTenantDetails)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
-                    title="Open WhatsApp with pre-filled invitation"
-                  >
-                    <MessageCircle size={14} />
-                    <span>Share via WhatsApp</span>
-                  </a>
+                  {isSubscribed ? (
+                    <>
+                      <a
+                        href={getTenantWhatsAppUrl(selectedTenantDetails)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                        title="Open WhatsApp with pre-filled invitation"
+                      >
+                        <MessageCircle size={14} />
+                        <span>Share via WhatsApp</span>
+                      </a>
 
-                  <a
-                    href={getTenantMailtoUrl(selectedTenantDetails)}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
-                    title="Open email client with pre-filled invitation"
-                  >
-                    <Mail size={14} />
-                    <span>Share via Email</span>
-                  </a>
+                      <a
+                        href={getTenantMailtoUrl(selectedTenantDetails)}
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                        title="Open email client with pre-filled invitation"
+                      >
+                        <Mail size={14} />
+                        <span>Share via Email</span>
+                      </a>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSubscriptionGateModalOpen(true)}
+                      className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                    >
+                      <Lock size={14} className="text-amber-700" />
+                      <span>Unlock WhatsApp &amp; Email Dispatch (Pro)</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
                     className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
                   >
-                    {copiedTenantId === selectedTenantDetails.id ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Link"}</span>
+                    {isSubscribed ? <Copy size={14} /> : <Lock size={14} />}
+                    <span>{isSubscribed ? (copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Portal Link") : "Unlock Link"}</span>
                   </button>
                 </div>
 
@@ -1142,6 +1193,55 @@ export default function TenantDirectoryPage() {
           initialTab={hierarchyTab}
           onSuccess={fetchData}
         />
+
+        {/* Subscription Gate Modal for Tenant Link Sharing */}
+        {subscriptionGateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 sm:p-7 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-inner">
+                <Lock size={24} />
+              </div>
+              <div className="text-center">
+                <h3 className="text-base font-black text-slate-900">
+                  Pro Commercial Subscription Required
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  Generating and dispatching tenant self-service portal links, automated WhatsApp invites, and digital lease onboarding are exclusive to subscribed commercial accounts.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
+                <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-[#0F8B7D]" />
+                  <span>Pro Plan Includes:</span>
+                </div>
+                <ul className="space-y-1 text-slate-600 text-[11px] list-disc pl-4">
+                  <li>Tenant Self-Service Portal Access &amp; Invoicing</li>
+                  <li>1-Click WhatsApp &amp; Email Dispatching</li>
+                  <li>Legally Executed Lease Agreement PDF Downloads</li>
+                  <li>Automated Rent Escalations &amp; CAM Billing</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSubscriptionGateModalOpen(false)}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <Link
+                  href="/operate/subscription"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs text-center transition shadow-md shadow-teal-900/10 flex items-center justify-center gap-1.5"
+                >
+                  <span>Unlock Pro Plan</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         <MobileBottomNav />
       </div>

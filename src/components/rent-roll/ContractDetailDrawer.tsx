@@ -533,37 +533,73 @@ export default function ContractDetailDrawer({
               <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-bold text-slate-700">Share Tenant Portal Access</span>
-                  <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">1-Click Dispatch</span>
+                  {(() => {
+                    const email = (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "").toLowerCase().trim();
+                    const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || email === "jiyapatel181224@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
+                    const userSub = typeof window !== "undefined" ? localStorage.getItem(`officex_sub_${email}`) : null;
+                    const isSub = isAdmin || userSub === "active" || (typeof window !== "undefined" && localStorage.getItem("officex_subscription") === "active");
+                    return isSub ? (
+                      <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">1-Click Dispatch</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+                        <Lock size={10} className="text-amber-700" />
+                        <span>Pro Locked</span>
+                      </span>
+                    );
+                  })()}
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <a
-                    href={getTenantWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
-                    title="Share portal access via WhatsApp"
-                  >
-                    <MessageCircle size={13} />
-                    <span>WhatsApp</span>
-                  </a>
-                  <a
-                    href={getTenantMailtoUrl()}
-                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
-                    title="Send portal invitation via Email"
-                  >
-                    <Mail size={13} />
-                    <span>Email</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleCopyTenantPortalLink}
-                    className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition cursor-pointer shadow-2xs"
-                    title="Copy secure portal link"
-                  >
-                    {copiedPortal ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                    <span>{copiedPortal ? "Copied!" : "Copy Link"}</span>
-                  </button>
-                </div>
+
+                {(() => {
+                  const email = (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "").toLowerCase().trim();
+                  const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || email === "jiyapatel181224@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
+                  const userSub = typeof window !== "undefined" ? localStorage.getItem(`officex_sub_${email}`) : null;
+                  const isSub = isAdmin || userSub === "active" || (typeof window !== "undefined" && localStorage.getItem("officex_subscription") === "active");
+
+                  if (!isSub) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => alert("🔒 Pro Commercial Subscription Required\n\nGenerating and dispatching tenant self-service portal links is reserved for active Pro accounts. Please upgrade your subscription.")}
+                        className="w-full py-2 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Lock size={13} className="text-amber-700" />
+                        <span>Unlock Tenant Portal Dispatching (Pro)</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <a
+                        href={getTenantWhatsAppUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                        title="Share portal access via WhatsApp"
+                      >
+                        <MessageCircle size={13} />
+                        <span>WhatsApp</span>
+                      </a>
+                      <a
+                        href={getTenantMailtoUrl()}
+                        className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                        title="Send portal invitation via Email"
+                      >
+                        <Mail size={13} />
+                        <span>Email</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleCopyTenantPortalLink}
+                        className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition cursor-pointer shadow-2xs"
+                        title="Copy secure portal link"
+                      >
+                        {copiedPortal ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                        <span>{copiedPortal ? "Copied!" : "Copy Link"}</span>
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
