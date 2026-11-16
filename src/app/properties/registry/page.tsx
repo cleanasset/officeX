@@ -54,6 +54,9 @@ export default function SpaceAndBuildingRegistryPage() {
   const [excelImporterOpen, setExcelImporterOpen] = useState(false);
   const [selectedPropertyScope, setSelectedPropertyScope] = useState<string>("all");
   const [selectedPropertyScopeName, setSelectedPropertyScopeName] = useState<string>("All Properties");
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
+  const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchRegistryData();
@@ -272,7 +275,7 @@ export default function SpaceAndBuildingRegistryPage() {
     try {
       setLoading(true);
       const authHeaders = getClientAuthHeaders();
-      const res = await fetch(`/api/rent-roll/properties/${propertyId}?action=approve_permanent&force=true&cascade_confirmed=true`, {
+      const res = await fetch(`/api/rent-roll/properties/${propertyId}`, {
         method: "DELETE",
         headers: authHeaders,
       });
@@ -288,6 +291,107 @@ export default function SpaceAndBuildingRegistryPage() {
       alert("Network error requesting property deletion");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBulkRequestDeletion = async () => {
+    if (selectedPropertyIds.length === 0) return;
+    const selectedCount = selectedPropertyIds.length;
+    if (
+      !confirm(
+        `BULK PROPERTY REMOVAL:\n\nAre you sure you want to request deletion for all ${selectedCount} selected properties?\n\n• The properties will be moved to the "Pending Deletions & Approvals" tab for Admin governance review.\n• They will NOT be deleted permanently until an Admin approves them.\n\n⚠️ IMPORTANT CAPACITY NOTICE:\nDeleting properties will not refund your licensed Sq.Ft quota.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkActionLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/rent-roll/properties", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ ids: selectedPropertyIds, action: "request_deletion" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.success) {
+        alert(`✓ Bulk Deletion Request Submitted:\n\n${d.count || selectedCount} properties have been moved to the "Pending Deletions & Approvals" tab for Admin review.`);
+        setSelectedPropertyIds([]);
+        setActiveTab("approvals");
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to submit bulk deletion request");
+      }
+    } catch {
+      alert("Network error processing bulk property deletion");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkCancelPending = async () => {
+    if (selectedPendingIds.length === 0) return;
+    const selectedCount = selectedPendingIds.length;
+    if (
+      !confirm(
+        `Are you sure you want to cancel deletion requests for ${selectedCount} selected properties?\n\nThey will be restored to your active registered properties list.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkActionLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/rent-roll/properties", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ ids: selectedPendingIds, action: "cancel" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.success) {
+        alert(`✓ Successfully restored ${d.count || selectedCount} properties to active registered list.`);
+        setSelectedPendingIds([]);
+        setActiveTab("properties");
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to cancel deletion requests");
+      }
+    } catch {
+      alert("Network error cancelling deletion requests");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkPurgePending = async () => {
+    if (selectedPendingIds.length === 0) return;
+    const selectedCount = selectedPendingIds.length;
+    if (
+      !confirm(
+        `PERMANENT PURGE CONFIRMATION:\n\nAre you sure you want to permanently delete all ${selectedCount} selected properties?\n\n• Demarcated spaces will be purged.\n• Associated contracts will be terminated.\n• This action CANNOT be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkActionLoading(true);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/rent-roll/properties", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ ids: selectedPendingIds, action: "approve_permanent" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.success) {
+        alert(`✓ Permanently purged ${d.count || selectedCount} properties from database.`);
+        setSelectedPendingIds([]);
+        await fetchRegistryData();
+      } else {
+        alert(d.message || d.error || "Failed to purge properties");
+      }
+    } catch {
+      alert("Network error purging properties");
+    } finally {
+      setBulkActionLoading(false);
     }
   };
 
@@ -580,24 +684,100 @@ export default function SpaceAndBuildingRegistryPage() {
                     </div>
                   </div>
                 )
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Code</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Location</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Base Rate PSF</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Occupancy &amp; Tenants</th>
-                        <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                        <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredProperties.map((p) => {
-                        const propRegRows = registerRows.filter(
+              ) : (() => {
+                const allPropertiesSelected = filteredProperties.length > 0 && filteredProperties.every((p) => selectedPropertyIds.includes(p.id));
+
+                const toggleSelectAllProperties = () => {
+                  if (allPropertiesSelected) {
+                    setSelectedPropertyIds([]);
+                  } else {
+                    setSelectedPropertyIds(filteredProperties.map((p) => p.id));
+                  }
+                };
+
+                const toggleSelectProperty = (id: string) => {
+                  if (selectedPropertyIds.includes(id)) {
+                    setSelectedPropertyIds(selectedPropertyIds.filter((item) => item !== id));
+                  } else {
+                    setSelectedPropertyIds([...selectedPropertyIds, id]);
+                  }
+                };
+
+                return (
+                  <div>
+                    {/* Bulk Selection Bar */}
+                    {selectedPropertyIds.length > 0 && (
+                      <div className="p-3.5 bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 text-white flex flex-wrap items-center justify-between gap-3 border-b border-teal-500/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300 flex items-center justify-center font-bold text-xs shrink-0">
+                            {selectedPropertyIds.length}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-white flex items-center gap-2">
+                              <span>{selectedPropertyIds.length} of {filteredProperties.length} Properties Selected</span>
+                            </div>
+                            <p className="text-[11px] text-slate-300">
+                              Bulk operations apply across your selected commercial properties
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedPropertyIds.length < filteredProperties.length && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPropertyIds(filteredProperties.map((p) => p.id))}
+                              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition cursor-pointer"
+                            >
+                              Select All ({filteredProperties.length})
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPropertyIds([])}
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                          >
+                            Deselect All
+                          </button>
+                          <button
+                            type="button"
+                            disabled={bulkActionLoading}
+                            onClick={handleBulkRequestDeletion}
+                            className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-rose-900/40 cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 size={13} />
+                            <span>Request Deletion for Selected ({selectedPropertyIds.length})</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                            <th className="py-3 px-4 w-10 text-center">
+                              <input
+                                type="checkbox"
+                                checked={allPropertiesSelected}
+                                onChange={toggleSelectAllProperties}
+                                className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                                title="Select or deselect all visible properties"
+                              />
+                            </th>
+                            <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Code</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Location</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Base Rate PSF</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Occupancy &amp; Tenants</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                            <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredProperties.map((p) => {
+                            const isSelected = selectedPropertyIds.includes(p.id);
+                            const propRegRows = registerRows.filter(
                           (r) =>
                             r.property_id === p.id ||
                             (r.property_name && r.property_name.toLowerCase().trim() === p.property_name.toLowerCase().trim())
@@ -680,8 +860,16 @@ export default function SpaceAndBuildingRegistryPage() {
                               setSelectedPropertyForDetail(p);
                               setPropertyDetailMode("view");
                             }}
-                            className="hover:bg-teal-50/40 transition cursor-pointer group"
+                            className={`transition cursor-pointer group ${isSelected ? "bg-teal-50/70" : "hover:bg-teal-50/40"}`}
                           >
+                            <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectProperty(p.id)}
+                                className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                              />
+                            </td>
                             <td className="py-3.5 px-4 font-black text-slate-900">
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-[#0F8B7D] group-hover:text-white transition">
@@ -796,6 +984,18 @@ export default function SpaceAndBuildingRegistryPage() {
                                   <span>Rent Roll</span>
                                   <ChevronRight size={13} className="shrink-0" />
                                 </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteProperty(p.id, p.property_name);
+                                  }}
+                                  className="p-1.5 rounded-xl border border-transparent hover:border-rose-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="Request Deletion for this property"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -804,7 +1004,9 @@ export default function SpaceAndBuildingRegistryPage() {
                     </tbody>
                   </table>
                 </div>
-              )}
+              </div>
+            );
+          })()}
             </div>
           )}
 
@@ -950,132 +1152,232 @@ export default function SpaceAndBuildingRegistryPage() {
           )}
 
           {/* TAB 3: PENDING DELETIONS & APPROVALS */}
-          {activeTab === "approvals" && (
-            <div className="space-y-4">
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
-                <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-bold text-amber-950">Property Deletion Governance &amp; Approvals</h4>
-                  <p className="mt-0.5 text-amber-800 leading-relaxed">
-                    Properties with active lease contracts or pending compliance review are held in this approval queue before final purge. Vacant assets delete immediately. You can review, cancel the deletion request, or permanently purge them below.
-                  </p>
-                </div>
-              </div>
+          {activeTab === "approvals" && (() => {
+            const allPendingSelected = filteredPendingProperties.length > 0 && filteredPendingProperties.every((p) => selectedPendingIds.includes(p.id));
 
-              <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
-                {loading ? (
-                  <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
-                    <RefreshCw size={24} className="animate-spin text-teal-600" />
-                    <span>Loading pending deletion records...</span>
-                  </div>
-                ) : filteredPendingProperties.length === 0 ? (
-                  <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 size={28} />
+            const toggleSelectAllPending = () => {
+              if (allPendingSelected) {
+                setSelectedPendingIds([]);
+              } else {
+                setSelectedPendingIds(filteredPendingProperties.map((p) => p.id));
+              }
+            };
+
+            const toggleSelectPending = (id: string) => {
+              if (selectedPendingIds.includes(id)) {
+                setSelectedPendingIds(selectedPendingIds.filter((item) => item !== id));
+              } else {
+                setSelectedPendingIds([...selectedPendingIds, id]);
+              }
+            };
+
+            return (
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 text-xs">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-amber-950">Property Deletion Governance &amp; Approvals</h4>
+                      <p className="mt-0.5 text-amber-800 leading-relaxed">
+                        Properties held in this approval queue before final purge. You can cancel deletion requests to restore them to your active registry, or permanently purge them.
+                      </p>
                     </div>
-                    <h4 className="text-base font-black text-slate-900">No properties pending deletion</h4>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      All your properties are active. When a deletion request is initiated on an occupied property, it will appear here for admin governance.
-                    </p>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                          <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
-                          <th className="py-3 px-4 whitespace-nowrap">Code</th>
-                          <th className="py-3 px-4 whitespace-nowrap">Location</th>
-                          <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
-                          <th className="py-3 px-4">Reason / Notes</th>
-                          <th className="py-3 px-4 whitespace-nowrap">Requested By</th>
-                          <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                          <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredPendingProperties.map((p) => (
-                          <tr key={p.id} className="hover:bg-amber-50/30 transition">
-                            <td className="py-3.5 px-4 font-black text-slate-900">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shrink-0">
-                                  <Building size={14} />
-                                </div>
-                                <div>
-                                  <span className="text-slate-900">{p.property_name}</span>
-                                  <div className="text-[10px] text-slate-400 font-normal">
-                                    {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                              {p.property_code || "—"}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-700 font-semibold whitespace-nowrap">
-                              <div className="flex items-center gap-1 text-slate-600">
-                                <MapPin size={12} className="text-teal-600 shrink-0" />
-                                <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 font-black text-slate-900 whitespace-nowrap">
-                              {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <div className="text-xs text-slate-700 font-medium">
-                                {p.pending_deletion_reason || "User requested property deletion"}
-                              </div>
-                              {p.pending_deletion_active_contracts > 0 && (
-                                <div className="text-[10px] font-bold text-rose-600 mt-0.5">
-                                  ⚠️ {p.pending_deletion_active_contracts} active lease contract(s)
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-600 text-[11px] whitespace-nowrap">
-                              <div>{p.pending_deletion_requested_by || "Admin / User"}</div>
-                              {p.pending_deletion_requested_at && (
-                                <div className="text-[10px] text-slate-400">
-                                  {new Date(p.pending_deletion_requested_at).toLocaleDateString()}
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                                PENDING APPROVAL
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleApprovePermanentDelete(p.id, p.property_name)}
-                                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                                  title="Admin Action: Permanently purge this property from database"
-                                >
-                                  <Trash2 size={13} />
-                                  <span>Approve &amp; Permanently Delete</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelDeletionRequest(p.id)}
-                                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                                  title="Cancel deletion request and restore to active registered list"
-                                >
-                                  <RotateCcw size={13} />
-                                  <span>Reject / Restore</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  {filteredPendingProperties.length > 0 && (
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        disabled={bulkActionLoading}
+                        onClick={toggleSelectAllPending}
+                        className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100/50 text-amber-900 text-xs font-bold transition cursor-pointer shadow-2xs"
+                      >
+                        {allPendingSelected ? "Deselect All" : `Select All (${filteredPendingProperties.length})`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bulk Pending Action Bar */}
+                {selectedPendingIds.length > 0 && (
+                  <div className="p-3.5 bg-gradient-to-r from-amber-950 via-slate-900 to-slate-950 text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg border border-amber-500/30 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        {selectedPendingIds.length}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-2">
+                          <span>{selectedPendingIds.length} of {filteredPendingProperties.length} Pending Properties Selected</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300">
+                          Bulk governance actions across selected pending properties
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPendingIds([])}
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                      >
+                        Clear Selection
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkActionLoading}
+                        onClick={handleBulkCancelPending}
+                        className="px-3.5 py-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Cancel Requests &amp; Restore ({selectedPendingIds.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkActionLoading}
+                        onClick={handleBulkPurgePending}
+                        className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-rose-900/40 cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 size={13} />
+                        <span>Approve &amp; Purge Selected ({selectedPendingIds.length})</span>
+                      </button>
+                    </div>
                   </div>
                 )}
+
+                <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
+                  {loading ? (
+                    <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
+                      <RefreshCw size={24} className="animate-spin text-teal-600" />
+                      <span>Loading pending deletion records...</span>
+                    </div>
+                  ) : filteredPendingProperties.length === 0 ? (
+                    <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 size={28} />
+                      </div>
+                      <h4 className="text-base font-black text-slate-900">No properties pending deletion</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        All your properties are active. When a deletion request is initiated on an occupied property, it will appear here for admin governance.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                            <th className="py-3 px-4 w-10 text-center">
+                              <input
+                                type="checkbox"
+                                checked={allPendingSelected}
+                                onChange={toggleSelectAllPending}
+                                className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                                title="Select or deselect all pending properties"
+                              />
+                            </th>
+                            <th className="py-3 px-4 whitespace-nowrap">Property Name</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Code</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Location</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Leasable Area</th>
+                            <th className="py-3 px-4">Reason / Notes</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Requested By</th>
+                            <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                            <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredPendingProperties.map((p) => {
+                            const isSelected = selectedPendingIds.includes(p.id);
+                            return (
+                              <tr key={p.id} className={`transition ${isSelected ? "bg-amber-100/60" : "hover:bg-amber-50/30"}`}>
+                                <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectPending(p.id)}
+                                    className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 font-black text-slate-900">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                      <Building size={14} />
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-900">{p.property_name}</span>
+                                      <div className="text-[10px] text-slate-400 font-normal">
+                                        {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                                  {p.property_code || "—"}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-700 font-semibold whitespace-nowrap">
+                                  <div className="flex items-center gap-1 text-slate-600">
+                                    <MapPin size={12} className="text-teal-600 shrink-0" />
+                                    <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 font-black text-slate-900 whitespace-nowrap">
+                                  {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <div className="text-xs text-slate-700 font-medium">
+                                    {p.pending_deletion_reason || "User requested property deletion"}
+                                  </div>
+                                  {p.pending_deletion_active_contracts > 0 && (
+                                    <div className="text-[10px] font-bold text-rose-600 mt-0.5">
+                                      ⚠️ {p.pending_deletion_active_contracts} active lease contract(s)
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-600 text-[11px] whitespace-nowrap">
+                                  <div>{p.pending_deletion_requested_by || "Admin / User"}</div>
+                                  {p.pending_deletion_requested_at && (
+                                    <div className="text-[10px] text-slate-400">
+                                      {new Date(p.pending_deletion_requested_at).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 whitespace-nowrap">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                    PENDING APPROVAL
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApprovePermanentDelete(p.id, p.property_name)}
+                                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                      title="Admin Action: Permanently purge this property from database"
+                                    >
+                                      <Trash2 size={13} />
+                                      <span>Approve &amp; Permanently Delete</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelDeletionRequest(p.id)}
+                                      className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                                      title="Cancel deletion request and restore to active registered list"
+                                    >
+                                      <RotateCcw size={13} />
+                                      <span>Reject / Restore</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </main>
 
         {/* Unified Canonical Commercial Hierarchy, Space & Property Modal */}

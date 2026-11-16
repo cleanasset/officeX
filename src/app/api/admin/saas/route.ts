@@ -457,7 +457,115 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, id, status, remarks } = body;
+    const { action, id, ids, status, remarks } = body;
+
+    // Helper: Purge a single property and cascade delete its assets
+    async function purgeSingleProperty(propId: string) {
+      const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, propId));
+      const bldgIds = bldgs.map((b) => b.id);
+      if (bldgIds.length > 0) {
+        const sps = await db.select({ id: space.id }).from(space).where(sql`${space.building_id} IN ${bldgIds}`);
+        const spIds = sps.map((s) => s.id);
+        if (spIds.length > 0) {
+          await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(sql`${contract.space_id} IN ${spIds}`);
+          await db.update(space).set({ deleted_at: new Date() }).where(sql`${space.id} IN ${spIds}`);
+        }
+        await db.update(building).set({ deleted_at: new Date() }).where(sql`${building.id} IN ${bldgIds}`);
+      }
+      await db.update(property).set({ deleted_at: new Date() }).where(eq(property.id, propId));
+      try {
+        await db.delete(property).where(eq(property.id, propId));
+      } catch {}
+    }
+
+    // Helper: Reject deletion and restore property
+    async function restoreSingleProperty(propId: string) {
+      const propData = await db.select({ sourceRowId: property.source_row_id }).from(property).where(eq(property.id, propId)).limit(1);
+      let meta: any = {};
+      if (propData[0]?.sourceRowId && typeof propData[0].sourceRowId === "string" && propData[0].sourceRowId.startsWith("{")) {
+        try { meta = JSON.parse(propData[0].sourceRowId); } catch {}
+      }
+      meta.pending_deletion = false;
+      meta.deletion_rejected_at = new Date().toISOString();
+      meta.deletion_rejected_by = "super_admin";
+      await db.update(property).set({ source_row_id: JSON.stringify(meta), updated_at: new Date() }).where(eq(property.id, propId));
+    }
+
+    // E. Bulk Approve All Pending Deletions
+    if (action === "approve_all_deletions") {
+      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property).where(sql`${property.deleted_at} IS NULL`);
+      const pendingIds: string[] = [];
+      for (const p of allProps) {
+        if (p.sourceRowId && typeof p.sourceRowId === "string" && p.sourceRowId.startsWith("{")) {
+          try {
+            const m = JSON.parse(p.sourceRowId);
+            if (m.pending_deletion) pendingIds.push(p.id);
+          } catch {}
+        }
+      }
+      for (const pId of pendingIds) {
+        await purgeSingleProperty(pId);
+      }
+      return NextResponse.json({
+        success: true,
+        count: pendingIds.length,
+        message: `Successfully approved permanent deletion for all ${pendingIds.length} pending property(ies).`,
+      });
+    }
+
+    // F. Bulk Reject All Pending Deletions
+    if (action === "reject_all_deletions") {
+      const allProps = await db.select({ id: property.id, sourceRowId: property.source_row_id }).from(property).where(sql`${property.deleted_at} IS NULL`);
+      const pendingIds: string[] = [];
+      for (const p of allProps) {
+        if (p.sourceRowId && typeof p.sourceRowId === "string" && p.sourceRowId.startsWith("{")) {
+          try {
+            const m = JSON.parse(p.sourceRowId);
+            if (m.pending_deletion) pendingIds.push(p.id);
+          } catch {}
+        }
+      }
+      for (const pId of pendingIds) {
+        await restoreSingleProperty(pId);
+      }
+      return NextResponse.json({
+        success: true,
+        count: pendingIds.length,
+        message: `Successfully rejected all ${pendingIds.length} deletion requests. Restored to active state.`,
+      });
+    }
+
+    // E2. Approve Property Deletion (Single or Array of IDs)
+    if (action === "approve_deletion") {
+      const targetIds: string[] = Array.isArray(ids) && ids.length > 0 ? ids : (id ? [id] : []);
+      if (targetIds.length === 0) {
+        return NextResponse.json({ error: "Property ID or IDs required" }, { status: 400 });
+      }
+      for (const pId of targetIds) {
+        await purgeSingleProperty(pId);
+      }
+      return NextResponse.json({
+        success: true,
+        count: targetIds.length,
+        message: `Approved deletion and permanently archived ${targetIds.length} property(ies).`,
+      });
+    }
+
+    // F2. Reject Property Deletion (Single or Array of IDs)
+    if (action === "reject_deletion") {
+      const targetIds: string[] = Array.isArray(ids) && ids.length > 0 ? ids : (id ? [id] : []);
+      if (targetIds.length === 0) {
+        return NextResponse.json({ error: "Property ID or IDs required" }, { status: 400 });
+      }
+      for (const pId of targetIds) {
+        await restoreSingleProperty(pId);
+      }
+      return NextResponse.json({
+        success: true,
+        count: targetIds.length,
+        message: `Property deletion request rejected for ${targetIds.length} property(ies). Restored to active state.`,
+      });
+    }
 
     if (!id) {
       return NextResponse.json({ error: "Record ID is required" }, { status: 400 });
@@ -541,44 +649,6 @@ export async function PUT(request: NextRequest) {
         .where(eq(organizations.id, id));
 
       return NextResponse.json({ success: true, id, status });
-    }
-
-    // E. Approve Property Deletion (Security Governance)
-    if (action === "approve_deletion") {
-      // Soft-delete buildings & spaces
-      const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, id));
-      const bldgIds = bldgs.map((b) => b.id);
-      if (bldgIds.length > 0) {
-        const sps = await db.select({ id: space.id }).from(space).where(sql`${space.building_id} IN ${bldgIds}`);
-        const spIds = sps.map((s) => s.id);
-        if (spIds.length > 0) {
-          await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(sql`${contract.space_id} IN ${spIds}`);
-          await db.update(space).set({ deleted_at: new Date() }).where(sql`${space.id} IN ${spIds}`);
-        }
-        await db.update(building).set({ deleted_at: new Date() }).where(sql`${building.id} IN ${bldgIds}`);
-      }
-      // Soft-delete property
-      await db.update(property).set({ deleted_at: new Date() }).where(eq(property.id, id));
-      try {
-        await db.delete(property).where(eq(property.id, id));
-      } catch {}
-
-      return NextResponse.json({ success: true, message: "Property deletion approved and permanently archived." });
-    }
-
-    // F. Reject Property Deletion
-    if (action === "reject_deletion") {
-      const propData = await db.select({ sourceRowId: property.source_row_id }).from(property).where(eq(property.id, id)).limit(1);
-      let meta: any = {};
-      if (propData[0]?.sourceRowId && typeof propData[0].sourceRowId === "string" && propData[0].sourceRowId.startsWith("{")) {
-        try { meta = JSON.parse(propData[0].sourceRowId); } catch {}
-      }
-      meta.pending_deletion = false;
-      meta.deletion_rejected_at = new Date().toISOString();
-      meta.deletion_rejected_by = "super_admin";
-
-      await db.update(property).set({ source_row_id: JSON.stringify(meta), updated_at: new Date() }).where(eq(property.id, id));
-      return NextResponse.json({ success: true, message: "Property deletion request rejected. Property restored to active state." });
     }
 
     return NextResponse.json({ error: "Invalid SaaS action" }, { status: 400 });

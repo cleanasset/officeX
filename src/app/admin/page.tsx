@@ -15,7 +15,7 @@ import {
   SlidersHorizontal, Download, Plus, CheckCircle2, ChevronLeft,
   Database, Table, Coins, Save, Trash2, Copy, FileJson, Info,
   Sliders, ArrowUpDown, CreditCard,
-  Calendar, QrCode, Wrench, FileCheck2, Laptop, MessageSquare
+  Calendar, QrCode, Wrench, FileCheck2, Laptop, MessageSquare, RotateCcw
 } from "lucide-react";
 
 function SuperAdminDashboardContent() {
@@ -220,6 +220,135 @@ function SuperAdminDashboardContent() {
       }
     } catch {
       setToast({ text: "Network error rejecting deletion", type: "error" });
+    }
+  };
+
+  const [selectedPendingDeletionIds, setSelectedPendingDeletionIds] = useState<string[]>([]);
+  const [bulkGovernanceLoading, setBulkGovernanceLoading] = useState<boolean>(false);
+
+  const handleApproveAllDeletions = async () => {
+    const pendingProps = saasProperties.filter((p) => p.pendingDeletion);
+    if (pendingProps.length === 0) return;
+    if (
+      !confirm(
+        `SUPER ADMIN GOVERNANCE:\n\nAre you sure you want to APPROVE permanent deletion for ALL ${pendingProps.length} pending properties?\n\n• All demarcated spaces will be purged.\n• All active lease contracts will be terminated.\n• This action CANNOT be undone.`
+      )
+    ) {
+      return;
+    }
+    setBulkGovernanceLoading(true);
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve_all_deletions" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: `✓ Successfully approved permanent deletion for all ${data.count || pendingProps.length} properties.`, type: "success" });
+        setSelectedPendingDeletionIds([]);
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to approve all deletions", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error approving all deletions", type: "error" });
+    } finally {
+      setBulkGovernanceLoading(false);
+    }
+  };
+
+  const handleRejectAllDeletions = async () => {
+    const pendingProps = saasProperties.filter((p) => p.pendingDeletion);
+    if (pendingProps.length === 0) return;
+    if (
+      !confirm(
+        `SUPER ADMIN GOVERNANCE:\n\nAre you sure you want to REJECT deletion requests for ALL ${pendingProps.length} pending properties and restore them to active status?`
+      )
+    ) {
+      return;
+    }
+    setBulkGovernanceLoading(true);
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject_all_deletions" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: `✓ Rejected deletion requests for all ${data.count || pendingProps.length} properties. Restored to active.`, type: "success" });
+        setSelectedPendingDeletionIds([]);
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to reject all deletions", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error rejecting all deletions", type: "error" });
+    } finally {
+      setBulkGovernanceLoading(false);
+    }
+  };
+
+  const handleApproveSelectedDeletions = async () => {
+    if (selectedPendingDeletionIds.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to approve permanent deletion for ${selectedPendingDeletionIds.length} selected properties?\n\nThis will purge units and terminate contracts.`
+      )
+    ) {
+      return;
+    }
+    setBulkGovernanceLoading(true);
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve_deletion", ids: selectedPendingDeletionIds }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: `✓ Approved permanent deletion for ${selectedPendingDeletionIds.length} selected properties.`, type: "success" });
+        setSelectedPendingDeletionIds([]);
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to approve selected deletions", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error approving selected deletions", type: "error" });
+    } finally {
+      setBulkGovernanceLoading(false);
+    }
+  };
+
+  const handleRejectSelectedDeletions = async () => {
+    if (selectedPendingDeletionIds.length === 0) return;
+    if (
+      !confirm(
+        `Reject deletion and restore ${selectedPendingDeletionIds.length} selected properties to active status?`
+      )
+    ) {
+      return;
+    }
+    setBulkGovernanceLoading(true);
+    try {
+      const res = await fetch("/api/admin/saas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject_deletion", ids: selectedPendingDeletionIds }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ text: `✓ Rejected deletion for ${selectedPendingDeletionIds.length} properties. Restored to active.`, type: "success" });
+        setSelectedPendingDeletionIds([]);
+        await loadSaasData();
+      } else {
+        setToast({ text: data.error || "Failed to reject selected deletions", type: "error" });
+      }
+    } catch {
+      setToast({ text: "Network error rejecting selected deletions", type: "error" });
+    } finally {
+      setBulkGovernanceLoading(false);
     }
   };
   const [saasProperties, setSaasProperties] = useState<any[]>([]);
@@ -2698,87 +2827,192 @@ function SuperAdminDashboardContent() {
           )}
 
           {/* TAB: PENDING DELETIONS & SECURITY APPROVALS (Point 7) */}
-          {saasSubTab === "pending_deletions" && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Commercial Property Deletion Governance</h3>
-                  <p className="text-xs text-slate-500">
-                    Institutional safety protocol: Commercial properties cannot be deleted without Super Admin verification and explicit approval.
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold shrink-0">
-                  {saasProperties.filter((p) => p.pendingDeletion).length} Pending Review
-                </span>
-              </div>
+          {saasSubTab === "pending_deletions" && (() => {
+            const pendingList = saasProperties.filter((p) => p.pendingDeletion);
+            const allSelected = pendingList.length > 0 && pendingList.every((p) => selectedPendingDeletionIds.includes(p.id));
 
-              {saasProperties.filter((p) => p.pendingDeletion).length === 0 ? (
-                <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-                  <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                  <h4 className="text-sm font-bold text-slate-800">Zero Pending Deletion Requests</h4>
-                  <p className="text-xs text-slate-500 mt-1">All commercial properties across portfolios are verified and secure.</p>
+            const toggleSelectAll = () => {
+              if (allSelected) {
+                setSelectedPendingDeletionIds([]);
+              } else {
+                setSelectedPendingDeletionIds(pendingList.map((p) => p.id));
+              }
+            };
+
+            const toggleSelectItem = (id: string) => {
+              if (selectedPendingDeletionIds.includes(id)) {
+                setSelectedPendingDeletionIds(selectedPendingDeletionIds.filter((item) => item !== id));
+              } else {
+                setSelectedPendingDeletionIds([...selectedPendingDeletionIds, id]);
+              }
+            };
+
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Commercial Property Deletion Governance</h3>
+                    <p className="text-xs text-slate-500">
+                      Institutional safety protocol: Commercial properties cannot be deleted without Super Admin verification and explicit approval.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <span className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+                      {pendingList.length} Pending Review
+                    </span>
+
+                    {pendingList.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={bulkGovernanceLoading}
+                          onClick={handleRejectAllDeletions}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
+                          title="Reject all pending deletion requests and restore properties to active"
+                        >
+                          <RotateCcw size={13} />
+                          <span>Reject All</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={bulkGovernanceLoading}
+                          onClick={handleApproveAllDeletions}
+                          className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
+                          title="Approve permanent deletion for all pending properties"
+                        >
+                          <Trash2 size={13} />
+                          <span>Approve All</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-xs text-slate-700">
-                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">Property Name &amp; Code</th>
-                        <th className="p-3">Managed Area</th>
-                        <th className="p-3">Location</th>
-                        <th className="p-3">Requested By</th>
-                        <th className="p-3">Requested At</th>
-                        <th className="p-3 text-right">Governance Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {saasProperties
-                        .filter((p) => p.pendingDeletion)
-                        .map((p) => (
-                          <tr key={p.id} className="hover:bg-slate-50/60">
-                            <td className="p-3">
-                              <div className="font-bold text-slate-900">{p.name}</div>
-                              <div className="text-[10px] font-mono text-slate-400">{p.code}</div>
-                            </td>
-                            <td className="p-3 font-mono font-bold text-slate-800">
-                              {Number(p.totalAreaSqft || 0).toLocaleString("en-IN")} sq.ft
-                            </td>
-                            <td className="p-3 text-slate-600">
-                              {p.city}, {p.state}
-                            </td>
-                            <td className="p-3 font-medium text-slate-700">
-                              {p.deletionRequestedBy || "User Landlord"}
-                            </td>
-                            <td className="p-3 text-slate-500">
-                              {p.deletionRequestedAt ? new Date(p.deletionRequestedAt).toLocaleString("en-IN") : "Recent"}
-                            </td>
-                            <td className="p-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRejectPropertyDeletion(p.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
-                                >
-                                  Reject Request
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleApprovePropertyDeletion(p.id)}
-                                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
-                                >
-                                  <Trash2 size={12} />
-                                  <span>Approve Permanent Deletion</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+
+                {/* Bulk Selection Bar */}
+                {selectedPendingDeletionIds.length > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2 font-bold">
+                      <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px]">
+                        {selectedPendingDeletionIds.length}
+                      </span>
+                      <span>{selectedPendingDeletionIds.length} property(ies) selected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPendingDeletionIds([])}
+                        className="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-amber-100/60 font-semibold transition cursor-pointer"
+                      >
+                        Clear Selection
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkGovernanceLoading}
+                        onClick={handleRejectSelectedDeletions}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <RotateCcw size={12} />
+                        <span>Reject Selected ({selectedPendingDeletionIds.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkGovernanceLoading}
+                        onClick={handleApproveSelectedDeletions}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 size={12} />
+                        <span>Approve Selected ({selectedPendingDeletionIds.length})</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {pendingList.length === 0 ? (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                    <h4 className="text-sm font-bold text-slate-800">Zero Pending Deletion Requests</h4>
+                    <p className="text-xs text-slate-500 mt-1">All commercial properties across portfolios are verified and secure.</p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs text-slate-700">
+                      <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={toggleSelectAll}
+                              className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                              title="Select / Deselect all pending properties"
+                            />
+                          </th>
+                          <th className="p-3">Property Name &amp; Code</th>
+                          <th className="p-3">Managed Area</th>
+                          <th className="p-3">Location</th>
+                          <th className="p-3">Requested By</th>
+                          <th className="p-3">Requested At</th>
+                          <th className="p-3 text-right">Governance Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {pendingList.map((p) => {
+                          const isSelected = selectedPendingDeletionIds.includes(p.id);
+                          return (
+                            <tr key={p.id} className={`transition ${isSelected ? "bg-amber-50/60" : "hover:bg-slate-50/60"}`}>
+                              <td className="p-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectItem(p.id)}
+                                  className="w-4 h-4 rounded text-teal-600 accent-teal-600 border-slate-300 cursor-pointer focus:ring-0"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <div className="font-bold text-slate-900">{p.name}</div>
+                                <div className="text-[10px] font-mono text-slate-400">{p.code}</div>
+                              </td>
+                              <td className="p-3 font-mono font-bold text-slate-800">
+                                {Number(p.totalAreaSqft || 0).toLocaleString("en-IN")} sq.ft
+                              </td>
+                              <td className="p-3 text-slate-600">
+                                {p.city}, {p.state}
+                              </td>
+                              <td className="p-3 font-medium text-slate-700">
+                                {p.deletionRequestedBy || "User Landlord"}
+                              </td>
+                              <td className="p-3 text-slate-500">
+                                {p.deletionRequestedAt ? new Date(p.deletionRequestedAt).toLocaleString("en-IN") : "Recent"}
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRejectPropertyDeletion(p.id)}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                                  >
+                                    Reject Request
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApprovePropertyDeletion(p.id)}
+                                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Trash2 size={12} />
+                                    <span>Approve Permanent Deletion</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 1. SAAS PROPERTIES & VERIFICATION */}
           {saasSubTab === "properties" && (

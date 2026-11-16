@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { supabase } from "@/lib/supabase";
-import { property, building, space } from "@/db/schema";
+import { property, building, space, contract, occupant, properties } from "@/db/schema";
 import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
-import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
+import { eq, and, sql, desc, or, ilike, inArray } from "drizzle-orm";
 import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-code/route";
 
 /**
@@ -465,5 +465,118 @@ export async function POST(req: Request) {
       },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const auth = getAuthContext(req);
+    const body = await req.json().catch(() => ({}));
+    const { searchParams } = new URL(req.url);
+    const action = body.action || searchParams.get("action") || "request_deletion";
+    const ids: string[] = body.ids || (searchParams.get("ids") ? searchParams.get("ids")!.split(",").filter(Boolean) : []);
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "Property IDs array required (ids: string[])" }, { status: 400 });
+    }
+
+    const userEmail = req.headers.get("x-user-email") || "";
+
+    // 1. CANCEL PENDING DELETIONS (Restore to active)
+    if (action === "cancel") {
+      const propRecords = await db
+        .select({ id: property.id, source_row_id: property.source_row_id })
+        .from(property)
+        .where(and(inArray(property.id, ids), eq(property.org_id, auth.orgId)));
+
+      for (const p of propRecords) {
+        let meta: any = {};
+        if (p.source_row_id && typeof p.source_row_id === "string" && p.source_row_id.startsWith("{")) {
+          try { meta = JSON.parse(p.source_row_id); } catch {}
+        }
+        delete meta.pending_deletion;
+        delete meta.requested_by;
+        delete meta.requested_at;
+        delete meta.reason;
+        delete meta.active_contracts_count;
+
+        await db
+          .update(property)
+          .set({
+            source_row_id: JSON.stringify(meta),
+            updated_at: new Date(),
+            updated_by: auth.userId,
+          })
+          .where(eq(property.id, p.id));
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: propRecords.length,
+        message: `Cancelled deletion requests for ${propRecords.length} properties. Restored to active status.`,
+      });
+    }
+
+    // 2. APPROVE PERMANENT PURGE (Permanent Database Purge)
+    if (action === "approve_permanent" || action === "purge") {
+      for (const propId of ids) {
+        const bldgs = await db.select({ id: building.id }).from(building).where(eq(building.property_id, propId));
+        const bldgIds = bldgs.map((b) => b.id);
+        if (bldgIds.length > 0) {
+          const sps = await db.select({ id: space.id }).from(space).where(inArray(space.building_id, bldgIds));
+          const spIds = sps.map((s) => s.id);
+          if (spIds.length > 0) {
+            await db.update(contract).set({ contract_status: "terminated", deleted_at: new Date() }).where(inArray(contract.space_id, spIds));
+            await db.update(space).set({ deleted_at: new Date() }).where(inArray(space.id, spIds));
+          }
+          await db.update(building).set({ deleted_at: new Date() }).where(inArray(building.id, bldgIds));
+        }
+        await db.update(property).set({ deleted_at: new Date(), updated_by: auth.userId }).where(and(eq(property.id, propId), eq(property.org_id, auth.orgId)));
+        try {
+          await db.delete(properties).where(eq(properties.id, propId));
+        } catch {}
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: ids.length,
+        message: `Successfully purged ${ids.length} properties and terminated associated contracts.`,
+      });
+    }
+
+    // 3. DEFAULT: REQUEST DELETION (Move to Pending Deletions for Admin governance review)
+    const propRecords = await db
+      .select({ id: property.id, source_row_id: property.source_row_id, name: property.property_name })
+      .from(property)
+      .where(and(inArray(property.id, ids), eq(property.org_id, auth.orgId)));
+
+    for (const p of propRecords) {
+      let meta: any = {};
+      if (p.source_row_id && typeof p.source_row_id === "string" && p.source_row_id.startsWith("{")) {
+        try { meta = JSON.parse(p.source_row_id); } catch {}
+      }
+      meta.pending_deletion = true;
+      meta.requested_by = userEmail || auth.userId || "User";
+      meta.requested_at = new Date().toISOString();
+      meta.reason = "Bulk property deletion request submitted";
+
+      await db
+        .update(property)
+        .set({
+          source_row_id: JSON.stringify(meta),
+          updated_at: new Date(),
+          updated_by: auth.userId,
+        })
+        .where(eq(property.id, p.id));
+    }
+
+    return NextResponse.json({
+      success: true,
+      count: propRecords.length,
+      message: `Successfully requested deletion for ${propRecords.length} properties. They have been moved to Pending Deletions for Admin review.`,
+    });
+  } catch (err: any) {
+    console.error("Batch property DELETE error:", err);
+    return NextResponse.json({ error: "Failed to process bulk deletion", message: err.message }, { status: 500 });
   }
 }
