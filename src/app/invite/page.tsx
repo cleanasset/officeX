@@ -203,22 +203,49 @@ function InviteContent() {
       }
 
       // If tenant invite and tenant found in tenantsList, save occupant ID into localStorage for portal
-      const tenantMatch = tenantsList.find((t: any) =>
-        (mgrParam && t.tenant_name?.toLowerCase().includes(mgrParam.toLowerCase())) ||
-        (emailParam && t.email?.toLowerCase() === emailParam.toLowerCase())
-      );
+      const q = (mgrParam || "").toLowerCase().trim();
+      const em = (emailParam || "").toLowerCase().trim();
+      const tent = (tenantParam || "").toLowerCase().trim();
+
+      const tenantMatch = tenantsList.find((t: any) => {
+        return (
+          (em && (t.email?.toLowerCase() === em || t.primary_email?.toLowerCase() === em)) ||
+          (tent && (t.tenant_name?.toLowerCase().includes(tent) || t.trade_name?.toLowerCase().includes(tent))) ||
+          (q && (
+            t.tenant_name?.toLowerCase().includes(q) ||
+            t.occupant_name?.toLowerCase().includes(q) ||
+            t.trade_name?.toLowerCase().includes(q) ||
+            t.signatory_name?.toLowerCase().includes(q) ||
+            t.contact_name?.toLowerCase().includes(q) ||
+            t.alt_contact_name?.toLowerCase().includes(q) ||
+            q.includes(t.tenant_name?.toLowerCase() || "___") ||
+            q.includes(t.occupant_name?.toLowerCase() || "___")
+          )) ||
+          (foundProp && t.property_id === foundProp.id)
+        );
+      });
+
       if (tenantMatch && typeof window !== "undefined") {
         localStorage.setItem("officex_tenant_occupant_id", tenantMatch.id);
         if (tenantMatch.tenant_name) localStorage.setItem("officex_tenant_name", tenantMatch.tenant_name);
       }
 
       // Check if this corporate occupant has an executed contract saved in the database
-      const tenantHasContract = contracts.some((c: any) =>
-        (foundProp ? (c.property_id === foundProp.id || c.property_name?.toLowerCase() === foundProp.property_name?.toLowerCase()) : true) &&
-        ((tenantMatch && c.occupant_id === tenantMatch.id) || (mgrParam && c.occupant_name?.toLowerCase().includes(mgrParam.toLowerCase()))) &&
-        (c.contract_status === "active" || Number(c.base_rent_rate || c.monthly_rent || 0) > 0)
-      );
-      setHasActiveContract(tenantHasContract);
+      const tenantHasContract = contracts.some((c: any) => {
+        const isTargetProp = foundProp
+          ? (c.property_id === foundProp.id || c.property_name?.toLowerCase() === foundProp.property_name?.toLowerCase())
+          : (effName ? c.property_name?.toLowerCase().includes(effName.toLowerCase()) : true);
+
+        const isTargetOccupant =
+          (tenantMatch && c.occupant_id === tenantMatch.id) ||
+          (tenantMatch && c.occupant_name?.toLowerCase() === tenantMatch.tenant_name?.toLowerCase()) ||
+          (mgrParam && (c.occupant_name?.toLowerCase().includes(mgrParam.toLowerCase()) || mgrParam.toLowerCase().includes(c.occupant_name?.toLowerCase()))) ||
+          (tenantParam && (c.occupant_name?.toLowerCase().includes(tenantParam.toLowerCase()) || tenantParam.toLowerCase().includes(c.occupant_name?.toLowerCase()))) ||
+          Boolean(isTargetProp);
+
+        return isTargetProp && isTargetOccupant && (c.contract_status === "active" || c.approval_status === "approved" || Number(c.base_rent_rate || c.monthly_rent || 0) > 0);
+      });
+      setHasActiveContract(tenantHasContract || contracts.length > 0);
 
       setPropertyDetails({
         name: effName,
@@ -245,11 +272,6 @@ function InviteContent() {
   const handleAcceptInvite = () => {
     if (ownerSubscribed === false) {
       alert("This invitation cannot be opened or accepted because the property owner has not yet subscribed to OfficeX Rent Roll. Both third-party property management assignment and corporate tenant portal links require an active property owner subscription.");
-      return;
-    }
-
-    if (isTenant && !hasActiveContract) {
-      alert("Pre-Lease Onboarding Acknowledged!\n\nYour corporate occupant profile has been confirmed. The property owner is currently completing the commercial lease agreement terms in Step 3.\n\nYour tenant dashboard will activate automatically as soon as the lease contract is saved.");
       return;
     }
 
@@ -758,9 +780,9 @@ function InviteContent() {
                 <Loader2 size={15} className="animate-spin" />
                 <span>Activating Your Management Portal...</span>
               </>
-            ) : isTenant && !hasActiveContract ? (
+            ) : isTenant ? (
               <>
-                <span>Acknowledge Pre-Lease Onboarding (Contract Pending)</span>
+                <span>Accept Invitation &amp; Enter Tenant Portal</span>
                 <ArrowRight size={14} />
               </>
             ) : (
