@@ -27,6 +27,7 @@ import {
   Mail,
   Copy,
   Edit,
+  Lock,
 } from "lucide-react";
 import AgreementEditorModal from "@/components/rent-roll/AgreementEditorModal";
 
