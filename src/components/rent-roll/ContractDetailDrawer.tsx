@@ -83,7 +83,7 @@ export default function ContractDetailDrawer({
     if (unit) queryParts.push(`unit=${encodeURIComponent(unit)}`);
     if (ownerName) queryParts.push(`owner=${encodeURIComponent(ownerName)}`);
 
-    return `${origin}/invite?${queryParts.join("&")}`;
+    return `${origin}/portal/invoices?occupant_id=${encodeURIComponent(occupantId)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}`;
   };
 
   const formatPhoneForWhatsApp = (rawPhone?: string): string => {

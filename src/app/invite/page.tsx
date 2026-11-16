@@ -34,6 +34,7 @@ function InviteContent() {
   const emailParam = searchParams.get("email") || "";
   const inviteParam = searchParams.get("invite") || "";
   const tenantParam = searchParams.get("tenant") || searchParams.get("entity") || "";
+  const occupantIdParam = searchParams.get("occupant_id") || "";
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [managerName, setManagerName] = useState(mgrParam);
@@ -225,7 +226,10 @@ function InviteContent() {
         );
       });
 
-      if (tenantMatch && typeof window !== "undefined") {
+      if (occupantIdParam && typeof window !== "undefined") {
+        localStorage.setItem("officex_tenant_occupant_id", occupantIdParam);
+        localStorage.setItem("officex_tenant_name", mgrParam || tenantParam || "Persistent Systems Ltd");
+      } else if (tenantMatch && typeof window !== "undefined") {
         localStorage.setItem("officex_tenant_occupant_id", tenantMatch.id);
         if (tenantMatch.tenant_name) localStorage.setItem("officex_tenant_name", tenantMatch.tenant_name);
       }
@@ -245,13 +249,14 @@ function InviteContent() {
 
         return isTargetProp && isTargetOccupant && (c.contract_status === "active" || c.approval_status === "approved" || Number(c.base_rent_rate || c.monthly_rent || 0) > 0);
       });
-      setHasActiveContract(tenantHasContract || contracts.length > 0);
+      const isOccupantActive = isTenant ? true : (tenantHasContract || contracts.length > 0);
+      setHasActiveContract(isOccupantActive);
 
       setPropertyDetails({
         name: effName,
         location: effLocation,
         totalArea: effArea,
-        occupancyPct: matchedTenants.length > 0 ? 100 : (isTenant ? (tenantHasContract ? 100 : 0) : 0),
+        occupancyPct: matchedTenants.length > 0 ? 100 : (isTenant ? 100 : 0),
         monthlyRevenue: matchedTenants.reduce((s: number, t: any) => s + t.monthlyRent, 0),
         tenants: matchedTenants,
       });
@@ -310,6 +315,16 @@ function InviteContent() {
       sessionStorage.setItem("officex_role_key", roleKey);
       document.cookie = `officex_role_key=${roleKey}; path=/; max-age=86400; SameSite=Lax`;
 
+      if (isTenant) {
+        const occId = occupantIdParam || localStorage.getItem("officex_tenant_occupant_id") || "";
+        localStorage.setItem("officex_tenant_name", displayName);
+        sessionStorage.setItem("officex_tenant_name", displayName);
+        if (occId) {
+          localStorage.setItem("officex_tenant_occupant_id", occId);
+          sessionStorage.setItem("officex_tenant_occupant_id", occId);
+        }
+      }
+
       // 4. Set company brand & property
       localStorage.setItem("officex_company_name", ownerParam);
       localStorage.setItem("officex_brand_name", ownerParam);
@@ -361,7 +376,7 @@ function InviteContent() {
 
     setTimeout(() => {
       if (roleParam === "tenant" || roleParam === "occupant") {
-        const occId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+        const occId = occupantIdParam || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
         router.push(`/portal/invoices?occupant_id=${encodeURIComponent(occId)}&prop=${encodeURIComponent(propToAssign)}&email=${encodeURIComponent(displayEmail)}`);
       } else {
         const storedAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");

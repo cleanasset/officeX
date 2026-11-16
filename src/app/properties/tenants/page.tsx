@@ -166,7 +166,7 @@ export default function TenantDirectoryPage() {
     if (unit) queryParts.push(`unit=${encodeURIComponent(unit)}`);
     if (ownerName) queryParts.push(`owner=${encodeURIComponent(ownerName)}`);
 
-    return `${origin}/invite?${queryParts.join("&")}`;
+    return `${origin}/portal/invoices?occupant_id=${encodeURIComponent(t?.id || "")}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}`;
   };
 
   const getTenantWhatsAppUrl = (t: any) => {
