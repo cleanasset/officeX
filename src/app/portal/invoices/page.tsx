@@ -28,6 +28,7 @@ import {
   Printer
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface PortalInvoice {
   id: string;
@@ -145,9 +146,13 @@ function TenantInvoicesContent() {
       const url = savedOccId
         ? `/api/portal/invoices?status=${filterTab}&occupant_id=${encodeURIComponent(savedOccId)}`
         : `/api/portal/invoices?status=${filterTab}`;
-      const res = await fetch(url);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
+        if (json.occupant_id && typeof window !== "undefined") {
+          localStorage.setItem("officex_tenant_occupant_id", json.occupant_id);
+        }
         const list: PortalInvoice[] = json.invoices || [];
         setInvoices(list);
 

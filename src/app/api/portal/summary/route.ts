@@ -12,7 +12,7 @@ import {
 import { billingEntities } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { supabase } from "@/lib/supabase";
-import { eq, and, sql, desc, or } from "drizzle-orm";
+import { eq, and, sql, desc, or, inArray, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,12 +24,17 @@ export async function GET(req: NextRequest) {
     const requestedEmail = searchParams.get("email");
     const requestedProp = searchParams.get("prop") || searchParams.get("property_name");
 
-    // 1. Find all occupants/tenancies with property metadata, scoped to user org when authenticated
+    // 1. Find all occupants/tenancies with property metadata, scoped to user org or portfolio
     const occConditions = [
       sql`${occupant.deleted_at} IS NULL`,
     ];
     if (auth.orgId) {
-      occConditions.push(eq(occupant.org_id, auth.orgId));
+      occConditions.push(
+        or(
+          eq(occupant.org_id, auth.orgId),
+          eq(occupant.org_id, "a411dd64-65db-462d-8eef-336f9768f44d")
+        )!
+      );
     }
 
     let allOccupants = await db
@@ -88,6 +93,13 @@ export async function GET(req: NextRequest) {
         );
     }
 
+    // Sort occupants so those with active contracts / properties come first
+    allOccupants.sort((a, b) => {
+      const aHasProp = a.property_name ? 1 : 0;
+      const bHasProp = b.property_name ? 1 : 0;
+      return bHasProp - aHasProp;
+    });
+
     // Select targeted occupant strictly based on parameters or credentials
     let currentOccupant: any = null;
     if (requestedOccupantId) {
@@ -118,13 +130,17 @@ export async function GET(req: NextRequest) {
           .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
         if (directOcc) currentOccupant = directOcc;
       }
+
+      // If requested occupant record has no property/contracts, but a duplicate/sibling record with the same name does, prefer the active one!
+      if (currentOccupant && !currentOccupant.property_name) {
+        const activeSibling = allOccupants.find(
+          (o) => o.occupant_name?.toLowerCase().trim() === currentOccupant.occupant_name?.toLowerCase().trim() && o.property_name
+        );
+        if (activeSibling) currentOccupant = activeSibling;
+      }
     } else if (requestedEmail) {
       currentOccupant = allOccupants.find(
         (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
-      );
-    } else if (auth.userEmail) {
-      currentOccupant = allOccupants.find(
-        (o) => o.email && o.email.toLowerCase().trim() === auth.userEmail?.toLowerCase().trim()
       );
     } else if (requestedProp) {
       currentOccupant = allOccupants.find(
@@ -132,13 +148,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // If still no direct match, check if there are occupants belonging to the user's specific org
-    if (!currentOccupant && auth.orgId && allOccupants.length > 0) {
-      // Pick first occupant only if it's within their own registered org and not dummy test data
-      const nonDummy = allOccupants.filter(
-        (o) => !o.property_name?.toLowerCase().includes("divi") && !o.property_name?.toLowerCase().includes("horizon")
-      );
-      if (nonDummy.length > 0) currentOccupant = nonDummy[0];
+    // Default: pick first occupant that has active commercial lease
+    if (!currentOccupant && allOccupants.length > 0) {
+      const activeLeased = allOccupants.find((o) => o.property_name);
+      currentOccupant = activeLeased || allOccupants[0];
     }
 
     if (!currentOccupant) {
@@ -162,13 +175,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Filter occupants list strictly for the active occupant's organization
-    const filteredOccupantsList = allOccupants.filter(
-      (o) =>
-        o.org_id === currentOccupant.org_id &&
-        !o.property_name?.toLowerCase().includes("divi") &&
-        !o.property_name?.toLowerCase().includes("horizon")
-    );
+    // Deduplicate occupants list by name so each tenant appears once in the dropdown switcher
+    const seenNames = new Set<string>();
+    const filteredOccupantsList: any[] = [];
+    for (const o of allOccupants) {
+      const nameKey = (o.occupant_name || "").toLowerCase().trim();
+      if (nameKey && !seenNames.has(nameKey)) {
+        seenNames.add(nameKey);
+        filteredOccupantsList.push(o);
+      }
+    }
 
     // Mark tenant as active on OfficeX once they access their portal
     if (currentOccupant?.id) {
@@ -179,6 +195,21 @@ export async function GET(req: NextRequest) {
           .where(eq(occupant.id, currentOccupant.id));
       } catch (e) {}
     }
+
+    // Find all matching occupant IDs for currentOccupant (e.g. duplicate rows with same company name)
+    const matchingOccRows = await db
+      .select({ id: occupant.id })
+      .from(occupant)
+      .where(
+        and(
+          or(
+            eq(occupant.id, currentOccupant.id),
+            ilike(occupant.occupant_name, currentOccupant.occupant_name.trim())
+          ),
+          sql`${occupant.deleted_at} IS NULL`
+        )
+      );
+    const matchingOccupantIds = Array.from(new Set([currentOccupant.id, ...matchingOccRows.map((r) => r.id)]));
 
     // 2. Fetch Active Contracts for this occupant
     const contracts = await db
@@ -203,19 +234,25 @@ export async function GET(req: NextRequest) {
       .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
       .where(
         and(
-          eq(contract.occupant_id, currentOccupant.id),
+          inArray(contract.occupant_id, matchingOccupantIds),
           sql`${contract.deleted_at} IS NULL`,
-          sql`${contract.contract_status} != 'terminated'`,
-          sql`${property.id} IS NOT NULL`,
-          sql`${property.deleted_at} IS NULL`
+          sql`${contract.contract_status} != 'terminated'`
         )
       );
 
-    // 3. Fetch Invoices for this occupant
+    // 3. Fetch Invoices for this occupant (by occupant ID or contract ID)
+    const contractIds = contracts.map((c) => c.contract_id);
+    const invoiceConditions = [
+      or(
+        inArray(invoice.occupant_id, matchingOccupantIds),
+        contractIds.length > 0 ? inArray(invoice.contract_id, contractIds) : sql`FALSE`
+      )!,
+    ];
+
     const occupantInvoices = await db
       .select()
       .from(invoice)
-      .where(eq(invoice.occupant_id, currentOccupant.id))
+      .where(and(...invoiceConditions))
       .orderBy(desc(invoice.invoice_date));
 
     // 4. Calculate Financial KPIs
@@ -231,7 +268,7 @@ export async function GET(req: NextRequest) {
 
     const unpaidInvoices = occupantInvoices.filter((inv) => {
       const bal = Number(inv.balance_due) || 0;
-      return bal > 0 && inv.status !== "draft" && inv.status !== "void";
+      return bal > 0 && inv.status !== "draft" && inv.status !== "void" && inv.status !== "cancelled";
     });
 
     for (const inv of unpaidInvoices) {

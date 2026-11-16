@@ -41,6 +41,7 @@ export default function TenantPortalLayout({
   const [selectedOccupantId, setSelectedOccupantId] = useState<string>("");
   const [currentOccupant, setCurrentOccupant] = useState<any>(null);
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
+  const [nextDueDate, setNextDueDate] = useState<string>("31-Oct-2026");
   const [primaryContract, setPrimaryContract] = useState<any>(null);
   const [ownerSubscribed, setOwnerSubscribed] = useState<boolean | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
@@ -115,6 +116,9 @@ export default function TenantPortalLayout({
           }
         }
         setOutstandingAmount(json.summary?.total_outstanding_inr || 0);
+        if (json.summary?.next_due_date) {
+          setNextDueDate(json.summary.next_due_date);
+        }
       }
     } catch (e) {
       console.error("Failed to load portal summary", e);
@@ -342,7 +346,7 @@ export default function TenantPortalLayout({
             ₹{Number(outstandingAmount).toLocaleString("en-IN")}
           </div>
           <p className="text-[10px] text-slate-400">
-            Due by <strong className="text-slate-200">31-Oct-2026</strong>
+            Due by <strong className="text-slate-200">{nextDueDate}</strong>
           </p>
           <Link
             href="/portal/invoices?action=pay"

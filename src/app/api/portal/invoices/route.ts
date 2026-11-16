@@ -10,7 +10,7 @@ import {
   property,
 } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, or, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,19 +23,62 @@ export async function GET(req: NextRequest) {
     // 1. Determine occupant
     let occupantId = requestedOccupantId;
     if (!occupantId) {
-      const [firstOcc] = await db
+      // Find first occupant who has contracts or invoices
+      const [occWithLease] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+        .innerJoin(contract, eq(contract.occupant_id, occupant.id))
+        .where(sql`${occupant.deleted_at} IS NULL`)
         .limit(1);
-      occupantId = firstOcc?.id;
+      occupantId = occWithLease?.id;
+
+      if (!occupantId) {
+        const [firstOcc] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(sql`${occupant.deleted_at} IS NULL`)
+          .limit(1);
+        occupantId = firstOcc?.id;
+      }
     }
 
     if (!occupantId) {
       return NextResponse.json({ success: true, invoices: [] });
     }
 
-    // 2. Query invoices for this occupant
+    // Find occupant record and all sibling IDs sharing the same company name
+    const [occRecord] = await db
+      .select({ id: occupant.id, occupant_name: occupant.occupant_name })
+      .from(occupant)
+      .where(eq(occupant.id, occupantId));
+
+    let allOccIds = [occupantId];
+    if (occRecord?.occupant_name) {
+      const matchingOccs = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            ilike(occupant.occupant_name, occRecord.occupant_name.trim()),
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        );
+      allOccIds = Array.from(new Set([occupantId, ...matchingOccs.map((m) => m.id)]));
+    }
+
+    // Get all contract IDs for this occupant
+    const occContracts = await db
+      .select({ id: contract.id })
+      .from(contract)
+      .where(
+        and(
+          inArray(contract.occupant_id, allOccIds),
+          sql`${contract.deleted_at} IS NULL`
+        )
+      );
+    const contractIds = occContracts.map((c) => c.id);
+
+    // 2. Query invoices for this occupant (by occupant ID or contract ID)
     const rawInvoices = await db
       .select({
         id: invoice.id,
@@ -61,19 +104,24 @@ export async function GET(req: NextRequest) {
       .leftJoin(space, eq(contract.space_id, space.id))
       .leftJoin(building, eq(space.building_id, building.id))
       .leftJoin(property, eq(building.property_id, property.id))
-      .where(eq(invoice.occupant_id, occupantId))
+      .where(
+        or(
+          inArray(invoice.occupant_id, allOccIds),
+          contractIds.length > 0 ? inArray(invoice.contract_id, contractIds) : sql`FALSE`
+        )!
+      )
       .orderBy(desc(invoice.invoice_date));
 
     // 3. Filter by status
     const filtered = rawInvoices.filter((inv) => {
       const bal = Number(inv.balance_due) || 0;
       if (statusFilter === "unpaid") {
-        return bal > 0 && inv.status !== "void" && inv.status !== "draft";
+        return bal > 0 && inv.status !== "void" && inv.status !== "draft" && inv.status !== "cancelled";
       }
       if (statusFilter === "paid") {
         return bal <= 0 || inv.status === "paid";
       }
-      return inv.status !== "draft" && inv.status !== "void";
+      return inv.status !== "draft" && inv.status !== "void" && inv.status !== "cancelled";
     });
 
     // 4. Attach line items for each invoice

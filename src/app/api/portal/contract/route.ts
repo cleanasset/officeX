@@ -9,7 +9,7 @@ import {
   contract_charge,
 } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc, ilike } from "drizzle-orm";
+import { eq, and, sql, desc, ilike, inArray, or } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,17 +35,48 @@ export async function GET(req: NextRequest) {
       if (occByEmail) occupantId = occByEmail.id;
     }
 
-    if (!occupantId && auth.orgId) {
-      const [firstOcc] = await db
+    if (!occupantId) {
+      // Find first occupant who has an active contract
+      const [occWithLease] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+        .innerJoin(contract, eq(contract.occupant_id, occupant.id))
+        .where(sql`${occupant.deleted_at} IS NULL`)
         .limit(1);
-      occupantId = firstOcc?.id;
+      occupantId = occWithLease?.id;
+
+      if (!occupantId && auth.orgId) {
+        const [firstOcc] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+          .limit(1);
+        occupantId = firstOcc?.id;
+      }
     }
 
     if (!occupantId) {
       return NextResponse.json({ success: true, contract: null });
+    }
+
+    // Find all matching occupant IDs sharing same company name
+    const [occRecord] = await db
+      .select({ id: occupant.id, occupant_name: occupant.occupant_name })
+      .from(occupant)
+      .where(eq(occupant.id, occupantId));
+
+    let allOccIds = [occupantId];
+    if (occRecord?.occupant_name) {
+      const matchingOccs = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            ilike(occupant.occupant_name, occRecord.occupant_name.trim()),
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        );
+      allOccIds = Array.from(new Set([occupantId, ...matchingOccs.map((m) => m.id)]));
     }
 
     // 1. Fetch occupant active contract
@@ -76,7 +107,7 @@ export async function GET(req: NextRequest) {
       .leftJoin(property, eq(building.property_id, property.id))
       .where(
         and(
-          eq(contract.occupant_id, occupantId),
+          inArray(contract.occupant_id, allOccIds),
           sql`${contract.deleted_at} IS NULL`
         )
       )
