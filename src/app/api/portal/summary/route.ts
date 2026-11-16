@@ -24,19 +24,7 @@ export async function GET(req: NextRequest) {
     const requestedEmail = searchParams.get("email");
     const requestedProp = searchParams.get("prop") || searchParams.get("property_name");
 
-    // 1. Find all occupants/tenancies with property metadata, scoped to user org or portfolio
-    const occConditions = [
-      sql`${occupant.deleted_at} IS NULL`,
-    ];
-    if (auth.orgId) {
-      occConditions.push(
-        or(
-          eq(occupant.org_id, auth.orgId),
-          eq(occupant.org_id, "a411dd64-65db-462d-8eef-336f9768f44d")
-        )!
-      );
-    }
-
+    // 1. Find all active occupants/tenancies with property metadata across the commercial portfolio
     let allOccupants = await db
       .select({
         id: occupant.id,
@@ -59,45 +47,29 @@ export async function GET(req: NextRequest) {
       .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
       .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
       .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
-      .where(and(...occConditions));
+      .where(sql`${occupant.deleted_at} IS NULL`);
 
-    // If org-scoped query returned empty and unauthenticated, query non-deleted occupants
-    if (!allOccupants.length && !auth.userEmail) {
-      allOccupants = await db
-        .select({
-          id: occupant.id,
-          org_id: occupant.org_id,
-          occupant_name: occupant.occupant_name,
-          occupant_code: occupant.occupant_code,
-          email: occupant.email,
-          phone: occupant.phone,
-          gst_number: occupant.gst_number,
-          pan_number: occupant.pan_number,
-          industry_sector: occupant.industry_sector,
-          is_critical_occupant: occupant.is_critical_occupant,
-          address: occupant.address,
-          city: occupant.city,
-          state: occupant.state,
-          property_name: property.property_name,
-        })
-        .from(occupant)
-        .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`, sql`${contract.contract_status} != 'terminated'`))
-        .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
-        .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
-        .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
+    // Prioritize occupants with issued invoices, then those with active contracts
+    let occIdsWithInvoices = new Set<string>();
+    try {
+      const issuedInvoices = await db
+        .select({ occupant_id: invoice.occupant_id })
+        .from(invoice)
         .where(
           and(
-            sql`${occupant.deleted_at} IS NULL`,
-            sql`(${property.property_name} IS NULL OR (${property.property_name} NOT ILIKE '%divi%' AND ${property.property_name} NOT ILIKE '%horizon%'))`
+            sql`${invoice.status} != 'draft'`,
+            sql`${invoice.status} != 'void'`,
+            sql`${invoice.status} != 'cancelled'`
           )
         );
-    }
+      occIdsWithInvoices = new Set(issuedInvoices.map((i) => i.occupant_id).filter(Boolean) as string[]);
+    } catch (e) {}
 
-    // Sort occupants so those with active contracts / properties come first
+    // Sort occupants so those with invoices and active contracts come first
     allOccupants.sort((a, b) => {
-      const aHasProp = a.property_name ? 1 : 0;
-      const bHasProp = b.property_name ? 1 : 0;
-      return bHasProp - aHasProp;
+      const aWeight = occIdsWithInvoices.has(a.id) ? 2 : (a.property_name ? 1 : 0);
+      const bWeight = occIdsWithInvoices.has(b.id) ? 2 : (b.property_name ? 1 : 0);
+      return bWeight - aWeight;
     });
 
     // Select targeted occupant strictly based on parameters or credentials
@@ -138,20 +110,19 @@ export async function GET(req: NextRequest) {
         );
         if (activeSibling) currentOccupant = activeSibling;
       }
-    } else if (requestedEmail) {
-      currentOccupant = allOccupants.find(
-        (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
-      );
     } else if (requestedProp) {
       currentOccupant = allOccupants.find(
         (o) => o.property_name && o.property_name.toLowerCase().includes(requestedProp.toLowerCase().trim())
       );
+    } else if (requestedEmail) {
+      currentOccupant = allOccupants.find(
+        (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
+      );
     }
 
-    // Default: pick first occupant that has active commercial lease
+    // Default: pick first occupant (already sorted by invoice and lease priority)
     if (!currentOccupant && allOccupants.length > 0) {
-      const activeLeased = allOccupants.find((o) => o.property_name);
-      currentOccupant = activeLeased || allOccupants[0];
+      currentOccupant = allOccupants[0];
     }
 
     if (!currentOccupant) {

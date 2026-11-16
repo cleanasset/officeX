@@ -23,14 +23,32 @@ export async function GET(req: NextRequest) {
     // 1. Determine occupant
     let occupantId = requestedOccupantId;
     if (!occupantId) {
-      // Find first occupant who has contracts or invoices
-      const [occWithLease] = await db
+      // Prefer occupant who has issued/unpaid invoices first!
+      const [occWithInvoice] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .innerJoin(contract, eq(contract.occupant_id, occupant.id))
-        .where(sql`${occupant.deleted_at} IS NULL`)
+        .innerJoin(invoice, eq(invoice.occupant_id, occupant.id))
+        .where(
+          and(
+            sql`${occupant.deleted_at} IS NULL`,
+            sql`${invoice.status} != 'draft'`,
+            sql`${invoice.status} != 'void'`,
+            sql`${invoice.status} != 'cancelled'`
+          )
+        )
+        .orderBy(desc(invoice.created_at))
         .limit(1);
-      occupantId = occWithLease?.id;
+      occupantId = occWithInvoice?.id;
+
+      if (!occupantId) {
+        const [occWithLease] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .innerJoin(contract, eq(contract.occupant_id, occupant.id))
+          .where(sql`${occupant.deleted_at} IS NULL`)
+          .limit(1);
+        occupantId = occWithLease?.id;
+      }
 
       if (!occupantId) {
         const [firstOcc] = await db

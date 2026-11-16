@@ -287,17 +287,20 @@ export default function TenantPortalLayout({
             </p>
           )}
 
-          {/* Occupant Switcher Dropdown (if multiple) */}
-          {occupantsList.length > 1 && (
-            <div className="pt-1.5 border-t border-slate-700/50">
+          {/* Occupant Switcher Dropdown */}
+          {occupantsList.length > 0 && (
+            <div className="pt-2 border-t border-slate-700/60 space-y-1">
+              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                Switch Tenant Account
+              </label>
               <select
                 value={selectedOccupantId}
                 onChange={(e) => handleSwitchOccupant(e.target.value)}
-                className="w-full text-[11px] font-bold text-slate-200 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 outline-none cursor-pointer"
+                className="w-full text-xs font-bold text-white bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-600 focus:border-indigo-400 outline-none cursor-pointer"
               >
                 {occupantsList.map((occ) => (
                   <option key={occ.id} value={occ.id}>
-                    {occ.occupant_name} {occ.property_name ? `· ${occ.property_name}` : `(${occ.occupant_code})`}
+                    {occ.occupant_name} {occ.property_name ? `· ${occ.property_name}` : ""}
                   </option>
                 ))}
               </select>

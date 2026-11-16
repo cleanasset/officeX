@@ -150,7 +150,7 @@ function TenantInvoicesContent() {
       const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
-        if (json.occupant_id && typeof window !== "undefined") {
+        if (json.occupant_id && typeof window !== "undefined" && !savedOccId) {
           localStorage.setItem("officex_tenant_occupant_id", json.occupant_id);
         }
         const list: PortalInvoice[] = json.invoices || [];
