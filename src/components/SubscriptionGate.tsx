@@ -345,6 +345,7 @@ export default function SubscriptionGate({
       const isAdmin =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com" ||
+        email === "jiyapatel181224@gmail.com" ||
         role === "super_admin" ||
         role === "Super Administrator" ||
         (typeof window !== "undefined" && (

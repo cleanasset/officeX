@@ -29,9 +29,11 @@ import {
   Calendar,
   DollarSign,
   Scale,
+  Edit,
 } from "lucide-react";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 import { downloadLeaseContractPdf, LeaseContractPdfData } from "@/lib/pdf/lease-contract-pdf";
+import AgreementEditorModal from "@/components/rent-roll/AgreementEditorModal";
 
 interface PropertyDetailModalProps {
   property: any | null;
@@ -60,6 +62,7 @@ export default function PropertyDetailModal({
   const [spaces, setSpaces] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [managerAssignment, setManagerAssignment] = useState<any>(null);
+  const [editingContractForAgreement, setEditingContractForAgreement] = useState<any | null>(null);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -132,6 +135,36 @@ export default function PropertyDetailModal({
       escalationPct: Number(c.escalation_pct || c.escalation_value || 5),
       escalationFrequency: c.escalation_frequency || "Annual",
     };
+
+    const logoUrl = typeof window !== "undefined"
+      ? (localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || undefined)
+      : undefined;
+
+    let customClauses: any[] = [];
+    let specialConditions: string | undefined = undefined;
+    if (c.remarks && typeof c.remarks === "string" && c.remarks.trim().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(c.remarks);
+        const rev = parsed.agreement_revision;
+        if (rev && (rev.status === "approved" || rev.status === "pending_admin_approval")) {
+          if (rev.customClauses) customClauses = rev.customClauses;
+          if (rev.specialConditions) specialConditions = rev.specialConditions;
+          if (rev.lockInMonths !== undefined) data.lockInMonths = Number(rev.lockInMonths);
+          if (rev.noticePeriodDays !== undefined) data.noticePeriodDays = Number(rev.noticePeriodDays);
+          if (rev.fitoutPeriodDays !== undefined) data.fitoutPeriodDays = Number(rev.fitoutPeriodDays);
+          if (rev.penalInterestPct !== undefined) data.penalInterestPct = Number(rev.penalInterestPct);
+          if (rev.paymentDueDate) data.paymentDueDate = rev.paymentDueDate;
+          if (rev.stampDutySharing) data.stampDutySharing = rev.stampDutySharing;
+          if (rev.executionCity) data.executionCity = rev.executionCity;
+          if (rev.executionState) data.executionState = rev.executionState;
+          if (rev.lessorBoardResolution) data.lessorBoardResolution = rev.lessorBoardResolution;
+          if (rev.lesseeBoardResolution) data.lesseeBoardResolution = rev.lesseeBoardResolution;
+        }
+      } catch (e) {}
+    }
+    data.landlordLogo = logoUrl;
+    data.customClauses = customClauses;
+    data.specialConditions = specialConditions;
 
     downloadLeaseContractPdf(data, true);
   };
@@ -914,6 +947,15 @@ export default function PropertyDetailModal({
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   type="button"
+                                  onClick={() => setEditingContractForAgreement(c)}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                                  title="Customize Agreement Clauses & Terms"
+                                >
+                                  <Edit size={12} className="text-indigo-700 shrink-0" />
+                                  <span>Edit Terms</span>
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleDownloadContractPdf(c)}
                                   className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
                                   title="View & Download Official Lease Agreement PDF"
@@ -1443,17 +1485,45 @@ export default function PropertyDetailModal({
                   Close
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleDownloadContractPdf(selectedContractForView)}
-                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition shadow-teal-900/10"
-                >
-                  <Printer size={15} />
-                  <span>Print / Download Official Lease Agreement (PDF)</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingContractForAgreement(selectedContractForView)}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 cursor-pointer transition shadow-2xs"
+                  >
+                    <Edit size={14} />
+                    <span>Customize Agreement Terms &amp; Clauses</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadContractPdf(selectedContractForView)}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition shadow-teal-900/10"
+                  >
+                    <Printer size={15} />
+                    <span>Print / Download Official Lease Agreement (PDF)</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        )}
+
+        {editingContractForAgreement && (
+          <AgreementEditorModal
+            contractId={editingContractForAgreement.id}
+            contractCode={editingContractForAgreement.contract_code}
+            tenantName={editingContractForAgreement.occupant_name || editingContractForAgreement.tenant_name}
+            propertyName={property?.property_name || property?.name}
+            isOpen={!!editingContractForAgreement}
+            onClose={() => setEditingContractForAgreement(null)}
+            onSuccess={() => {
+              // Refresh property data
+              if (property?.id) fetchPropertyDetails();
+              if (onPropertyUpdated) onPropertyUpdated();
+            }}
+            isAdmin={true}
+          />
         )}
       </div>
     </div>

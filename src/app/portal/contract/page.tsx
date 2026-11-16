@@ -97,12 +97,23 @@ export default function TenantContractPage() {
           </p>
         </div>
 
-        <Link
-          href="/portal/documents"
-          className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-2 transition-colors"
-        >
-          <FileText size={14} /> View Executed Agreement
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              window.open(`/api/contracts/${c.id}/pdf?subscribed=true`, "_blank");
+            }}
+            className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-2xs"
+          >
+            <FileText size={14} /> View Formatted Lease Deed (PDF)
+          </button>
+          <Link
+            href="/portal/documents"
+            className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-2 transition-colors"
+          >
+            <FileText size={14} /> Stored Documents
+          </Link>
+        </div>
       </div>
 
       {/* Primary Key Terms Card (§T-06 Wireframe) */}

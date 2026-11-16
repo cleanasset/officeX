@@ -10,63 +10,15 @@ import {
   contractCharge,
   rentStep,
 } from "@/db/schema";
-import { eq, and, sql, asc } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { generateLeaseAgreementHtml } from "@/lib/pdf/lease-contract-pdf";
-
-function numberToIndianWords(num: number): string {
-  if (isNaN(num) || num === 0) return "Rupees Zero Only";
-  const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen",
-  ];
-  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-  const inWords = (n: number): string => {
-    let str = "";
-    if (n >= 10000000) {
-      str += inWords(Math.floor(n / 10000000)) + " Crore ";
-      n %= 10000000;
-    }
-    if (n >= 100000) {
-      str += inWords(Math.floor(n / 100000)) + " Lakh ";
-      n %= 100000;
-    }
-    if (n >= 1000) {
-      str += inWords(Math.floor(n / 1000)) + " Thousand ";
-      n %= 1000;
-    }
-    if (n >= 100) {
-      str += inWords(Math.floor(n / 100)) + " Hundred ";
-      n %= 100;
-    }
-    if (n > 0) {
-      if (str !== "") str += "and ";
-      if (n < 20) {
-        str += a[n] + " ";
-      } else {
-        str += b[Math.floor(n / 10)] + " " + (a[n % 10] ? a[n % 10] + " " : "");
-      }
-    }
-    return str.trim();
-  };
-
-  const rupees = Math.floor(Math.abs(num));
-  const paise = Math.round((Math.abs(num) - rupees) * 100);
-
-  let result = "Rupees " + inWords(rupees);
-  if (paise > 0) {
-    result += " and " + inWords(paise) + " Paise";
-  }
-  result += " Only";
-  return result;
-}
 
 function formatDate(dStr: string | null | undefined): string {
   if (!dStr) return "--";
   try {
     const d = new Date(dStr);
-    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
   } catch {
     return dStr;
   }
@@ -86,7 +38,7 @@ export async function GET(
       auth = null;
     }
 
-    // Strict Subscription gate check
+    // Subscription gate check
     const subHeader = req.headers.get("x-subscription-status") || req.headers.get("x-owner-subscribed");
     const cookieHeader = req.headers.get("cookie") || "";
     const isSubCookie =
@@ -94,7 +46,11 @@ export async function GET(
       cookieHeader.includes("officex_subscription_status=active") ||
       cookieHeader.includes("officex_subscription=active");
 
-    const isAdminRequest = url.searchParams.get("admin") === "1" || url.searchParams.get("subscribed") === "true" || cookieHeader.includes("officex_user_role=super_admin") || cookieHeader.includes("officex_user_role=admin");
+    const isAdminRequest =
+      url.searchParams.get("admin") === "1" ||
+      url.searchParams.get("subscribed") === "true" ||
+      cookieHeader.includes("officex_user_role=super_admin") ||
+      cookieHeader.includes("officex_user_role=admin");
     let isSubscribed: boolean = isAdminRequest || subHeader === "active" || subHeader === "true" || isSubCookie || true;
 
     if (!isSubscribed && auth?.orgId) {
@@ -116,7 +72,7 @@ export async function GET(
       return NextResponse.json(
         {
           error: "Subscription Required",
-          message: "You need an active OfficeX subscription plan to generate and download signed commercial contract agreements. Please upgrade your subscription.",
+          message: "You need an active subscription plan to generate and download signed commercial contract agreements. Please upgrade your subscription.",
         },
         { status: 403 }
       );
@@ -162,26 +118,6 @@ export async function GET(
       }
     }
 
-    // Load Escalation Rent Steps
-    let rentSteps: any[] = [];
-    try {
-      const rsTable = rentStep as any;
-      rentSteps = await db
-        .select({
-          stepNumber: rsTable.step_no || rsTable.stepNumber,
-          startDate: rsTable.effective_date || rsTable.start_date,
-          endDate: rsTable.effective_to || rsTable.end_date,
-          rentAmount: rsTable.monthly_base_rent || rsTable.rent_amount,
-          ratePerSqft: rsTable.base_rate_psf || rsTable.rate_per_sqft,
-        })
-        .from(rentStep)
-        .innerJoin(contractCharge, eq((rentStep as any).contract_charge_id, contractCharge.id))
-        .where(and(eq(contractCharge.contract_id, id), sql`${(rentStep as any).deleted_at} IS NULL`))
-        .orderBy((rentStep as any).step_no);
-    } catch {
-      rentSteps = [];
-    }
-
     // Organization info
     let org: any = null;
     if (c.org_id) {
@@ -202,29 +138,83 @@ export async function GET(
     const monthlyRent = Number(cAny.base_rent_rate || cAny.monthly_rent || 0);
     const areaSqft = Number(sp?.chargeable_area_sqft || sp?.usable_area_sqft || 0);
     const depositAmount = Number(cAny.deposit_amount_inr || 0);
-    const lockInMonths = Number(cAny.lock_in_months || 12);
-    const noticePeriodDays = Number(cAny.notice_period_days || (cAny.notice_period_months ? cAny.notice_period_months * 30 : 90));
+    let lockInMonths = Number(cAny.lock_in_months || (cAny.lock_in_period_days ? Math.round(cAny.lock_in_period_days / 30) : 12));
+    let noticePeriodDays = Number(cAny.notice_period_days || (cAny.notice_period_months ? cAny.notice_period_months * 30 : 90));
+    let fitoutPeriodDays = Number(cAny.fitout_period_days || 30);
+    let penalInterestPct = 18;
+    let paymentDueDate = "5th day of each English calendar month";
+    let stampDutySharing = "Shared equally (50:50) between Lessor and Lessee";
+    let carParkingSlots = Number(cAny.car_parking_slots || 0);
+    let twoWheelerSlots = Number(cAny.two_wheeler_slots || 0);
+    let customClauses: any[] = [];
+    let specialConditions = "";
+    let executionCity = prop?.city || "Ahmedabad";
+    let executionState = prop?.state || "Gujarat";
+    let lessorBoardResolution = "";
+    let lesseeBoardResolution = "";
+    let revisionStatus: "draft" | "pending_admin_approval" | "approved" | undefined = undefined;
+
+    // Check if contract has customized agreement revisions in `remarks`
+    if (c.remarks) {
+      try {
+        if (c.remarks.trim().startsWith("{")) {
+          const parsed = JSON.parse(c.remarks);
+          const rev = parsed.agreement_revision;
+          if (rev) {
+            revisionStatus = rev.status;
+            const isPreview = url.searchParams.get("preview") === "true";
+            // If approved, or if preview requested, load customized terms
+            if (rev.status === "approved" || isPreview) {
+              if (rev.lockInMonths !== undefined) lockInMonths = Number(rev.lockInMonths);
+              if (rev.noticePeriodDays !== undefined) noticePeriodDays = Number(rev.noticePeriodDays);
+              if (rev.fitoutPeriodDays !== undefined) fitoutPeriodDays = Number(rev.fitoutPeriodDays);
+              if (rev.penalInterestPct !== undefined) penalInterestPct = Number(rev.penalInterestPct);
+              if (rev.paymentDueDate) paymentDueDate = rev.paymentDueDate;
+              if (rev.stampDutySharing) stampDutySharing = rev.stampDutySharing;
+              if (rev.carParkingSlots !== undefined) carParkingSlots = Number(rev.carParkingSlots);
+              if (rev.twoWheelerSlots !== undefined) twoWheelerSlots = Number(rev.twoWheelerSlots);
+              if (rev.executionCity) executionCity = rev.executionCity;
+              if (rev.executionState) executionState = rev.executionState;
+              if (rev.lessorBoardResolution) lessorBoardResolution = rev.lessorBoardResolution;
+              if (rev.lesseeBoardResolution) lesseeBoardResolution = rev.lesseeBoardResolution;
+              if (rev.customClauses && Array.isArray(rev.customClauses)) customClauses = rev.customClauses;
+              if (rev.specialConditions) specialConditions = rev.specialConditions;
+            }
+          }
+        }
+      } catch (e) {
+        // remarks is legacy string, ignore json parse error
+      }
+    }
 
     // Entity details
     const tenantName = occ?.occupant_name || "M/S COMMERCIAL TENANT";
-    const tenantType = occ?.occupant_type === "individual" ? "sole_proprietorship" : "pvt_ltd";
-    const tenantPan = occ?.pan_number || "PAN APPLIED FOR";
-    const tenantGstin = occ?.gst_number || "UNREGISTERED";
+    const tenantType = occ?.occupant_type === "individual" ? "Sole Proprietorship" : "Private Limited Company";
+    const tenantPan = occ?.pan_number || "";
+    const tenantGstin = occ?.gst_number || "";
     const tenantAddress = occ?.address || "Registered Corporate Office Address";
-    const isProprietorship = tenantType === "sole_proprietorship";
 
     // Lessor details
     const lessorName = prop?.property_name ? `${prop.property_name} Asset Holdings` : (org?.name || "COMMERCIAL LESSOR");
     const lessorAddress = prop?.address ? `${prop.address}, ${prop.city || ""}, ${prop.state || ""}` : (org?.legal_name || "Commercial Complex Premises");
 
-    // Use Canonical Commercial Lease Agreement HTML Generator matching Indian Standard Deeds
+    // Owner logo (either from query param, prop record, or org record)
+    const passedLogo = url.searchParams.get("logoUrl") || (prop as any)?.logo_url || (org as any)?.logo_url || undefined;
+    const eStampReserve = url.searchParams.get("estamp") === "1" || url.searchParams.get("estamp") === "true";
+
+    // Generate authentic deed HTML
     const html = generateLeaseAgreementHtml({
       contractCode: c.contract_code || id,
       executionDate: formatDate(c.start_date),
+      executionCity,
+      executionState,
+      lessorBoardResolution,
+      lesseeBoardResolution,
       landlordName: lessorName,
       landlordAddress: lessorAddress,
       landlordPan: (prop as any)?.pan || (org as any)?.pan || "",
       landlordGstin: (prop as any)?.gstin || (org as any)?.gstin || "",
+      landlordLogo: passedLogo,
       tenantName: tenantName,
       tenantTradeName: occ?.trade_name || "",
       tenantCompanyType: tenantType,
@@ -233,7 +223,7 @@ export async function GET(
       tenantGstin: tenantGstin,
       tenantAddress: tenantAddress,
       signatoryName: occ?.signatory_name || "Authorized Signatory",
-      signatoryDesignation: occ?.signatory_designation || "Director",
+      signatoryDesignation: occ?.signatory_designation || "Director / Authorized Signatory",
       propertyName: prop?.property_name || "Commercial Property",
       buildingName: bldg?.name,
       floorName: sp?.floor_name || (sp?.floor_number !== undefined ? `Floor ${sp.floor_number}` : undefined),
@@ -248,8 +238,18 @@ export async function GET(
       endDate: c.end_date || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
       lockInMonths: lockInMonths,
       noticePeriodDays: noticePeriodDays,
+      fitoutPeriodDays: fitoutPeriodDays,
+      penalInterestPct: penalInterestPct,
+      paymentDueDate: paymentDueDate,
+      stampDutySharing: stampDutySharing,
+      carParkingSlots: carParkingSlots,
+      twoWheelerSlots: twoWheelerSlots,
       escalationPct: Number(cAny.escalation_value || cAny.escalation_percentage || 5),
       billingEntity: org?.name || lessorName,
+      eStampReserveSpace: eStampReserve,
+      customClauses: customClauses,
+      specialConditions: specialConditions,
+      revisionStatus: revisionStatus,
     });
 
     return new NextResponse(html, {

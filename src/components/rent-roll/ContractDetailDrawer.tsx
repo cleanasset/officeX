@@ -26,7 +26,9 @@ import {
   MessageCircle,
   Mail,
   Copy,
+  Edit,
 } from "lucide-react";
+import AgreementEditorModal from "@/components/rent-roll/AgreementEditorModal";
 
 interface ContractDetailDrawerProps {
   contractId: string | null;
@@ -53,6 +55,7 @@ export default function ContractDetailDrawer({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copiedPortal, setCopiedPortal] = useState(false);
+  const [agreementEditorOpen, setAgreementEditorOpen] = useState(false);
 
   const getTenantSharableLink = () => {
     const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
@@ -478,16 +481,54 @@ export default function ContractDetailDrawer({
                     true
                   );
                   if (!isSub) {
-                    alert("Active OfficeX Subscription Required\n\nYou need an active subscription to download commercial contract agreements. Please upgrade your plan.");
+                    alert("Active Subscription Required\n\nYou need an active subscription to download commercial contract agreements. Please upgrade your plan.");
                     return;
                   }
-                  window.open(`/api/contracts/${data.id || contractId}/pdf?subscribed=true`, "_blank");
+                  const logoUrl = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
+                  window.open(`/api/contracts/${data.id || contractId}/pdf?subscribed=true${logoUrl ? `&logoUrl=${encodeURIComponent(logoUrl)}` : ""}`, "_blank");
                 }}
                 className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg shadow-2xs transition cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-teal-700" />
                 Download Commercial Lease Agreement (PDF)
               </button>
+
+              <button
+                type="button"
+                onClick={() => setAgreementEditorOpen(true)}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 rounded-lg shadow-2xs transition cursor-pointer"
+              >
+                <Edit className="w-3.5 h-3.5 text-indigo-700" />
+                Customize Agreement Terms &amp; Clauses
+              </button>
+
+              {(() => {
+                let revStatus: string | null = null;
+                if (data?.remarks && typeof data.remarks === "string" && data.remarks.trim().startsWith("{")) {
+                  try {
+                    const parsed = JSON.parse(data.remarks);
+                    revStatus = parsed.agreement_revision?.status || null;
+                  } catch (e) {}
+                }
+                if (revStatus === "pending_admin_approval") {
+                  return (
+                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between text-xs text-amber-900">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                        <span>Agreement Revision Pending Admin Approval</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAgreementEditorOpen(true)}
+                        className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[10px] cursor-pointer"
+                      >
+                        Review
+                      </button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
@@ -1067,6 +1108,21 @@ export default function ContractDetailDrawer({
             </div>
           </div>
         </div>
+      )}
+
+      {agreementEditorOpen && (
+        <AgreementEditorModal
+          contractId={data?.id || contractId}
+          contractCode={data?.contract_code}
+          tenantName={data?.occupant?.occupant_name || data?.occupant?.trade_name}
+          propertyName={data?.property?.property_name || data?.property_name}
+          isOpen={agreementEditorOpen}
+          onClose={() => setAgreementEditorOpen(false)}
+          onSuccess={() => {
+            if (typeof onRefresh === "function") onRefresh();
+          }}
+          isAdmin={true}
+        />
       )}
     </>
   );

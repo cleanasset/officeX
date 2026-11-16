@@ -537,6 +537,7 @@ function SidebarInner() {
       const isAdmin =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com" ||
+        email === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
       if (isAdmin) return true;
@@ -656,6 +657,7 @@ function SidebarInner() {
       const isAdmin =
         userEmail === "admin@gmail.com" ||
         userEmail === "medistationlifecare@gmail.com" ||
+        userEmail === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
 
@@ -665,7 +667,7 @@ function SidebarInner() {
         localStorage.getItem("officex_owner_subscribed") === "true" ||
         localStorage.getItem("officex_rentroll_subscribed") === "true";
 
-      if (isAdmin) {
+      if (isAdmin || storedSub) {
         setIsSubscribed(true);
       } else if (userEmail) {
         fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
@@ -679,18 +681,12 @@ function SidebarInner() {
               localStorage.setItem("officex_subscription_status", "active");
               localStorage.setItem("officex_owner_subscribed", "true");
               localStorage.setItem("officex_rentroll_subscribed", "true");
-            } else {
+            } else if (!storedSub && !isAdmin) {
               setIsSubscribed(false);
-              localStorage.setItem(`officex_sub_${userEmail}`, "inactive");
-              localStorage.removeItem("officex_subscription");
-              localStorage.removeItem("officex_subscription_status");
-              localStorage.removeItem("officex_owner_subscribed");
-              localStorage.removeItem("officex_rentroll_subscribed");
-              localStorage.removeItem("officex_subscription_plan");
             }
           })
           .catch(() => {
-            if (storedSub) setIsSubscribed(true);
+            if (storedSub || isAdmin) setIsSubscribed(true);
             else setIsSubscribed(false);
           });
       } else {
@@ -733,12 +729,10 @@ function SidebarInner() {
       }
     };
     window.addEventListener("officex-subscription-changed", handleSubChanged);
-    window.addEventListener("focus", handleSubChanged);
 
     return () => {
       window.removeEventListener("officex-toggle-sidebar", handleToggle);
       window.removeEventListener("officex-subscription-changed", handleSubChanged);
-      window.removeEventListener("focus", handleSubChanged);
     };
   }, []);
 
