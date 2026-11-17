@@ -54,6 +54,9 @@ export async function GET(request: Request) {
         isAdmin: true,
         role: "super_admin",
         days_remaining: 365,
+        subscribed_sqft: 500000000,
+        totalPortfolioSqft: 0,
+        remaining_sqft: 500000000,
         starts_at: new Date(Date.now() - 30 * 86400000).toISOString(),
         ends_at: new Date(Date.now() + 365 * 86400000).toISOString(),
         message: "Executive Super Administrator Sovereign Access"
@@ -68,8 +71,25 @@ export async function GET(request: Request) {
       return NextResponse.json({
         subscribed: false,
         plan: "none",
+        subscribed_sqft: 0,
+        totalPortfolioSqft: 0,
+        remaining_sqft: 0,
         message: "No email provided"
       }, { status: 200 });
+    }
+
+    // Calculate current portfolio sqft for the user/organization
+    let totalPortfolioSqft = 0;
+    try {
+      const { data: propRows } = await supabase
+        .from("property")
+        .select("total_leasable_area_sqft")
+        .is("deleted_at", null);
+      if (Array.isArray(propRows)) {
+        totalPortfolioSqft = propRows.reduce((sum, p) => sum + (Number(p.total_leasable_area_sqft) || 0), 0);
+      }
+    } catch {
+      // Non-blocking
     }
 
     // 2. Check users table for super_admin role
@@ -129,6 +149,8 @@ export async function GET(request: Request) {
           payment_id: dbSub.payment_id,
           coupon: dbSub.coupon_code,
           subscribed_sqft: dbSub.metadata?.subscribed_sqft || null,
+          totalPortfolioSqft,
+          remaining_sqft: dbSub.metadata?.subscribed_sqft ? Math.max(0, Number(dbSub.metadata.subscribed_sqft) - totalPortfolioSqft) : null,
         }, { status: 200 });
         res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
         res.cookies.set("officex_owner_subscribed", "true", { path: "/", maxAge: 2592000, sameSite: "lax" });
@@ -170,6 +192,8 @@ export async function GET(request: Request) {
             paymentId: userSub.paymentId,
             coupon: userSub.coupon,
             subscribed_sqft: userSub.subscribed_sqft || null,
+            totalPortfolioSqft,
+            remaining_sqft: userSub.subscribed_sqft ? Math.max(0, Number(userSub.subscribed_sqft) - totalPortfolioSqft) : null,
           }, { status: 200 });
           res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
           return res;
@@ -184,6 +208,9 @@ export async function GET(request: Request) {
       subscribed: false,
       email,
       plan: "none",
+      subscribed_sqft: 0,
+      totalPortfolioSqft,
+      remaining_sqft: 0,
       message: "Pro subscription required for Rent Roll & Financial Suite"
     }, { status: 200 });
 

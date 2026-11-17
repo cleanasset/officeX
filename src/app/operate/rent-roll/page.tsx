@@ -42,29 +42,36 @@ export default function RentRollProductPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setAuthCookie("officex_oauth_context", "rent-roll", 7200);
-      setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
+      setAuthCookie("officex_oauth_redirect", "/operate/rent-roll", 7200);
       setAuthCookie("officex_last_rent_roll", "1", 7200);
       localStorage.setItem("officex_oauth_context", "rent-roll");
-      localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      localStorage.setItem("officex_oauth_redirect", "/operate/rent-roll");
       sessionStorage.setItem("officex_oauth_context", "rent-roll");
-      sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      sessionStorage.setItem("officex_oauth_redirect", "/operate/rent-roll");
       sessionStorage.setItem("officex_active_operate_module", "rentroll");
 
       const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
-      const isSub = email ? (
-        localStorage.getItem(`officex_sub_${email}`) === "active" ||
-        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
-        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
-      ) : false;
-      setIsSubscribed(isSub);
-
+      if (email) {
+        fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            const active = Boolean(d?.subscribed && d.plan !== "none" && d.plan !== "free");
+            setIsSubscribed(active);
+            if (active && d.subscribed_sqft) {
+              localStorage.setItem("officex_subscribed_sqft", String(d.subscribed_sqft));
+            }
+          })
+          .catch(() => setIsSubscribed(false));
+      } else {
+        setIsSubscribed(false);
+      }
     }
   }, []);
 
   const subscribeHref = isLoggedIn
-    ? "/properties/rent-roll"
-    : "/login?context=rent-roll&redirect=/properties/rent-roll";
+    ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+    : "/login?context=rent-roll&redirect=/operate/rent-roll";
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -195,11 +202,19 @@ export default function RentRollProductPage() {
               {/* Action Buttons — Clean, Direct & High-Impact */}
               <div className="flex flex-wrap items-center gap-3 mb-4 w-full sm:w-auto">
                 <Link
-                  href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
+                  href={
+                    isLoggedIn
+                      ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                      : "/login?context=rent-roll&redirect=/operate/rent-roll"
+                  }
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 active:scale-98 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                 >
                   <Building2 size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
-                  <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
+                  <span>
+                    {isLoggedIn
+                      ? (isSubscribed ? "Go to Dashboard" : "Subscribe to Rent Roll")
+                      : "Get Started"}
+                  </span>
                   <ArrowRight size={15} />
                 </Link>
                 <a
@@ -497,11 +512,19 @@ export default function RentRollProductPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
+              href={
+                isLoggedIn
+                  ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                  : "/login?context=rent-roll&redirect=/operate/rent-roll"
+              }
               className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center gap-2 group cursor-pointer"
             >
               <Building2 size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
-              <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
+              <span>
+                {isLoggedIn
+                  ? (isSubscribed ? "Go to Dashboard" : "Subscribe to Rent Roll")
+                  : "Get Started"}
+              </span>
               <ArrowRight size={15} />
             </Link>
             <a
@@ -532,11 +555,19 @@ export default function RentRollProductPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <Link
-              href={isLoggedIn ? "/dashboard/owner" : "/login?redirect=/dashboard/owner"}
+              href={
+                isLoggedIn
+                  ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                  : "/login?context=rent-roll&redirect=/operate/rent-roll"
+              }
               className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"
             >
               <Building2 size={16} className="text-[#0D7B6C] group-hover:scale-110 transition-transform" />
-              <span>{isLoggedIn ? "Go to Dashboard" : "Get Started"}</span>
+              <span>
+                {isLoggedIn
+                  ? (isSubscribed ? "Go to Dashboard" : "Subscribe to Rent Roll")
+                  : "Get Started"}
+              </span>
               <ArrowRight size={14} />
             </Link>
             <a

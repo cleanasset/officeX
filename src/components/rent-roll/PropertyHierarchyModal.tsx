@@ -732,24 +732,29 @@ export default function PropertyHierarchyModal({
         setHasSavedOnboarding(Boolean(rawOb));
 
         // Update Subscription Status
-        setIsOwnerSubscribed(checkIsOwnerSubscribed());
+        const isSub = checkIsOwnerSubscribed();
+        setIsOwnerSubscribed(isSub);
 
-        // Subscribed Capacity
+        // Subscribed Capacity (strictly 0 if not subscribed)
         const storedCap = Number(localStorage.getItem("officex_subscribed_sqft"));
         const storedPlan = (localStorage.getItem("officex_subscription_plan") || localStorage.getItem("officex_selected_plan") || "").toLowerCase();
         let planCap = 0;
-        if (storedCap && !isNaN(storedCap) && storedCap > 0) {
-          planCap = storedCap;
-        } else if (storedPlan === "commercial-suite") {
-          planCap = storedCap > 0 ? storedCap : 500000;
-        } else if (storedPlan === "starter") {
-          planCap = 50000;
-        } else if (storedPlan === "techpark" || storedPlan === "growth" || storedPlan === "campus") {
-          planCap = 250000;
-        } else if (storedPlan === "reit-mega" || storedPlan === "enterprise") {
-          planCap = 500000000;
-        } else if (checkIsOwnerSubscribed()) {
-          planCap = 500000;
+        if (isSub) {
+          if (storedCap && !isNaN(storedCap) && storedCap > 0) {
+            planCap = storedCap;
+          } else if (storedPlan === "commercial-suite") {
+            planCap = storedCap > 0 ? storedCap : 500000;
+          } else if (storedPlan === "starter") {
+            planCap = 50000;
+          } else if (storedPlan === "techpark" || storedPlan === "growth" || storedPlan === "campus") {
+            planCap = 250000;
+          } else if (storedPlan === "reit-mega" || storedPlan === "enterprise") {
+            planCap = 500000000;
+          } else {
+            planCap = 500000;
+          }
+        } else {
+          planCap = 0;
         }
         setSubscribedCapacity(planCap);
 
@@ -762,6 +767,14 @@ export default function PropertyHierarchyModal({
               if (d?.subscribed && Number(d.subscribed_sqft) > 0) {
                 setSubscribedCapacity(Number(d.subscribed_sqft));
                 localStorage.setItem("officex_subscribed_sqft", String(d.subscribed_sqft));
+                setIsOwnerSubscribed(true);
+              } else if (!d?.subscribed) {
+                setSubscribedCapacity(0);
+                setIsOwnerSubscribed(false);
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_subscription_status");
+                localStorage.removeItem("officex_owner_subscribed");
+                localStorage.removeItem("officex_rentroll_subscribed");
               }
             })
             .catch(() => {});
@@ -3892,7 +3905,8 @@ export default function PropertyHierarchyModal({
 
               {/* Capacity Exhausted Banner (Point 5 & 12) */}
               {(() => {
-                const effCap = subscribedCapacity > 0 ? subscribedCapacity : 250000;
+                if (!checkIsOwnerSubscribed() || subscribedCapacity <= 0) return null;
+                const effCap = subscribedCapacity;
                 const currArea = propertiesList
                   .filter((p) => p.id !== propForm.existingPropId)
                   .reduce((acc, p) => acc + (Number(p.area) || 0), 0);

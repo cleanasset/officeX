@@ -42,6 +42,7 @@ import {
   LayoutGrid,
   Maximize2,
   UserPlus,
+  ArrowRight,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -140,13 +141,32 @@ export default function RentRollRegisterPage() {
   const [viewerOpen, setViewerOpen] = useState(false);
 
   // Capacity Quota & Grace Period Telemetry (§OI-8 Commercial Policy)
-  const MAX_FREE_CAPACITY_SQFT = 500_000_000;
+  const [licensedCapacity, setLicensedCapacity] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
+      if (stored && stored > 0) return stored;
+    }
+    return 0;
+  });
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return (
+        localStorage.getItem("officex_subscription") === "active" ||
+        localStorage.getItem("officex_subscription_status") === "active" ||
+        localStorage.getItem("officex_owner_subscribed") === "true"
+      );
+    }
+    return false;
+  });
   const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
 
   const effectiveAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
-  const capacityPercent = Math.min(100, Math.max(0, (effectiveAumSqft / MAX_FREE_CAPACITY_SQFT) * 100));
+  const effectiveCapacity = licensedCapacity > 0 ? licensedCapacity : 500000;
+  const capacityPercent = isUserSubscribed && licensedCapacity > 0
+    ? Math.min(100, Math.max(0, (effectiveAumSqft / effectiveCapacity) * 100))
+    : 0;
   const percentRemaining = Math.max(0, 100 - capacityPercent);
-  const isApproachingLimit = percentRemaining <= 2 && percentRemaining > 0 && effectiveAumSqft > 0;
+  const isApproachingLimit = isUserSubscribed && licensedCapacity > 0 && percentRemaining <= 5 && effectiveAumSqft > 0;
 
   const isLeasing = registerData?.is_leasing_role || false;
 
@@ -156,6 +176,30 @@ export default function RentRollRegisterPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      if (userEmail) {
+        fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
+              setIsUserSubscribed(true);
+              const cap = Number(d.subscribed_sqft) || 0;
+              if (cap > 0) {
+                setLicensedCapacity(cap);
+                localStorage.setItem("officex_subscribed_sqft", String(cap));
+              }
+            } else {
+              setIsUserSubscribed(false);
+              setLicensedCapacity(0);
+              localStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_subscription_status");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
+            }
+          })
+          .catch(() => {});
+      }
+
       localStorage.setItem("officex_rentroll_onboarded", "true");
       localStorage.setItem("officex_onboarding_completed", "1");
       sessionStorage.setItem("officex_onboarding_completed", "1");
@@ -559,6 +603,35 @@ export default function RentRollRegisterPage() {
               </div>
             </div>
 
+            {/* Unsubscribed Account Banner */}
+            {!isUserSubscribed && (
+              <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-slate-50 border-2 border-teal-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Building2 className="w-5 h-5 text-teal-200" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs sm:text-sm font-extrabold text-slate-900">Subscription Required for Automated Rent Roll &amp; CAM Billing</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                        Unsubscribed Account
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed max-w-3xl">
+                      To activate automated lease escalations, institutional CAM pooling, and board-ready financial registers, please subscribe to an active licensed square footage capacity.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/operate/pricing?mode=standalone&module=rentroll"
+                  className="px-5 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-extrabold shrink-0 transition-all shadow-xs text-center flex items-center justify-center gap-2 group cursor-pointer"
+                >
+                  <span>Subscribe to Rent Roll</span>
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+            )}
+
             {/* Capacity Warning Alert (if applicable) */}
             {isApproachingLimit && (
               <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 p-4 sm:p-5 shadow-xs">
@@ -570,7 +643,7 @@ export default function RentRollRegisterPage() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200 text-amber-950">
-                          Capacity Warning · 2% or Less Remaining
+                          Capacity Warning · {percentRemaining.toFixed(0)}% Remaining
                         </span>
                         <span className="text-xs font-bold text-teal-900 bg-teal-100/90 px-2 py-0.5 rounded-md flex items-center gap-1">
                           <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
@@ -578,10 +651,17 @@ export default function RentRollRegisterPage() {
                         </span>
                       </div>
                       <h3 className="text-base font-extrabold text-slate-900 mt-1">
-                        Approaching Licensed Quota ({effectiveAumSqft.toLocaleString("en-IN")} / 50 Cr Sq.Ft)
+                        Approaching Licensed Quota ({effectiveAumSqft.toLocaleString("en-IN")} / {effectiveCapacity.toLocaleString("en-IN")} Sq.Ft)
                       </h3>
                     </div>
                   </div>
+                  <Link
+                    href="/operate/subscription"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs shrink-0"
+                  >
+                    <Zap size={14} />
+                    <span>Upgrade Quota</span>
+                  </Link>
                 </div>
               </div>
             )}

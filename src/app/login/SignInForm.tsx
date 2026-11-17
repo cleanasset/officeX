@@ -32,7 +32,7 @@ import {
   Settings,
   ClipboardList
 } from "lucide-react";
-import { setAuthCookie } from "@/lib/auth-storage";
+import { setAuthCookie, getAuthCookie, clearAuthCookie } from "@/lib/auth-storage";
 import {
   validateRedirect,
   maskIdentifier,
@@ -252,7 +252,7 @@ export default function SignInForm({
             sessionStorage.setItem("officex_user_name", fullName);
           }
 
-          handleAuthSuccess(
+          await handleAuthSuccess(
             cleanEmail || u.phone || identifier,
             "owner",
             [],
@@ -287,7 +287,7 @@ export default function SignInForm({
           sessionStorage.setItem("officex_user_name", fullName);
         }
 
-        handleAuthSuccess(
+        await handleAuthSuccess(
           cleanEmail || u.phone || identifier,
           "owner",
           [],
@@ -488,7 +488,7 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(
+      await handleAuthSuccess(
         data.user?.identifier || identifier,
         data.user?.role || "Commercial Member",
         data.memberships,
@@ -650,7 +650,7 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(
+      await handleAuthSuccess(
         data.user?.identifier || identifier,
         data.user?.role || "Commercial Member",
         data.memberships,
@@ -749,7 +749,7 @@ export default function SignInForm({
         setSelectedMembershipId(data.memberships[0].id);
       }
 
-      handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Commercial Member", data.memberships);
+      await handleAuthSuccess(data.user?.identifier || identifier, data.user?.role || "Commercial Member", data.memberships);
     } catch (err) {
       setError("Failed to verify authenticator code.");
     } finally {
@@ -760,12 +760,18 @@ export default function SignInForm({
   // --------------------------------------------------------------------------
   // Handle Authentication Success & Context Resolution
   // --------------------------------------------------------------------------
-  const handleAuthSuccess = (
+  const handleAuthSuccess = async (
     userEmailOrPhone: string,
     roleName: string,
     availableMemberships?: WorkspaceMembership[],
     userNameParam?: string
   ) => {
+    setIsLoading(true);
+    setInfoMessage(lang === "hi" ? "सत्यापित किया जा रहा है..." : "Verifying account & active subscription...");
+
+    const cleanVal = userEmailOrPhone.trim().toLowerCase();
+    const isEmail = cleanVal.includes("@") && !cleanVal.endsWith("@officex.pro");
+
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_user_role", roleName);
@@ -779,7 +785,6 @@ export default function SignInForm({
         sessionStorage.setItem("officex_user_name", rawName.trim());
       }
 
-      const cleanVal = userEmailOrPhone.trim().toLowerCase();
       const previousEmail = (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "").toLowerCase().trim();
       if (previousEmail && previousEmail !== cleanVal && !previousEmail.endsWith("@officex.pro")) {
         // Clear previous user's cached onboarding and properties for a fresh new account login
@@ -791,37 +796,11 @@ export default function SignInForm({
         document.cookie = "officex_onboarding_completed=0; path=/; max-age=0";
       }
 
-      if (cleanVal.includes("@") && !cleanVal.endsWith("@officex.pro")) {
+      if (isEmail) {
         sessionStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_email_verified", "1");
         document.cookie = `officex_user_email=${encodeURIComponent(cleanVal)}; path=/; max-age=86400; SameSite=Lax`;
-
-        // Verify if user already has an active subscription or valid coupon
-        fetch(`/api/subscription/status?email=${encodeURIComponent(cleanVal)}`)
-          .then(res => res.json())
-          .then(subData => {
-            if (subData && subData.subscribed) {
-              localStorage.setItem("officex_subscription", "active");
-              sessionStorage.setItem("officex_subscription", "active");
-              document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-              localStorage.setItem(`officex_sub_${cleanVal}`, "active");
-              sessionStorage.setItem(`officex_sub_${cleanVal}`, "active");
-              document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=active; path=/; max-age=2592000; SameSite=Lax`;
-            } else {
-              localStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
-              sessionStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
-              localStorage.removeItem("officex_subscription");
-              sessionStorage.removeItem("officex_subscription");
-              localStorage.removeItem("officex_subscription_status");
-              sessionStorage.removeItem("officex_subscription_status");
-              localStorage.removeItem("officex_owner_subscribed");
-              localStorage.removeItem("officex_rentroll_subscribed");
-              document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-              document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-            }
-          })
-          .catch(() => {});
       } else if (/^\+?[0-9\s-]+$/.test(cleanVal)) {
         sessionStorage.setItem("officex_user_mobile", cleanVal);
         localStorage.setItem("officex_user_mobile", cleanVal);
@@ -866,30 +845,126 @@ export default function SignInForm({
       document.cookie = "officex_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
     }
 
+    // Authoritative Subscription & Quota Check BEFORE redirect
+    let isUserSubscribed = false;
+    let userSubscribedSqft = 0;
+    let userPortfolioSqft = 0;
+    let userPlan = "none";
+
+    if (isEmail) {
+      try {
+        const subRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(cleanVal)}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData?.subscribed && subData.plan !== "none" && subData.plan !== "free") {
+            isUserSubscribed = true;
+            userPlan = subData.plan || "commercial-suite";
+            userSubscribedSqft = Number(subData.subscribed_sqft) || 0;
+            userPortfolioSqft = Number(subData.totalPortfolioSqft) || 0;
+          }
+        }
+      } catch (err) {
+        console.warn("Subscription status verification error:", err);
+      }
+
+      // Check current portfolio area if not returned
+      if (isUserSubscribed && userPortfolioSqft === 0) {
+        try {
+          const areaRes = await fetch("/api/subscription/portfolio-area");
+          if (areaRes.ok) {
+            const areaJson = await areaRes.json();
+            if (areaJson.totalPortfolioSqft) {
+              userPortfolioSqft = Number(areaJson.totalPortfolioSqft);
+            }
+          }
+        } catch {}
+      }
+
+      if (typeof window !== "undefined") {
+        if (isUserSubscribed) {
+          localStorage.setItem("officex_subscription", "active");
+          sessionStorage.setItem("officex_subscription", "active");
+          localStorage.setItem("officex_owner_subscribed", "true");
+          localStorage.setItem("officex_subscription_status", "active");
+          localStorage.setItem("officex_subscription_plan", userPlan);
+          localStorage.setItem("officex_subscribed_sqft", String(userSubscribedSqft));
+          sessionStorage.setItem("officex_subscribed_sqft", String(userSubscribedSqft));
+          localStorage.setItem("officex_total_portfolio_sqft", String(userPortfolioSqft));
+          sessionStorage.setItem("officex_total_portfolio_sqft", String(userPortfolioSqft));
+          localStorage.setItem(`officex_sub_${cleanVal}`, "active");
+          sessionStorage.setItem(`officex_sub_${cleanVal}`, "active");
+
+          document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+          document.cookie = "officex_owner_subscribed=true; path=/; max-age=2592000; SameSite=Lax";
+          document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=active; path=/; max-age=2592000; SameSite=Lax`;
+        } else {
+          // Strictly unsubscribed: clear all subscription indicators
+          localStorage.removeItem("officex_subscription");
+          sessionStorage.removeItem("officex_subscription");
+          localStorage.removeItem("officex_owner_subscribed");
+          localStorage.removeItem("officex_subscription_status");
+          sessionStorage.removeItem("officex_subscription_status");
+          localStorage.removeItem("officex_rentroll_subscribed");
+          localStorage.removeItem("officex_subscription_plan");
+          localStorage.removeItem("officex_selected_plan");
+          localStorage.setItem("officex_subscribed_sqft", "0");
+          sessionStorage.setItem("officex_subscribed_sqft", "0");
+          localStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
+          sessionStorage.setItem(`officex_sub_${cleanVal}`, "inactive");
+
+          document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax";
+          document.cookie = "officex_owner_subscribed=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax";
+          document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax`;
+        }
+      }
+    }
+
     const storedName = (typeof window !== "undefined" && (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name"))) || "";
     setSuccessUserName(storedName || userEmailOrPhone.split("@")[0] || "Member");
 
-    const memList = availableMemberships !== undefined ? availableMemberships : memberships;
+    // Read stored OAuth redirect and context (restores destination after Google OAuth)
+    const storedRedirect = (typeof window !== "undefined" && (
+      sessionStorage.getItem("officex_oauth_redirect") ||
+      localStorage.getItem("officex_oauth_redirect") ||
+      getAuthCookie("officex_oauth_redirect")
+    )) || "";
 
-    // Check if user has an active commercial property configured or completed onboarding
-    const hasActiveProperty = typeof window !== "undefined" && Boolean(
-      localStorage.getItem("officex_property_id") ||
-      (localStorage.getItem("officex_user_properties") && localStorage.getItem("officex_user_properties") !== "[]")
-    );
-    const isAlreadyOnboarded = typeof window !== "undefined" && (
-      (localStorage.getItem("officex_onboarding_completed") === "1" && hasActiveProperty) ||
-      (sessionStorage.getItem("officex_onboarding_completed") === "1" && hasActiveProperty) ||
-      (document.cookie.includes("officex_onboarding_completed=1") && hasActiveProperty)
-    );
+    const storedContext = (typeof window !== "undefined" && (
+      sessionStorage.getItem("officex_oauth_context") ||
+      localStorage.getItem("officex_oauth_context") ||
+      getAuthCookie("officex_oauth_context")
+    )) || "";
 
-    // Determine destination - go straight to destination or dashboard without prompting twice
+    // Clean up temporary OAuth markers once consumed
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("officex_oauth_redirect");
+      sessionStorage.removeItem("officex_oauth_redirect");
+      localStorage.removeItem("officex_oauth_context");
+      sessionStorage.removeItem("officex_oauth_context");
+      clearAuthCookie("officex_oauth_redirect");
+      clearAuthCookie("officex_oauth_context");
+    }
+
+    // Determine target destination
+    const targetCandidate = safeRedirect || storedRedirect || "";
+    const isFromRentRoll =
+      storedContext === "rent-roll" ||
+      isRentRollContext ||
+      targetCandidate.includes("rent-roll");
+
     let destination = "";
-    if (safeRedirect && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
-      if (safeRedirect.startsWith("/admin") && !isStrictSuperAdmin) {
-        destination = "/dashboard";
+    if (isFromRentRoll) {
+      if (isUserSubscribed) {
+        // Subscribed user can go straight to the active Rent Roll workspace
+        destination = (targetCandidate && !targetCandidate.startsWith("/login") && !targetCandidate.startsWith("/signup"))
+          ? targetCandidate
+          : "/dashboard/owner";
       } else {
-        destination = safeRedirect;
+        // Unsubscribed user returns to the Rent Roll landing page so they see their logged-in state and can subscribe!
+        destination = "/operate/rent-roll";
       }
+    } else if (targetCandidate && !targetCandidate.startsWith("/signup") && !targetCandidate.startsWith("/login") && !targetCandidate.startsWith("/onboarding")) {
+      destination = (targetCandidate.startsWith("/admin") && !isStrictSuperAdmin) ? "/dashboard" : targetCandidate;
     } else {
       destination = "/dashboard";
     }
@@ -897,7 +972,7 @@ export default function SignInForm({
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
-    }, 400);
+    }, 300);
     return;
   };
 
@@ -1052,7 +1127,7 @@ export default function SignInForm({
       const activeCtx = isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace";
       const targetDestination = (safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/admin"))
         ? safeRedirect
-        : "/dashboard";
+        : (isRentRollContext ? "/operate/rent-roll" : "/dashboard");
 
       if (typeof window !== "undefined") {
         setAuthCookie("officex_oauth_context", activeCtx, 7200);
