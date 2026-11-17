@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         }
       } catch {}
 
-      // 2. Fallback to PostgreSQL users table if Supabase is unavailable or managed in DB
+      // 2. Check PostgreSQL users table or Supabase Admin if direct password authentication did not succeed
       if (!supaUser) {
         const dbUsers = await db
           .select()
@@ -103,36 +103,84 @@ export async function POST(request: Request) {
           .where(eq(users.email, norm.toLowerCase().trim()))
           .limit(1);
 
-        if (dbUsers.length === 0) {
+        if (dbUsers.length > 0) {
+          const dbUser = dbUsers[0];
+          if (
+            dbUser.passwordHash &&
+            dbUser.passwordHash !== 'SUPABASE_AUTH_MANAGED' &&
+            dbUser.passwordHash !== 'INVITED_DELEGATION' &&
+            dbUser.passwordHash !== password
+          ) {
+            return NextResponse.json(
+              { error: 'Incorrect password. Please verify your credentials or reset your password.' },
+              { status: 401 }
+            );
+          }
+
+          userId = dbUser.id;
+          userName = dbUser.fullName || userName;
+          userRole =
+            dbUser.role === 'super_admin' || norm === 'admin@gmail.com'
+              ? 'Super Administrator'
+              : dbUser.role === 'tenant_admin'
+              ? 'Tenant Occupant'
+              : dbUser.role === 'property_manager'
+                ? 'Property Manager'
+                : 'Property Owner & Asset Manager';
+        } else {
+          // If not in dbUsers, verify if this user exists in Supabase Auth to distinguish between
+          // a Google OAuth account, an incorrect password, or a non-existent account
+          let existsInSupabase = false;
+          let isGoogleAccount = false;
+          let hasEmailPassword = false;
+
+          if (supabaseAdmin) {
+            try {
+              const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+              const match = usersData?.users?.find(
+                (u) => u.email?.toLowerCase().trim() === norm.toLowerCase().trim()
+              );
+              if (match) {
+                existsInSupabase = true;
+                const providers = match.app_metadata?.providers || (match.app_metadata?.provider ? [match.app_metadata.provider] : []);
+                const identities = match.identities || [];
+                isGoogleAccount = providers.includes('google') || identities.some((id: any) => id.provider === 'google');
+                hasEmailPassword = providers.includes('email') || identities.some((id: any) => id.provider === 'email');
+              }
+            } catch (err) {
+              console.warn('[PASSWORD_AUTH] Supabase listUsers check notice:', err);
+            }
+          }
+
+          if (existsInSupabase) {
+            if (isGoogleAccount) {
+              return NextResponse.json(
+                {
+                  error: 'This account was registered with Google. You must sign in using Google.',
+                  is_google_account: true,
+                  compulsory_google: true,
+                  provider: 'google'
+                },
+                { status: 400 }
+              );
+            }
+
+            // User exists in Supabase Auth with an email credential, but the password provided was wrong:
+            return NextResponse.json(
+              {
+                error: 'Incorrect password. Please verify your credentials or click "Forgot password" to reset.',
+                is_google_account: false
+              },
+              { status: 401 }
+            );
+          }
+
+          // User does not exist anywhere:
           return NextResponse.json(
             { error: 'No account found with this email. Please sign up to create an account.' },
             { status: 404 }
           );
         }
-
-        const dbUser = dbUsers[0];
-        if (
-          dbUser.passwordHash &&
-          dbUser.passwordHash !== 'SUPABASE_AUTH_MANAGED' &&
-          dbUser.passwordHash !== 'INVITED_DELEGATION' &&
-          dbUser.passwordHash !== password
-        ) {
-          return NextResponse.json(
-            { error: 'Incorrect password. Please verify your credentials or reset your password.' },
-            { status: 401 }
-          );
-        }
-
-        userId = dbUser.id;
-        userName = dbUser.fullName || userName;
-        userRole =
-          dbUser.role === 'super_admin' || norm === 'admin@gmail.com'
-            ? 'Super Administrator'
-            : dbUser.role === 'tenant_admin'
-            ? 'Tenant Occupant'
-            : dbUser.role === 'property_manager'
-              ? 'Property Manager'
-              : 'Property Owner & Asset Manager';
       }
     }
 

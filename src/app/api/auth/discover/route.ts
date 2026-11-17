@@ -85,11 +85,13 @@ export async function POST(request: Request) {
       // Check if user exists in database or Supabase Auth
       let userFound = false;
       let userName = '';
+      let isGoogleUser = false;
+      let hasPassword = false;
 
       // Check PostgreSQL users table
       try {
         const dbUsers = await db
-          .select({ id: users.id, email: users.email, fullName: users.fullName })
+          .select({ id: users.id, email: users.email, fullName: users.fullName, passwordHash: users.passwordHash })
           .from(users)
           .where(eq(users.email, cleanEmail))
           .limit(1);
@@ -97,13 +99,16 @@ export async function POST(request: Request) {
         if (dbUsers.length > 0) {
           userFound = true;
           userName = dbUsers[0].fullName || '';
+          if (dbUsers[0].passwordHash && dbUsers[0].passwordHash !== 'SUPABASE_AUTH_MANAGED' && dbUsers[0].passwordHash !== 'INVITED_DELEGATION') {
+            hasPassword = true;
+          }
         }
       } catch (dbErr) {
         console.warn('[AUTH_DISCOVER] DB check notice:', dbErr);
       }
 
       // Check Supabase Auth if supabaseAdmin is available
-      if (!userFound && supabaseAdmin) {
+      if (supabaseAdmin) {
         try {
           const { data: usersData, error: supaErr } = await supabaseAdmin.auth.admin.listUsers();
           if (!supaErr && usersData?.users) {
@@ -112,7 +117,16 @@ export async function POST(request: Request) {
             );
             if (match) {
               userFound = true;
-              userName = match.user_metadata?.full_name || '';
+              if (!userName) userName = match.user_metadata?.full_name || match.user_metadata?.name || '';
+
+              const providers = match.app_metadata?.providers || (match.app_metadata?.provider ? [match.app_metadata.provider] : []);
+              const identities = match.identities || [];
+              if (providers.includes('google') || identities.some((id: any) => id.provider === 'google')) {
+                isGoogleUser = true;
+              }
+              if (providers.includes('email') || identities.some((id: any) => id.provider === 'email')) {
+                hasPassword = true;
+              }
             }
           }
         } catch (supaEx) {
@@ -131,7 +145,23 @@ export async function POST(request: Request) {
         );
       }
 
-      // User exists in database -> proceed to password
+      // If user registered with Google: compulsory Google sign-in
+      if (isGoogleUser) {
+        return NextResponse.json({
+          success: true,
+          type: 'email',
+          next: 'google',
+          provider: 'google',
+          is_google_only: true,
+          compulsory_google: true,
+          masked: masked,
+          user_name: userName,
+          has_password: false,
+          message: 'This account was registered with Google. You must sign in using Google.'
+        });
+      }
+
+      // User exists with password or standard email auth -> proceed to password
       return NextResponse.json({
         success: true,
         type: 'email',
@@ -140,6 +170,7 @@ export async function POST(request: Request) {
         masked: masked,
         user_name: userName,
         has_password: true,
+        is_google_user: isGoogleUser,
         mfa_required: false,
         allow_code_fallback: true
       });

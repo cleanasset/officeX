@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { detectIdentifierType, maskIdentifier, normalizeIdentifier } from '@/lib/auth-utils';
 import { generateAndStoreOtp } from '@/lib/otp-store';
 import { sendOtpEmail } from '@/lib/email-service';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
@@ -34,6 +34,33 @@ export async function POST(request: Request) {
 
     const normalized = normalizeIdentifier(identifier);
     const masked = maskIdentifier(normalized);
+
+    // If account was registered with Google, they must compulsory sign in with Google
+    if (type === 'email' && supabaseAdmin) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const match = usersData?.users?.find(
+          (u) => u.email?.toLowerCase().trim() === normalized.toLowerCase().trim()
+        );
+        if (match) {
+          const providers = match.app_metadata?.providers || (match.app_metadata?.provider ? [match.app_metadata.provider] : []);
+          const identities = match.identities || [];
+          const isGoogle = providers.includes('google') || identities.some((id: any) => id.provider === 'google');
+          if (isGoogle) {
+            return NextResponse.json(
+              {
+                error: 'This account was registered with Google. You must sign in using Google.',
+                compulsory_google: true,
+                is_google_account: true
+              },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('[CODE_SEND] Supabase check notice:', err);
+      }
+    }
 
     const { code, error: otpError } = generateAndStoreOtp(normalized);
     if (otpError) {
