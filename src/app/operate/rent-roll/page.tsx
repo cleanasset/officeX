@@ -48,6 +48,7 @@ export default function RentRollProductPage() {
       localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
       sessionStorage.setItem("officex_oauth_context", "rent-roll");
       sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      sessionStorage.setItem("officex_active_operate_module", "rentroll");
 
       const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
@@ -213,7 +214,7 @@ export default function RentRollProductPage() {
                   <span>Book a Demo</span>
                 </a>
                 <Link
-                  href="/operate/pricing"
+                  href="/operate/pricing?mode=standalone&module=rentroll"
                   className="px-5 py-3.5 rounded-xl bg-teal-50/80 hover:bg-teal-100 text-[#0D7B6C] font-extrabold text-xs sm:text-sm border border-teal-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                 >
                   <Tag size={15} />

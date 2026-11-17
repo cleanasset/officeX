@@ -1279,18 +1279,47 @@ function OperatePricingWithParams(props: OperatePricingSectionProps) {
   const paramMode = searchParams?.get("mode") || searchParams?.get("tab");
   const paramModule = searchParams?.get("module") || searchParams?.get("from");
 
-  const effectiveMode: "bundle" | "standalone" =
-    paramMode === "standalone" || paramMode === "individual" || Boolean(paramModule)
-      ? "standalone"
-      : (props.defaultMode || "bundle");
+  const [resolvedMode, setResolvedMode] = useState<"bundle" | "standalone">(() => {
+    if (paramMode === "standalone" || paramMode === "individual" || Boolean(paramModule)) {
+      return "standalone";
+    }
+    return props.defaultMode || "bundle";
+  });
 
-  const effectiveModule = (paramModule || props.defaultModule || "").toLowerCase();
+  const [resolvedModule, setResolvedModule] = useState<string>(() => (paramModule || props.defaultModule || "").toLowerCase());
+
+  useEffect(() => {
+    if (paramMode === "standalone" || paramMode === "individual" || Boolean(paramModule)) {
+      setResolvedMode("standalone");
+      if (paramModule) setResolvedModule(paramModule.toLowerCase());
+      return;
+    }
+
+    // Inspect document.referrer or sessionStorage context fallback
+    if (typeof window !== "undefined") {
+      const ref = (document.referrer || "").toLowerCase();
+      const lastMod = (sessionStorage.getItem("officex_active_operate_module") || "").toLowerCase();
+
+      const matched =
+        ref.includes("/rent-roll") || lastMod === "rentroll" || lastMod === "rent-roll" ? "rentroll" :
+        ref.includes("/visitor") || lastMod === "visitor" || lastMod === "visitors" ? "visitor" :
+        ref.includes("/ppm") || lastMod === "ppm" ? "ppm" :
+        ref.includes("/compliance") || lastMod === "compliance" ? "compliance" :
+        ref.includes("/helpdesk") || lastMod === "helpdesk" ? "helpdesk" :
+        ref.includes("/lease-crm") || lastMod === "leasecrm" ? "leasecrm" : "";
+
+      if (matched) {
+        setResolvedMode("standalone");
+        setResolvedModule(matched);
+      }
+    }
+  }, [paramMode, paramModule]);
 
   return (
     <OperatePricingInner
       {...props}
-      activeParamMode={effectiveMode}
-      activeParamModule={effectiveModule}
+      activeParamMode={resolvedMode}
+      activeParamModule={resolvedModule}
     />
   );
 }

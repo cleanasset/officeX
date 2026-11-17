@@ -53,6 +53,7 @@ export default function ComplianceCalendarProductPage() {
         sessionStorage.getItem("officex_vc_sub_active") === "active" ||
         document.cookie.includes("officex_vc_sub_active=active");
       setIsSubscribed(localSub);
+      sessionStorage.setItem("officex_active_operate_module", "compliance");
     }
 
     // 2. Sync with server database status

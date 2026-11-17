@@ -44,6 +44,12 @@ export default function OperatePage() {
   >(undefined);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("officex_active_operate_module", "operate_hub");
+    }
+  }, []);
+
   const openEnquiry = (mod: string) => {
     setEnquiryPrefill({ modules: [mod] });
     setSlideInOpen(true);

@@ -54,6 +54,7 @@ export default function VisitorsProductPage() {
         sessionStorage.getItem("officex_vc_sub_active") === "active" ||
         document.cookie.includes("officex_vc_sub_active=active");
       setIsSubscribed(localSub);
+      sessionStorage.setItem("officex_active_operate_module", "visitor");
     }
 
     // 2. Sync with server database status
@@ -160,8 +161,8 @@ export default function VisitorsProductPage() {
               1. Landing Page
             </Link>
             <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/visitor-compliance/pricing?coupon=visitor001" className="text-[#0D7B6C] font-semibold hover:underline">
-              2. Subscription (₹999/mo)
+            <Link href="/operate/pricing?mode=standalone&module=visitor" className="text-[#0D7B6C] font-semibold hover:underline">
+              2. Subscription (₹4,999/mo)
             </Link>
             <span className="text-slate-400 font-mono">──►</span>
             <Link href="/vc/dashboard" className="text-slate-800 font-bold hover:underline">

@@ -46,6 +46,29 @@ export default function MarketingHeader({
   }, [transparentAtTop]);
 
   const isOperate = pathname?.startsWith("/operate") || activePath?.startsWith("/operate");
+  const currentPath = pathname || activePath || "";
+
+  const getPricingHref = () => {
+    if (currentPath.includes("/rent-roll") || currentPath.includes("/rentroll")) {
+      return "/operate/pricing?mode=standalone&module=rentroll";
+    }
+    if (currentPath.includes("/visitor")) {
+      return "/operate/pricing?mode=standalone&module=visitor";
+    }
+    if (currentPath.includes("/ppm")) {
+      return "/operate/pricing?mode=standalone&module=ppm";
+    }
+    if (currentPath.includes("/compliance")) {
+      return "/operate/pricing?mode=standalone&module=compliance";
+    }
+    if (currentPath.includes("/helpdesk")) {
+      return "/operate/pricing?mode=standalone&module=helpdesk";
+    }
+    if (currentPath.includes("/lease-crm")) {
+      return "/operate/pricing?mode=standalone&module=leasecrm";
+    }
+    return "/operate/pricing";
+  };
 
   return (
     <>
@@ -151,7 +174,7 @@ export default function MarketingHeader({
 
               {/* Pricing in Main Menu */}
               <Link
-                href="/operate/pricing"
+                href={getPricingHref()}
                 className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap font-semibold ${
                   pathname === "/operate/pricing" ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
                 }`}
@@ -463,7 +486,7 @@ export default function MarketingHeader({
                 <Link href="/operate/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Rent Roll &amp; Billing
                 </Link>
-                <Link href="/operate/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                <Link href={getPricingHref()} onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Pricing &amp; Plans
                 </Link>
                 <Link href="/operate/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">

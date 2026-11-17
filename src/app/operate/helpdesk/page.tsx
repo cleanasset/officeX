@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Headphones,
@@ -33,6 +33,12 @@ export default function HelpdeskProductPage() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [selectedTab, setSelectedTab] = useState<"tickets" | "amenities" | "broadcasts">("tickets");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("officex_active_operate_module", "helpdesk");
+    }
+  }, []);
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
