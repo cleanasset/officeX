@@ -642,23 +642,6 @@ export default function Topbar() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsProfileMenuOpen(false);
-                    router.push("/operate/subscription");
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 cursor-pointer"
-                >
-                  <ShieldCheck size={15} className="text-emerald-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-900">Subscription &amp; Quota</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      Active Plan &amp; Capacity
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
                   onClick={handleSignOut}
                   className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 cursor-pointer border-t border-slate-100 mt-1"
                 >

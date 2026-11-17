@@ -35,9 +35,7 @@ function PortalLayoutContent({
 
       const isPermittedAdminEmail =
         email === "admin@gmail.com" ||
-        email === "medistationlifecare@gmail.com" ||
-        email === "jiyapatel181224@gmail.com" ||
-        email === "jiya.d.patel@tsuniv.edu.in";
+        email === "medistationlifecare@gmail.com";
 
       if ((isAdminCookie || isAdminLocal || isSuperAdminRole) && isPermittedAdminEmail) {
         setIsAuthorized(true);

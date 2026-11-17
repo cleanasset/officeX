@@ -38,12 +38,12 @@ export default function SubscriptionAndQuotaPage() {
         localStorage.getItem("officex_subscription_status") === "active" ||
         localStorage.getItem("officex_owner_subscribed") === "true";
       const storedSqft = Number(localStorage.getItem("officex_subscribed_sqft")) || 0;
-      if (isSub) {
+      if (isSub && storedSqft > 0) {
         return {
           subscribed: true,
           plan: "commercial-suite",
           plan_name: "OfficeX Commercial Suite",
-          subscribed_sqft: storedSqft > 0 ? storedSqft : 50000,
+          subscribed_sqft: storedSqft,
           days_remaining: 30,
         };
       }
@@ -102,8 +102,13 @@ export default function SubscriptionAndQuotaPage() {
       if (statusRes && statusRes.ok) {
         const sJson = await statusRes.json();
         setSubData(sJson);
-        if (sJson.subscribed_sqft && typeof window !== "undefined") {
+        if (sJson.subscribed && sJson.subscribed_sqft && typeof window !== "undefined") {
           localStorage.setItem("officex_subscribed_sqft", String(sJson.subscribed_sqft));
+        } else if (!sJson.subscribed && typeof window !== "undefined") {
+          localStorage.removeItem("officex_subscription");
+          localStorage.removeItem("officex_owner_subscribed");
+          localStorage.removeItem("officex_subscription_status");
+          localStorage.removeItem("officex_subscribed_sqft");
         }
       }
 
@@ -133,7 +138,7 @@ export default function SubscriptionAndQuotaPage() {
 
   // Active Capacity
   const storedCustomCap = typeof window !== "undefined" ? Number(localStorage.getItem("officex_subscribed_sqft")) : 0;
-  const currentCapSqft = Number(subData?.subscribed_sqft || 0) || storedCustomCap || (isSubscribed ? 50000 : 0);
+  const currentCapSqft = Number(subData?.subscribed_sqft || 0) || (isSubscribed ? storedCustomCap : 0);
   const remainingSqft = currentCapSqft > 0 ? Math.max(0, currentCapSqft - currentPortfolioSqft) : 0;
   const currentUsagePct = currentCapSqft > 0 ? Math.min(100, Math.round((currentPortfolioSqft / currentCapSqft) * 100)) : 0;
   const daysRemainingInCycle = isSubscribed ? (subData?.days_remaining || 30) : 0;

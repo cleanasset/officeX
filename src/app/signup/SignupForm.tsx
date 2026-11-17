@@ -254,6 +254,19 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     }
   }, [searchParams]);
 
+  // Reset loading state if user returns from external OAuth or cancels modal/window
+  useEffect(() => {
+    const handleResetLoading = () => {
+      setIsLoading(false);
+    };
+    window.addEventListener("pageshow", handleResetLoading);
+    window.addEventListener("focus", handleResetLoading);
+    return () => {
+      window.removeEventListener("pageshow", handleResetLoading);
+      window.removeEventListener("focus", handleResetLoading);
+    };
+  }, []);
+
   // Countdown timer for OTP resend
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -304,7 +317,13 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       }
 
       if (data?.url) {
+        // Safety timeout to reset spinner if user returns / cancels without page reload
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 6000);
         window.location.href = data.url;
+      } else {
+        setIsLoading(false);
       }
     } catch (err: any) {
       setError(err?.message || "Failed to connect to Google authentication.");

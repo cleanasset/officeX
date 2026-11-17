@@ -41,8 +41,7 @@ export async function GET(request: Request) {
     // 1. Super Admin and Sovereign Property Owner accounts ALWAYS retain enterprise sovereign access
     const isSuperAdminEmail =
       email === "admin@gmail.com" ||
-      email === "medistationlifecare@gmail.com" ||
-      email === "jiyapatel181224@gmail.com";
+      email === "medistationlifecare@gmail.com";
 
     if (isSuperAdminEmail) {
       const res = NextResponse.json({

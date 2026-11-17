@@ -146,6 +146,19 @@ export default function SubscriptionGate({
     loadAdminPricing();
   }, []);
 
+  // Reset payment processing spinner if user cancels or window regains focus
+  useEffect(() => {
+    const handleReset = () => {
+      setIsPaymentProcessing(false);
+    };
+    window.addEventListener("pageshow", handleReset);
+    window.addEventListener("focus", handleReset);
+    return () => {
+      window.removeEventListener("pageshow", handleReset);
+      window.removeEventListener("focus", handleReset);
+    };
+  }, []);
+
   // Active Plan & Dynamic Pricing Calculations
   const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[0];
   const effectivePricePerSqft = adminRatePerSqft || selectedPlan.price || 1;
@@ -373,7 +386,6 @@ export default function SubscriptionGate({
       const isAdmin =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com" ||
-        email === "jiyapatel181224@gmail.com" ||
         role === "super_admin" ||
         role === "Super Administrator" ||
         (typeof window !== "undefined" && (
@@ -390,10 +402,10 @@ export default function SubscriptionGate({
           sessionStorage.getItem("officex_subscription") === "active"
         )) || getCookie("officex_subscription") === "active";
 
-      if (isAdmin || locallySubscribed) {
+      if (isAdmin) {
         verifiedSub = true;
       } else if (email) {
-        // Query server-side subscription database
+        // Query server-side subscription database - authoritative check
         try {
           const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
           if (res.ok) {
@@ -405,14 +417,21 @@ export default function SubscriptionGate({
                 localStorage.setItem("officex_owner_subscribed", "true");
                 localStorage.setItem("officex_subscription_status", "active");
               }
-            } else if (locallySubscribed) {
-              verifiedSub = true;
             } else {
+              // Server confirms NOT subscribed
               verifiedSub = false;
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_owner_subscribed");
+                localStorage.removeItem("officex_subscription_status");
+                localStorage.removeItem("officex_rentroll_subscribed");
+              }
             }
+          } else {
+            verifiedSub = false;
           }
         } catch {
-          verifiedSub = locallySubscribed;
+          verifiedSub = false;
         }
       } else {
         verifiedSub = locallySubscribed;
@@ -535,6 +554,7 @@ export default function SubscriptionGate({
         },
         onFailure: (error) => {
           console.error("Subscription payment failed:", error);
+          setIsPaymentProcessing(false);
           setPaymentToast(`Payment failed: ${error?.description || error?.message || "Please try again"}`);
           setTimeout(() => setPaymentToast(null), 5000);
         },

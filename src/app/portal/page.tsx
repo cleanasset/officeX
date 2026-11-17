@@ -819,7 +819,7 @@ export default function TenantHomePage() {
                 >
                   <div className="flex items-center gap-2">
                     <CreditCard size={16} className={selectedPayChannel === "razorpay" ? "text-indigo-600" : "text-slate-400"} />
-                    <span className="text-xs font-black text-slate-900">Real Net Banking</span>
+                    <span className="text-xs font-black text-slate-900">Net Banking &amp; UPI</span>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1 font-medium leading-tight">
                     Live Indian Bank Net Banking & UPI Gateway
@@ -973,7 +973,7 @@ export default function TenantHomePage() {
 
                 {!landlordBank?.account_number && (
                   <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-medium">
-                    ⚠️ The property owner has not linked direct wire details yet. Please use <strong>Real Net Banking</strong> above or contact property management.
+                    ⚠️ The property owner has not linked direct wire details yet. Please use <strong>Net Banking &amp; UPI</strong> above or contact property management.
                   </div>
                 )}
 

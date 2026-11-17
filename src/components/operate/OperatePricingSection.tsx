@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Building2,
   Check,
@@ -49,15 +50,39 @@ export interface PricingConfigResponse {
 interface OperatePricingSectionProps {
   id?: string;
   hideHeader?: boolean;
+  defaultMode?: "bundle" | "standalone";
+  defaultModule?: string;
+  activeParamMode?: "bundle" | "standalone";
+  activeParamModule?: string;
 }
 
-export default function OperatePricingSection({
+function OperatePricingInner({
   id = "pricing",
   hideHeader = false,
+  activeParamMode = "bundle",
+  activeParamModule = "",
 }: OperatePricingSectionProps) {
   // Pricing tab: "bundle" (CAFM All-In-One) vs "standalone" (A-La-Carte)
-  const [pricingMode, setPricingMode] = useState<"bundle" | "standalone">("bundle");
+  const [pricingMode, setPricingMode] = useState<"bundle" | "standalone">(activeParamMode);
   
+  useEffect(() => {
+    if (activeParamMode) {
+      setPricingMode(activeParamMode);
+    }
+  }, [activeParamMode]);
+
+  useEffect(() => {
+    if (activeParamModule && pricingMode === "standalone") {
+      const cleanMod = activeParamModule.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const el = document.getElementById(`module-${cleanMod}`) || document.getElementById(`module-${activeParamModule.toLowerCase()}`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
+      }
+    }
+  }, [activeParamModule, pricingMode]);
+
   // Billing cycle: "monthly" vs "annual" (15% discount)
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   
@@ -683,15 +708,28 @@ export default function OperatePricingSection({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* 1. Rent Roll */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-rentroll"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "rentroll" || activeParamModule === "rent-roll"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-teal-50 flex items-center justify-center text-[#0D7B6C]">
                     <Building2 className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#0D7B6C] px-2.5 py-1 rounded-full">
-                    SaaS Module 1
-                  </span>
+                  {(activeParamModule === "rentroll" || activeParamModule === "rent-roll") ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#0D7B6C] px-2.5 py-1 rounded-full">
+                      SaaS Module 1
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">Automated Rent Roll &amp; Billing</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -758,15 +796,28 @@ export default function OperatePricingSection({
             </div>
 
             {/* 2. 52-Week PPM */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-ppm"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "ppm"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
                     <Wrench className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">
-                    SaaS Module 2
-                  </span>
+                  {activeParamModule === "ppm" ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">
+                      SaaS Module 2
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">52-Week PPM &amp; Asset QR</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -833,15 +884,28 @@ export default function OperatePricingSection({
             </div>
 
             {/* 3. Visitor Flow */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-visitor"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "visitor" || activeParamModule === "visitors"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                     <Users className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
-                    SaaS Module 3
-                  </span>
+                  {(activeParamModule === "visitor" || activeParamModule === "visitors") ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
+                      SaaS Module 3
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">Visitor Flow &amp; Speed-Gates</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -907,15 +971,28 @@ export default function OperatePricingSection({
             </div>
 
             {/* 4. Statutory Compliance */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-compliance"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "compliance"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                     <FileCheck2 className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
-                    SaaS Module 4
-                  </span>
+                  {activeParamModule === "compliance" ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
+                      SaaS Module 4
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">Statutory Compliance Calendar</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -982,15 +1059,28 @@ export default function OperatePricingSection({
             </div>
 
             {/* 5. Lease CRM */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-leasecrm"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "leasecrm" || activeParamModule === "lease-crm" || activeParamModule === "crm"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
                     <Layers className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full">
-                    SaaS Module 5
-                  </span>
+                  {(activeParamModule === "leasecrm" || activeParamModule === "lease-crm" || activeParamModule === "crm") ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full">
+                      SaaS Module 5
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">Commercial Lease CRM</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -1057,15 +1147,28 @@ export default function OperatePricingSection({
             </div>
 
             {/* 6. Tenant Helpdesk */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-teal-500 hover:shadow-md transition-all">
+            <div
+              id="module-helpdesk"
+              className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                activeParamModule === "helpdesk"
+                  ? "border-2 border-[#0D7B6C] ring-4 ring-[#0D7B6C]/10 shadow-lg scale-[1.02]"
+                  : "border-slate-200 hover:border-teal-500 hover:shadow-md"
+              }`}
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-600">
                     <Zap className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">
-                    SaaS Module 6
-                  </span>
+                  {activeParamModule === "helpdesk" ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-[#0D7B6C] text-white px-2.5 py-1 rounded-full shadow-xs">
+                      Selected Module
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">
+                      SaaS Module 6
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900 mb-1">Tenant Helpdesk &amp; Rooms</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -1168,5 +1271,34 @@ export default function OperatePricingSection({
         </div>
       </div>
     </section>
+  );
+}
+
+function OperatePricingWithParams(props: OperatePricingSectionProps) {
+  const searchParams = useSearchParams();
+  const paramMode = searchParams?.get("mode") || searchParams?.get("tab");
+  const paramModule = searchParams?.get("module") || searchParams?.get("from");
+
+  const effectiveMode: "bundle" | "standalone" =
+    paramMode === "standalone" || paramMode === "individual" || Boolean(paramModule)
+      ? "standalone"
+      : (props.defaultMode || "bundle");
+
+  const effectiveModule = (paramModule || props.defaultModule || "").toLowerCase();
+
+  return (
+    <OperatePricingInner
+      {...props}
+      activeParamMode={effectiveMode}
+      activeParamModule={effectiveModule}
+    />
+  );
+}
+
+export default function OperatePricingSection(props: OperatePricingSectionProps) {
+  return (
+    <Suspense fallback={<OperatePricingInner {...props} activeParamMode={props.defaultMode || "bundle"} />}>
+      <OperatePricingWithParams {...props} />
+    </Suspense>
   );
 }

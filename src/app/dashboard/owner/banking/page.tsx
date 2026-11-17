@@ -487,41 +487,37 @@ export default function OwnerBankingAndERPPage() {
             <button
               type="button"
               onClick={() => setEditBankModalOpen(true)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
-                bankDetails.account_number
-                  ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white"
-                  : "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200 shadow-md"
-              }`}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-xs cursor-pointer"
             >
               <Edit3 size={13} />
-              <span>{bankDetails.account_number ? "Update Bank Details" : "+ Add Bank Details Now"}</span>
+              <span>{bankDetails.account_number ? "Update Bank Details" : "Configure Bank Details"}</span>
             </button>
           </div>
         </div>
 
-        {/* Warning Banner if Bank Account Not Configured */}
+        {/* Informative Guidance Banner if Bank Account Not Configured */}
         {!bankDetails.account_number && (
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-amber-100 text-amber-800 mt-0.5">
                 <AlertCircle size={18} />
               </div>
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-900">
-                  Official Remittance Bank Account Not Configured
+                  Remittance Bank Account Required for Invoicing
                 </h4>
-                <p className="text-xs text-amber-800 mt-0.5">
-                  Tenants cannot remit rent or download official Rule 46 CGST tax invoices with valid settlement coordinates until your verified company bank account is added.
+                <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                  Enter your official bank coordinates to enable direct tenant wire instructions and Rule-46 CGST tax invoicing.
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setEditBankModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold shrink-0 transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shrink-0 transition shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <PlusCircle size={13} />
-              <span>Add Real Bank Account</span>
+              <span>Set Up Account</span>
             </button>
           </div>
         )}

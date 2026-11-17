@@ -238,14 +238,13 @@ export default function HelpdeskProductPage() {
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3.5 mb-10">
-              <button
-                type="button"
-                onClick={() => setEnquiryOpen(true)}
+              <Link
+                href="/operate/pricing?mode=standalone&module=helpdesk"
                 className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Schedule Helpdesk Walkthrough</span>
+                <span>View Helpdesk Pricing (₹3,499/mo)</span>
                 <ArrowRight size={15} />
-              </button>
+              </Link>
               <Link
                 href="/tenant/tickets"
                 className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"

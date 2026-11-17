@@ -161,14 +161,13 @@ export default function PpmProductPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setEnquiryOpen(true)}
+                <Link
+                  href="/operate/pricing?mode=standalone&module=ppm"
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                 >
-                  <span>Enquire for 52-Week PPM</span>
+                  <span>View PPM Pricing (₹6,999/mo)</span>
                   <ArrowRight size={15} />
-                </button>
+                </Link>
                 <Link
                   href="/ops/ppm"
                   className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
@@ -331,13 +330,12 @@ export default function PpmProductPage() {
             Eliminate equipment failures and track all vendor AMCs in real time. Schedule a 52-Week PPM walkthrough today.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
-            <button
-              type="button"
-              onClick={() => setEnquiryOpen(true)}
-              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+            <Link
+              href="/operate/pricing?mode=standalone&module=ppm"
+              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
             >
-              Request 52-Week PPM Walkthrough
-            </button>
+              <span>View PPM Pricing (₹6,999/mo) →</span>
+            </Link>
             <Link
               href="/ops/ppm"
               className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all"

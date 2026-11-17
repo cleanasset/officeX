@@ -536,7 +536,7 @@ export default function ContractDetailDrawer({
                   <span className="text-[11px] font-bold text-slate-700">Share Tenant Portal Access</span>
                   {(() => {
                     const email = (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "").toLowerCase().trim();
-                    const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || email === "jiyapatel181224@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
+                    const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
                     const userSub = typeof window !== "undefined" ? localStorage.getItem(`officex_sub_${email}`) : null;
                     const isSub = isAdmin || userSub === "active" || (typeof window !== "undefined" && localStorage.getItem("officex_subscription") === "active");
                     return isSub ? (
@@ -552,7 +552,7 @@ export default function ContractDetailDrawer({
 
                 {(() => {
                   const email = (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "").toLowerCase().trim();
-                  const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || email === "jiyapatel181224@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
+                  const isAdmin = email === "admin@gmail.com" || email === "medistationlifecare@gmail.com" || (typeof window !== "undefined" && (localStorage.getItem("officex_admin") === "1" || localStorage.getItem("officex_user_role") === "super_admin"));
                   const userSub = typeof window !== "undefined" ? localStorage.getItem(`officex_sub_${email}`) : null;
                   const isSub = isAdmin || userSub === "active" || (typeof window !== "undefined" && localStorage.getItem("officex_subscription") === "active");
 

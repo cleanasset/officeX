@@ -177,6 +177,19 @@ export default function SignInForm({
     return () => clearTimeout(timer);
   }, [userNotFound, signupRedirectUrl, signupCountdown]);
 
+  // Reset loading state if user returns from external OAuth or cancels modal/window
+  useEffect(() => {
+    const handleResetLoading = () => {
+      setIsLoading(false);
+    };
+    window.addEventListener("pageshow", handleResetLoading);
+    window.addEventListener("focus", handleResetLoading);
+    return () => {
+      window.removeEventListener("pageshow", handleResetLoading);
+      window.removeEventListener("focus", handleResetLoading);
+    };
+  }, []);
+
   // Timer countdown for OTP resend
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -341,11 +354,7 @@ export default function SignInForm({
             ? `/signup?context=rent-roll&email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`
             : `/signup?email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`;
           setSignupRedirectUrl(signupTarget);
-          setError(
-            lang === "hi"
-              ? `"${clean}" के लिए कोई पंजीकृत खाता नहीं मिला। लॉगिन करने के लिए आपका ईमेल पंजीकृत होना आवश्यक है।`
-              : `No registered account found for "${clean}". You must have a registered email ID to log in.`
-          );
+          setError(""); // Clear generic error to ensure no duplicate banner is shown
           setIsLoading(false);
           return;
         }
@@ -1086,7 +1095,13 @@ export default function SignInForm({
       }
 
       if (data?.url) {
+        // Safety timeout to reset spinner if user returns / cancels without page reload
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 6000);
         window.location.href = data.url;
+      } else {
+        setIsLoading(false);
       }
     } catch (err: any) {
       setError(err?.message || "Failed to connect to Google authentication.");
@@ -1294,7 +1309,7 @@ export default function SignInForm({
           <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-100/60 rounded-full blur-2xl pointer-events-none" />
 
           {/* Global Error Banner */}
-          {error && (
+          {error && !userNotFound && (
             <div
               role="alert"
               className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2.5 animate-fadeIn"

@@ -537,7 +537,6 @@ function SidebarInner() {
       const isAdmin =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com" ||
-        email === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
       if (isAdmin) return true;
@@ -657,7 +656,6 @@ function SidebarInner() {
       const isAdmin =
         userEmail === "admin@gmail.com" ||
         userEmail === "medistationlifecare@gmail.com" ||
-        userEmail === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
 

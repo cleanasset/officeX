@@ -194,8 +194,8 @@ export default function ComplianceCalendarProductPage() {
               1. Landing Page
             </Link>
             <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/visitor-compliance/pricing?coupon=visitor001" className="text-[#0D7B6C] font-semibold hover:underline">
-              2. Subscription (₹999/mo)
+            <Link href="/operate/pricing?mode=standalone&module=compliance" className="text-[#0D7B6C] font-semibold hover:underline">
+              2. Subscription (₹3,999/mo)
             </Link>
             <span className="text-slate-400 font-mono">──►</span>
             <Link href="/vc/dashboard" className="text-slate-800 font-bold hover:underline">
@@ -257,10 +257,10 @@ export default function ComplianceCalendarProductPage() {
 
             {/* Pricing Link */}
             <Link
-              href="/visitor-compliance/pricing?coupon=visitor001"
+              href="/operate/pricing?mode=standalone&module=compliance"
               className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
             >
-              <span>₹999/mo (visitor001 Free)</span>
+              <span>View Compliance Pricing →</span>
             </Link>
           </div>
         </div>
@@ -403,10 +403,10 @@ export default function ComplianceCalendarProductPage() {
                       <span>Open Visitor Flow Console</span>
                     </button>
                     <Link
-                      href="/visitor-compliance/pricing?coupon=visitor001"
+                      href="/operate/pricing?mode=standalone&module=compliance"
                       className="px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                     >
-                      <span>View Pricing (₹999/mo)</span>
+                      <span>View Compliance Pricing</span>
                       <ArrowRight size={14} className="text-[#0D7B6C]" />
                     </Link>
                   </div>

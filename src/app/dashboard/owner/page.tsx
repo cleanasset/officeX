@@ -153,7 +153,6 @@ export default function OwnerDashboardPage() {
       const isOwnerAdmin =
         uEmail === "admin@gmail.com" ||
         uEmail === "medistationlifecare@gmail.com" ||
-        uEmail === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
 

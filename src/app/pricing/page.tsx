@@ -153,18 +153,7 @@ function PricingPageContent() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("officex_subscription", "active");
-                      localStorage.setItem("officex_owner_subscribed", "true");
-                      localStorage.setItem("officex_rentroll_subscribed", "true");
-                      localStorage.setItem("officex_subscription_status", "active");
-                      localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
-                      localStorage.setItem("officex_rentroll_onboarded", "true");
-                      localStorage.setItem("officex_onboarding_completed", "1");
-                      sessionStorage.setItem("officex_onboarding_completed", "1");
-                      document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
-                    }
-                    router.push("/properties/rent-roll");
+                    router.push(`/operate/subscription?sqft=${minPortfolioSqft}`);
                   }}
                   className="px-5 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
                 >
@@ -229,14 +218,7 @@ function PricingPageContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("officex_subscription", "active");
-                        localStorage.setItem("officex_owner_subscribed", "true");
-                        localStorage.setItem("officex_rentroll_subscribed", "true");
-                        localStorage.setItem("officex_subscription_status", "active");
-                        localStorage.setItem("officex_subscribed_sqft", String(minPortfolioSqft));
-                      }
-                      router.push("/properties/rent-roll");
+                      router.push(`/operate/subscription?sqft=${minPortfolioSqft}`);
                     }}
                     className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                   >

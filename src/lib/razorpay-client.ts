@@ -136,6 +136,12 @@ export async function initiateRazorpayPayment(
         confirm_close: true,
         ondismiss: function () {
           console.log("Razorpay checkout dismissed by user.");
+          if (onFailure) {
+            onFailure({
+              description: "Payment cancelled by user.",
+              code: "PAYMENT_CANCELLED",
+            });
+          }
         },
       },
       handler: async function (response: RazorpayPaymentResponse) {

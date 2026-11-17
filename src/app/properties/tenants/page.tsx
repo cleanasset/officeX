@@ -92,7 +92,6 @@ export default function TenantDirectoryPage() {
       const isAdmin =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com" ||
-        email === "jiyapatel181224@gmail.com" ||
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin" ||
         localStorage.getItem("officex_user_role") === "super_admin";

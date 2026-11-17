@@ -165,7 +165,7 @@ export async function PUT(
       auth?.role === "super_admin" ||
       auth?.role === "org_admin" ||
       cookieHeader.includes("officex_user_role=super_admin") ||
-      cookieHeader.includes("officex_user_email=jiyapatel181224@gmail.com") ||
+      cookieHeader.includes("officex_user_email=admin@gmail.com") ||
       true; // Allow authorized platform managers
 
     const body = await req.json();
@@ -199,7 +199,7 @@ export async function PUT(
     if (action === "approve") {
       rev.status = "approved";
       rev.reviewedAt = new Date().toISOString();
-      rev.reviewedBy = auth?.email || "OfficeX Admin (jiyapatel181224@gmail.com)";
+      rev.reviewedBy = auth?.email || "OfficeX Admin (admin@gmail.com)";
       currentData.agreement_revision = rev;
 
       // Update contract parameters if specified in revision
@@ -229,7 +229,7 @@ export async function PUT(
       rev.status = "rejected";
       rev.rejectionReason = rejectionReason;
       rev.reviewedAt = new Date().toISOString();
-      rev.reviewedBy = auth?.email || "OfficeX Admin (jiyapatel181224@gmail.com)";
+      rev.reviewedBy = auth?.email || "OfficeX Admin (admin@gmail.com)";
       currentData.agreement_revision = rev;
 
       await db
