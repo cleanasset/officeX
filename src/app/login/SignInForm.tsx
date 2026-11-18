@@ -413,15 +413,17 @@ export default function SignInForm({
                 : `Verification code dispatched to ${sendData.masked || maskedId}.`
             );
           } else {
-            setError(sendData.error || "Unable to send verification code. Please sign in with password.");
+            setError(sendData.error || "Unable to dispatch verification code. Please retry or sign in with Google.");
           }
         } catch {
-          setError("Network error while dispatching code. Please sign in with password.");
+          setError("Network error while dispatching verification code. Please retry or sign in with Google.");
         }
       }
-      // 3. Password
-      else {
+      // 3. Password (Reserved for Super Admin)
+      else if (data.next === "password") {
         setStep("password");
+      } else {
+        setError("Unable to process sign in. Please continue with Google.");
       }
     } catch (err) {
       setError("Unable to connect to authentication services. Please check your network connection.");

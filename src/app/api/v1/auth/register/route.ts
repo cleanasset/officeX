@@ -9,7 +9,17 @@ import { supabaseAdmin } from "@/lib/supabase";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fullName, email, mobileNumber, password, mobileCountryCode = "+91" } = body;
+    const { fullName, email, mobileNumber, password, mobileCountryCode = "+91", role } = body;
+    const targetRole =
+      role === "pm" || role === "property_manager"
+        ? "property_manager"
+        : role === "tenant" || role === "tenant_admin"
+        ? "tenant_admin"
+        : role === "broker"
+        ? "broker"
+        : role === "vendor" || role === "vendor_admin"
+        ? "vendor_admin"
+        : "owner";
 
     if (!fullName || !email || !mobileNumber || !password) {
       return NextResponse.json(
@@ -57,7 +67,7 @@ export async function POST(req: Request) {
             user_metadata: {
               full_name: fullName.trim(),
               mobile: `${mobileCountryCode}${cleanMobile}`,
-              role: "property_manager",
+              role: targetRole,
               email_verified: false
             }
           });
@@ -83,7 +93,7 @@ export async function POST(req: Request) {
           user_metadata: {
             full_name: fullName.trim(),
             mobile: `${mobileCountryCode}${cleanMobile}`,
-            role: "property_manager"
+            role: targetRole
           }
         });
 

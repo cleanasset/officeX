@@ -77,10 +77,30 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
         }
         if (!name) name = "Member";
 
-        const role =
+        const rawRole =
+          authUser?.user_metadata?.role ||
           sessionStorage.getItem("officex_user_role") ||
           localStorage.getItem("officex_user_role") ||
-          "Commercial Owner";
+          "Property Owner & Asset Manager";
+
+        let role = "Property Owner & Asset Manager";
+        if (rawRole === "super_admin" || rawRole === "Super Administrator" || email === "admin@gmail.com" || email === "medistationlifecare@gmail.com") {
+          role = "Super Administrator";
+        } else if (rawRole === "tenant" || rawRole === "tenant_admin" || rawRole === "Tenant Occupant") {
+          role = "Tenant Occupant";
+        } else if (rawRole === "broker" || rawRole === "Broker / Channel Partner") {
+          role = "Broker / Channel Partner";
+        } else if (rawRole === "vendor" || rawRole === "vendor_admin" || rawRole === "Facility / Service Vendor") {
+          role = "Facility / Service Vendor";
+        } else if (rawRole === "owner" || rawRole === "Property Owner & Asset Manager" || rawRole === "Commercial Owner" || rawRole === "Property Manager") {
+          role = "Property Owner & Asset Manager";
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+            sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+          }
+        } else {
+          role = rawRole;
+        }
 
         const globalSub =
           localStorage.getItem("officex_subscription") === "active" ||

@@ -5,6 +5,7 @@ import { subscriptionStatusEnum } from "./rent-roll-schema";
 // 1. Existing & Shared Enums
 export const userRoleEnum = pgEnum("user_role", [
   "super_admin",
+  "owner",
   "property_manager",
   "facility_manager",
   "tenant_admin",

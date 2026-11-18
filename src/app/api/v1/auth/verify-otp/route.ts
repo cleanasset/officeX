@@ -36,29 +36,47 @@ export async function POST(req: Request) {
           existingUser = usersData?.users?.find(
             (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
           );
-          if (existingUser) {
-            supaId = existingUser.id;
-            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { email_confirm: true });
-          } else {
-            const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
-              email: email.trim().toLowerCase(),
-              email_confirm: true,
-              user_metadata: { role: "property_manager" }
-            });
-            supaId = newUser?.user?.id;
-          }
+        const targetRole =
+          existingUser?.user_metadata?.role ||
+          (body.role === "pm" || body.role === "property_manager"
+            ? "property_manager"
+            : body.role === "tenant" || body.role === "tenant_admin"
+            ? "tenant_admin"
+            : body.role === "broker"
+            ? "broker"
+            : body.role === "vendor" || body.role === "vendor_admin"
+            ? "vendor_admin"
+            : "owner");
+
+        if (existingUser) {
+          supaId = existingUser.id;
+          await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+            email_confirm: true,
+            user_metadata: { ...existingUser.user_metadata, role: targetRole }
+          });
+        } else {
+          const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
+            email: email.trim().toLowerCase(),
+            email_confirm: true,
+            user_metadata: { role: targetRole }
+          });
+          supaId = newUser?.user?.id;
         }
+      }
 
-        const finalName = (body.fullName || existingUser?.user_metadata?.full_name || email.split('@')[0]).trim();
+      const finalName = (body.fullName || existingUser?.user_metadata?.full_name || email.split('@')[0]).trim();
 
-        // Also insert into Postgres users table
-        await db.insert(users).values({
-          id: supaId || undefined,
-          email: email.trim().toLowerCase(),
-          fullName: finalName,
-          role: "property_manager",
-          passwordHash: "SUPABASE_AUTH_MANAGED"
-        }).onConflictDoNothing();
+      // Also insert into Postgres users table
+      await db.insert(users).values({
+        id: supaId || undefined,
+        email: email.trim().toLowerCase(),
+        fullName: finalName,
+        role: targetRole as any,
+        passwordHash: "SUPABASE_AUTH_MANAGED"
+      }).onConflictDoUpdate({
+        target: users.email,
+        set: { role: targetRole as any, fullName: finalName }
+      });
       } catch (e) {
         console.warn("[VERIFY-OTP] Supabase sync notice:", e);
       }

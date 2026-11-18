@@ -161,18 +161,38 @@ export async function POST(request: Request) {
         });
       }
 
-      // User exists with password or standard email auth -> proceed to password
+      // Super Admin accounts retain dedicated password authentication
+      const isSuperAdminEmail =
+        cleanEmail === 'admin@gmail.com' ||
+        cleanEmail === 'medistationlifecare@gmail.com';
+
+      if (isSuperAdminEmail) {
+        return NextResponse.json({
+          success: true,
+          type: 'email',
+          next: 'password',
+          channel: 'email',
+          masked: masked,
+          user_name: userName,
+          has_password: true,
+          is_google_user: false,
+          mfa_required: false,
+          allow_code_fallback: true
+        });
+      }
+
+      // All standard users sign in passwordlessly via secure One-Time Email Code (OTP) or Google
       return NextResponse.json({
         success: true,
         type: 'email',
-        next: 'password',
+        next: 'code',
         channel: 'email',
         masked: masked,
         user_name: userName,
-        has_password: true,
+        has_password: false,
         is_google_user: isGoogleUser,
         mfa_required: false,
-        allow_code_fallback: true
+        allow_code_fallback: false
       });
     }
 
