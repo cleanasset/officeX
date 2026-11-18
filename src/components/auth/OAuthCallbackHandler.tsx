@@ -51,6 +51,39 @@ export default function OAuthCallbackHandler() {
         sessionStorage.setItem("officex_user_mobile", phone);
       }
 
+      // Purge any stale subscription indicators so new accounts start strictly on Free Tier
+      try {
+        localStorage.removeItem("officex_subscription");
+        sessionStorage.removeItem("officex_subscription");
+        localStorage.removeItem("officex_owner_subscribed");
+        localStorage.removeItem("officex_subscription_status");
+        sessionStorage.removeItem("officex_subscription_status");
+        localStorage.removeItem("officex_rentroll_subscribed");
+        localStorage.removeItem("officex_subscribed_sqft");
+        sessionStorage.removeItem("officex_subscribed_sqft");
+        document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax";
+        document.cookie = "officex_owner_subscribed=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax";
+        document.cookie = "officex_subscription_status=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax";
+
+        // Query authoritative subscription status in the background
+        if (email) {
+          fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
+                localStorage.setItem("officex_subscription", "active");
+                sessionStorage.setItem("officex_subscription", "active");
+                localStorage.setItem("officex_owner_subscribed", "true");
+                document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+                if (d.subscribed_sqft) {
+                  localStorage.setItem("officex_subscribed_sqft", String(d.subscribed_sqft));
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      } catch {}
+
       // Notify all components on page (e.g. HeaderAuthButton)
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("officex_auth_change", { detail: { user: sessionUser } }));
@@ -135,7 +168,7 @@ export default function OAuthCallbackHandler() {
 
         // Default post-login destination
         const userRoleKey = (typeof window !== "undefined" && localStorage.getItem("officex_role_key")) || "owner";
-        const defaultDash = userRoleKey === "property_manager" ? "/dashboard/pm" : "/dashboard/owner";
+        const defaultDash = userRoleKey === "property_manager" ? "/dashboard/pm" : "/dashboard";
         window.location.replace(defaultDash);
         return;
       }

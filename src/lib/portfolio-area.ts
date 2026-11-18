@@ -45,11 +45,18 @@ export async function fetchUniversalPortfolioSqft(): Promise<number> {
     if (res.ok) {
       const data = await res.json();
       const serverArea = Number(data.totalPortfolioSqft || 0);
-      const effective = Math.max(serverArea, localVal);
-      if (effective > 0) {
-        saveUniversalPortfolioSqft(effective);
+      if (data.success && (data.propertyCount === 0 || serverArea === 0)) {
+        // User has NO properties registered in the system. Purge stale local values.
+        localStorage.removeItem("officex_total_portfolio_sqft");
+        sessionStorage.removeItem("officex_total_portfolio_sqft");
+        localStorage.removeItem("officex_onboarded_property_details");
+        return 0;
       }
-      return effective;
+      if (serverArea > 0) {
+        saveUniversalPortfolioSqft(serverArea);
+        return serverArea;
+      }
+      return 0;
     }
   } catch (err) {
     console.warn("[Portfolio-Area] Failed to fetch server portfolio area:", err);
@@ -62,7 +69,7 @@ export async function fetchUniversalPortfolioSqft(): Promise<number> {
  * React Hook for Universal Portfolio Square Footage
  * Enforces the mandatory minimum subscription floor across all subscription surfaces.
  */
-export function useUniversalPortfolioSqft(baseFallbackFloor = 10000) {
+export function useUniversalPortfolioSqft(baseFallbackFloor = 1000) {
   const [totalPortfolioSqft, setTotalPortfolioSqft] = useState<number>(() => {
     const stored = getStoredPortfolioSqft();
     return stored > 0 ? stored : 0;
@@ -74,16 +81,14 @@ export function useUniversalPortfolioSqft(baseFallbackFloor = 10000) {
 
     fetchUniversalPortfolioSqft().then((val) => {
       if (isMounted) {
-        if (val > 0) {
-          setTotalPortfolioSqft(val);
-        }
+        setTotalPortfolioSqft(val);
         setLoading(false);
       }
     });
 
     const handleStorageChange = () => {
       const updated = getStoredPortfolioSqft();
-      if (updated > 0) setTotalPortfolioSqft(updated);
+      setTotalPortfolioSqft(updated > 0 ? updated : 0);
     };
 
     window.addEventListener("storage", handleStorageChange);

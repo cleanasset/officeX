@@ -70,7 +70,7 @@ export default function RentRollProductPage() {
   }, []);
 
   const subscribeHref = isLoggedIn
-    ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+    ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
     : "/login?context=rent-roll&redirect=/operate/rent-roll";
 
   const toggleFaq = (index: number) => {
@@ -204,7 +204,7 @@ export default function RentRollProductPage() {
                 <Link
                   href={
                     isLoggedIn
-                      ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                      ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
                       : "/login?context=rent-roll&redirect=/operate/rent-roll"
                   }
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 active:scale-98 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
@@ -514,7 +514,7 @@ export default function RentRollProductPage() {
             <Link
               href={
                 isLoggedIn
-                  ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
                   : "/login?context=rent-roll&redirect=/operate/rent-roll"
               }
               className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center gap-2 group cursor-pointer"
@@ -557,7 +557,7 @@ export default function RentRollProductPage() {
             <Link
               href={
                 isLoggedIn
-                  ? (isSubscribed ? "/dashboard/owner" : "/operate/pricing?mode=standalone&module=rentroll")
+                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
                   : "/login?context=rent-roll&redirect=/operate/rent-roll"
               }
               className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"

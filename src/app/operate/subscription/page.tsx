@@ -75,6 +75,7 @@ export default function SubscriptionAndQuotaPage() {
   const [couponMsg, setCouponMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [showFloorNotice, setShowFloorNotice] = useState<boolean>(true);
 
   // Upgrade Modal State (for subscribed mode)
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -115,9 +116,11 @@ export default function SubscriptionAndQuotaPage() {
       if (areaRes && areaRes.ok) {
         const aJson = await areaRes.json();
         setPortfolioData(aJson);
-        if (aJson.totalPortfolioSqft && typeof window !== "undefined") {
+        if (aJson.totalPortfolioSqft && Number(aJson.totalPortfolioSqft) > 0 && typeof window !== "undefined") {
           localStorage.setItem("officex_total_portfolio_sqft", String(aJson.totalPortfolioSqft));
           setCustomSqft((prev) => Math.max(prev, Number(aJson.totalPortfolioSqft)));
+        } else if (typeof window !== "undefined") {
+          localStorage.removeItem("officex_total_portfolio_sqft");
         }
       }
     } catch (e) {
@@ -175,7 +178,7 @@ export default function SubscriptionAndQuotaPage() {
       setCouponApplied(clean);
       setCouponMsg({ text: `🎉 Promo code '${clean}' applied: 100% Free Plan Access (₹0)!`, type: "success" });
     } else {
-      setCouponMsg({ text: "Invalid promo code. Please enter OFFICEX100 or RENTROLL12.", type: "error" });
+      setCouponMsg({ text: "Invalid promo code. Please enter a valid coupon code.", type: "error" });
     }
   };
 
@@ -188,7 +191,7 @@ export default function SubscriptionAndQuotaPage() {
       setModalCouponApplied(clean);
       setModalCouponMsg({ text: `🎉 Promo code '${clean}' applied: 100% Free Capacity Grant!`, type: "success" });
     } else {
-      setModalCouponMsg({ text: "Invalid promo code. Try OFFICEX100.", type: "error" });
+      setModalCouponMsg({ text: "Invalid promo code. Please enter a valid coupon code.", type: "error" });
     }
   };
 
@@ -442,24 +445,34 @@ export default function SubscriptionAndQuotaPage() {
         </div>
 
         {/* Portfolio Floor Notice (if properties already onboarded) */}
-        {minAllowedSqft > 1000 && (
-          <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 text-teal-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold shrink-0">
+        {showFloorNotice && minAllowedSqft > 1000 && (
+          <div className="p-4 rounded-2xl bg-teal-50 border border-teal-300 text-teal-950 flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-2xs">
                 <Building2 size={18} />
               </div>
-              <div>
-                <span className="text-xs font-black text-slate-900 block">
-                  Registered Properties Floor: {minAllowedSqft.toLocaleString("en-IN")} Sq.Ft
-                </span>
-                <span className="text-[11px] text-teal-800 font-medium">
-                  Your subscription automatically scales to cover your active registered assets.
-                </span>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-slate-900">
+                    Portfolio Minimum Capacity: {minAllowedSqft.toLocaleString("en-IN")} Sq.Ft
+                  </span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-200 text-teal-900">
+                    Mandatory Floor
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  You have added <strong>{portfolioData?.propertyCount || portfolioData?.propertyItems?.length || 1} commercial {portfolioData?.propertyCount === 1 ? "property" : "properties"}</strong> totaling <strong>{currentPortfolioSqft.toLocaleString("en-IN")} Sq.Ft</strong>. To ensure complete audit compliance and billing coverage for your existing portfolio, your minimum subscription tier is set to <strong>{minAllowedSqft.toLocaleString("en-IN")} Sq.Ft</strong>. You cannot subscribe for less capacity than the properties already added.
+                </p>
               </div>
             </div>
-            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-teal-200 text-teal-900 self-start sm:self-auto">
-              Portfolio Floor Applied
-            </span>
+            <button
+              type="button"
+              onClick={() => setShowFloorNotice(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-teal-100/60 transition cursor-pointer self-start sm:self-auto shrink-0"
+              title="Dismiss notice"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
 
@@ -652,7 +665,7 @@ export default function SubscriptionAndQuotaPage() {
                 type="text"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
-                placeholder="Partner / Promo Code (e.g. OFFICEX100, RENTROLL12)"
+                placeholder="Enter promo or partner voucher code"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs uppercase focus:border-teal-400 outline-none"
               />
               <Gift size={15} className="absolute right-3 top-3 text-slate-400" />
@@ -1059,7 +1072,7 @@ export default function SubscriptionAndQuotaPage() {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder="e.g. OFFICEX100"
+                    placeholder="Enter promo or voucher code"
                     value={modalCouponCode}
                     onChange={(e) => setModalCouponCode(e.target.value)}
                     className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs uppercase font-mono focus:border-[#0F8B7D] outline-none"

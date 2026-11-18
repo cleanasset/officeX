@@ -33,6 +33,38 @@ function savePersistentSubscribed(email: string) {
   }
 }
 
+function resolveModules(planId: string, isAdmin: boolean) {
+  const p = (planId || "").toLowerCase();
+  const isAllInOne = isAdmin || p.includes("cafm") || p.includes("suite") || p.includes("commercial-suite") || p.includes("reit") || p.includes("enterprise");
+  
+  const isRentRoll = isAllInOne || p.includes("rentroll") || p.includes("rent-roll") || p.includes("starter") || p.includes("growth") || p.includes("campus") || p.includes("techpark");
+  const isVisitors = isAllInOne || p.includes("visitor");
+  const isPpm = isAllInOne || p.includes("ppm") || p.includes("maintenance");
+  const isCompliance = isAllInOne || p.includes("compliance");
+  const isHelpdesk = isAllInOne || p.includes("helpdesk");
+  const isLeaseCrm = isAllInOne || p.includes("crm") || p.includes("lease");
+
+  return {
+    allInOne: isAllInOne,
+    rentRoll: isRentRoll,
+    visitors: isVisitors,
+    ppm: isPpm,
+    compliance: isCompliance,
+    helpdesk: isHelpdesk,
+    leaseCrm: isLeaseCrm,
+  };
+}
+
+const EMPTY_MODULES = {
+  allInOne: false,
+  rentRoll: false,
+  visitors: false,
+  ppm: false,
+  compliance: false,
+  helpdesk: false,
+  leaseCrm: false,
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -44,6 +76,7 @@ export async function GET(request: Request) {
       email === "medistationlifecare@gmail.com";
 
     if (isSuperAdminEmail) {
+      const adminModules = resolveModules("reit-mega", true);
       const res = NextResponse.json({
         subscribed: true,
         email,
@@ -59,6 +92,9 @@ export async function GET(request: Request) {
         remaining_sqft: 500000000,
         starts_at: new Date(Date.now() - 30 * 86400000).toISOString(),
         ends_at: new Date(Date.now() + 365 * 86400000).toISOString(),
+        modules: adminModules,
+        activeModuleKeys: Object.keys(adminModules).filter(k => k !== "allInOne"),
+        activeModulesCount: 6,
         message: "Executive Super Administrator Sovereign Access"
       }, { status: 200 });
       res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 31536000, sameSite: "lax" });
@@ -74,6 +110,9 @@ export async function GET(request: Request) {
         subscribed_sqft: 0,
         totalPortfolioSqft: 0,
         remaining_sqft: 0,
+        modules: EMPTY_MODULES,
+        activeModuleKeys: [],
+        activeModulesCount: 0,
         message: "No email provided"
       }, { status: 200 });
     }
@@ -101,6 +140,7 @@ export async function GET(request: Request) {
         .maybeSingle();
 
       if (userData?.role === "super_admin") {
+        const adminModules = resolveModules("reit-mega", true);
         const res = NextResponse.json({
           subscribed: true,
           email,
@@ -110,7 +150,10 @@ export async function GET(request: Request) {
           duration_months: 12,
           isAdmin: true,
           role: "super_admin",
-          days_remaining: 365
+          days_remaining: 365,
+          modules: adminModules,
+          activeModuleKeys: Object.keys(adminModules).filter(k => k !== "allInOne"),
+          activeModulesCount: 6,
         }, { status: 200 });
         res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 31536000, sameSite: "lax" });
         return res;
@@ -135,11 +178,14 @@ export async function GET(request: Request) {
       if (!dbErr && dbSub) {
         const endsAtMs = new Date(dbSub.ends_at).getTime();
         const daysRemaining = Math.max(0, Math.ceil((endsAtMs - Date.now()) / (1000 * 60 * 60 * 24)));
+        const planKey = dbSub.plan_id || "techpark";
+        const userModules = resolveModules(planKey, false);
+        const activeKeys = Object.entries(userModules).filter(([k, v]) => v && k !== "allInOne").map(([k]) => k);
 
         const res = NextResponse.json({
           subscribed: true,
           email,
-          plan: dbSub.plan_id || "techpark",
+          plan: planKey,
           plan_name: dbSub.plan_name || "Tech Park Campus",
           billing_cycle: dbSub.billing_cycle || "monthly",
           duration_months: dbSub.duration_months || 1,
@@ -151,6 +197,9 @@ export async function GET(request: Request) {
           subscribed_sqft: dbSub.metadata?.subscribed_sqft || null,
           totalPortfolioSqft,
           remaining_sqft: dbSub.metadata?.subscribed_sqft ? Math.max(0, Number(dbSub.metadata.subscribed_sqft) - totalPortfolioSqft) : null,
+          modules: userModules,
+          activeModuleKeys: activeKeys,
+          activeModulesCount: activeKeys.length,
         }, { status: 200 });
         res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
         res.cookies.set("officex_owner_subscribed", "true", { path: "/", maxAge: 2592000, sameSite: "lax" });
@@ -179,10 +228,14 @@ export async function GET(request: Request) {
         // Check if not expired
         if (endsAtMs > Date.now()) {
           const daysRemaining = Math.max(0, Math.ceil((endsAtMs - Date.now()) / (1000 * 60 * 60 * 24)));
+          const planKey = userSub.plan || "techpark";
+          const userModules = resolveModules(planKey, false);
+          const activeKeys = Object.entries(userModules).filter(([k, v]) => v && k !== "allInOne").map(([k]) => k);
+
           const res = NextResponse.json({
             subscribed: true,
             email,
-            plan: userSub.plan || "techpark",
+            plan: planKey,
             plan_name: userSub.plan_name || "Tech Park Campus",
             billing_cycle: userSub.billing_cycle || "monthly",
             duration_months: userSub.duration_months || 1,
@@ -194,6 +247,9 @@ export async function GET(request: Request) {
             subscribed_sqft: userSub.subscribed_sqft || null,
             totalPortfolioSqft,
             remaining_sqft: userSub.subscribed_sqft ? Math.max(0, Number(userSub.subscribed_sqft) - totalPortfolioSqft) : null,
+            modules: userModules,
+            activeModuleKeys: activeKeys,
+            activeModulesCount: activeKeys.length,
           }, { status: 200 });
           res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
           return res;
@@ -211,6 +267,9 @@ export async function GET(request: Request) {
       subscribed_sqft: 0,
       totalPortfolioSqft,
       remaining_sqft: 0,
+      modules: EMPTY_MODULES,
+      activeModuleKeys: [],
+      activeModulesCount: 0,
       message: "Pro subscription required for Rent Roll & Financial Suite"
     }, { status: 200 });
 

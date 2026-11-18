@@ -80,28 +80,22 @@ export default function SubscriptionGate({
 
   // Selected Pricing Plan state (default: "commercial-suite" ₹1)
   const [selectedPlanId, setSelectedPlanId] = useState<string>("commercial-suite");
-  const { minAllowedSqft: universalFloor, totalPortfolioSqft } = useUniversalPortfolioSqft(10000);
+  const { minAllowedSqft: universalFloor, totalPortfolioSqft } = useUniversalPortfolioSqft(1000);
+
+  const [floorNoticeDismissed, setFloorNoticeDismissed] = useState<boolean>(false);
 
   const [minAllowedSqft, setMinAllowedSqft] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
       if (portSqft && portSqft > 0) return portSqft;
-      try {
-        const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
-        if (snap?.areaSqft && Number(snap.areaSqft) > 0) return Number(snap.areaSqft);
-      } catch {}
     }
-    return 10000;
+    return 1000;
   });
 
   const [customSqft, setCustomSqft] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
       if (portSqft && portSqft > 0) return portSqft;
-      try {
-        const snap = JSON.parse(localStorage.getItem("officex_onboarded_property_details") || "{}");
-        if (snap?.areaSqft && Number(snap.areaSqft) > 0) return Number(snap.areaSqft);
-      } catch {}
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) return stored;
     }
@@ -113,6 +107,8 @@ export default function SubscriptionGate({
     if (universalFloor > 0) {
       setMinAllowedSqft(universalFloor);
       setCustomSqft((prev) => (prev < universalFloor ? universalFloor : prev));
+    } else {
+      setMinAllowedSqft(1000);
     }
   }, [universalFloor]);
 
@@ -816,19 +812,27 @@ export default function SubscriptionGate({
 
           {/* ──── INTERACTIVE SQUARE FOOTAGE CHOOSER ──── */}
                     {/* Universal Minimum Floor Notice if properties registered */}
-          {minAllowedSqft > 10000 && (
+          {totalPortfolioSqft > 0 && !floorNoticeDismissed && (
             <div className="mb-3 p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
               <div className="flex items-center gap-2 font-bold">
                 <Building2 size={16} className="text-[#0F8B7D] shrink-0" />
-                <span>Total Properties Registered: <strong className="font-mono text-slate-900 font-black">{minAllowedSqft.toLocaleString("en-IN")} Sq.Ft</strong></span>
+                <span>Total Properties Registered: <strong className="font-mono text-slate-900 font-black">{totalPortfolioSqft.toLocaleString("en-IN")} Sq.Ft</strong></span>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-700 text-white tracking-wider ml-1">
+                  Compulsory Minimum Floor
+                </span>
               </div>
-              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-700 text-white tracking-wider self-start sm:self-auto">
-                Compulsory Minimum Floor
-              </span>
+              <button
+                type="button"
+                onClick={() => setFloorNoticeDismissed(true)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg self-end sm:self-auto cursor-pointer"
+                title="Dismiss notice"
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
 
-<div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
+          <div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
               <div>
                 <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block">
@@ -862,9 +866,12 @@ export default function SubscriptionGate({
             <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-200/60">
               <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
               {(() => {
-                const standard = [25000, 50000, 100000, 250000, 500000, 1000000];
-                const higher = standard.filter((p) => p > minAllowedSqft);
-                const presetsToRender = [minAllowedSqft, ...higher].slice(0, 5);
+                const standard = [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+                const higher = standard.filter((p) => p >= minAllowedSqft);
+                const presetsToRender = higher.slice(0, 5);
+                if (minAllowedSqft > 0 && !presetsToRender.includes(minAllowedSqft)) {
+                  presetsToRender.unshift(minAllowedSqft);
+                }
                 return presetsToRender.map((preset) => (
                   <button
                     key={preset}
@@ -878,7 +885,7 @@ export default function SubscriptionGate({
                     }}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                       customSqft === preset
-                        ? "bg-[#0F8B7D] text-white shadow-2xs"
+                        ? "bg-[#0F8B7D] text-white shadow-2xs font-black"
                         : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                     }`}
                   >
@@ -980,56 +987,72 @@ export default function SubscriptionGate({
             })}
           </div>
 
-          {/* ──── 1-CLICK PROMOTIONAL COUPON (RENTROLL12) ──── */}
-          <div className="mb-4 rounded-xl border border-amber-300/80 bg-linear-to-r from-amber-50/80 to-teal-50/60 p-3 shadow-2xs">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Gift size={16} className="text-amber-700 shrink-0" />
-                <span className="font-mono text-xs font-black text-[#0F8B7D] px-2 py-0.5 rounded-md bg-amber-100/80 border border-dashed border-amber-400">
-                  RENTROLL12
+          {/* ──── OPTIONAL PROMOTIONAL / PARTNER VOUCHER CODE ──── */}
+          <div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <Gift size={14} className="text-[#0F8B7D]" />
+                <span>Partner / Promo Voucher</span>
+              </label>
+              {appliedCoupon && (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  {appliedCoupon} ({couponDiscountPct}% OFF)
                 </span>
-                <span className="text-[11px] font-semibold text-slate-700 hidden sm:inline">
-                  100% Free Promotional Access (₹0)
-                </span>
-              </div>
-
-              <div>
-                {appliedCoupon === "RENTROLL12" ? (
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs">
-                      <CheckCircle2 size={12} />
-                      <span>Applied (₹0)</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-[10px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAppliedCoupon("RENTROLL12");
-                      setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated.");
-                      setCouponError(null);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("officex_applied_coupon", "RENTROLL12");
-                        sessionStorage.setItem("officex_applied_coupon", "RENTROLL12");
-                        localStorage.setItem("officex_subscription", "active");
-                        sessionStorage.setItem("officex_subscription", "active");
-                        localStorage.setItem("officex_subscribed_sqft", String(customSqft));
-                      }
-                    }}
-                    className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-[11px] shadow-2xs transition active:scale-95 cursor-pointer"
-                  >
-                    Apply 100% Off
-                  </button>
-                )}
-              </div>
+              )}
             </div>
+
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span>Promo Code <strong>{appliedCoupon}</strong> Applied ({couponDiscountPct}% OFF)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleApplyCoupon();
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value);
+                    setCouponError(null);
+                  }}
+                  placeholder="Enter promo or voucher code"
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono uppercase font-bold text-slate-900 outline-none focus:border-[#0F8B7D] shadow-2xs"
+                />
+                <button
+                  type="submit"
+                  disabled={!couponInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-black disabled:bg-slate-300 text-white text-xs font-extrabold transition shadow-2xs cursor-pointer"
+                >
+                  Apply
+                </button>
+              </form>
+            )}
+
+            {couponError && (
+              <p className="text-[11px] font-semibold text-rose-600 mt-1.5">
+                {couponError}
+              </p>
+            )}
+            {couponSuccess && !appliedCoupon && (
+              <p className="text-[11px] font-semibold text-emerald-700 mt-1.5">
+                {couponSuccess}
+              </p>
+            )}
           </div>
 
           {/* ──── LIVE CALCULATION SUMMARY ──── */}
@@ -1107,17 +1130,9 @@ export default function SubscriptionGate({
                   Not ready to activate {portalName}? You will remain signed in to OfficeX.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold text-[#0F8B7D]">
-                  <Link href="/dashboard/owner" className="hover:underline flex items-center gap-1.5 font-extrabold text-[#0D7B6C] bg-teal-50 px-3 py-1 rounded-lg border border-teal-200">
+                  <Link href="/dashboard" className="hover:underline flex items-center gap-1.5 font-extrabold text-[#0D7B6C] bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl border border-teal-200 transition">
                     <ArrowLeft size={13} />
                     <span>Return to Workspace Dashboard</span>
-                  </Link>
-                  <span className="text-slate-300">•</span>
-                  <Link href="/fm-marketplace" className="hover:underline flex items-center gap-1">
-                    <span>FM Marketplace</span>
-                  </Link>
-                  <span className="text-slate-300">•</span>
-                  <Link href={fallbackLandingPage} className="hover:underline flex items-center gap-1">
-                    <span>Platform Overview</span>
                   </Link>
                 </div>
               </div>

@@ -470,23 +470,18 @@ export default function ContractDetailDrawer({
                     sessionStorage.getItem("officex_owner_subscribed") === "true" ||
                     localStorage.getItem("officex_subscription_status") === "active" ||
                     localStorage.getItem("officex_rentroll_subscribed") === "true" ||
-                    localStorage.getItem("officex_user_email") ||
-                    localStorage.getItem("officex_user_role") ||
-                    localStorage.getItem("officex_payment_id") ||
-                    localStorage.getItem("officex_applied_coupon") ||
                     (document.cookie && (
                       document.cookie.includes("officex_subscription=active") ||
                       document.cookie.includes("officex_owner_subscribed=true") ||
                       document.cookie.includes("officex_subscription_status=active")
-                    )) ||
-                    true
+                    ))
                   );
                   if (!isSub) {
-                    alert("Active Subscription Required\n\nYou need an active subscription to download commercial contract agreements. Please upgrade your plan.");
+                    alert("🔒 Active Rent Roll Subscription Required\n\nYou need an active Rent Roll subscription to download or export executed commercial lease agreements. Free workspace allows managing properties, spaces, and contracts without limits, while PDF contract downloads are reserved for active subscribers.\n\nPlease subscribe to Rent Roll to unlock PDF downloads.");
                     return;
                   }
                   const logoUrl = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
-                  window.open(`/api/contracts/${data.id || contractId}/pdf?subscribed=true${logoUrl ? `&logoUrl=${encodeURIComponent(logoUrl)}` : ""}`, "_blank");
+                  window.open(`/api/contracts/${data.id || contractId}/pdf${logoUrl ? `?logoUrl=${encodeURIComponent(logoUrl)}` : ""}`, "_blank");
                 }}
                 className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg shadow-2xs transition cursor-pointer"
               >

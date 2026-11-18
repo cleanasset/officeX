@@ -14,13 +14,28 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
     const auth = getAuthContext(req);
+    const userEmail = (auth.userEmail || "").toLowerCase().trim();
+    const isMasterAdmin = auth.role === "super_admin" || userEmail === "admin@gmail.com" || userEmail === "medistationlifecare@gmail.com";
+
+    // Unauthenticated or new users without explicit email have 0 properties by definition
+    if (!userEmail && !isMasterAdmin) {
+      return NextResponse.json({
+        success: true,
+        orgId: null,
+        totalPortfolioSqft: 0,
+        propertyCount: 0,
+        properties: [],
+      });
+    }
+
     const targetOrgId = auth.orgId;
 
     let totalArea = 0;
     const propertyItems: Array<{ id: string; name: string; areaSqft: number; source: string }> = [];
     const seenIds = new Set<string>();
 
-    if (targetOrgId) {
+    // For standard users, do not query the demo constant DEFAULT_TEST_ORG_ID
+    if (targetOrgId && (isMasterAdmin || targetOrgId !== "a411dd64-65db-462d-8eef-336f9768f44d")) {
       // 1. Fetch from rent-roll `property` table
       try {
         const rrProps = await db

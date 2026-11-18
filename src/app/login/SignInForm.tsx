@@ -458,6 +458,10 @@ export default function SignInForm({
       if (!res.ok) {
         if (data.is_google_account) {
           setIsGoogleAccount(true);
+          setStep("google_account");
+          setError(data.error || "This account was registered with Google. Please sign in using Google.");
+          setIsLoading(false);
+          return;
         }
         setError(data.error || "Incorrect password. Please verify and try again.");
         setIsLoading(false);

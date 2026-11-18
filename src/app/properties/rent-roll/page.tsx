@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Calendar,
@@ -69,6 +70,7 @@ import SeatCountModal from "@/components/rent-roll/SeatCountModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
+  const router = useRouter();
   // As-of-date and Views (§S-10)
   const [asOfDate, setAsOfDate] = useState<string>(() => {
     const d = new Date();
@@ -209,11 +211,14 @@ export default function RentRollRegisterPage() {
 
       // Handle deep-link triggers from Onboarding or direct URL navigation
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("tab") === "contracts") {
+      const tabParam = urlParams.get("tab");
+      if (tabParam === "contracts" || tabParam === "contracted") {
         setCurrentView("contracted");
-      }
-      if (urlParams.get("tab") === "rentroll") {
+      } else if (tabParam === "rentroll") {
         setCurrentView("current");
+      } else if (!isUserSubscribed) {
+        // Free tier users default to the contracts & properties workspace view
+        setCurrentView("contracted");
       }
       if (urlParams.get("openContract") === "1" || urlParams.get("tab") === "newContract") {
         setPreloadSpaceId(undefined);
@@ -439,12 +444,18 @@ export default function RentRollRegisterPage() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <Link href="/properties" className="hover:text-slate-800 transition">Portfolio</Link>
                   <span>/</span>
-                  <span className="text-teal-700 font-bold">Rent Roll Register</span>
+                  <span className="text-teal-700 font-bold">{isUserSubscribed ? "Rent Roll Register" : "Property & Lease Registry"}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                    Rent Roll Register
+                    {isUserSubscribed ? "Rent Roll Register" : "Property & Lease Registry"}
                   </h1>
+                  {!isUserSubscribed && (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
+                      <Lock size={11} className="text-amber-700" />
+                      Rent Roll Locked · Free Property Tier Active
+                    </span>
+                  )}
                   {isSnapshotLocked && (
                     <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1 shadow-2xs">
                       <Lock size={12} className="text-emerald-700" />
@@ -458,21 +469,32 @@ export default function RentRollRegisterPage() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Institutional schedule of commercial demised spaces, active occupant agreements, escalations, and arrears.
+                  {isUserSubscribed
+                    ? "Institutional schedule of commercial demised spaces, active occupant agreements, escalations, and arrears."
+                    : "Manage your commercial properties, demarcated spaces, active occupants, and 39-point lease agreements. (Institutional Rent Roll calculation & CAM billing locked)."}
                 </p>
               </div>
 
               {/* Action Buttons Suite */}
               <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Primary Action: Run Monthly Billing / Invoices */}
-                <button
-                  type="button"
-                  onClick={() => setBillingRunOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 border border-slate-700"
-                >
-                  <Receipt size={14} className="text-teal-400" />
-                  <span>Run Monthly Billing / Invoices</span>
-                </button>
+                {!isUserSubscribed ? (
+                  <Link
+                    href="/operate/subscription"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Lock size={13} />
+                    <span>Unlock Institutional Rent Roll</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setBillingRunOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 border border-slate-700"
+                  >
+                    <Receipt size={14} className="text-teal-400" />
+                    <span>Run Monthly Billing / Invoices</span>
+                  </button>
+                )}
 
                 {/* Secondary: Import */}
                 <button
@@ -769,17 +791,25 @@ export default function RentRollRegisterPage() {
               {/* Top Bar: View Selector & As-of-Date */}
               <div className="p-4 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-4 bg-slate-50/60">
                 {/* View Selector: Current / Contracted / Forecast (§S-10) */}
-                <div className="flex bg-slate-200/80 p-1 rounded-xl text-xs font-semibold">
+                <div className="flex bg-slate-200/80 p-1 rounded-xl text-xs font-semibold gap-1">
                   <button
-                    onClick={() => setCurrentView("current")}
-                    className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                    onClick={() => {
+                      if (!isUserSubscribed) {
+                        router.push("/operate/subscription");
+                        return;
+                      }
+                      setCurrentView("current");
+                    }}
+                    className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                       currentView === "current"
                         ? "bg-white text-slate-900 shadow-xs font-bold"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Current View
+                    {!isUserSubscribed && <Lock size={12} className="text-amber-700" />}
+                    <span>{isUserSubscribed ? "Institutional Rent Roll" : "Rent Roll (Locked)"}</span>
                   </button>
+
                   <button
                     onClick={() => setCurrentView("contracted")}
                     className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
@@ -788,17 +818,25 @@ export default function RentRollRegisterPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Contracted (+ Future)
+                    <span>Property &amp; Lease Registry</span>
                   </button>
+
                   <button
-                    onClick={() => setCurrentView("forecast")}
-                    className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                    onClick={() => {
+                      if (!isUserSubscribed) {
+                        router.push("/operate/subscription");
+                        return;
+                      }
+                      setCurrentView("forecast");
+                    }}
+                    className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                       currentView === "forecast"
                         ? "bg-white text-slate-900 shadow-xs font-bold"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Forecast (+ Deals Weighted)
+                    {!isUserSubscribed && <Lock size={12} className="text-amber-700" />}
+                    <span>{isUserSubscribed ? "Forecast (+ Deals Weighted)" : "Forecast (Locked)"}</span>
                   </button>
                 </div>
 

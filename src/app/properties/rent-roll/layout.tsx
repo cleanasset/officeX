@@ -1,5 +1,4 @@
 import React from "react";
-import SubscriptionGate from "@/components/SubscriptionGate";
 
 export const metadata = {
   title: "Rent Roll Master | OfficeX",
@@ -11,9 +10,5 @@ export default function RentRollLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SubscriptionGate portalName="Rent Roll Master" fallbackLandingPage="/dashboard/owner">
-      {children}
-    </SubscriptionGate>
-  );
+  return <>{children}</>;
 }

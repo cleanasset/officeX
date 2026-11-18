@@ -542,23 +542,9 @@ function SidebarInner() {
       if (isAdmin) return true;
       if (!email) return false;
 
-      // User-scoped check takes absolute precedence to eliminate flicker/delay
+      // User-scoped check takes absolute precedence to eliminate cross-account leakage
       const userSub = localStorage.getItem(`officex_sub_${email}`);
-      if (userSub === "inactive" || userSub === "false" || userSub === "none") {
-        return false;
-      }
-      if (userSub === "active") {
-        return true;
-      }
-
-      const subStatus = localStorage.getItem("officex_subscription");
-      const subStatus2 = localStorage.getItem("officex_subscription_status");
-      const ownerSub = localStorage.getItem("officex_owner_subscribed");
-      const rentrollSub = localStorage.getItem("officex_rentroll_subscribed");
-      return (
-        subStatus === "active" &&
-        (subStatus2 === "active" || ownerSub === "true" || rentrollSub === "true")
-      );
+      return userSub === "active";
     }
     return false;
   });
@@ -659,13 +645,7 @@ function SidebarInner() {
         localStorage.getItem("officex_admin") === "1" ||
         localStorage.getItem("officex_role") === "super_admin";
 
-      const storedSub =
-        localStorage.getItem("officex_subscription") === "active" ||
-        localStorage.getItem("officex_subscription_status") === "active" ||
-        localStorage.getItem("officex_owner_subscribed") === "true" ||
-        localStorage.getItem("officex_rentroll_subscribed") === "true";
-
-      if (isAdmin || storedSub) {
+      if (isAdmin) {
         setIsSubscribed(true);
       } else if (userEmail) {
         fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
@@ -679,16 +659,21 @@ function SidebarInner() {
               localStorage.setItem("officex_subscription_status", "active");
               localStorage.setItem("officex_owner_subscribed", "true");
               localStorage.setItem("officex_rentroll_subscribed", "true");
-            } else if (!storedSub && !isAdmin) {
+            } else {
               setIsSubscribed(false);
+              localStorage.setItem(`officex_sub_${userEmail}`, "inactive");
+              localStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_subscription_status");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
             }
           })
           .catch(() => {
-            if (storedSub || isAdmin) setIsSubscribed(true);
-            else setIsSubscribed(false);
+            const userSub = localStorage.getItem(`officex_sub_${userEmail}`);
+            setIsSubscribed(userSub === "active");
           });
       } else {
-        setIsSubscribed(Boolean(storedSub));
+        setIsSubscribed(false);
       }
     }
   }, []);

@@ -164,11 +164,46 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
 
   const loginHref = `/login?${queryParams.toString()}`;
 
+  const getDashboardTarget = () => {
+    const p = (pathname || "").toLowerCase();
+    if (p.includes("/operate/rent-roll") || p.includes("/properties/rent-roll") || p.includes("/properties/registry")) {
+      if (isSubscribed) {
+        return { href: "/properties/rent-roll", label: "Open Rent Roll Dashboard", sub: "Institutional Leases & Billing" };
+      }
+      return { href: "/properties/registry", label: "Open Property Registry", sub: "Properties, Units & Leases" };
+    }
+    if (p.includes("/operate/visitors")) {
+      return { href: "/visitors", label: "Open Visitor Management", sub: "Digital Kiosk & QR Passes" };
+    }
+    if (p.includes("/operate/ppm")) {
+      return { href: "/operate/ppm", label: "Open PPM Maintenance", sub: "52-Week MEP Maintenance" };
+    }
+    if (p.includes("/operate/compliance")) {
+      return { href: "/operate/compliance", label: "Open Compliance Calendar", sub: "Statutory Licenses & NOCs" };
+    }
+    if (p.includes("/operate/helpdesk")) {
+      return { href: "/operate/helpdesk", label: "Open Facility Helpdesk", sub: "SLA Tickets & Work Orders" };
+    }
+    if (p.includes("/operate/lease-crm")) {
+      return { href: "/operate/lease-crm", label: "Open Commercial Leasing CRM", sub: "Stacking Plans & Pipeline" };
+    }
+    if (p === "/operate" || p.startsWith("/operate")) {
+      return { href: "/dashboard?context=operate", label: "Open SaaS Workspaces Hub", sub: "Select Commercial SaaS Tool" };
+    }
+    if (p.includes("/marketplace") && !p.includes("/fm-marketplace")) {
+      return { href: "/marketplace", label: "Open Office Marketplace", sub: "Commercial Listings & Leads" };
+    }
+    if (p.includes("/fm-marketplace")) {
+      return { href: "/fm-marketplace", label: "Open FM Procurement Desk", sub: "RFQs, Vendor Bids & Work Orders" };
+    }
+    return { href: "/dashboard", label: "Go to My Dashboard", sub: "Choose Your Active Workspace" };
+  };
+
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setMenuOpen(false);
-    // Directly navigate to the sovereign Workspace Options Hub where user explicitly chooses their workspace
-    router.push("/dashboard");
+    const target = getDashboardTarget();
+    router.push(target.href);
   };
 
   const handleProfileClick = (e: React.MouseEvent) => {
@@ -220,22 +255,27 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
 
             {/* Core User Navigation */}
             <div className="py-1.5 space-y-0.5">
-              {/* Go to My Dashboard */}
-              <button
-                type="button"
-                onClick={handleDashboardClick}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
-              >
-                <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <LayoutDashboard size={13} className="stroke-[2.2]" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Go to My Dashboard</span>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    Rent Roll, Marketplace &amp; FM
-                  </span>
-                </div>
-              </button>
+              {/* Context-aware Dashboard entry */}
+              {(() => {
+                const target = getDashboardTarget();
+                return (
+                  <button
+                    type="button"
+                    onClick={handleDashboardClick}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                      <LayoutDashboard size={13} className="stroke-[2.2]" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">{target.label}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {target.sub}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })()}
 
               {/* Profile & KYC */}
               <button
