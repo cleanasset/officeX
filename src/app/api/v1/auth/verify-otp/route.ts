@@ -31,14 +31,8 @@ export async function POST(req: Request) {
       try {
         let supaId: string | undefined;
         let existingUser: any = null;
-        if (supabaseAdmin) {
-          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-          existingUser = usersData?.users?.find(
-            (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-          );
-        const targetRole =
-          existingUser?.user_metadata?.role ||
-          (body.role === "pm" || body.role === "property_manager"
+        let targetRole =
+          body.role === "pm" || body.role === "property_manager"
             ? "property_manager"
             : body.role === "tenant" || body.role === "tenant_admin"
             ? "tenant_admin"
@@ -46,23 +40,32 @@ export async function POST(req: Request) {
             ? "broker"
             : body.role === "vendor" || body.role === "vendor_admin"
             ? "vendor_admin"
-            : "owner");
+            : "owner";
 
-        if (existingUser) {
-          supaId = existingUser.id;
-          await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-            email_confirm: true,
-            user_metadata: { ...existingUser.user_metadata, role: targetRole }
-          });
-        } else {
-          const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
-            email: email.trim().toLowerCase(),
-            email_confirm: true,
-            user_metadata: { role: targetRole }
-          });
-          supaId = newUser?.user?.id;
+        if (supabaseAdmin) {
+          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+          existingUser = usersData?.users?.find(
+            (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+          );
+          if (existingUser?.user_metadata?.role) {
+            targetRole = existingUser.user_metadata.role;
+          }
+
+          if (existingUser) {
+            supaId = existingUser.id;
+            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+              email_confirm: true,
+              user_metadata: { ...existingUser.user_metadata, role: targetRole }
+            });
+          } else {
+            const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
+              email: email.trim().toLowerCase(),
+              email_confirm: true,
+              user_metadata: { role: targetRole }
+            });
+            supaId = newUser?.user?.id;
+          }
         }
-      }
 
       const finalName = (body.fullName || existingUser?.user_metadata?.full_name || email.split('@')[0]).trim();
 
