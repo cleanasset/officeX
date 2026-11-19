@@ -444,11 +444,11 @@ export default function RentRollRegisterPage() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <Link href="/properties" className="hover:text-slate-800 transition">Portfolio</Link>
                   <span>/</span>
-                  <span className="text-teal-700 font-bold">{isUserSubscribed ? "Rent Roll Register" : "Property & Lease Registry"}</span>
+                  <span className="text-teal-700 font-bold">Rent Roll Register</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                    {isUserSubscribed ? "Rent Roll Register" : "Property & Lease Registry"}
+                    Rent Roll Register
                   </h1>
                   {!isUserSubscribed && (
                     <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
@@ -645,7 +645,7 @@ export default function RentRollRegisterPage() {
                   </div>
                 </div>
                 <Link
-                  href="/operate/pricing?mode=standalone&module=rentroll"
+                  href="/operate/rent-roll/pricing"
                   className="px-5 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-extrabold shrink-0 transition-all shadow-xs text-center flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   <span>Subscribe to Rent Roll</span>

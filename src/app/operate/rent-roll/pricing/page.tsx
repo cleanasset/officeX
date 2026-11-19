@@ -114,8 +114,8 @@ export default function RentRollPricingPage() {
       a: "Commercial properties are billed on a transparent monthly software license per edition, with optional volume metering for multi-million square foot portfolios. Managed office flex operators can utilize the Flex & Seats add-on for capacity-based seat billing.",
     },
     {
-      q: "Can we start with Essentials and upgrade to Professional later?",
-      a: "Yes. Upgrading is a simple entitlement switch. Because all editions use the same single Platform Core database schema, zero data migration, re-importing, or downtime is required when transitioning between editions.",
+      q: "Are there multiple tiers or hidden feature locks?",
+      a: "No. OfficeX Rent Roll is offered under a single, transparent fixed rate of ₹1 per sq.ft / month. You get 100% full access to all 39 points of canonical lease management, automated escalations, CAM pooling, GST/TDS tax accounting, and tenant self-service without feature paywalls.",
     },
     {
       q: "How does the 100% free launch coupon work?",
@@ -168,34 +168,15 @@ export default function RentRollPricingPage() {
             Pay strictly for the square footage you manage. No lock-ins, zero hidden charges.
           </p>
 
-          {/* Attractive 3-Tier Quick Price Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto mb-6">
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Standalone Tower</span>
-              <div className="text-2xl font-black text-slate-900 mt-0.5">
-                ₹1<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
-              </div>
-              <span className="text-[11px] font-bold text-teal-700 mt-1">Commercial Starter</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-teal-50/60 to-white border-2 border-[#0D7B6C] shadow-md shadow-teal-900/5 flex flex-col items-center relative">
-              <span className="absolute -top-2.5 px-2 py-0.5 bg-[#0D7B6C] text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-2xs">
-                ★ MOST POPULAR
-              </span>
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-800">Tech Parks &amp; Campuses</span>
-              <div className="text-2xl font-black text-[#0D7B6C] mt-0.5">
-                ₹2<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
-              </div>
-              <span className="text-[11px] font-bold text-teal-800 mt-1">Tech Park Campus</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Funds &amp; REITs</span>
-              <div className="text-2xl font-black text-slate-900 mt-0.5">
-                ₹3<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
-              </div>
-              <span className="text-[11px] font-bold text-slate-700 mt-1">REIT Mega-Portfolio</span>
-            </div>
+          {/* Unified Transparent Price Callout */}
+          <div className="inline-flex items-center gap-3 bg-white border-2 border-[#0D7B6C] shadow-md px-6 py-3 rounded-2xl mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-800">Unified License</span>
+            <span className="text-3xl font-black text-[#0D7B6C] font-mono">
+              ₹1 <span className="text-xs font-semibold text-slate-600 font-sans">/ sq.ft / mo</span>
+            </span>
+            <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+              Full Suite Included
+            </span>
           </div>
 
           {/* Launch Special Offer Ribbon */}
@@ -227,34 +208,26 @@ export default function RentRollPricingPage() {
 
       {/* Comprehensive Feature Comparison Matrix */}
       <section className="py-16 bg-white border-y border-slate-200/80 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-10">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Detailed Edition Comparison Matrix
+              Complete Feature &amp; Specification Matrix
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 font-medium mt-2">
-              Every capability mapped to the canonical Lease-to-Cash functional specification.
+              Every institutional capability below is 100% unlocked in your single ₹1 / sq.ft commercial license.
             </p>
           </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded-3xl shadow-sm bg-white">
-            <table className="w-full text-left border-collapse min-w-[680px]">
+            <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-900">
-                  <th className="py-4 px-6 text-xs font-black uppercase tracking-wider w-2/5">
-                    Capability / Module
+                  <th className="py-4 px-6 text-xs font-black uppercase tracking-wider w-3/4">
+                    Capability / Functional Specification
                   </th>
-                  <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
-                    <div>Commercial Starter</div>
-                    <div className="text-[11px] font-bold text-teal-700 normal-case">₹1 / sq.ft</div>
-                  </th>
-                  <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5 text-[#0D7B6C] bg-teal-50/50">
-                    <div>Tech Park Campus</div>
-                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹2 / sq.ft</div>
-                  </th>
-                  <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
-                    <div>REIT Mega-Portfolio</div>
-                    <div className="text-[11px] font-bold text-slate-800 normal-case">₹3 / sq.ft</div>
+                  <th className="py-4 px-6 text-xs font-black uppercase tracking-wider text-center w-1/4 text-[#0D7B6C] bg-teal-50/60 border-l border-teal-200/80">
+                    <div>OfficeX Rent Roll</div>
+                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">Fixed ₹1 / sq.ft</div>
                   </th>
                 </tr>
               </thead>
@@ -263,7 +236,7 @@ export default function RentRollPricingPage() {
                   <React.Fragment key={gIdx}>
                     <tr className="bg-slate-100/70 border-b border-slate-200/80">
                       <td
-                        colSpan={4}
+                        colSpan={2}
                         className="py-3 px-6 text-xs font-black text-slate-800 uppercase tracking-wide"
                       >
                         {group.category}
@@ -277,44 +250,11 @@ export default function RentRollPricingPage() {
                         <td className="py-3 px-6 text-xs font-semibold text-slate-700">
                           {item.name}
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          {typeof item.essentials === "boolean" ? (
-                            item.essentials ? (
-                              <Check size={16} className="text-emerald-600 mx-auto" />
-                            ) : (
-                              <X size={16} className="text-slate-300 mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-[11px] font-bold text-slate-600">
-                              {item.essentials}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center bg-teal-50/20 font-bold">
-                          {typeof item.pro === "boolean" ? (
-                            item.pro ? (
-                              <Check size={16} className="text-[#0D7B6C] mx-auto stroke-[2.5]" />
-                            ) : (
-                              <X size={16} className="text-slate-300 mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-[11px] font-extrabold text-[#0D7B6C]">
-                              {item.pro}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {typeof item.enterprise === "boolean" ? (
-                            item.enterprise ? (
-                              <Check size={16} className="text-slate-900 mx-auto" />
-                            ) : (
-                              <X size={16} className="text-slate-300 mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-[11px] font-bold text-slate-800">
-                              {item.enterprise}
-                            </span>
-                          )}
+                        <td className="py-3 px-6 text-center bg-teal-50/20 border-l border-teal-100">
+                          <div className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#0D7B6C]">
+                            <Check size={16} className="text-[#0D7B6C] stroke-[2.5]" />
+                            <span>Included</span>
+                          </div>
                         </td>
                       </tr>
                     ))}

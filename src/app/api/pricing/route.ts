@@ -13,6 +13,11 @@ export async function GET() {
     ).catch(() => ({ rows: [] }));
 
     const defaultPricing = {
+      taxConfig: {
+        gstMode: "exclusive" as const,
+        gstRatePct: 18,
+        sacCode: "997212",
+      },
       cafmSuite: {
         essentialsMonthly: 19999,
         proMonthly: 39999,
@@ -60,6 +65,11 @@ export async function GET() {
       return NextResponse.json({
         success: true,
         pricing: {
+          taxConfig: {
+            gstMode: res.rows[0].data?.taxConfig?.gstMode || "exclusive",
+            gstRatePct: Number(res.rows[0].data?.taxConfig?.gstRatePct) || 18,
+            sacCode: res.rows[0].data?.taxConfig?.sacCode || "997212",
+          },
           cafmSuite: {
             essentialsMonthly: saas.cafmEssentialsMonthly || defaultPricing.cafmSuite.essentialsMonthly,
             proMonthly: saas.cafmProMonthly || defaultPricing.cafmSuite.proMonthly,

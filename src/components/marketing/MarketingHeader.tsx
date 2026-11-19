@@ -50,7 +50,7 @@ export default function MarketingHeader({
 
   const getPricingHref = () => {
     if (currentPath.includes("/rent-roll") || currentPath.includes("/rentroll")) {
-      return "/operate/pricing?mode=standalone&module=rentroll";
+      return "/operate/rent-roll/pricing";
     }
     if (currentPath.includes("/visitor")) {
       return "/operate/pricing?mode=standalone&module=visitor";

@@ -1438,6 +1438,183 @@ function SuperAdminDashboardContent() {
               <div className="p-12 text-center text-slate-400">Loading pricing matrix from system KV store...</div>
             ) : (
               <div className="space-y-8">
+                {/* 0. GST & Statutory Tax Configuration Card */}
+                <div className="bg-gradient-to-r from-teal-50/70 via-slate-50 to-emerald-50/50 border-2 border-teal-200/90 rounded-2xl p-5 space-y-4 shadow-2xs">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-teal-200/60">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-[#0F8B7D]" />
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                          GST &amp; Statutory Tax Configuration
+                        </h3>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white">
+                          Live Invoicing Engine
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Choose whether platform pricing for Rent Roll, CAFM modules, and marketplace subscriptions includes or excludes GST.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-semibold text-slate-500">Active Tax Mode:</span>
+                      <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-xl border ${
+                        (pricingConfig.taxConfig?.gstMode || "exclusive") === "inclusive"
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          : "bg-blue-100 text-blue-800 border-blue-300"
+                      }`}>
+                        {(pricingConfig.taxConfig?.gstMode || "exclusive") === "inclusive"
+                          ? "Inclusive of GST"
+                          : "Exclusive (+ GST Extra)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mode Selector Buttons */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Exclusive Option */}
+                    <div
+                      onClick={() => setPricingConfig({
+                        ...pricingConfig,
+                        taxConfig: {
+                          ...pricingConfig.taxConfig,
+                          gstMode: "exclusive",
+                          gstRatePct: pricingConfig.taxConfig?.gstRatePct ?? 18,
+                          sacCode: pricingConfig.taxConfig?.sacCode || "997212",
+                        }
+                      })}
+                      className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        (pricingConfig.taxConfig?.gstMode || "exclusive") === "exclusive"
+                          ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-slate-300 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-xs text-slate-900">
+                              Exclusive of GST (+18% GST Extra)
+                            </span>
+                            {(pricingConfig.taxConfig?.gstMode || "exclusive") === "exclusive" && (
+                              <CheckCircle2 size={15} className="text-[#0F8B7D]" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                            Display clean net rates (e.g. ₹1 / sq.ft). GST is calculated and added as a statutory line item at checkout and on tax invoices.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] font-mono text-slate-600 flex justify-between">
+                        <span>Invoice Display:</span>
+                        <span className="font-bold text-slate-900">₹1.00 + ₹0.18 GST = ₹1.18 Total</span>
+                      </div>
+                    </div>
+
+                    {/* Inclusive Option */}
+                    <div
+                      onClick={() => setPricingConfig({
+                        ...pricingConfig,
+                        taxConfig: {
+                          ...pricingConfig.taxConfig,
+                          gstMode: "inclusive",
+                          gstRatePct: pricingConfig.taxConfig?.gstRatePct ?? 18,
+                          sacCode: pricingConfig.taxConfig?.sacCode || "997212",
+                        }
+                      })}
+                      className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        pricingConfig.taxConfig?.gstMode === "inclusive"
+                          ? "bg-white border-emerald-600 ring-2 ring-emerald-600/20 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-slate-300 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-xs text-slate-900">
+                              Inclusive of GST (All Taxes Included)
+                            </span>
+                            {pricingConfig.taxConfig?.gstMode === "inclusive" && (
+                              <CheckCircle2 size={15} className="text-emerald-600" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                            Display gross all-inclusive prices (e.g. ₹1 / sq.ft). What users see is what they pay. GST is reverse-calculated and itemized on the tax receipt.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] font-mono text-slate-600 flex justify-between">
+                        <span>Invoice Display:</span>
+                        <span className="font-bold text-slate-900">₹0.85 Net + ₹0.15 GST = ₹1.00 Total</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GST Rate and SAC Code Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block">
+                        Statutory GST Rate (%)
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="28"
+                          value={pricingConfig.taxConfig?.gstRatePct ?? 18}
+                          onChange={(e) => setPricingConfig({
+                            ...pricingConfig,
+                            taxConfig: {
+                              ...pricingConfig.taxConfig,
+                              gstRatePct: Number(e.target.value) || 0,
+                              gstMode: pricingConfig.taxConfig?.gstMode || "exclusive",
+                              sacCode: pricingConfig.taxConfig?.sacCode || "997212",
+                            }
+                          })}
+                          className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                        />
+                        <span className="font-bold text-slate-500 text-sm">%</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">Standard rate for Commercial Tech &amp; SaaS is 18%</span>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block">
+                        Statutory SAC / HSN Code
+                      </label>
+                      <input
+                        type="text"
+                        value={pricingConfig.taxConfig?.sacCode || "997212"}
+                        onChange={(e) => setPricingConfig({
+                          ...pricingConfig,
+                          taxConfig: {
+                            ...pricingConfig.taxConfig,
+                            sacCode: e.target.value.trim(),
+                            gstRatePct: pricingConfig.taxConfig?.gstRatePct ?? 18,
+                            gstMode: pricingConfig.taxConfig?.gstMode || "exclusive",
+                          }
+                        })}
+                        className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-mono outline-none focus:border-teal-500"
+                      />
+                      <span className="text-[10px] text-slate-400">SAC 997212: Real estate operational &amp; leasing services</span>
+                    </div>
+
+                    <div className="bg-teal-50/60 border border-teal-200/80 rounded-xl p-3 space-y-1 sm:col-span-2 md:col-span-1">
+                      <span className="text-[10px] font-bold uppercase text-teal-800 block">
+                        Live Checkout Formula Preview
+                      </span>
+                      <p className="text-xs font-mono font-bold text-teal-950 mt-1">
+                        {(pricingConfig.taxConfig?.gstMode || "exclusive") === "inclusive"
+                          ? "Payable = Area × Rate (18% GST embedded)"
+                          : "Payable = (Area × Rate) + 18% GST"}
+                      </p>
+                      <p className="text-[10px] text-teal-700">
+                        Updates live across Rent Roll pricing, CAFM modules, and Razorpay modal.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1. Office Marketplace Tariffs */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">

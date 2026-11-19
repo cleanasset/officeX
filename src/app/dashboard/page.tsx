@@ -271,18 +271,16 @@ function WorkspaceHubContent() {
   const saasModulesList = [
     {
       id: "rent-roll",
-      title: isRentRollActive ? "Rent Roll & Operations" : "Property & Lease Registry",
-      tag: isRentRollActive ? "Core Lease ERP" : "Free Operational Tier",
-      desc: isRentRollActive
-        ? "39-point lease contracts register, monthly batch billing, step escalations, and CAM pooling."
-        : "Manage unlimited commercial properties, demarcated units, occupants & 39-point contracts. (Rent Roll computation locked).",
+      title: "Rent Roll & Operations",
+      tag: "Core ERP Platform",
+      desc: "For owners managing active tenants, leases, and cash flow. Automate your 39-point contract register, monthly rent runs, step escalations, and CAM pooling.",
       activeHref: "/properties/rent-roll",
-      freeHref: "/properties/registry",
+      freeHref: "/properties/rent-roll",
       icon: Building2,
       color: "from-[#0F8B7D] to-emerald-700",
       isSubscribed: isRentRollActive,
       freeNotice: "Free workspace: Add unlimited properties, units & tenants. (Rent Roll calculation locked).",
-      freeButtonLabel: "Open Property Registry",
+      freeButtonLabel: "Open Free Workspace",
       subscribeHref: "/operate/subscription",
     },
     {
@@ -734,21 +732,12 @@ function WorkspaceHubContent() {
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] font-bold text-slate-600 pt-0.5">
-                    {isRentRollActive ? (
-                      <Link
-                        href="/properties/rent-roll"
-                        className="text-teal-700 hover:text-teal-900 hover:underline"
-                      >
-                        Rent Roll →
-                      </Link>
-                    ) : (
-                      <Link
-                        href="/properties/registry"
-                        className="text-teal-700 hover:text-teal-900 hover:underline"
-                      >
-                        Property Registry →
-                      </Link>
-                    )}
+                    <Link
+                      href="/properties/rent-roll"
+                      className="text-teal-700 hover:text-teal-900 hover:underline"
+                    >
+                      Rent Roll &amp; Operations →
+                    </Link>
                     <span className="text-slate-300">·</span>
                     <Link
                       href="/properties/tenants"

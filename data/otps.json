@@ -40,11 +40,5 @@
     "expiresAt": 1793425521169,
     "attempts": 0,
     "createdAt": 1793424921169
-  },
-  "jiya@scalezix.com": {
-    "code": "498262",
-    "expiresAt": 1793309184385,
-    "attempts": 0,
-    "createdAt": 1793308584385
   }
 }

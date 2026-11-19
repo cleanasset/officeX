@@ -136,6 +136,28 @@ export default function RentRollPricingTable({
     }
   };
 
+  // Tax Configuration loaded from Admin Pricing Settings
+  const [taxConfig, setTaxConfig] = useState<{
+    gstMode: "inclusive" | "exclusive";
+    gstRatePct: number;
+    sacCode: string;
+  }>({
+    gstMode: "exclusive",
+    gstRatePct: 18,
+    sacCode: "997212",
+  });
+
+  useEffect(() => {
+    fetch("/api/pricing")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.pricing?.taxConfig) {
+          setTaxConfig(data.pricing.taxConfig);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Area Scope State (User enters / selects their property sq.ft)
   const { minAllowedSqft, totalPortfolioSqft } = useUniversalPortfolioSqft(10000);
   const [customSqft, setCustomSqft] = useState<number>(50000);
@@ -300,7 +322,13 @@ export default function RentRollPricingTable({
       (userName || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || "" : "") || (finalEmail ? finalEmail.split("@")[0] : "")).trim()
     );
 
-    const priceInRupees = (plan.sqftNumber * plan.ratePerSqft) || plan.basePriceNum || 50;
+    const baseSubtotal = (plan.sqftNumber * plan.ratePerSqft) || plan.basePriceNum || 50;
+    const gstRate = taxConfig.gstRatePct ?? 18;
+    const isGstExclusive = (taxConfig.gstMode || "exclusive") === "exclusive";
+    const totalAmountWithGst = isGstExclusive
+      ? Math.round(baseSubtotal * (1 + gstRate / 100))
+      : Math.round(baseSubtotal);
+    const priceInRupees = appliedCoupon ? 0 : totalAmountWithGst;
     const amountInPaise = priceInRupees * 100;
 
     setProcessingActivation(true);
@@ -454,41 +482,9 @@ export default function RentRollPricingTable({
 
   return (
     <div className="w-full">
-      {/* ──── SIGNED-IN VERIFIED BANNER (WHEN USER COMES FROM SIGN-IN / GATE) ──── */}
-      {userEmail && (
-        <div className="max-w-6xl mx-auto mb-6 p-3.5 sm:p-4 bg-gradient-to-r from-teal-50 via-emerald-50/50 to-white border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#0D7B6C] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
-              {(userName || userEmail).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-black text-slate-900">
-                  Signed in as {userName || userEmail}
-                </span>
-                <span className="text-[10px] font-black bg-[#0D7B6C] text-white px-2 py-0.5 rounded-full shadow-2xs">
-                  ✓ Verified Account
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 font-medium">
-                {userEmail} &middot; Pick your operational plan below to directly launch the Razorpay payment gateway and unlock live access.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/properties/rent-roll"
-            className="text-xs font-bold text-[#0D7B6C] hover:text-[#0A6357] hover:underline flex items-center gap-1 shrink-0 self-start sm:self-auto"
-          >
-            <span>Return to Dashboard Gate</span>
-            <ArrowRight size={12} />
-          </Link>
-        </div>
-      )}
-
-      {/* ──── 1. MASTER PROPERTY AREA (SQ.FT) SELECTOR ──── */}
       {/* Universal Minimum Floor Notice if properties registered */}
       {minAllowedSqft > 10000 && (
-        <div className="max-w-6xl mx-auto mb-4 p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+        <div className="max-w-4xl mx-auto mb-4 p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
           <div className="flex items-center gap-2 font-bold text-teal-900 text-xs sm:text-sm">
             <Building2 size={18} className="text-[#0D7B6C] shrink-0" />
             <span>Cumulative Portfolio Size: <strong className="font-mono text-slate-900 font-black">{minAllowedSqft.toLocaleString("en-IN")} Sq.Ft</strong> across registered properties.</span>
@@ -499,7 +495,8 @@ export default function RentRollPricingTable({
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto mb-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 text-left">
+      {/* ──── 1. MASTER PROPERTY AREA (SQ.FT) SELECTOR ──── */}
+      <div className="max-w-4xl mx-auto mb-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 text-left">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex-1 space-y-3">
             <div className="flex items-center gap-2">
@@ -511,7 +508,7 @@ export default function RentRollPricingTable({
                   Enter Your Leasable Property Area (Sq.Ft)
                 </h2>
                 <p className="text-xs text-slate-500 font-medium">
-                  Plans are charged fixed at <strong className="text-slate-800">₹1, ₹2, or ₹3 per sq.ft</strong> based on tier capabilities. Choose or type your area below:
+                  Simple, transparent pricing fixed at <strong className="text-slate-800">₹1 per sq.ft / month</strong>. Choose or type your area below:
                 </p>
               </div>
             </div>
@@ -579,80 +576,87 @@ export default function RentRollPricingTable({
         </div>
       </div>
 
-      {/* ──── 2. 3 TIER PRICING CARDS DYNAMICALLY SCOPED ──── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch max-w-6xl mx-auto mb-10">
+      {/* ──── 2. DEDICATED RENT ROLL PRICING CARD (CENTERED) ──── */}
+      <div className="max-w-2xl mx-auto mb-10">
         {SLABS.map((slab) => {
           const totalTierPrice = customSqft * slab.ratePerSqft;
           return (
             <div
               key={slab.id}
-              className={`relative rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-200 ${
-                slab.popular
-                  ? "bg-gradient-to-b from-white via-white to-teal-50/20 border-2 border-[#0D7B6C] shadow-lg shadow-teal-950/5 ring-2 ring-[#0D7B6C]/10"
-                  : "bg-white border border-slate-200/90 shadow-2xs hover:shadow-md"
-              }`}
+              className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-white via-white to-teal-50/20 border-2 border-[#0D7B6C] shadow-xl shadow-teal-950/5 ring-4 ring-[#0D7B6C]/10 flex flex-col justify-between transition-all"
             >
               {/* Badge */}
-              {slab.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#0D7B6C] text-white text-[10px] font-bold tracking-wider uppercase shadow-xs flex items-center gap-1 whitespace-nowrap">
-                  <Sparkles size={11} />
-                  <span>{slab.badge}</span>
-                </div>
-              )}
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#0D7B6C] text-white text-xs font-black tracking-wider uppercase shadow-xs flex items-center gap-1.5 whitespace-nowrap">
+                <Sparkles size={13} />
+                <span>Fixed ₹1 / Sq.Ft · Rent Roll Suite</span>
+              </div>
 
               <div>
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                     {slab.name}
                   </h3>
-                  {!slab.popular && (
-                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                      {slab.badge}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#0D7B6C] bg-teal-50 border border-teal-200 px-3 py-1 rounded-full self-start sm:self-auto">
+                    Full Platform Access
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium mb-4">
-                  {slab.target}
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mb-5">
+                  Complete commercial lease governance, automated 5% escalations, CAM pooling, GST/TDS accounting &amp; occupant portal.
                 </p>
 
-                {/* Clear Per Sq.Ft Rate & Total Calculation */}
-                <div className="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200/80 mb-4">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-slate-900 font-mono tracking-tight">
-                        ₹{slab.ratePerSqft}
-                      </span>
-                      <span className="text-xs font-bold text-slate-600">
-                        / sq.ft
+                {/* Clear Per Sq.Ft Rate & Total Calculation Box */}
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-teal-50/30 rounded-2xl border border-teal-200/70 mb-6">
+                  <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-slate-200/80">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Unit Rate</span>
+                      <div className="flex flex-wrap items-baseline gap-1.5 mt-0.5">
+                        <span className="text-4xl font-black text-slate-900 font-mono tracking-tight">
+                          ₹1
+                        </span>
+                        <span className="text-sm font-bold text-slate-600">
+                          / sq.ft / mo
+                        </span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                          taxConfig.gstMode === "inclusive"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : "bg-teal-100 text-teal-800 border border-teal-200"
+                        }`}>
+                          {taxConfig.gstMode === "inclusive" ? `Inclusive of ${taxConfig.gstRatePct}% GST` : `+ ${taxConfig.gstRatePct}% GST`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Selected Scope</span>
+                      <span className="text-base font-black text-slate-800 font-mono">
+                        {customSqft.toLocaleString("en-IN")} sq.ft
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold text-[#0D7B6C] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                      Direct Rate
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs pt-1">
+                    <span className="text-slate-600 font-semibold">Total Monthly Subscription:</span>
+                    <span className="font-mono font-black text-2xl text-[#0D7B6C]">
+                      ₹{taxConfig.gstMode === "exclusive"
+                        ? Math.round(totalTierPrice * (1 + (taxConfig.gstRatePct ?? 18) / 100)).toLocaleString("en-IN")
+                        : totalTierPrice.toLocaleString("en-IN")
+                      } <span className="text-xs font-semibold text-slate-500">/ mo</span>
                     </span>
                   </div>
-
-                  <div className="mt-2.5 pt-2 border-t border-slate-200 text-xs">
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span className="font-medium">Total for {customSqft.toLocaleString("en-IN")} sq.ft:</span>
-                      <span className="font-mono font-black text-slate-900 text-base">
-                        ₹{totalTierPrice.toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                      Calculation: {customSqft.toLocaleString("en-IN")} sq.ft × ₹{slab.ratePerSqft}/sq.ft
-                    </p>
-                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                    {taxConfig.gstMode === "exclusive"
+                      ? `Calculation: Base ₹${totalTierPrice.toLocaleString("en-IN")} + ${taxConfig.gstRatePct}% GST (₹${Math.round((totalTierPrice * (taxConfig.gstRatePct ?? 18)) / 100).toLocaleString("en-IN")}) = ₹${Math.round(totalTierPrice * (1 + (taxConfig.gstRatePct ?? 18) / 100)).toLocaleString("en-IN")}`
+                      : `Calculation: Total ₹${totalTierPrice.toLocaleString("en-IN")} (Includes ${taxConfig.gstRatePct}% GST: ₹${Math.round(totalTierPrice - totalTierPrice / (1 + (taxConfig.gstRatePct ?? 18) / 100)).toLocaleString("en-IN")})`
+                    }
+                  </p>
                 </div>
 
-                {/* Features */}
-                <div className="space-y-2 mb-6 text-left">
+                {/* Features 2-column Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6 text-left">
                   {slab.features.map((feat, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 leading-snug">
                       <Check
-                        size={14}
-                        className={`shrink-0 mt-0.5 ${
-                          slab.popular ? "text-[#0D7B6C]" : "text-emerald-600"
-                        }`}
+                        size={15}
+                        className="shrink-0 mt-0.5 text-[#0D7B6C] stroke-[2.5]"
                       />
                       <span>{feat}</span>
                     </div>
@@ -660,33 +664,38 @@ export default function RentRollPricingTable({
                 </div>
               </div>
 
-              {/* Button */}
+              {/* Action Button */}
               <div>
                 <button
                   type="button"
                   onClick={() => handleChoosePlan(slab)}
                   disabled={processingActivation}
-                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 ${
-                    slab.popular
-                      ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/20 hover:shadow-md"
-                      : "bg-slate-900 hover:bg-slate-800 text-white"
-                  }`}
+                  className="w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/25 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {processingActivation && checkoutPlan?.id === slab.id ? (
                     <>
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Opening Gateway...</span>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Opening Payment Gateway...</span>
                     </>
                   ) : (
                     <>
-                      <CreditCard size={13} />
+                      <CreditCard size={16} />
                       <span>
-                        Choose {slab.name} · ₹{totalTierPrice.toLocaleString("en-IN")}
+                        Subscribe to Rent Roll · ₹{totalTierPrice.toLocaleString("en-IN")} / month
                       </span>
-                      <ArrowRight size={13} />
+                      <ArrowRight size={16} />
                     </>
                   )}
                 </button>
+                <div className="flex items-center justify-center gap-3 mt-3 text-[11px] text-slate-500 font-medium">
+                  <span className="flex items-center gap-1 text-emerald-700 font-bold">
+                    <Check size={12} className="stroke-[3]" /> Instant Activation
+                  </span>
+                  <span>•</span>
+                  <span>Zero Setup Fees</span>
+                  <span>•</span>
+                  <span>GST Invoice SAC 997212</span>
+                </div>
               </div>
             </div>
           );
@@ -845,54 +854,88 @@ export default function RentRollPricingTable({
                 </span>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Subtotal Due:</span>
-                <span className="font-mono font-bold text-slate-900">
-                  ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
-                </span>
-              </div>
+              {/* Dynamic Subtotal & GST Line Items */}
+              {(() => {
+                const basePrice = checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft;
+                const gstRate = taxConfig.gstRatePct ?? 18;
+                const isExclusive = (taxConfig.gstMode || "exclusive") === "exclusive";
+                const gstAmount = isExclusive
+                  ? Math.round((basePrice * gstRate) / 100)
+                  : Math.round(basePrice - basePrice / (1 + gstRate / 100));
+                const totalGross = isExclusive ? basePrice + gstAmount : basePrice;
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Statutory GST (18%):</span>
-                <span className="font-mono text-emerald-700 font-semibold">
-                  Included
-                </span>
-              </div>
+                return (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-medium">
+                        {isExclusive ? "Net Base Subtotal:" : "Gross Subtotal (Incl. Tax):"}
+                      </span>
+                      <span className="font-mono font-bold text-slate-900">
+                        ₹{basePrice.toLocaleString("en-IN")}.00
+                      </span>
+                    </div>
 
-              {/* Coupon Row */}
-              {appliedCoupon && (
-                <div className="flex justify-between text-emerald-800 font-bold pt-1.5 border-t border-emerald-200 bg-emerald-100/70 -mx-3.5 -mb-3.5 p-2.5 rounded-b-xl">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 size={13} className="text-emerald-700" />
-                    Launch Coupon "{appliedCoupon}" (100% OFF):
-                  </span>
-                  <span className="font-mono">
-                    -₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
-                  </span>
-                </div>
-              )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-medium">
+                        Statutory GST ({gstRate}% · SAC {taxConfig.sacCode || "997212"}):
+                      </span>
+                      <span className={`font-mono font-bold ${isExclusive ? "text-slate-800" : "text-emerald-700 font-semibold"}`}>
+                        {isExclusive ? `+₹${gstAmount.toLocaleString("en-IN")}.00` : `₹${gstAmount.toLocaleString("en-IN")}.00 (Included)`}
+                      </span>
+                    </div>
+
+                    {/* Coupon Row */}
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-emerald-800 font-bold pt-1.5 border-t border-emerald-200 bg-emerald-100/70 -mx-3.5 -mb-3.5 p-2.5 rounded-b-xl">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 size={13} className="text-emerald-700" />
+                          Launch Coupon "{appliedCoupon}" (100% OFF):
+                        </span>
+                        <span className="font-mono">
+                          -₹{totalGross.toLocaleString("en-IN")}.00
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Total Due */}
-            <div className="flex justify-between items-baseline mb-4 px-1">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-600">Total Due:</span>
-              <div className="text-right">
-                {appliedCoupon ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-mono line-through text-slate-400">
-                      ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
-                    </span>
-                    <span className="text-2xl font-black text-emerald-600 font-mono">
-                      ₹0.00 FREE
-                    </span>
+            {(() => {
+              const basePrice = checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft;
+              const gstRate = taxConfig.gstRatePct ?? 18;
+              const isExclusive = (taxConfig.gstMode || "exclusive") === "exclusive";
+              const gstAmount = isExclusive ? Math.round((basePrice * gstRate) / 100) : 0;
+              const totalGross = basePrice + gstAmount;
+
+              return (
+                <div className="flex justify-between items-baseline mb-4 px-1">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-600">Total Due:</span>
+                  <div className="text-right">
+                    {appliedCoupon ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-mono line-through text-slate-400">
+                          ₹{totalGross.toLocaleString("en-IN")}.00
+                        </span>
+                        <span className="text-2xl font-black text-emerald-600 font-mono">
+                          ₹0.00 FREE
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-2xl font-black text-slate-900 font-mono">
+                          ₹{totalGross.toLocaleString("en-IN")}.00
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-sans">
+                          {isExclusive ? `Includes ${gstRate}% GST` : `All taxes included`}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <span className="text-2xl font-black text-slate-900 font-mono">
-                    ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
-                  </span>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Promo Code Input - Always Visible & Interactive */}
             <div className="mb-5 p-3.5 rounded-xl bg-slate-50 border border-slate-200">

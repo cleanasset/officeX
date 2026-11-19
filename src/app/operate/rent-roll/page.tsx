@@ -70,8 +70,8 @@ export default function RentRollProductPage() {
   }, []);
 
   const subscribeHref = isLoggedIn
-    ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
-    : "/login?context=rent-roll&redirect=/operate/rent-roll";
+    ? (isSubscribed ? "/properties/rent-roll" : "/operate/rent-roll/pricing")
+    : "/login?context=rent-roll&redirect=/operate/rent-roll/pricing";
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -204,8 +204,8 @@ export default function RentRollProductPage() {
                 <Link
                   href={
                     isLoggedIn
-                      ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
-                      : "/login?context=rent-roll&redirect=/operate/rent-roll"
+                      ? (isSubscribed ? "/properties/rent-roll" : "/operate/rent-roll/pricing")
+                      : "/login?context=rent-roll&redirect=/operate/rent-roll/pricing"
                   }
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 active:scale-98 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                 >
@@ -229,7 +229,7 @@ export default function RentRollProductPage() {
                   <span>Book a Demo</span>
                 </a>
                 <Link
-                  href="/operate/pricing?mode=standalone&module=rentroll"
+                  href="/operate/rent-roll/pricing"
                   className="px-5 py-3.5 rounded-xl bg-teal-50/80 hover:bg-teal-100 text-[#0D7B6C] font-extrabold text-xs sm:text-sm border border-teal-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                 >
                   <Tag size={15} />
@@ -514,8 +514,8 @@ export default function RentRollProductPage() {
             <Link
               href={
                 isLoggedIn
-                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
-                  : "/login?context=rent-roll&redirect=/operate/rent-roll"
+                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/rent-roll/pricing")
+                  : "/login?context=rent-roll&redirect=/operate/rent-roll/pricing"
               }
               className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center gap-2 group cursor-pointer"
             >
@@ -557,8 +557,8 @@ export default function RentRollProductPage() {
             <Link
               href={
                 isLoggedIn
-                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/pricing?mode=standalone&module=rentroll")
-                  : "/login?context=rent-roll&redirect=/operate/rent-roll"
+                  ? (isSubscribed ? "/properties/rent-roll" : "/operate/rent-roll/pricing")
+                  : "/login?context=rent-roll&redirect=/operate/rent-roll/pricing"
               }
               className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"
             >

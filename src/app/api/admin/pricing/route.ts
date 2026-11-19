@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminPool } from "@/lib/admin-db";
 
 export interface GlobalPricingConfig {
+  taxConfig?: {
+    gstMode: "inclusive" | "exclusive"; // 'inclusive': all prices include GST, 'exclusive': GST added on top
+    gstRatePct: number; // e.g. 18
+    sacCode: string; // e.g. "997212"
+  };
   officeMarketplace: {
     hotDeskMonthlyMin: number;
     dedicatedDeskMonthlyMin: number;
@@ -51,6 +56,11 @@ export interface GlobalPricingConfig {
 }
 
 const DEFAULT_GLOBAL_PRICING: GlobalPricingConfig = {
+  taxConfig: {
+    gstMode: "exclusive",
+    gstRatePct: 18,
+    sacCode: "997212",
+  },
   officeMarketplace: {
     hotDeskMonthlyMin: 7999,
     dedicatedDeskMonthlyMin: 11999,
@@ -142,6 +152,10 @@ export async function GET() {
       pricingData = {
         ...DEFAULT_GLOBAL_PRICING,
         ...res.rows[0].data,
+        taxConfig: {
+          ...DEFAULT_GLOBAL_PRICING.taxConfig,
+          ...(res.rows[0].data.taxConfig || {}),
+        },
         officeMarketplace: {
           ...DEFAULT_GLOBAL_PRICING.officeMarketplace,
           ...(res.rows[0].data.officeMarketplace || {}),

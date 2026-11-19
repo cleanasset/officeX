@@ -25,6 +25,11 @@ import {
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 export interface PricingConfigResponse {
+  taxConfig?: {
+    gstMode: "inclusive" | "exclusive";
+    gstRatePct: number;
+    sacCode: string;
+  };
   cafmSuite: {
     essentialsMonthly: number;
     proMonthly: number;
@@ -772,27 +777,36 @@ function OperatePricingInner({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={processingPlan === "Rent Roll & Billing"}
-                onClick={() => handleCheckout({
-                  productCode: "RR",
-                  planName: "Rent Roll & Billing",
-                  edition: "standalone",
-                  monthlyPrice: calcRentRollPrice(),
-                  sqftRate: formatSqftRate(calcRentRollPrice()),
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "Rent Roll & Billing" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to Rent Roll</span>
-                  </>
-                )}
-              </button>
+              <div className="space-y-2">
+                <Link
+                  href="/operate/rent-roll/pricing"
+                  className="w-full py-2 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] border border-teal-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Open Dedicated Rent Roll Pricing Table</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  type="button"
+                  disabled={processingPlan === "Rent Roll & Billing"}
+                  onClick={() => handleCheckout({
+                    productCode: "RR",
+                    planName: "Rent Roll & Billing",
+                    edition: "standalone",
+                    monthlyPrice: calcRentRollPrice(),
+                    sqftRate: formatSqftRate(calcRentRollPrice()),
+                  })}
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "Rent Roll & Billing" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Instant Subscribe (₹{calcRentRollPrice().toLocaleString("en-IN")}/mo)</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* 2. 52-Week PPM */}
@@ -1289,6 +1303,14 @@ function OperatePricingWithParams(props: OperatePricingSectionProps) {
   const [resolvedModule, setResolvedModule] = useState<string>(() => (paramModule || props.defaultModule || "").toLowerCase());
 
   useEffect(() => {
+    const mod = (paramModule || "").toLowerCase();
+    if (mod === "rentroll" || mod === "rent-roll") {
+      if (typeof window !== "undefined") {
+        window.location.replace("/operate/rent-roll/pricing");
+      }
+      return;
+    }
+
     if (paramMode === "standalone" || paramMode === "individual" || Boolean(paramModule)) {
       setResolvedMode("standalone");
       if (paramModule) setResolvedModule(paramModule.toLowerCase());
