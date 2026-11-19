@@ -112,7 +112,12 @@ export async function POST(request: Request) {
             dbUser.passwordHash !== password
           ) {
             return NextResponse.json(
-              { error: 'Incorrect password. Please verify your credentials or reset your password.' },
+              { error: 'Incorrect password. Please verify your credentials or click "Forgot password" to reset.' },
+              { status: 401 }
+            );
+          } else if (dbUser.passwordHash === 'SUPABASE_AUTH_MANAGED') {
+            return NextResponse.json(
+              { error: 'Incorrect password. If you cannot remember your password, please click "Email me a one-time sign-in code instead" or "Forgot password".' },
               { status: 401 }
             );
           }

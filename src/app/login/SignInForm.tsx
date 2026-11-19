@@ -1907,7 +1907,7 @@ export default function SignInForm({
                   {t.neverShareCode}
                 </p>
 
-                <div className="pt-4 border-t border-slate-200 flex items-center justify-center text-xs text-slate-600">
+                <div className="pt-4 border-t border-slate-200 flex flex-col items-center justify-center gap-2 text-xs text-slate-600">
                   {cooldown > 0 ? (
                     <span className="text-slate-500 font-mono">
                       {t.resendIn} {cooldown}s
@@ -1922,6 +1922,16 @@ export default function SignInForm({
                       {lang === "hi" ? "ईमेल पर कोड पुनः भेजें" : "Resend Code to Email"}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setStep("password");
+                    }}
+                    className="text-xs text-slate-500 hover:text-blue-600 font-semibold cursor-pointer transition-colors mt-1"
+                  >
+                    {lang === "hi" ? "पासवर्ड से साइन इन करें →" : "Sign in with password instead →"}
+                  </button>
                 </div>
               </div>
             </div>

@@ -161,38 +161,19 @@ export async function POST(request: Request) {
         });
       }
 
-      // Super Admin accounts retain dedicated password authentication
-      const isSuperAdminEmail =
-        cleanEmail === 'admin@gmail.com' ||
-        cleanEmail === 'medistationlifecare@gmail.com';
-
-      if (isSuperAdminEmail) {
-        return NextResponse.json({
-          success: true,
-          type: 'email',
-          next: 'password',
-          channel: 'email',
-          masked: masked,
-          user_name: userName,
-          has_password: true,
-          is_google_user: false,
-          mfa_required: false,
-          allow_code_fallback: true
-        });
-      }
-
-      // All standard users sign in passwordlessly via secure One-Time Email Code (OTP) or Google
+      // All registered users proceed with Password authentication by default.
+      // If user forgot password or prefers a one-time code, they can choose "Forgot password?" or "Email me a one-time sign-in code instead" on the password screen.
       return NextResponse.json({
         success: true,
         type: 'email',
-        next: 'code',
+        next: 'password',
         channel: 'email',
         masked: masked,
         user_name: userName,
-        has_password: false,
+        has_password: true,
         is_google_user: isGoogleUser,
         mfa_required: false,
-        allow_code_fallback: false
+        allow_code_fallback: true
       });
     }
 
