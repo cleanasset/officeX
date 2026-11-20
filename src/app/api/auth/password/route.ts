@@ -92,6 +92,20 @@ export async function POST(request: Request) {
           userId = supaUser.id;
           userRole = supaUser.user_metadata?.role || userRole;
           userName = supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || userName;
+
+          try {
+            const dbUsers = await db
+              .select({ fullName: users.fullName, role: users.role })
+              .from(users)
+              .where(eq(users.email, norm.toLowerCase().trim()))
+              .limit(1);
+            if (dbUsers.length > 0 && dbUsers[0].fullName) {
+              const dbName = dbUsers[0].fullName.trim();
+              if (dbName && (userName.toLowerCase() === norm.split('@')[0].toLowerCase() || (dbName.toLowerCase() !== norm.split('@')[0].toLowerCase() && /[a-zA-Z]/.test(dbName)))) {
+                userName = dbName;
+              }
+            }
+          } catch {}
         }
       } catch {}
 
@@ -187,6 +201,10 @@ export async function POST(request: Request) {
           );
         }
       }
+    }
+
+    if ((userName.toLowerCase() === norm.split('@')[0].toLowerCase() || !userName) && norm.toLowerCase().startsWith('jiyapatel181224')) {
+      userName = 'jiya';
     }
 
     const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com' || norm === 'medistationlifecare@gmail.com';

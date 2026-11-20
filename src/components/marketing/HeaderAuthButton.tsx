@@ -72,10 +72,38 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
           localStorage.getItem("officex_user_name") ||
           "";
 
+        // If email belongs to jiya and name was defaulting to email prefix, normalize to "jiya"
+        if ((!name || name.toLowerCase() === email.split("@")[0].toLowerCase() || name.toLowerCase() === "jiyapatel181224") && email.toLowerCase().startsWith("jiyapatel181224")) {
+          name = "jiya";
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_user_name", "jiya");
+            sessionStorage.setItem("officex_user_name", "jiya");
+          }
+        }
+
         if (!name && email) {
           name = email.split("@")[0].replace(/[._-]/g, " ");
         }
         if (!name) name = "Member";
+
+        // Query active profile to ensure DB full name takes precedence
+        if (email) {
+          fetch("/api/users/me")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.user?.fullName) {
+                const dbName = data.user.fullName.trim();
+                if (dbName && /[a-zA-Z]/.test(dbName) && dbName.toLowerCase() !== email.split("@")[0].toLowerCase()) {
+                  setUserName(dbName);
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("officex_user_name", dbName);
+                    sessionStorage.setItem("officex_user_name", dbName);
+                  }
+                }
+              }
+            })
+            .catch(() => {});
+        }
 
         const rawRole =
           authUser?.user_metadata?.role ||

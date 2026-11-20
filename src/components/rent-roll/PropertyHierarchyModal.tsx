@@ -1668,6 +1668,13 @@ export default function PropertyHierarchyModal({
         // Sync local storage active property & registered lists
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_active_property", propForm.propertyName);
+
+          if (propForm.contactName && propForm.contactName.trim() && /[a-zA-Z]/.test(propForm.contactName)) {
+            const enteredContact = propForm.contactName.trim();
+            localStorage.setItem("officex_user_name", enteredContact);
+            sessionStorage.setItem("officex_user_name", enteredContact);
+            window.dispatchEvent(new CustomEvent("officex_auth_change", { detail: { user: { name: enteredContact } } }));
+          }
           const reg = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
           if (!reg.includes(propForm.propertyName)) {
             reg.push(propForm.propertyName);

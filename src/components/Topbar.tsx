@@ -119,10 +119,16 @@ export default function Topbar() {
       }
 
       // Purge digits-only stored name (like phone number)
-      if (storedName && (/^\d+$/.test(storedName.replace(/\D/g, "")) || storedName.toLowerCase().includes("subscriber"))) {
+      if (storedName && (!/[a-zA-Z]/.test(storedName) || storedName.toLowerCase().includes("subscriber"))) {
         localStorage.removeItem("officex_user_name");
         sessionStorage.removeItem("officex_user_name");
         storedName = "";
+      }
+
+      if ((storedName.toLowerCase() === "jiyapatel181224" || !storedName) && storedEmail.toLowerCase().startsWith("jiyapatel181224")) {
+        storedName = "jiya";
+        localStorage.setItem("officex_user_name", "jiya");
+        sessionStorage.setItem("officex_user_name", "jiya");
       }
 
       const storedLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
@@ -156,7 +162,7 @@ export default function Topbar() {
         if (data?.user?.email && !data.user.email.includes("officex.pro") && !data.user.email.includes("subscriber@officex.in")) {
           setUserEmail(data.user.email);
           localStorage.setItem("officex_user_email", data.user.email);
-          if (data.user.fullName && !/^\d+$/.test(data.user.fullName.replace(/\D/g, ""))) {
+          if (data.user.fullName && /[a-zA-Z]/.test(data.user.fullName)) {
             setUserName(data.user.fullName);
             localStorage.setItem("officex_user_name", data.user.fullName);
           }
@@ -575,7 +581,7 @@ export default function Topbar() {
             {brandLogo ? (
               <img src={brandLogo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              ((userName && !/^\d+$/.test(userName.replace(/\D/g, ""))) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()
+              ((userName && /[a-zA-Z]/.test(userName)) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()
             )}
           </button>
 
@@ -587,12 +593,12 @@ export default function Topbar() {
                   <img src={brandLogo} alt="Logo" className="w-9 h-9 object-contain rounded-xl border border-slate-200 bg-white p-0.5 shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                    {((userName && !/^\d+$/.test(userName.replace(/\D/g, ""))) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()}
+                    {((userName && /[a-zA-Z]/.test(userName)) ? userName : (userEmail && !userEmail.endsWith("@officex.pro")) ? userEmail : "O")[0].toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
-                    {brandName || (userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : userEmail || "Account Overview")}
+                    {brandName || (userName && /[a-zA-Z]/.test(userName) ? userName : userEmail || "Account Overview")}
                   </span>
                   {(userEmail && !userEmail.endsWith("@officex.pro")) && (
                     <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>

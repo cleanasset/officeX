@@ -601,14 +601,14 @@ function SidebarInner() {
       setHasBankSetup(Boolean(bankAcc && bankAcc.trim().length >= 8));
 
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
-      if (storedName && !/^\d+$/.test(storedName.replace(/\D/g, ""))) {
+      if (storedName && /[a-zA-Z]/.test(storedName)) {
         setUserName(storedName);
       }
 
       fetch("/api/users/me")
         .then((r) => r.json())
         .then((d) => {
-          if (d?.user?.fullName && !/^\d+$/.test(d.user.fullName.replace(/\D/g, ""))) {
+          if (d?.user?.fullName && /[a-zA-Z]/.test(d.user.fullName)) {
             setUserName(d.user.fullName);
             localStorage.setItem("officex_user_name", d.user.fullName);
           }
@@ -816,7 +816,7 @@ function SidebarInner() {
               {isAdminPortal ? "Platform Scope" : "User"}
             </span>
             <span className="text-[11px] font-black text-slate-900 truncate">
-              {isAdminPortal ? "Super Admin Governance" : (userName && !/^\d+$/.test(userName.replace(/\D/g, "")) ? userName : "Commercial Member")}
+              {isAdminPortal ? "Super Admin Governance" : (userName && /[a-zA-Z]/.test(userName) ? userName : "Commercial Member")}
             </span>
           </div>
         </div>

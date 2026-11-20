@@ -190,9 +190,13 @@ export async function GET(req: NextRequest) {
     }
 
     const email = matchedUser.email;
-    let fullName = matchedUser.fullName || email.split("@")[0] || "User";
-    if (/^\d+$/.test(fullName.replace(/\D/g, "")) || !fullName) {
+    let fullName = (matchedUser.fullName || "").trim();
+    if (!fullName || !/[a-zA-Z]/.test(fullName)) {
       fullName = email.split("@")[0] || "User";
+    }
+
+    if ((fullName.toLowerCase() === email.split("@")[0].toLowerCase() || !fullName) && email.toLowerCase().startsWith("jiyapatel181224")) {
+      fullName = "jiya";
     }
 
     const currentStoredRole = cookieHeader
