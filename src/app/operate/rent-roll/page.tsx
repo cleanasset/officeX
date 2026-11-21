@@ -53,7 +53,7 @@ export default function RentRollProductPage() {
       const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
       if (email) {
-        fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+        fetch('/api/subscription/status', { headers: { 'x-user-email': email } })
           .then((r) => r.json())
           .then((d) => {
             const active = Boolean(d?.subscribed && d.plan !== "none" && d.plan !== "free");

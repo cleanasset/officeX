@@ -92,6 +92,16 @@ export async function GET(
       return NextResponse.json({ error: "Access denied to this contract" }, { status: 403 });
     }
 
+    // Strict occupant/tenant role isolation (§3.3 & §7.3)
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      const isTheirContract =
+        existing.contract.occupant_id === auth.userId ||
+        Boolean(auth.userEmail && existing.occupant?.email && existing.occupant.email.toLowerCase() === auth.userEmail.toLowerCase());
+      if (!isTheirContract) {
+        return NextResponse.json({ error: "Access denied: You can only view your own contract" }, { status: 403 });
+      }
+    }
+
     // Scoped role check
     if (!auth.isPortfolioRole && auth.clientAccountId && existing.contract.client_account_id !== auth.clientAccountId) {
       return NextResponse.json({ error: "Access denied to this client account" }, { status: 403 });

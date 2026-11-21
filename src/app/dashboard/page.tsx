@@ -163,7 +163,7 @@ function WorkspaceHubContent() {
           });
         } else if (email) {
           try {
-            const subRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
+            const subRes = await fetch('/api/subscription/status', { headers: { 'x-user-email': email } });
             if (subRes.ok) {
               const subData = await subRes.json();
               if (subData?.subscribed && subData.plan !== "none" && subData.plan !== "free") {

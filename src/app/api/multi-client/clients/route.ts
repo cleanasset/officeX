@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { db } from "@/db";
 import { client_account } from "@/db/rent-roll-schema";
 import { eq, sql } from "drizzle-orm";
@@ -8,7 +8,14 @@ export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot access client accounts" }, { status: 403 });
+    }
 
     let clients = await db
       .select({

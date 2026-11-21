@@ -15,29 +15,58 @@ export async function GET(req: NextRequest) {
     const requestedOccupantId = searchParams.get("occupant_id");
     const requestedEmail = searchParams.get("email");
 
+    const isTenant = auth.role === "occupant" || auth.role === "tenant";
     let occupantId = requestedOccupantId;
 
-    if (!occupantId && requestedEmail) {
-      const [occByEmail] = await db
+    if (isTenant) {
+      // Find occupant record belonging strictly to this tenant
+      const [myOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
         .where(
           and(
-            ilike(occupant.email, requestedEmail.trim()),
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!,
             sql`${occupant.deleted_at} IS NULL`
           )
         )
         .limit(1);
-      if (occByEmail) occupantId = occByEmail.id;
-    }
 
-    if (!occupantId && auth.orgId) {
-      const [firstOcc] = await db
-        .select({ id: occupant.id })
-        .from(occupant)
-        .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
-        .limit(1);
-      occupantId = firstOcc?.id;
+      if (!myOcc) {
+        return NextResponse.json({ success: true, documents: [] });
+      }
+
+      if (requestedOccupantId && requestedOccupantId !== myOcc.id) {
+        return NextResponse.json({ error: "Access denied to requested documents" }, { status: 403 });
+      }
+      occupantId = myOcc.id;
+    } else {
+      if (!occupantId && requestedEmail) {
+        const [occByEmail] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(
+            and(
+              eq(occupant.org_id, auth.orgId),
+              ilike(occupant.email, requestedEmail.trim()),
+              sql`${occupant.deleted_at} IS NULL`
+            )
+          )
+          .limit(1);
+        if (occByEmail) occupantId = occByEmail.id;
+      }
+
+      if (!occupantId && auth.orgId) {
+        const [firstOcc] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+          .limit(1);
+        occupantId = firstOcc?.id;
+      }
     }
 
     if (!occupantId) {

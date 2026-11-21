@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { occupant, contract, space, building, property, contractCharge, organization, billingEntity } from "@/db/schema";
 import { validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query");
@@ -18,6 +22,16 @@ export async function GET(req: Request) {
       sql`${occupant.deleted_at} IS NULL`,
       sql`${occupant.occupant_status} != 'inactive'`,
     ];
+
+    // Strict occupant isolation: occupants can only view their own profile
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      conditions.push(
+        or(
+          eq(occupant.id, auth.userId),
+          auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+        )!
+      );
+    }
     if (query) {
       conditions.push(
         or(
@@ -206,7 +220,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot register tenant records" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const orgId = body.org_id || auth.orgId;

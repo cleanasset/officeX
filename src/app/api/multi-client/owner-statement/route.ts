@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { generateOwnerStatement } from "@/lib/rent-roll/multi-client/owner-statement";
 import { db } from "@/db";
 import { client_account } from "@/db/rent-roll-schema";
@@ -8,6 +8,15 @@ import { eq } from "drizzle-orm";
 export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
+  if (!isAuthenticated(req)) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const auth = getAuthContext(req);
+  if (auth.role === "occupant" || auth.role === "tenant") {
+    return NextResponse.json({ error: "Forbidden: Tenants cannot access owner statements" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const periodStart = searchParams.get("period_start") || undefined;
   const periodEnd = searchParams.get("period_end") || undefined;

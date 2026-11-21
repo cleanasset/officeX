@@ -11,7 +11,7 @@ import {
   payment,
   payment_allocation,
 } from "@/db/schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc } from "drizzle-orm";
 
 /**
@@ -22,6 +22,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to view invoice details" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { id } = await params;
 
@@ -50,6 +54,16 @@ export async function GET(
 
     if (!existing) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    // Role-based tenant isolation: occupants can only view their own invoices
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      const isOwnerTenant =
+        existing.invoice.occupant_id === auth.userId ||
+        Boolean(auth.userEmail && existing.occupant?.email && existing.occupant.email.toLowerCase() === auth.userEmail.toLowerCase());
+      if (!isOwnerTenant) {
+        return NextResponse.json({ error: "Access denied to this invoice" }, { status: 403 });
+      }
     }
 
     // Client Account scoping
@@ -152,7 +166,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to modify invoices" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot modify invoices" }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await req.json();
 

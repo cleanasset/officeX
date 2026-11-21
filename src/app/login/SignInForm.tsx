@@ -351,9 +351,10 @@ export default function SignInForm({
           setUserNotFound(true);
           setNotFoundEmail(clean);
           setSignupCountdown(3);
+          try { sessionStorage.setItem("officex_signup_email", clean); } catch {}
           const signupTarget = isRentRollContext
-            ? `/signup?context=rent-roll&email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`
-            : `/signup?email=${encodeURIComponent(clean)}&redirect=${encodeURIComponent(safeRedirect)}`;
+            ? `/signup?context=rent-roll&redirect=${encodeURIComponent(safeRedirect)}`
+            : `/signup?redirect=${encodeURIComponent(safeRedirect)}`;
           setSignupRedirectUrl(signupTarget);
           setError(""); // Clear generic error to ensure no duplicate banner is shown
           setIsLoading(false);
@@ -884,7 +885,7 @@ export default function SignInForm({
 
     if (isEmail) {
       try {
-        const subRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(cleanVal)}`);
+        const subRes = await fetch('/api/subscription/status', { headers: { 'x-user-email': cleanVal } });
         if (subRes.ok) {
           const subData = await subRes.json();
           if (subData?.subscribed && subData.plan !== "none" && subData.plan !== "free") {

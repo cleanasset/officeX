@@ -5,7 +5,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const code = (searchParams.get("code") || "").trim().toUpperCase();
-    const userEmail = (searchParams.get("email") || "").trim().toLowerCase();
+    const headerEmail = req.headers.get("x-user-email");
+    const userEmail = (searchParams.get("email") || headerEmail || "").trim().toLowerCase();
 
     if (!code) {
       return NextResponse.json({ valid: false, message: "Enter a coupon code" }, { status: 400 });

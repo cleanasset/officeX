@@ -34,6 +34,9 @@ export async function POST(req: Request) {
     }
 
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot create contracts" }, { status: 403 });
+    }
     const body = await req.json();
 
     const orgId = body.org_id || auth.orgId;
@@ -736,6 +739,32 @@ export async function GET(req: Request) {
         : eq(contract.org_id, auth.orgId),
       sql`${contract.deleted_at} IS NULL`,
     ];
+
+    // Strict occupant/tenant role isolation (§3.3 & §7.3)
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      const tenantMatch = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!
+          )
+        );
+      const tenantIds = tenantMatch.map((t) => t.id);
+      if (tenantIds.length === 0) {
+        return NextResponse.json({
+          contracts: [],
+          total: 0,
+          page,
+          limit,
+        });
+      }
+      conditions.push(sql`${contract.occupant_id} = ANY(${tenantIds})`);
+    }
 
     if (!auth.isPortfolioRole && auth.clientAccountId) {
       conditions.push(eq(contract.client_account_id, auth.clientAccountId));

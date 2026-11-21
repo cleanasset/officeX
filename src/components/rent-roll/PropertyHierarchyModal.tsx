@@ -764,7 +764,7 @@ export default function PropertyHierarchyModal({
         // Async fetch exact quota from DB
         const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
         if (userEmail) {
-          fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+          fetch('/api/subscription/status', { headers: { 'x-user-email': userEmail } })
             .then((r) => r.json())
             .then((d) => {
               if (d?.subscribed && Number(d.subscribed_sqft) > 0) {
@@ -1440,7 +1440,7 @@ export default function PropertyHierarchyModal({
     }
 
     if (!link) {
-      link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&mgr=${encodeURIComponent(delegationForm.managerName.trim())}&email=${encodeURIComponent(delegationForm.managerEmail.trim())}&prop=${encodeURIComponent(targetPropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${subActive ? "1" : "0"}`;
+      link = `${origin}/invite?role=${encodeURIComponent(delegationForm.managerType)}&mgr=${encodeURIComponent(delegationForm.managerName.trim())}&prop=${encodeURIComponent(targetPropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${subActive ? "1" : "0"}`;
     }
 
     // Store in localStorage
@@ -2645,7 +2645,7 @@ export default function PropertyHierarchyModal({
           "Commercial Asset Owner";
         const isOwnerSub = checkIsOwnerSubscribed();
         const inviteToken = `ten_${Date.now()}`;
-        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(effectiveContactName)}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${isOwnerSub ? "1" : "0"}&invite=${inviteToken}`;
+        const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(effectiveContactName)}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(ownerBrand)}&owner_sub=${isOwnerSub ? "1" : "0"}&invite=${inviteToken}`;
 
         setLatestTenantInvite({
           name: (tenantForm.companyName || effectiveContactName).trim(),

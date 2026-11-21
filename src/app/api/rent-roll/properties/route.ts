@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { supabase } from "@/lib/supabase";
 import { property, building, space, contract, occupant, properties, invoice, contractCharge } from "@/db/schema";
 import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike, inArray } from "drizzle-orm";
 import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-code/route";
@@ -13,6 +13,10 @@ import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query");
@@ -79,7 +83,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot create property records" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const orgId = body.org_id || auth.orgId;

@@ -23,8 +23,22 @@ export async function GET(req: NextRequest) {
     const requestedOccupantId = searchParams.get("occupant_id");
     const requestedEmail = searchParams.get("email");
     const requestedProp = searchParams.get("prop") || searchParams.get("property_name");
+    const isTenant = auth.role === "occupant" || auth.role === "tenant";
 
-    // 1. Find all active occupants/tenancies with property metadata across the commercial portfolio
+    // 1. Find active occupants/tenancies with property metadata across the commercial portfolio
+    const occConditions = [sql`${occupant.deleted_at} IS NULL`];
+    if (auth.orgId) {
+      occConditions.push(eq(occupant.org_id, auth.orgId));
+    }
+    if (isTenant && auth.userEmail) {
+      occConditions.push(
+        or(
+          ilike(occupant.email, auth.userEmail),
+          eq(occupant.id, auth.userId)
+        )!
+      );
+    }
+
     let allOccupants = await db
       .select({
         id: occupant.id,
@@ -47,7 +61,7 @@ export async function GET(req: NextRequest) {
       .leftJoin(space, and(eq(contract.space_id, space.id), sql`${space.deleted_at} IS NULL`))
       .leftJoin(building, and(eq(space.building_id, building.id), sql`${building.deleted_at} IS NULL`))
       .leftJoin(property, and(eq(building.property_id, property.id), sql`${property.deleted_at} IS NULL`))
-      .where(sql`${occupant.deleted_at} IS NULL`);
+      .where(and(...occConditions));
 
     // Prioritize occupants with issued invoices, then those with active contracts
     let occIdsWithInvoices = new Set<string>();
@@ -130,55 +144,69 @@ export async function GET(req: NextRequest) {
 
     // Select targeted occupant strictly based on parameters or credentials
     let currentOccupant: any = null;
-    if (requestedOccupantId) {
-      currentOccupant = allOccupants.find((o) => o.id === requestedOccupantId);
-      if (!currentOccupant) {
-        const [directOcc] = await db
-          .select({
-            id: occupant.id,
-            org_id: occupant.org_id,
-            occupant_name: occupant.occupant_name,
-            occupant_code: occupant.occupant_code,
-            email: occupant.email,
-            phone: occupant.phone,
-            gst_number: occupant.gst_number,
-            pan_number: occupant.pan_number,
-            industry_sector: occupant.industry_sector,
-            is_critical_occupant: occupant.is_critical_occupant,
-            address: occupant.address,
-            city: occupant.city,
-            state: occupant.state,
-            property_name: property.property_name,
-          })
-          .from(occupant)
-          .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`))
-          .leftJoin(space, eq(contract.space_id, space.id))
-          .leftJoin(building, eq(space.building_id, building.id))
-          .leftJoin(property, eq(building.property_id, property.id))
-          .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
-        if (directOcc) currentOccupant = directOcc;
+    if (isTenant) {
+      if (requestedOccupantId) {
+        currentOccupant = allOccupants.find((o) => o.id === requestedOccupantId);
+        if (!currentOccupant) {
+          return NextResponse.json({ error: "Access denied to requested occupant record" }, { status: 403 });
+        }
+      } else {
+        currentOccupant =
+          (auth.userEmail ? allOccupants.find((o) => o.email?.toLowerCase().trim() === auth.userEmail!.toLowerCase().trim()) : null) ||
+          allOccupants[0] ||
+          null;
       }
+    } else {
+      if (requestedOccupantId) {
+        currentOccupant = allOccupants.find((o) => o.id === requestedOccupantId);
+        if (!currentOccupant) {
+          const [directOcc] = await db
+            .select({
+              id: occupant.id,
+              org_id: occupant.org_id,
+              occupant_name: occupant.occupant_name,
+              occupant_code: occupant.occupant_code,
+              email: occupant.email,
+              phone: occupant.phone,
+              gst_number: occupant.gst_number,
+              pan_number: occupant.pan_number,
+              industry_sector: occupant.industry_sector,
+              is_critical_occupant: occupant.is_critical_occupant,
+              address: occupant.address,
+              city: occupant.city,
+              state: occupant.state,
+              property_name: property.property_name,
+            })
+            .from(occupant)
+            .leftJoin(contract, and(eq(contract.occupant_id, occupant.id), sql`${contract.deleted_at} IS NULL`))
+            .leftJoin(space, eq(contract.space_id, space.id))
+            .leftJoin(building, eq(space.building_id, building.id))
+            .leftJoin(property, eq(building.property_id, property.id))
+            .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
+          if (directOcc) currentOccupant = directOcc;
+        }
 
-      // If requested occupant record has no property/contracts, but a duplicate/sibling record with the same name does, prefer the active one!
-      if (currentOccupant && !currentOccupant.property_name) {
-        const activeSibling = allOccupants.find(
-          (o) => o.occupant_name?.toLowerCase().trim() === currentOccupant.occupant_name?.toLowerCase().trim() && o.property_name
+        // If requested occupant record has no property/contracts, but a duplicate/sibling record with the same name does, prefer the active one!
+        if (currentOccupant && !currentOccupant.property_name) {
+          const activeSibling = allOccupants.find(
+            (o) => o.occupant_name?.toLowerCase().trim() === currentOccupant.occupant_name?.toLowerCase().trim() && o.property_name
+          );
+          if (activeSibling) currentOccupant = activeSibling;
+        }
+      } else if (requestedProp) {
+        currentOccupant = allOccupants.find(
+          (o) => o.property_name && o.property_name.toLowerCase().includes(requestedProp.toLowerCase().trim())
         );
-        if (activeSibling) currentOccupant = activeSibling;
+      } else if (requestedEmail) {
+        currentOccupant = allOccupants.find(
+          (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
+        );
       }
-    } else if (requestedProp) {
-      currentOccupant = allOccupants.find(
-        (o) => o.property_name && o.property_name.toLowerCase().includes(requestedProp.toLowerCase().trim())
-      );
-    } else if (requestedEmail) {
-      currentOccupant = allOccupants.find(
-        (o) => o.email && o.email.toLowerCase().trim() === requestedEmail.toLowerCase().trim()
-      );
-    }
 
-    // Default: pick first occupant (already sorted by invoice and lease priority)
-    if (!currentOccupant && allOccupants.length > 0) {
-      currentOccupant = allOccupants[0];
+      // Default for landlord/admin: pick first occupant (already sorted by invoice and lease priority)
+      if (!currentOccupant && allOccupants.length > 0) {
+        currentOccupant = allOccupants[0];
+      }
     }
 
     if (!currentOccupant) {

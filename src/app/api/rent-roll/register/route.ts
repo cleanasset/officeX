@@ -11,7 +11,7 @@ import {
   deal,
 } from "@/db/schema";
 import { invoice, rent_step } from "@/db/rent-roll-schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc, or, ilike, lte, gte } from "drizzle-orm";
 
 function parseFloorInfo(s: any): { floor: number; floor_name: string } {
@@ -58,7 +58,15 @@ function parseFloorInfo(s: any): { floor: number; floor_name: string } {
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to view Rent Roll register" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot access the master Rent Roll register" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
 
     const asOfDateStr = searchParams.get("as_of_date") || new Date().toISOString().split("T")[0];

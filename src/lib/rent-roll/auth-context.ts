@@ -13,6 +13,7 @@ export type SpecRoleKey =
   | "leasing_manager"
   | "asset_manager"
   | "occupant"
+  | "tenant"
   | "auditor"
   | "admin_ops"
   | "platform_support"

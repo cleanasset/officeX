@@ -13,7 +13,15 @@ const COOKIES_TO_CLEAR = [
   'officex_subscription',
   'officex_active_portal',
   'officex_dashboard',
-  'officex_trusted_device'
+  'officex_trusted_device',
+  'officex_admin',
+  'officex_tenant_id',
+  'officex_tenant_occupant_id',
+  'officex_tenant_name',
+  'officex_tenant_email',
+  'officex_org_id',
+  'officex_client_id',
+  'officex_onboarding_completed'
 ];
 
 export async function POST(request: Request) {

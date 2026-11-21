@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { occupant } from "@/db/schema";
 import { validateRequiredFields } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 /**
@@ -11,6 +11,10 @@ import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -20,6 +24,16 @@ export async function GET(req: Request) {
       eq(occupant.org_id, auth.orgId),
       sql`${occupant.deleted_at} IS NULL`,
     ];
+
+    // Strict occupant isolation: occupants can only view their own profile
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      conditions.push(
+        or(
+          eq(occupant.id, auth.userId),
+          auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+        )!
+      );
+    }
     if (status) conditions.push(eq(occupant.occupant_status, status as any));
     if (query) {
       conditions.push(
@@ -46,7 +60,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot create occupant records" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const payload = {

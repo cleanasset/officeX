@@ -785,7 +785,7 @@ export default function RentRollPricingTable({
                     Workspace Admin Credentials
                   </span>
                   <Link
-                    href={`/login?email=${encodeURIComponent(userEmail || "")}&name=${encodeURIComponent(userName || "")}&redirect=/operate/rent-roll/pricing`}
+                    href="/login?redirect=/operate/rent-roll/pricing"
                     className="text-[10px] font-bold text-[#0D7B6C] hover:underline"
                   >
                     Already have account? Sign in &rarr;

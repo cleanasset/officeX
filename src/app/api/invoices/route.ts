@@ -9,7 +9,7 @@ import {
   building,
   property,
 } from "@/db/schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { generateInvoicesBatch, generateInvoiceNumber, getFiscalYear } from "@/lib/rent-roll/jobs/invoice-generation";
 import { eq, and, sql, desc, or, ilike, count } from "drizzle-orm";
 
@@ -18,6 +18,10 @@ import { eq, and, sql, desc, or, ilike, count } from "drizzle-orm";
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to view invoices" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
 
@@ -34,6 +38,43 @@ export async function GET(req: Request) {
     const conditions = [
       eq(invoice.org_id, auth.orgId),
     ];
+
+    // Strict occupant/tenant role isolation (§3.3 & §7.3)
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      const tenantMatch = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!
+          )
+        );
+      const tenantIds = tenantMatch.map((t) => t.id);
+      if (tenantIds.length === 0) {
+        return NextResponse.json({
+          invoices: [],
+          total: 0,
+          page,
+          limit,
+          kpis: {
+            total_billed_inr: 0,
+            total_collected_inr: 0,
+            total_outstanding_inr: 0,
+            pending_approval_count: 0,
+            pending_approval_inr: 0,
+            overdue_count: 0,
+            overdue_inr: 0,
+            collections_realized_inr: 0,
+          },
+          pagination: { page, limit, count: 0, total: 0 },
+        });
+      }
+      conditions.push(sql`${invoice.occupant_id} = ANY(${tenantIds})`);
+    }
 
     // Client Account scoping
     if (!auth.isPortfolioRole && auth.clientAccountId) {
@@ -221,7 +262,15 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to generate invoices" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot generate invoices" }, { status: 403 });
+    }
+
     const body = await req.json().catch(() => ({}));
 
     // If contract_id provided, generate invoice for that single contract

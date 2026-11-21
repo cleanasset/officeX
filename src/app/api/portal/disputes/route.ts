@@ -2,22 +2,51 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { dispute, invoice, occupant } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const requestedOccupantId = searchParams.get("occupant_id");
+    const isTenant = auth.role === "occupant" || auth.role === "tenant";
 
     let occupantId = requestedOccupantId;
-    if (!occupantId) {
-      const [firstOcc] = await db
+
+    if (isTenant) {
+      // Find occupant record belonging strictly to this tenant
+      const [myOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+        .where(
+          and(
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!,
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        )
         .limit(1);
-      occupantId = firstOcc?.id;
+
+      if (!myOcc) {
+        return NextResponse.json({ success: true, disputes: [] });
+      }
+
+      if (requestedOccupantId && requestedOccupantId !== myOcc.id) {
+        return NextResponse.json({ error: "Access denied to requested disputes" }, { status: 403 });
+      }
+      occupantId = myOcc.id;
+    } else {
+      if (!occupantId) {
+        const [firstOcc] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+          .limit(1);
+        occupantId = firstOcc?.id;
+      }
     }
 
     if (!occupantId) {

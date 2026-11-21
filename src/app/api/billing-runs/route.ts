@@ -16,7 +16,7 @@ import {
   rentStep,
   billingEntities,
 } from "@/db/schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { getFiscalYear } from "@/lib/rent-roll/jobs/invoice-generation";
 import { sendInvoiceNotificationEmail } from "@/lib/email-service";
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
@@ -64,7 +64,15 @@ function parsePeriodDates(periodStr: string): { yyyyMm: string; pStart: string; 
 
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot access billing run operations" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
     const propertyId = searchParams.get("property_id");
@@ -458,7 +466,15 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot trigger billing runs" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const {

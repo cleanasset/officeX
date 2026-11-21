@@ -96,7 +96,7 @@ export default function SubscriptionAndQuotaPage() {
       const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
 
       const [statusRes, areaRes] = await Promise.all([
-        fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, { headers: authHeaders }).catch(() => null),
+        fetch('/api/subscription/status', { headers: { ...authHeaders, 'x-user-email': email } }).catch(() => null),
         fetch("/api/subscription/portfolio-area", { headers: authHeaders }).catch(() => null),
       ]);
 

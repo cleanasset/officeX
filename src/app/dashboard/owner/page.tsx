@@ -159,7 +159,7 @@ export default function OwnerDashboardPage() {
       if (isOwnerAdmin) {
         setIsRentRollSubscribed(true);
       } else if (uEmail) {
-        fetch(`/api/subscription/status?email=${encodeURIComponent(uEmail)}`)
+        fetch('/api/subscription/status', { headers: { 'x-user-email': uEmail } })
           .then((r) => r.json())
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
@@ -228,7 +228,7 @@ export default function OwnerDashboardPage() {
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
     const activePropName = (typeof window !== "undefined" ? localStorage.getItem("officex_selected_property_name") || localStorage.getItem("officex_active_property") || "" : "") || properties.find((p) => p.id === scope)?.name || properties[0]?.name || "";
-    return `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&email=${encodeURIComponent(delegatedManagerEmail || "")}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
+    return `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
   };
 
   const getManagerWhatsAppUrl = () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 
 export type TicketPriority = "Critical" | "High" | "Medium" | "Low";
 export type TicketStatus = "open" | "assigned" | "in-progress" | "resolved" | "closed";
@@ -20,18 +21,32 @@ export interface Ticket {
   description?: string;
   unit?: string;
   createdAtTimestamp: number;
+  orgId?: string;
+  userId?: string;
+  userEmail?: string;
 }
 
 // Global in-memory tickets store (shared across server runtime, zero mock data)
 const globalTickets: Ticket[] = [];
 
 export async function GET(request: Request) {
+  const auth = getAuthContext(request);
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const priority = searchParams.get("priority");
   const unit = searchParams.get("unit");
 
-  let result = [...globalTickets];
+  let result = globalTickets.filter((t) => !t.orgId || !auth.orgId || t.orgId === auth.orgId);
+
+  // Strict role isolation: tenants only see tickets created by themselves or matching their email
+  if (auth.role === "occupant" || auth.role === "tenant") {
+    result = result.filter(
+      (t) =>
+        Boolean(auth.userEmail && t.userEmail?.toLowerCase() === auth.userEmail.toLowerCase()) ||
+        t.userId === auth.userId ||
+        Boolean(auth.userEmail && t.requester.toLowerCase().includes(auth.userEmail.toLowerCase()))
+    );
+  }
 
   if (status && status !== "all") {
     result = result.filter((t) => t.status === status);
@@ -55,6 +70,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = getAuthContext(request);
     const body = await request.json();
     const { title, category, priority, unit, area, description, requester } = body;
 
@@ -104,10 +120,13 @@ export async function POST(request: Request) {
       slaRemaining: `${slaHours}h 00m remaining`,
       slaState: priorityVal === "Critical" ? "At Risk" : "Normal",
       created: "Just now",
-      requester: requester || "Enterprise Tenant Admin (Unit 5A)",
+      requester: requester || auth.userEmail || "Tenant User",
       description: description || "Reported via Tenant Self-Service Portal.",
       unit: unit || "Unit 5A",
-      createdAtTimestamp: Date.now()
+      createdAtTimestamp: Date.now(),
+      orgId: auth.orgId,
+      userId: auth.userId,
+      userEmail: auth.userEmail || undefined,
     };
 
     globalTickets.unshift(newTicket);
@@ -128,6 +147,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const auth = getAuthContext(request);
     const body = await request.json();
     const { id, status, assignee } = body;
 
@@ -136,8 +156,23 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
+    if (ticket.orgId && auth.orgId && ticket.orgId !== auth.orgId) {
+      return NextResponse.json({ error: "Access denied to this ticket" }, { status: 403 });
+    }
+
+    // Role check: tenants can only mark resolved or add comments, cannot reassign to arbitrary staff
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      const isOwner = Boolean(auth.userEmail && ticket.userEmail?.toLowerCase() === auth.userEmail.toLowerCase()) || ticket.userId === auth.userId;
+      if (!isOwner) {
+        return NextResponse.json({ error: "Access denied to modify this ticket" }, { status: 403 });
+      }
+      if (assignee && assignee !== ticket.assignee) {
+        return NextResponse.json({ error: "Tenants cannot reassign tickets" }, { status: 403 });
+      }
+    }
+
     if (status) ticket.status = status;
-    if (assignee) ticket.assignee = assignee;
+    if (assignee && auth.role !== "occupant" && auth.role !== "tenant") ticket.assignee = assignee;
 
     return NextResponse.json({
       success: true,

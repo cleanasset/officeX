@@ -91,10 +91,8 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     const ctx = isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : (searchParams?.get("context") || "marketplace");
     params.set("context", ctx);
 
-    const emailParam = searchParams?.get("email") || initialEmail;
-    if (emailParam) {
-      params.set("email", emailParam);
-    }
+    // Keep URL clean without exposing raw user email
+    // const emailParam = searchParams?.get("email") || initialEmail;
 
     const redir = initialRedirect || searchParams?.get("redirect") || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace");
     if (redir) {
@@ -122,7 +120,13 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
   // Form Fields - S02 (Account Credentials)
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState(initialEmail || searchParams?.get("email") || "");
+  const [email, setEmail] = useState(() => {
+    return (
+      initialEmail ||
+      searchParams?.get("email") ||
+      (typeof window !== "undefined" ? sessionStorage.getItem("officex_signup_email") || "" : "")
+    );
+  });
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

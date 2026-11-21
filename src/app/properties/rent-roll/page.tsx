@@ -188,7 +188,7 @@ export default function RentRollRegisterPage() {
     if (typeof window !== "undefined") {
       const userEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       if (userEmail) {
-        fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+        fetch('/api/subscription/status', { headers: { 'x-user-email': userEmail } })
           .then((r) => r.json())
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {

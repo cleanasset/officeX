@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { space, building, property } from "@/db/schema";
 import { validateRequiredFields } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc } from "drizzle-orm";
 
 /**
@@ -10,6 +10,10 @@ import { eq, and, sql, desc } from "drizzle-orm";
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const buildingId = searchParams.get("building_id");
@@ -67,7 +71,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot create spaces" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const VALID_SPACE_TYPES = ["entire_building", "floor", "wing", "suite", "cabin", "desk", "parking"];

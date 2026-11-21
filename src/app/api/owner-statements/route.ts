@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { ownerStatements, clientAccounts, billingEntities, invoice, occupant } from "@/db/schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc } from "drizzle-orm";
 
 export const revalidate = 0;
 
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot access owner statements" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
     const clientAccountId = searchParams.get("client_account_id");
@@ -178,7 +186,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot generate owner statements" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { client_account_id, period_month } = body;
 
@@ -245,6 +261,15 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot modify owner statements" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { statement_id, remittance_utr, remittance_date } = body;
 

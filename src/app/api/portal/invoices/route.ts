@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
       const [specOcc] = await db
         .select({
           id: occupant.id,
+          org_id: occupant.org_id,
+          email: occupant.email,
           name: occupant.occupant_name,
           deleted_at: occupant.deleted_at,
           status: occupant.occupant_status,
@@ -33,7 +35,11 @@ export async function GET(req: NextRequest) {
         .where(eq(occupant.id, requestedOccupantId))
         .limit(1);
 
-      if (specOcc && (specOcc.deleted_at || specOcc.status === "inactive")) {
+      if (!specOcc) {
+        return NextResponse.json({ success: true, invoices: [] });
+      }
+
+      if (specOcc.deleted_at || specOcc.status === "inactive") {
         return NextResponse.json(
           {
             success: false,
@@ -45,44 +51,29 @@ export async function GET(req: NextRequest) {
           { status: 410 }
         );
       }
+
+      // Security check: Verify tenant boundary
+      const isOwner = Boolean(auth.orgId && specOcc.org_id === auth.orgId);
+      const isTenantSelf = Boolean(auth.userEmail && specOcc.email && specOcc.email.toLowerCase() === auth.userEmail.toLowerCase());
+      if (auth.isAuthenticated && !auth.isSuperAdmin && !isOwner && !isTenantSelf) {
+        return NextResponse.json({ error: "Access denied to this tenant's invoices" }, { status: 403 });
+      }
     }
 
-    // 1. Determine occupant
+    // 1. Determine occupant - strictly scoped to user or verified requested ID
     let occupantId = requestedOccupantId;
-    if (!occupantId) {
-      // Prefer occupant who has issued/unpaid invoices first!
-      const [occWithInvoice] = await db
+    if (!occupantId && auth.userEmail) {
+      const [userOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .innerJoin(invoice, eq(invoice.occupant_id, occupant.id))
         .where(
           and(
-            sql`${occupant.deleted_at} IS NULL`,
-            sql`${invoice.status}::text NOT IN ('draft', 'cancelled')`
+            ilike(occupant.email, auth.userEmail.trim()),
+            sql`${occupant.deleted_at} IS NULL`
           )
         )
-        .orderBy(desc(invoice.created_at))
         .limit(1);
-      occupantId = occWithInvoice?.id;
-
-      if (!occupantId) {
-        const [occWithLease] = await db
-          .select({ id: occupant.id })
-          .from(occupant)
-          .innerJoin(contract, eq(contract.occupant_id, occupant.id))
-          .where(sql`${occupant.deleted_at} IS NULL`)
-          .limit(1);
-        occupantId = occWithLease?.id;
-      }
-
-      if (!occupantId) {
-        const [firstOcc] = await db
-          .select({ id: occupant.id })
-          .from(occupant)
-          .where(sql`${occupant.deleted_at} IS NULL`)
-          .limit(1);
-        occupantId = firstOcc?.id;
-      }
+      occupantId = userOcc?.id;
     }
 
     if (!occupantId) {

@@ -377,7 +377,7 @@ function InviteContent() {
     setTimeout(() => {
       if (roleParam === "tenant" || roleParam === "occupant") {
         const occId = occupantIdParam || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
-        router.push(`/portal/invoices?occupant_id=${encodeURIComponent(occId)}&prop=${encodeURIComponent(propToAssign)}&email=${encodeURIComponent(displayEmail)}`);
+        router.push(`/portal/invoices?occupant_id=${encodeURIComponent(occId)}&prop=${encodeURIComponent(propToAssign)}`);
       } else {
         const storedAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
         const aObj = storedAssigns[propToAssign] || {};

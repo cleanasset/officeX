@@ -2,32 +2,51 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { occupant, task } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const requestedOccupantId = searchParams.get("occupant_id");
+    const isTenant = auth.role === "occupant" || auth.role === "tenant";
 
     let occupantId = requestedOccupantId;
-    if (!occupantId) {
-      const [firstOcc] = await db
-        .select({ id: occupant.id })
-        .from(occupant)
-        .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
-        .limit(1);
-      occupantId = firstOcc?.id;
-    }
 
-    if (!occupantId) {
-      const [fallbackOcc] = await db
+    if (isTenant) {
+      // Find occupant record belonging strictly to this tenant
+      const [myOcc] = await db
         .select({ id: occupant.id })
         .from(occupant)
-        .where(sql`${occupant.deleted_at} IS NULL`)
-        .orderBy(desc(occupant.created_at))
+        .where(
+          and(
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!,
+            sql`${occupant.deleted_at} IS NULL`
+          )
+        )
         .limit(1);
-      occupantId = fallbackOcc?.id;
+
+      if (!myOcc) {
+        return NextResponse.json({ success: true, profile: null });
+      }
+
+      if (requestedOccupantId && requestedOccupantId !== myOcc.id) {
+        return NextResponse.json({ error: "Access denied to requested occupant profile" }, { status: 403 });
+      }
+      occupantId = myOcc.id;
+    } else {
+      if (!occupantId && auth.orgId) {
+        const [firstOcc] = await db
+          .select({ id: occupant.id })
+          .from(occupant)
+          .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`))
+          .limit(1);
+        occupantId = firstOcc?.id;
+      }
     }
 
     if (!occupantId) {
@@ -98,6 +117,26 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Occupant ID required" }, { status: 400 });
     }
 
+    const isTenant = auth.role === "occupant" || auth.role === "tenant";
+    if (isTenant) {
+      const [myOcc] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(
+          and(
+            eq(occupant.id, occupant_id),
+            eq(occupant.org_id, auth.orgId),
+            or(
+              eq(occupant.id, auth.userId),
+              auth.userEmail ? ilike(occupant.email, auth.userEmail) : sql`FALSE`
+            )!
+          )
+        );
+      if (!myOcc) {
+        return NextResponse.json({ error: "Access denied to update this occupant profile" }, { status: 403 });
+      }
+    }
+
     // Direct updates allowed for contact email and phone
     const updateData: any = { updated_at: new Date() };
     if (email) updateData.email = email;
@@ -106,7 +145,7 @@ export async function PATCH(req: NextRequest) {
     await db
       .update(occupant)
       .set(updateData)
-      .where(eq(occupant.id, occupant_id));
+      .where(and(eq(occupant.id, occupant_id), eq(occupant.org_id, auth.orgId)));
 
     // Per §T-08: "Changes to GSTIN or billing address are requests to Finance (not direct edits)."
     let requestNote = null;

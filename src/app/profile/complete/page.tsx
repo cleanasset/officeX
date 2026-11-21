@@ -1068,7 +1068,7 @@ function CompleteProfileContent() {
         setGeneratedInviteLink(json.data.inviteLink);
       } else {
         const origin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : DEPLOYED_BASE_URL.replace(/\/+$/, "");
-        setGeneratedInviteLink(`${origin}/invite?role=${role}&email=${encodeURIComponent(email)}`);
+        setGeneratedInviteLink(`${origin}/invite?role=${role}`);
       }
 
       if (typeof window !== "undefined") {
@@ -1101,7 +1101,7 @@ function CompleteProfileContent() {
       }
     } catch {
       const origin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : DEPLOYED_BASE_URL.replace(/\/+$/, "");
-      setGeneratedInviteLink(`${origin}/invite?role=${role}&email=${encodeURIComponent(email)}`);
+      setGeneratedInviteLink(`${origin}/invite?role=${role}`);
     } finally {
       setInviteLoading(false);
     }
@@ -1465,7 +1465,7 @@ function CompleteProfileContent() {
         propForm.property_name ||
         "Commercial Property";
       const ownerTitle = companyName || brandName || "Commercial Property Owner";
-      const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(occupantName)}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(targetProp)}&owner=${encodeURIComponent(ownerTitle)}&invite=ten_${Date.now()}`;
+      const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(occupantName)}&prop=${encodeURIComponent(targetProp)}&owner=${encodeURIComponent(ownerTitle)}&invite=ten_${Date.now()}`;
 
       const newTenantItem = {
         id: tenantId!,
@@ -4364,7 +4364,7 @@ function CompleteProfileContent() {
                           const tOrigin = typeof window !== "undefined" && window.location.origin ? window.location.origin : DEPLOYED_BASE_URL;
                           const tProp = registeredProperties.find((p) => p.id === selectedPropertyForTenant)?.property_name || propForm.property_name || "Commercial Centre";
                           const tOwner = companyName || brandName || "Commercial Property Owner";
-                          const tLink = t.inviteLink || `${tOrigin}/invite?role=tenant&mgr=${encodeURIComponent(t.name)}&email=${encodeURIComponent(t.email || "")}&prop=${encodeURIComponent(tProp)}&owner=${encodeURIComponent(tOwner)}&floor=${encodeURIComponent(t.floorLabels || "Demised Unit")}`;
+                          const tLink = t.inviteLink || `${tOrigin}/invite?role=tenant&mgr=${encodeURIComponent(t.name)}&prop=${encodeURIComponent(tProp)}&owner=${encodeURIComponent(tOwner)}&floor=${encodeURIComponent(t.floorLabels || "Demised Unit")}`;
 
                           return (
                             <div

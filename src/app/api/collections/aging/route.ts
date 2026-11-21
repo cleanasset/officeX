@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { calculateAgingReport } from "@/lib/rent-roll/payments/aging-service";
 
 export async function GET(req: NextRequest) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
+    if (auth.role === "occupant" || auth.role === "tenant") {
+      return NextResponse.json({ error: "Forbidden: Tenants cannot view aging collections reports" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const asOfDate = searchParams.get("as_of_date") || undefined;
 

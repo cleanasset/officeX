@@ -182,7 +182,9 @@ export default function SubscriptionGate({
 
     try {
       const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
-      const res = await fetch(`/api/subscription/coupons/validate?code=${encodeURIComponent(clean)}&email=${encodeURIComponent(email)}`);
+      const res = await fetch(`/api/subscription/coupons/validate?code=${encodeURIComponent(clean)}`, {
+        headers: { "x-user-email": email },
+      });
       const data = await res.json();
 
       if (data.valid) {
@@ -403,7 +405,7 @@ export default function SubscriptionGate({
       } else if (email) {
         // Query server-side subscription database - authoritative check
         try {
-          const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
+          const res = await fetch('/api/subscription/status', { headers: { 'x-user-email': email } });
           if (res.ok) {
             const data = await res.json();
             if (data?.subscribed && data.plan !== "none" && data.plan !== "free") {

@@ -648,7 +648,7 @@ function SidebarInner() {
       if (isAdmin) {
         setIsSubscribed(true);
       } else if (userEmail) {
-        fetch(`/api/subscription/status?email=${encodeURIComponent(userEmail)}`)
+        fetch('/api/subscription/status', { headers: { 'x-user-email': userEmail } })
           .then((r) => r.json())
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
@@ -687,7 +687,7 @@ function SidebarInner() {
       if (typeof window !== "undefined") {
         const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
         if (email) {
-          fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+          fetch('/api/subscription/status', { headers: { 'x-user-email': email } })
             .then((r) => r.json())
             .then((d) => {
               if (d?.subscribed) {

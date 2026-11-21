@@ -67,7 +67,7 @@ export default function OAuthCallbackHandler() {
 
         // Query authoritative subscription status in the background
         if (email) {
-          fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`)
+          fetch('/api/subscription/status', { headers: { 'x-user-email': email } })
             .then((r) => r.json())
             .then((d) => {
               if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
