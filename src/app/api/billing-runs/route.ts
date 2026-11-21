@@ -119,7 +119,7 @@ export async function GET(req: Request) {
     const loggedMeterIds = new Set(readingsInPeriod.map((r) => r.meter_id));
     const missingMetersCount = allActiveMeters.filter((m) => !loggedMeterIds.has(m.id)).length;
 
-    // Pre-check 4: Unapplied escalations due on or before today (AL-04)
+    // Pre-check 4: Unapplied escalations due on or before period end (AL-04)
     const unappliedEscalations = await db
       .select({ id: rentStep.id })
       .from(rentStep)
@@ -128,7 +128,7 @@ export async function GET(req: Request) {
           eq(rentStep.org_id, auth.orgId),
           sql`${rentStep.deleted_at} IS NULL`,
           ne(rentStep.status, "applied"),
-          sql`${rentStep.effective_date} <= CURRENT_DATE`
+          sql`${rentStep.effective_date} <= ${pEnd}`
         )
       );
 
@@ -226,7 +226,27 @@ export async function GET(req: Request) {
         if (ch.start_date && ch.start_date > pEnd) continue;
         if (ch.end_date && ch.end_date < pStart) continue;
 
-        const rate = parseFloat(ch.rate || "0");
+        let rate = parseFloat(ch.rate || "0");
+        // RR-01: Check active rentStep on or before pEnd
+        const activeSteps = await db
+          .select({ rate: rentStep.rate, step_no: rentStep.step_no })
+          .from(rentStep)
+          .where(
+            and(
+              eq(rentStep.contract_charge_id, ch.id),
+              sql`${rentStep.deleted_at} IS NULL`,
+              sql`${rentStep.effective_date} <= ${pEnd}`
+            )
+          )
+          .orderBy(desc(rentStep.step_no), desc(rentStep.effective_date))
+          .limit(1);
+
+        if (activeSteps.length > 0 && activeSteps[0].rate) {
+          const steppedRate = parseFloat(activeSteps[0].rate);
+          if (steppedRate > 0) {
+            rate = steppedRate;
+          }
+        }
         // RR-06: If calc_basis is per_area or rate looks like a PSF rate (< 500) and quantity_basis is empty or 1, multiply by area!
         let qty = parseFloat(ch.quantity_basis || "0");
         if ((ch.calc_basis as string) === "per_area" || (ch.calc_basis as string) === "per_sqft" || (rate > 0 && rate < 1000 && qty <= 1 && area > 0)) {
@@ -695,7 +715,27 @@ export async function POST(req: Request) {
         if (ch.start_date && ch.start_date > pEnd) continue;
         if (ch.end_date && ch.end_date < pStart) continue;
 
-        const rate = parseFloat(ch.rate || "0");
+        let rate = parseFloat(ch.rate || "0");
+        // RR-01: Check active rentStep on or before pEnd
+        const activeSteps = await db
+          .select({ rate: rentStep.rate, step_no: rentStep.step_no })
+          .from(rentStep)
+          .where(
+            and(
+              eq(rentStep.contract_charge_id, ch.id),
+              sql`${rentStep.deleted_at} IS NULL`,
+              sql`${rentStep.effective_date} <= ${pEnd}`
+            )
+          )
+          .orderBy(desc(rentStep.step_no), desc(rentStep.effective_date))
+          .limit(1);
+
+        if (activeSteps.length > 0 && activeSteps[0].rate) {
+          const steppedRate = parseFloat(activeSteps[0].rate);
+          if (steppedRate > 0) {
+            rate = steppedRate;
+          }
+        }
         // RR-06: For CAM or area-based charges, multiply rate by area when quantity basis is empty or 1
         let qty = parseFloat(ch.quantity_basis || "0");
         if ((ch.calc_basis as string) === "per_area" || (ch.calc_basis as string) === "per_sqft" || (rate > 0 && rate < 1000 && qty <= 1 && area > 0)) {

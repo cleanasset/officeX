@@ -34,7 +34,12 @@ interface BillingRunModalProps {
 }
 
 export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingRunModalProps) {
-  const [period, setPeriod] = useState<string>("Oct-2026");
+  // RR-10: Default billing period dynamically to current month (e.g. Nov-2026)
+  const [period, setPeriod] = useState<string>(() => {
+    const d = new Date();
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[d.getMonth()]}-${d.getFullYear()}`;
+  });
   const [invoiceDate, setInvoiceDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [consolidate, setConsolidate] = useState<boolean>(true); // Default 1 clean invoice per tenant
   const [dispatchMode, setDispatchMode] = useState<"buffer" | "instant">("buffer");
@@ -222,10 +227,24 @@ export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingR
                   onChange={(e) => setPeriod(e.target.value)}
                   className="bg-transparent text-white text-xs font-semibold outline-none cursor-pointer"
                 >
-                  <option value="Oct-2026" className="bg-slate-900 text-white">October 2026</option>
-                  <option value="Nov-2026" className="bg-slate-900 text-white">November 2026</option>
-                  <option value="Dec-2026" className="bg-slate-900 text-white">December 2026</option>
-                  <option value="Sep-2026" className="bg-slate-900 text-white">September 2026</option>
+                  {(() => {
+                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    const now = new Date();
+                    const options = [];
+                    // Generate for current month, next month, and previous 3 months
+                    for (let offset = 1; offset >= -3; offset--) {
+                      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+                      const key = `${months[d.getMonth()]}-${d.getFullYear()}`;
+                      const label = `${fullMonths[d.getMonth()]} ${d.getFullYear()}${offset === 0 ? " (Current)" : offset === 1 ? " (Next / Advance)" : ""}`;
+                      options.push(
+                        <option key={key} value={key} className="bg-slate-900 text-white">
+                          {label}
+                        </option>
+                      );
+                    }
+                    return options;
+                  })()}
                 </select>
               </div>
 

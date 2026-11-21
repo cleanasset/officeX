@@ -640,16 +640,22 @@ export function validateContractTransition(
 }
 
 /**
- * Statutory Identifiers Validation (RR-14)
- * Relaxed to allow any standard or testing alphanumeric identifiers without blocking users
+ * Statutory Identifiers Validation (RR-04 & RR-14)
+ * Enforces strict Indian regulatory formats:
+ * - PAN: 5 letters, 4 digits, 1 letter (10 chars, e.g. ABCDE1234F)
+ * - CIN: U/L + 5 digits + 2-letter state + 4-digit year + 3-letter type + 6 digits (21 chars, e.g. U72200MH2020PTC123456)
+ * - GSTIN: 2-digit state code + 10-char PAN + 1 entity digit + 'Z' + 1 checksum char (15 chars, e.g. 27ABCDE1234F1Z5)
+ * - Pincode: 6 digits starting with 1-9 (e.g. 110001)
+ * - Mobile: 10 digits starting with 6-9 (e.g. 9876543210)
  */
 export function validatePanFormat(pan: string): { isValid: boolean; message?: string } {
   if (!pan) return { isValid: true };
   const clean = pan.trim().toUpperCase();
-  if (clean.length > 10 || !/^[A-Z0-9]{1,10}$/.test(clean)) {
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  if (!panRegex.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid PAN format '${pan}'. Must be up to 10 alphanumeric characters.`,
+      message: `Invalid PAN format '${pan}'. Must be exactly 10 characters: 5 letters, 4 digits, and 1 letter (e.g. ABCDE1234F).`,
     };
   }
   return { isValid: true };
@@ -658,10 +664,11 @@ export function validatePanFormat(pan: string): { isValid: boolean; message?: st
 export function validateCinFormat(cin: string): { isValid: boolean; message?: string } {
   if (!cin) return { isValid: true };
   const clean = cin.trim().toUpperCase();
-  if (clean.length > 25 || !/^[A-Z0-9\-\/]{1,25}$/.test(clean)) {
+  const cinRegex = /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
+  if (!cinRegex.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be alphanumeric.`,
+      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be exactly 21 characters (e.g. U72200MH2020PTC123456).`,
     };
   }
   return { isValid: true };
@@ -670,11 +677,47 @@ export function validateCinFormat(cin: string): { isValid: boolean; message?: st
 export function validateGstinFormat(gstin: string, pan?: string): { isValid: boolean; message?: string } {
   if (!gstin) return { isValid: true };
   const clean = gstin.trim().toUpperCase();
-  // Relaxed: Accept any alphanumeric GSTIN up to 15 characters without rigid 10-char PAN restrictions
-  if (clean.length > 15 || !/^[A-Z0-9]{1,15}$/.test(clean)) {
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  if (!gstRegex.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid GSTIN format '${gstin}'. Must be up to 15 alphanumeric characters.`,
+      message: `Invalid GSTIN format '${gstin}'. Must be exactly 15 characters (e.g. 27ABCDE1234F1Z5).`,
+    };
+  }
+  if (pan) {
+    const cleanPan = pan.trim().toUpperCase();
+    const gstinPan = clean.slice(2, 12);
+    if (gstinPan !== cleanPan) {
+      return {
+        isValid: false,
+        message: `GSTIN mismatch: Characters 3-12 of GSTIN (${gstinPan}) must match the entity PAN (${cleanPan}).`,
+      };
+    }
+  }
+  return { isValid: true };
+}
+
+export function validatePincodeFormat(pincode: string): { isValid: boolean; message?: string } {
+  if (!pincode) return { isValid: true };
+  const clean = pincode.trim();
+  const pinRegex = /^[1-9][0-9]{5}$/;
+  if (!pinRegex.test(clean)) {
+    return {
+      isValid: false,
+      message: `Invalid Pincode '${pincode}'. Must be exactly 6 digits starting with 1-9 (e.g. 110001).`,
+    };
+  }
+  return { isValid: true };
+}
+
+export function validatePhoneFormat(phone: string): { isValid: boolean; message?: string } {
+  if (!phone) return { isValid: true };
+  const clean = phone.trim().replace(/^\+91/, "").replace(/\s+/g, "");
+  const phoneRegex = /^[6-9][0-9]{9}$/;
+  if (!phoneRegex.test(clean)) {
+    return {
+      isValid: false,
+      message: `Invalid mobile number '${phone}'. Must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.`,
     };
   }
   return { isValid: true };

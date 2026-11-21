@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { occupant, contract, space, building, property, contractCharge, organization, billingEntity } from "@/db/schema";
+import { validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
     // Deduplicate occupants (in case an occupant has multiple contracts) or keep their primary contract
     const seenOccupants = new Map<string, any>();
 
-    // Fetch all properties for this org to resolve unleased tenant property associations
+    // Fetch all properties for this org to resolve unleased tenant property associations (strictly org-isolated)
     const orgProperties = await db
       .select({ id: property.id, name: property.property_name })
       .from(property)
@@ -60,17 +61,6 @@ export async function GET(req: Request) {
     for (const p of orgProperties) {
       propMap.set(p.id, p.name);
       if (p.name) propMap.set(p.name.toLowerCase().trim(), p.name);
-    }
-
-    // Also fetch all non-deleted properties across DB as fallback for cross-org references
-    const allDbProperties = await db
-      .select({ id: property.id, name: property.property_name })
-      .from(property)
-      .where(sql`${property.deleted_at} IS NULL`);
-    const fallbackPropMap = new Map<string, string>();
-    for (const p of allDbProperties) {
-      fallbackPropMap.set(p.id, p.name);
-      if (p.name) fallbackPropMap.set(p.name.toLowerCase().trim(), p.name);
     }
 
     // Fetch all contract charges for accurate rent & CAM
@@ -114,9 +104,6 @@ export async function GET(req: Request) {
           associatedPropName = propMap.get(propLookupKey)!;
         } else if (propMap.has(propLookupKey.toLowerCase().trim())) {
           associatedPropName = propMap.get(propLookupKey.toLowerCase().trim())!;
-        } else if (fallbackPropMap.has(propLookupKey)) {
-          associatedPropId = propLookupKey;
-          associatedPropName = fallbackPropMap.get(propLookupKey)!;
         }
       }
 
@@ -167,8 +154,8 @@ export async function GET(req: Request) {
           company_type: occ.occupant_type === "individual" ? "sole_proprietorship" : "pvt_ltd",
           pan: occ.pan_number,
           gstin: occ.gst_number,
-          cin: occMeta.cin_number || "",
-          cin_number: occMeta.cin_number || "",
+          cin: occMeta.cin_number || occMeta.cin || "",
+          cin_number: occMeta.cin_number || occMeta.cin || "",
           signatory_name: occMeta.signatory_name || "",
           signatory_designation: occMeta.signatory_designation || "",
           alt_contact_name: occMeta.alt_contact_name || "",
@@ -177,7 +164,11 @@ export async function GET(req: Request) {
           phone: occ.phone,
           address: occ.address,
           billing_address: occ.address,
-          industry_sector: occ.industry_sector,
+          city: occ.city || occMeta.city || "",
+          state: occ.state || occMeta.state || "",
+          postal_code: occ.postal_code || occMeta.postal_code || occMeta.pincode || "",
+          pincode: occ.postal_code || occMeta.postal_code || occMeta.pincode || "",
+          industry_sector: occ.industry_sector || occMeta.industry_type || "IT & Software",
           status: occ.occupant_status || "active",
           portal_status: (item.contract && (item.contract.contract_status === "active" || (item.contract as any).contract_status === "pending_acceptance")) || occ.occupant_status === "active" ? "active" : "pending",
           is_activated: Boolean(item.contract) || occ.occupant_status === "active",
@@ -237,6 +228,44 @@ export async function POST(req: Request) {
         },
         { status: 422 }
       );
+    }
+
+    if (panToTest) {
+      const panRes = validatePanFormat(panToTest);
+      if (!panRes.isValid) {
+        return NextResponse.json({ error: panRes.message || "Invalid PAN format." }, { status: 400 });
+      }
+    }
+
+    const cinToTest = (body.cin_number || body.cin || "").trim().toUpperCase();
+    if (cinToTest) {
+      const cinRes = validateCinFormat(cinToTest);
+      if (!cinRes.isValid) {
+        return NextResponse.json({ error: cinRes.message || "Invalid CIN format." }, { status: 400 });
+      }
+    }
+
+    if (gstToTest) {
+      const gstRes = validateGstinFormat(gstToTest, panToTest || undefined);
+      if (!gstRes.isValid) {
+        return NextResponse.json({ error: gstRes.message || "Invalid GSTIN format." }, { status: 400 });
+      }
+    }
+
+    const phoneToTest = (body.phone || body.mobile || "").trim();
+    if (phoneToTest) {
+      const phoneRes = validatePhoneFormat(phoneToTest);
+      if (!phoneRes.isValid) {
+        return NextResponse.json({ error: phoneRes.message || "Invalid mobile number." }, { status: 400 });
+      }
+    }
+
+    const pinToTest = (body.pincode || body.postal_code || "").trim();
+    if (pinToTest) {
+      const pinRes = validatePincodeFormat(pinToTest);
+      if (!pinRes.isValid) {
+        return NextResponse.json({ error: pinRes.message || "Invalid pincode." }, { status: 400 });
+      }
     }
 
     if (panToTest || gstToTest) {
@@ -366,17 +395,25 @@ export async function POST(req: Request) {
         email: body.email || null,
         phone: body.phone || null,
         address: body.billing_address || body.address || null,
+        city: body.city || null,
+        state: body.state || null,
+        postal_code: pinToTest || null,
         industry_sector: body.industry_sector || body.industry || body.industryType || null,
         occupant_status: "active",
         source_row_id: JSON.stringify({
           property_id: body.property_id || null,
           trade_name: body.trade_name || body.tenant_name || name,
           legal_name: body.company_name || body.legal_name || name,
-          cin_number: body.cin_number || body.cin || null,
+          cin_number: cinToTest || null,
           signatory_name: body.signatory_name || body.signatory || null,
           signatory_designation: body.signatory_designation || null,
           alt_contact_name: body.alt_contact_name || null,
           alt_contact_phone: body.alt_contact_phone || null,
+          city: body.city || null,
+          state: body.state || null,
+          postal_code: pinToTest || null,
+          pincode: pinToTest || null,
+          industry_type: body.industry_sector || body.industry || body.industryType || null,
         }),
         created_by: auth.userId,
         updated_by: auth.userId,
@@ -393,8 +430,16 @@ export async function POST(req: Request) {
           occupant_code: inserted.occupant_code,
           pan: inserted.pan_number,
           gstin: inserted.gst_number,
+          cin: cinToTest || null,
+          cin_number: cinToTest || null,
+          signatory_name: body.signatory_name || body.signatory || null,
+          city: inserted.city,
+          state: inserted.state,
+          postal_code: inserted.postal_code,
+          pincode: inserted.postal_code,
+          industry_sector: inserted.industry_sector,
           status: inserted.occupant_status,
-          property_id: inserted.source_row_id || null,
+          property_id: body.property_id || null,
         },
       },
       { status: 201 }

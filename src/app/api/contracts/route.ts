@@ -20,7 +20,7 @@ import {
   validateDepositBounds,
   validateChargeDates,
 } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike, ne } from "drizzle-orm";
 
@@ -29,6 +29,10 @@ import { eq, and, sql, desc, or, ilike, ne } from "drizzle-orm";
  */
 export async function POST(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to create a lease contract" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const body = await req.json();
 
@@ -497,8 +501,8 @@ export async function POST(req: Request) {
           })
           .returning();
 
-        if (Array.isArray(ch.rent_steps)) {
-          let stepNo = 1;
+        let stepNo = 1;
+        if (Array.isArray(ch.rent_steps) && ch.rent_steps.length > 0) {
           for (const st of ch.rent_steps) {
             await db.insert(rentStep).values({
               org_id: orgId,
@@ -513,6 +517,70 @@ export async function POST(req: Request) {
               created_by: auth.userId,
               updated_by: auth.userId,
             });
+          }
+        } else if (
+          (ch.component === "base_rent" || ch.invoice_group === "rent") &&
+          (Number(body.escalation_value || payload.escalation_value || 0) > 0 || body.has_escalation)
+        ) {
+          // RR-01: Auto-generate full rentStep schedule across the entire lease term
+          const escPct = Number(body.escalation_value || payload.escalation_value || 5);
+          const initialRate = parseFloat(ch.rate || "0");
+          const cycleMonths =
+            body.escalation_frequency === "Quarterly" ? 3 :
+            body.escalation_frequency === "Biannual" ? 24 :
+            body.escalation_frequency === "Triennial" ? 36 : 12;
+
+          const contractStart = payload.start_date;
+          const contractEnd = payload.end_date;
+          const todayStr = new Date().toISOString().split("T")[0];
+
+          // Step 1: Base initial rate at lease start
+          await db.insert(rentStep).values({
+            org_id: orgId,
+            client_account_id: clientAccountId,
+            contract_charge_id: insertedCharge.id,
+            step_no: stepNo++,
+            effective_date: contractStart,
+            escalation_type: "percentage",
+            rate: String(initialRate),
+            escalation_value: "0",
+            status: contractStart <= todayStr ? "applied" : "scheduled",
+            created_by: auth.userId,
+            updated_by: auth.userId,
+          });
+
+          // Subsequent stepped escalations
+          let nextDate: Date;
+          if (body.escalation_start_date) {
+            nextDate = new Date(body.escalation_start_date);
+          } else {
+            nextDate = new Date(contractStart);
+            nextDate.setMonth(nextDate.getMonth() + cycleMonths);
+          }
+
+          let currentRate = initialRate;
+          const endDateObj = new Date(contractEnd);
+
+          while (nextDate <= endDateObj && stepNo <= 20) {
+            const dateStr = nextDate.toISOString().split("T")[0];
+            currentRate = Math.round(currentRate * (1 + escPct / 100) * 100) / 100;
+            const isDueOrPast = dateStr <= todayStr;
+
+            await db.insert(rentStep).values({
+              org_id: orgId,
+              client_account_id: clientAccountId,
+              contract_charge_id: insertedCharge.id,
+              step_no: stepNo++,
+              effective_date: dateStr,
+              escalation_type: "percentage",
+              rate: String(currentRate),
+              escalation_value: String(escPct),
+              status: isDueOrPast ? "due" : "scheduled",
+              created_by: auth.userId,
+              updated_by: auth.userId,
+            });
+
+            nextDate.setMonth(nextDate.getMonth() + cycleMonths);
           }
         }
       }
@@ -541,22 +609,67 @@ export async function POST(req: Request) {
         })
         .returning();
 
-      // If escalation specified, provision rentStep for Escalation Calendar engine
+      // If escalation specified, provision full rentStep schedule for Escalation Calendar & Billing engines
       const escPct = Number(body.escalation_value || payload.escalation_value || 0);
       if (escPct > 0) {
+        let stepNo = 1;
+        const cycleMonths =
+          body.escalation_frequency === "Quarterly" ? 3 :
+          body.escalation_frequency === "Biannual" ? 24 :
+          body.escalation_frequency === "Triennial" ? 36 : 12;
+
+        const contractStart = payload.start_date;
+        const contractEnd = payload.end_date;
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Step 1: Base initial rate at lease start
         await db.insert(rentStep).values({
           org_id: orgId,
           client_account_id: clientAccountId,
           contract_charge_id: insertedCharge.id,
-          step_no: 1,
-          effective_date: payload.start_date,
+          step_no: stepNo++,
+          effective_date: contractStart,
           escalation_type: "percentage",
           rate: String(rentRate),
-          escalation_value: String(escPct),
-          status: "scheduled",
+          escalation_value: "0",
+          status: contractStart <= todayStr ? "applied" : "scheduled",
           created_by: auth.userId,
           updated_by: auth.userId,
         });
+
+        // Subsequent stepped escalations
+        let nextDate: Date;
+        if (body.escalation_start_date) {
+          nextDate = new Date(body.escalation_start_date);
+        } else {
+          nextDate = new Date(contractStart);
+          nextDate.setMonth(nextDate.getMonth() + cycleMonths);
+        }
+
+        let currentRate = rentRate;
+        const endDateObj = new Date(contractEnd);
+
+        while (nextDate <= endDateObj && stepNo <= 20) {
+          const dateStr = nextDate.toISOString().split("T")[0];
+          currentRate = Math.round(currentRate * (1 + escPct / 100) * 100) / 100;
+          const isDueOrPast = dateStr <= todayStr;
+
+          await db.insert(rentStep).values({
+            org_id: orgId,
+            client_account_id: clientAccountId,
+            contract_charge_id: insertedCharge.id,
+            step_no: stepNo++,
+            effective_date: dateStr,
+            escalation_type: "percentage",
+            rate: String(currentRate),
+            escalation_value: String(escPct),
+            status: isDueOrPast ? "due" : "scheduled",
+            created_by: auth.userId,
+            updated_by: auth.userId,
+          });
+
+          nextDate.setMonth(nextDate.getMonth() + cycleMonths);
+        }
       }
     }
 
@@ -614,6 +727,10 @@ export async function POST(req: Request) {
  */
 export async function GET(req: Request) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to view contracts" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
 
@@ -628,10 +745,9 @@ export async function GET(req: Request) {
     const offset = (page - 1) * limit;
 
     const conditions = [
-      or(
-        eq(contract.org_id, auth.orgId),
-        eq(contract.org_id, "a411dd64-65db-462d-8eef-336f9768f44d")
-      )!,
+      auth.isSuperAdmin
+        ? sql`1=1`
+        : eq(contract.org_id, auth.orgId),
       sql`${contract.deleted_at} IS NULL`,
     ];
 
@@ -701,10 +817,13 @@ export async function GET(req: Request) {
       .limit(limit)
       .offset(offset);
 
-    // Get total count
+    // Get total count with matched table joins
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(contract)
+      .leftJoin(space, eq(contract.space_id, space.id))
+      .leftJoin(building, eq(space.building_id, building.id))
+      .leftJoin(property, eq(building.property_id, property.id))
       .where(
         and(
           ...conditions,
@@ -743,7 +862,7 @@ export async function GET(req: Request) {
   } catch (err: any) {
     console.error("Error fetching contracts:", err);
     return NextResponse.json(
-      { error: "Failed to fetch contracts", message: err.message },
+      { error: "Failed to fetch contracts" },
       { status: 500 }
     );
   }

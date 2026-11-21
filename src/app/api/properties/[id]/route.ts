@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { property, building, space, properties } from "@/db/schema";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
 export async function GET(
@@ -9,20 +9,47 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const [p] = await db.select().from(properties).where(eq(properties.id, id));
-    if (p) return NextResponse.json(p);
+    if (!isAuthenticated(req)) {
+      return NextResponse.json(
+        { error: "Authentication required to access property details" },
+        { status: 401 }
+      );
+    }
 
     const auth = getAuthContext(req);
+    const { id } = await params;
+
+    const [p] = await db.select().from(properties).where(eq(properties.id, id));
+    if (p) {
+      const isOwnerOrAdmin = auth.isSuperAdmin || (p.orgId && p.orgId === auth.orgId) || (p.ownerUserId && p.ownerUserId === auth.userId);
+      if (!isOwnerOrAdmin) {
+        return NextResponse.json({ error: "Access denied to this property" }, { status: 403 });
+      }
+      return NextResponse.json(p);
+    }
+
     const [rrP] = await db
       .select()
       .from(property)
       .where(and(eq(property.id, id), sql`${property.deleted_at} IS NULL`));
-    if (rrP) return NextResponse.json(rrP);
+
+    if (rrP) {
+      // Validate that the caller has access to this property's organization
+      const isOwnerOrAdmin =
+        auth.isSuperAdmin ||
+        rrP.org_id === auth.orgId;
+
+      if (!isOwnerOrAdmin) {
+        return NextResponse.json({ error: "Access denied to this property" }, { status: 403 });
+      }
+
+      return NextResponse.json(rrP);
+    }
 
     return NextResponse.json({ error: "Property not found" }, { status: 404 });
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to fetch property", message: err.message }, { status: 500 });
+    console.error("Error fetching property:", err);
+    return NextResponse.json({ error: "Failed to fetch property" }, { status: 500 });
   }
 }
 
@@ -31,8 +58,33 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json(
+        { error: "Authentication required to delete property" },
+        { status: 401 }
+      );
+    }
+
     const auth = getAuthContext(req);
     const { id } = await params;
+
+    // Verify ownership before deleting
+    const [existing] = await db
+      .select({ id: property.id, org_id: property.org_id })
+      .from(property)
+      .where(and(eq(property.id, id), sql`${property.deleted_at} IS NULL`));
+
+    if (!existing) {
+      return NextResponse.json({ error: "Property not found" }, { status: 404 });
+    }
+
+    const isOwnerOrAdmin =
+      auth.isSuperAdmin ||
+      existing.org_id === auth.orgId;
+
+    if (!isOwnerOrAdmin) {
+      return NextResponse.json({ error: "Access denied to delete this property" }, { status: 403 });
+    }
 
     // 1. Soft-delete property in Rent Roll master
     await db
@@ -66,6 +118,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Property deleted successfully" });
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to delete property", message: err.message }, { status: 500 });
+    console.error("Error deleting property:", err);
+    return NextResponse.json({ error: "Failed to delete property" }, { status: 500 });
   }
 }

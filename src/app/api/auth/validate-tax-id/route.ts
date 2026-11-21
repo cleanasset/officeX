@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { organizations, tenants } from "@/db/schema";
 import { billing_entity, occupant } from "@/db/rent-roll-schema";
-import { validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
+import { validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
 import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,28 @@ export async function POST(request: NextRequest) {
       if (!gstRes.isValid) {
         return NextResponse.json(
           { valid: false, field: "gstin", error: gstRes.message || "Invalid GSTIN format." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const rawPincode = (body.pincode || body.postal_code || "").trim();
+    if (rawPincode) {
+      const pinRes = validatePincodeFormat(rawPincode);
+      if (!pinRes.isValid) {
+        return NextResponse.json(
+          { valid: false, field: "pincode", error: pinRes.message || "Invalid Pincode." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const rawPhone = (body.phone || body.mobile || "").trim();
+    if (rawPhone) {
+      const phoneRes = validatePhoneFormat(rawPhone);
+      if (!phoneRes.isValid) {
+        return NextResponse.json(
+          { valid: false, field: "phone", error: phoneRes.message || "Invalid mobile number." },
           { status: 400 }
         );
       }

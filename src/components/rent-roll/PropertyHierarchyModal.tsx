@@ -499,6 +499,9 @@ export default function PropertyHierarchyModal({
     gst: "",
     pan: "",
     billingAddress: "",
+    city: "",
+    state: "",
+    pincode: "",
     occupantName: "",
     email: "",
     phone: "",
@@ -868,6 +871,18 @@ export default function PropertyHierarchyModal({
     onClose();
   };
 
+  // Escape key listener to close cleanly and clear draft open state (RR-13)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleModalClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const handleDiscardDraft = () => {
     clearWizardDraft();
     resetPropertyForm();
@@ -898,6 +913,9 @@ export default function PropertyHierarchyModal({
       gst: "",
       pan: "",
       billingAddress: "",
+      city: "",
+      state: "",
+      pincode: "",
       occupantName: "",
       email: "",
       phone: "",
@@ -2580,7 +2598,18 @@ export default function PropertyHierarchyModal({
           phone: tenantForm.phone.trim(),
           gstin: tenantForm.gst.trim().toUpperCase(),
           pan: tenantForm.pan.trim().toUpperCase(),
+          cin: tenantForm.companyType === "sole_proprietorship" ? "" : tenantForm.cinNumber.trim().toUpperCase(),
+          cin_number: tenantForm.companyType === "sole_proprietorship" ? "" : tenantForm.cinNumber.trim().toUpperCase(),
+          signatory_name: effectiveContactName,
+          signatory_designation: tenantForm.signatoryDesignation.trim() || "Director / Authorized Signatory",
           billing_address: tenantForm.billingAddress.trim(),
+          address: tenantForm.billingAddress.trim(),
+          city: tenantForm.city.trim(),
+          state: tenantForm.state.trim(),
+          pincode: tenantForm.pincode.trim(),
+          postal_code: tenantForm.pincode.trim(),
+          industry_sector: tenantForm.industryType,
+          industry: tenantForm.industryType,
           alt_contact_name: tenantForm.altContactName.trim(),
           alt_contact_phone: tenantForm.altContactPhone.trim(),
           property_id: targetPropertyId,
@@ -2591,6 +2620,9 @@ export default function PropertyHierarchyModal({
             signatory_designation: tenantForm.signatoryDesignation.trim() || "Director / Authorized Signatory",
             industry_type: tenantForm.industryType,
             cin_number: tenantForm.companyType === "sole_proprietorship" ? "" : tenantForm.cinNumber.trim().toUpperCase(),
+            city: tenantForm.city.trim(),
+            state: tenantForm.state.trim(),
+            pincode: tenantForm.pincode.trim(),
           }),
         }),
       });
@@ -2666,6 +2698,9 @@ export default function PropertyHierarchyModal({
           gst: "",
           pan: "",
           billingAddress: "",
+          city: "",
+          state: "",
+          pincode: "",
           altContactName: "",
           altContactPhone: "",
           cinNumber: "",
@@ -3558,14 +3593,16 @@ export default function PropertyHierarchyModal({
       }
 
       // RR-05 & RR-06: Structured Charges Payload (Base Rent, CAM, Parking)
+      const initialChargeRate = contractForm.billingModel === "Seat-based"
+        ? (contractForm.ratePerSeat || enteredRent)
+        : (contractForm.ratePerSqft || Math.round(enteredRent / (Number(contractForm.areaSqft) || 1)));
+
       const structuredCharges: any[] = [
         {
           component: "base_rent",
           invoice_group: "rent",
           calc_basis: contractForm.billingModel === "Seat-based" ? "per_seat" : "per_area",
-          rate: contractForm.billingModel === "Seat-based"
-            ? (contractForm.ratePerSeat || enteredRent)
-            : (contractForm.ratePerSqft || Math.round(enteredRent / (Number(contractForm.areaSqft) || 1))),
+          rate: initialChargeRate,
           quantity_basis: contractForm.billingModel === "Seat-based" ? contractForm.seatCount : contractForm.areaSqft,
           rate_period: "month",
           start_date: commencementDate || contractForm.startDate,
@@ -3573,6 +3610,60 @@ export default function PropertyHierarchyModal({
           hsn_sac: "997212",
         },
       ];
+
+      // RR-01: Calculate complete rent_steps schedule if escalation enabled
+      const escPctNum = Number(contractForm.escalationPct) || 0;
+      if (escPctNum > 0) {
+        const numRate = Number(initialChargeRate) || 0;
+        const cycleMonths =
+          contractForm.escalationFrequency === "Quarterly" ? 3 :
+          contractForm.escalationFrequency === "Biannual" ? 24 :
+          contractForm.escalationFrequency === "Triennial" ? 36 : 12;
+
+        const stepsArr: any[] = [];
+        let sNo = 1;
+        const cStart = commencementDate || contractForm.startDate;
+        const cEnd = contractForm.endDate;
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Step 1: Base initial rate
+        stepsArr.push({
+          step_no: sNo++,
+          effective_date: cStart,
+          escalation_type: "percentage",
+          rate: String(numRate),
+          escalation_value: "0",
+          status: cStart <= todayStr ? "applied" : "scheduled",
+        });
+
+        // Step 2+: Future stepped rates
+        let nextD: Date;
+        if (contractForm.escalationStartDate) {
+          nextD = new Date(contractForm.escalationStartDate);
+        } else {
+          nextD = new Date(cStart);
+          nextD.setMonth(nextD.getMonth() + cycleMonths);
+        }
+
+        let currR = numRate;
+        const endD = new Date(cEnd);
+
+        while (nextD <= endD && sNo <= 20) {
+          const dStr = nextD.toISOString().split("T")[0];
+          currR = Math.round(currR * (1 + escPctNum / 100) * 100) / 100;
+          stepsArr.push({
+            step_no: sNo++,
+            effective_date: dStr,
+            escalation_type: "percentage",
+            rate: String(currR),
+            escalation_value: String(escPctNum),
+            status: dStr <= todayStr ? "due" : "scheduled",
+          });
+          nextD.setMonth(nextD.getMonth() + cycleMonths);
+        }
+
+        structuredCharges[0].rent_steps = stepsArr;
+      }
 
       if (camAmount > 0) {
         structuredCharges.push({
@@ -3622,6 +3713,8 @@ export default function PropertyHierarchyModal({
           billing_model: dbBillingModel,
           escalation_type: "percentage",
           escalation_value: Number(contractForm.escalationPct) || 0,
+          escalation_frequency: contractForm.escalationFrequency,
+          escalation_start_date: contractForm.escalationStartDate || undefined,
           has_escalation: Boolean(Number(contractForm.escalationPct) > 0),
           deposit_amount_inr: Number(effectiveSecurityDeposit) || 0,
           lock_in_period_days: lockInMonthsNum * 30,
@@ -3635,6 +3728,9 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("rent_roll_updated"));
+        }
         onSuccess?.();
         if (targetAction === "delegate") {
           showToast("✓ Commercial Lease Contract registered! Proceeding to Management Assignment.");
@@ -4203,13 +4299,14 @@ export default function PropertyHierarchyModal({
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          setFloorBreakdown([]);
                           setPropForm({
                             ...propForm,
                             hasMultipleBuildings: true,
                             buildingsCount: propForm.buildingsCount && propForm.buildingsCount !== "1" ? propForm.buildingsCount : "2",
-                          })
-                        }
+                          });
+                        }}
                         className={`py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
                           propForm.hasMultipleBuildings
                             ? "bg-white text-slate-900 shadow-xs font-bold border border-slate-200/70"
@@ -6091,6 +6188,9 @@ export default function PropertyHierarchyModal({
                         gst: "",
                         pan: "",
                         billingAddress: "",
+                        city: "",
+                        state: "",
+                        pincode: "",
                         email: "",
                         phone: "",
                         signatoryName: "",
@@ -9130,42 +9230,42 @@ export default function PropertyHierarchyModal({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
                         <span className="text-[10px] text-slate-400 font-semibold block">Monthly Base Rent</span>
-                        <span className="text-sm font-mono font-black text-white">₹{rent.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-white">₹{rent.toLocaleString("en-IN")}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
                         <span className="text-[10px] text-slate-400 font-semibold block">
                           Monthly CAM {contractForm.camType === "Included" ? "(Included)" : ""}
                         </span>
-                        <span className="text-sm font-mono font-black text-white">₹{camMonthly.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-white">₹{camMonthly.toLocaleString("en-IN")}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
                         <span className="text-[10px] text-slate-400 font-semibold block">Parking ({carPaidCount} Car, {bikePaidCount} Bike)</span>
-                        <span className="text-sm font-mono font-black text-white">₹{totalParking.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-white">₹{totalParking.toLocaleString("en-IN")}</span>
                       </div>
                       <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
                         <span className="text-[10px] text-slate-400 font-semibold block">Subtotal Before Tax</span>
-                        <span className="text-sm font-mono font-black text-teal-300">₹{subtotal.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-teal-300">₹{subtotal.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-slate-700/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                       <div>
                         <span className="text-[10px] text-slate-400 block">+ GST (18%)</span>
-                        <span className="text-xs font-mono font-bold text-amber-300">+₹{gst18.toLocaleString()}</span>
+                        <span className="text-xs font-mono font-bold text-amber-300">+₹{gst18.toLocaleString("en-IN")}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block">- {tdsSection}</span>
                         <span className={`text-xs font-mono font-bold ${tdsAmount === 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                          {tdsAmount === 0 ? "₹0 (Exempt)" : `-₹${tdsAmount.toLocaleString()}`}
+                          {tdsAmount === 0 ? "₹0 (Exempt)" : `-₹${tdsAmount.toLocaleString("en-IN")}`}
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-teal-400 font-bold block">Net Monthly Receivable</span>
-                        <span className="text-sm font-mono font-black text-emerald-400">₹{netMonthly.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-emerald-400">₹{netMonthly.toLocaleString("en-IN")}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block">Security Deposit (IFRSD)</span>
-                        <span className="text-sm font-mono font-black text-white">₹{deposit.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-black text-white">₹{deposit.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
 

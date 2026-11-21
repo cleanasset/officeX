@@ -19,7 +19,7 @@ import {
   validateSpaceOverlap,
   validateDepositBounds,
 } from "@/db/validation";
-import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
 /**
@@ -30,6 +30,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json(
+        { error: "Authentication required to access lease contract details" },
+        { status: 401 }
+      );
+    }
+
     const auth = getAuthContext(req);
     const { id } = await params;
 
@@ -74,6 +81,15 @@ export async function GET(
         },
         { status: 404 }
       );
+    }
+
+    // Verify organization ownership - prevent cross-tenant data access
+    const isOwnerOrAdmin =
+      auth.isSuperAdmin ||
+      existing.contract.org_id === auth.orgId;
+
+    if (!isOwnerOrAdmin) {
+      return NextResponse.json({ error: "Access denied to this contract" }, { status: 403 });
     }
 
     // Scoped role check
@@ -151,14 +167,50 @@ export async function GET(
         )
       );
 
+    // RR-06: Unpack structured landlord & tenant fields from metadata
+    let occMeta: any = {};
+    if (existing.occupant?.source_row_id && typeof existing.occupant.source_row_id === "string" && existing.occupant.source_row_id.startsWith("{")) {
+      try { occMeta = JSON.parse(existing.occupant.source_row_id); } catch {}
+    }
+
+    let propMeta: any = {};
+    if (existing.property?.source_row_id && typeof existing.property.source_row_id === "string" && existing.property.source_row_id.startsWith("{")) {
+      try { propMeta = JSON.parse(existing.property.source_row_id); } catch {}
+    }
+
+    const structuredOccupant = existing.occupant ? {
+      ...existing.occupant,
+      cin: occMeta.cin_number || occMeta.cin || null,
+      cin_number: occMeta.cin_number || occMeta.cin || null,
+      signatory_name: occMeta.signatory_name || occMeta.signatory || null,
+      signatory_designation: occMeta.signatory_designation || null,
+      city: existing.occupant.city || occMeta.city || null,
+      state: existing.occupant.state || occMeta.state || null,
+      postal_code: existing.occupant.postal_code || occMeta.postal_code || occMeta.pincode || null,
+      pincode: existing.occupant.postal_code || occMeta.postal_code || occMeta.pincode || null,
+      industry_sector: existing.occupant.industry_sector || occMeta.industry_type || "IT & Software",
+      industry: existing.occupant.industry_sector || occMeta.industry_type || "IT & Software",
+    } : null;
+
+    const structuredProperty = existing.property ? {
+      ...existing.property,
+      spv_name: propMeta.spv_name || null,
+      pan: propMeta.pan || null,
+      cin: propMeta.cin || null,
+      gstin: propMeta.gstin || null,
+      ownership_type: propMeta.ownership_type || null,
+      primary_contact_name: propMeta.contact_name || null,
+      primary_contact_phone: propMeta.contact_phone || null,
+    } : null;
+
     return NextResponse.json({
       success: true,
       data: {
         ...existing.contract,
-        occupant: existing.occupant,
+        occupant: structuredOccupant,
         space: existing.space,
         building: existing.building,
-        property: existing.property,
+        property: structuredProperty,
         charges: charges.map(ch => ({
           ...ch,
           rent_steps: steps.filter(s => s.contract_charge_id === ch.id),
@@ -189,6 +241,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to update contract" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { id } = await params;
     const body = await req.json();
@@ -317,6 +373,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: "Authentication required to delete contract" }, { status: 401 });
+    }
+
     const auth = getAuthContext(req);
     const { id } = await params;
 

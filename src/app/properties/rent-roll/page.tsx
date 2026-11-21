@@ -142,24 +142,10 @@ export default function RentRollRegisterPage() {
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  // Capacity Quota & Grace Period Telemetry (§OI-8 Commercial Policy)
-  const [licensedCapacity, setLicensedCapacity] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
-      if (stored && stored > 0) return stored;
-    }
-    return 0;
-  });
-  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("officex_subscription") === "active" ||
-        localStorage.getItem("officex_subscription_status") === "active" ||
-        localStorage.getItem("officex_owner_subscribed") === "true"
-      );
-    }
-    return false;
-  });
+  // RR-14: Hydration safe capacity & subscription state (matching SSR and client initial renders)
+  const [licensedCapacity, setLicensedCapacity] = useState<number>(0);
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
   const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
 
   const effectiveAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
@@ -173,7 +159,29 @@ export default function RentRollRegisterPage() {
   const isLeasing = registerData?.is_leasing_role || false;
 
   useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
+      if (stored && stored > 0) setLicensedCapacity(stored);
+      const sub =
+        localStorage.getItem("officex_subscription") === "active" ||
+        localStorage.getItem("officex_subscription_status") === "active" ||
+        localStorage.getItem("officex_owner_subscribed") === "true";
+      setIsUserSubscribed(sub);
+    }
+  }, []);
+
+  useEffect(() => {
     fetchRegisterData();
+  }, [asOfDate, currentView, propertyFilter, expiryFilter]);
+
+  // RR-08: Automatically refresh rent roll register on contract save / space updates
+  useEffect(() => {
+    const handleRentRollUpdated = () => {
+      fetchRegisterData();
+    };
+    window.addEventListener("rent_roll_updated", handleRentRollUpdated);
+    return () => window.removeEventListener("rent_roll_updated", handleRentRollUpdated);
   }, [asOfDate, currentView, propertyFilter, expiryFilter]);
 
   useEffect(() => {
@@ -1406,7 +1414,7 @@ export default function RentRollRegisterPage() {
                             {/* 10. Escalation Summary */}
                             {visibleColumns.escalation && (
                               <td className="p-3.5 text-[11px] text-slate-600 border-b border-slate-100">
-                                <span>{r.escalation_summary || "15% / 36m"}</span>
+                                <span>{r.escalation_summary || "—"}</span>
                                 {r.next_escalation_date && (
                                   <span className="block text-[10px] text-teal-700 font-semibold">
                                     Next: {r.next_escalation_date}

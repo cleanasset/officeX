@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { supabase } from "@/lib/supabase";
 import { property, building, space, contract, occupant, properties, invoice, contractCharge } from "@/db/schema";
-import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat } from "@/db/validation";
+import { validateRequiredFields, validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike, inArray } from "drizzle-orm";
@@ -263,6 +263,22 @@ export async function POST(req: Request) {
       } catch (e) {}
     }
 
+    const rawPincode = (body.postal_code || body.pincode || "").trim();
+    if (rawPincode) {
+      const pinRes = validatePincodeFormat(rawPincode);
+      if (!pinRes.isValid) {
+        return NextResponse.json({ error: pinRes.message || "Invalid pincode." }, { status: 400 });
+      }
+    }
+
+    const rawContactPhone = (body.primary_contact_phone || body.contact_phone || "").trim();
+    if (rawContactPhone) {
+      const phoneRes = validatePhoneFormat(rawContactPhone);
+      if (!phoneRes.isValid) {
+        return NextResponse.json({ error: phoneRes.message || "Invalid contact phone number." }, { status: 400 });
+      }
+    }
+
     // 1. Check if property already exists for this org (by ID, matching code, or matching name)
     const matchConditions = [];
     if (body.id || body.property_id) {
@@ -300,6 +316,18 @@ export async function POST(req: Request) {
       delete meta.requested_at;
       delete meta.reason;
       delete meta.active_contracts_count;
+
+      meta.ownership_type = body.ownership_type || meta.ownership_type || null;
+      meta.spv_name = body.spv_name || meta.spv_name || null;
+      meta.pan = rawPan || meta.pan || null;
+      meta.cin = rawCin || meta.cin || null;
+      meta.gstin = rawGstin || meta.gstin || null;
+      meta.contact_name = body.primary_contact_name || body.contact_name || meta.contact_name || null;
+      meta.contact_phone = body.primary_contact_phone || body.contact_phone || meta.contact_phone || null;
+      meta.fitout_condition = body.fitout_condition || meta.fitout_condition || "Warm Shell";
+      meta.default_fitout_days = body.default_fitout_days || meta.default_fitout_days || "60";
+      if (body.workstations_count !== undefined) meta.workstations_count = body.workstations_count;
+      if (body.cabins_count !== undefined) meta.cabins_count = body.cabins_count;
 
       const [updated] = await db
         .update(property)
@@ -416,7 +444,16 @@ export async function POST(req: Request) {
       .returning();
 
     // Auto-provision building and space so Property/Space Registry and Rent Roll matrix are populated immediately
-    if (inserted) {
+    // RR-21: Do NOT auto-provision phantom Tower 1 if property has multiple buildings (campus) or if towers/buildings are configured!
+    const isCampusOrMulti = Boolean(
+      body.has_multiple_buildings ||
+      body.hasMultipleBuildings ||
+      (Array.isArray(body.towers) && body.towers.length > 0) ||
+      (Array.isArray(body.towersBreakdown) && body.towersBreakdown.length > 0) ||
+      body.skip_auto_building
+    );
+
+    if (inserted && !isCampusOrMulti) {
       try {
         const existingBuildings = await db
           .select({ id: building.id })

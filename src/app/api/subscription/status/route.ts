@@ -67,8 +67,41 @@ const EMPTY_MODULES = {
 
 export async function GET(request: Request) {
   try {
+    const headers = request.headers;
+    const cookieHeader = headers.get("cookie") || "";
+    const emailCookie = cookieHeader
+      .split(";")
+      .find((c) => c.trim().startsWith("officex_user_email="));
+    const headerEmail = headers.get("x-user-email");
+    const callerEmail = emailCookie
+      ? decodeURIComponent(emailCookie.split("=")[1].trim()).toLowerCase()
+      : headerEmail ? headerEmail.toLowerCase().trim() : null;
+
+    const hasAuthCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
+    const hasAuth = hasAuthCookie || Boolean(headers.get("authorization")) || (callerEmail && callerEmail.includes("@"));
+
+    if (!hasAuth) {
+      return NextResponse.json({ error: "Authentication required to view subscription status." }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email")?.toLowerCase().trim();
+    const requestedEmail = searchParams.get("email")?.toLowerCase().trim();
+
+    const isMasterAdmin =
+      callerEmail === "admin@gmail.com" ||
+      callerEmail === "medistationlifecare@gmail.com" ||
+      cookieHeader.includes("officex_role=super_admin") ||
+      cookieHeader.includes("officex_admin=1");
+
+    // Prevent cross-user subscription probing
+    if (requestedEmail && callerEmail && requestedEmail !== callerEmail && !isMasterAdmin) {
+      return NextResponse.json(
+        { error: "Access denied. You may only check your own subscription status." },
+        { status: 403 }
+      );
+    }
+
+    const email = requestedEmail || callerEmail;
 
     // 1. Super Admin and Sovereign Property Owner accounts ALWAYS retain enterprise sovereign access
     const isSuperAdminEmail =

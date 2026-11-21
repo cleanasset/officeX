@@ -73,15 +73,11 @@ export async function GET(req: Request) {
     // Role-based financial masking (§3.3 & §7.3)
     const isLeasing = auth.role === "leasing_manager" || (auth.role as string) === "leasing";
     const isSuperAdmin = auth.role === "super_admin" || auth.userEmail === "admin@gmail.com" || auth.userEmail === "admin@officex.pro";
-    const effectiveOrgId = (isSuperAdmin && (!auth.orgId || auth.orgId !== "a411dd64-65db-462d-8eef-336f9768f44d"))
-      ? "a411dd64-65db-462d-8eef-336f9768f44d"
-      : auth.orgId;
+    const effectiveOrgId = auth.orgId;
 
     // 1. Fetch all spaces for the organization (and property/building/client filters)
     const spaceConditions = [
-      isSuperAdmin && !searchParams.get("org_id")
-        ? sql`(${space.org_id} = ${effectiveOrgId} OR ${space.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d')`
-        : eq(space.org_id, effectiveOrgId),
+      eq(space.org_id, effectiveOrgId),
       sql`${space.deleted_at} IS NULL`,
     ];
     if (clientAccountId) spaceConditions.push(eq(space.client_account_id, clientAccountId));
@@ -116,9 +112,7 @@ export async function GET(req: Request) {
 
     // 2. Fetch contracts covering org (and client filter)
     const contractConditions = [
-      isSuperAdmin && !searchParams.get("org_id")
-        ? sql`(${contract.org_id} = ${effectiveOrgId} OR ${contract.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d')`
-        : eq(contract.org_id, effectiveOrgId),
+      eq(contract.org_id, effectiveOrgId),
       sql`${contract.deleted_at} IS NULL`,
       sql`${contract.contract_status} != 'terminated'`,
     ];
@@ -154,11 +148,7 @@ export async function GET(req: Request) {
         spaceId: contractSpace.space_id,
       })
       .from(contractSpace)
-      .where(
-        isSuperAdmin
-          ? sql`(${contractSpace.org_id} = ${effectiveOrgId} OR ${contractSpace.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d')`
-          : eq(contractSpace.org_id, effectiveOrgId)
-      );
+      .where(eq(contractSpace.org_id, effectiveOrgId));
 
     const contractMultiSpaceIdsMap: Record<string, string[]> = {};
     for (const ms of multiSpaces) {
@@ -176,9 +166,7 @@ export async function GET(req: Request) {
       .from(contractCharge)
       .where(
         and(
-          isSuperAdmin
-            ? sql`(${contractCharge.org_id} = ${effectiveOrgId} OR ${contractCharge.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d')`
-            : eq(contractCharge.org_id, effectiveOrgId),
+          eq(contractCharge.org_id, effectiveOrgId),
           sql`${contractCharge.deleted_at} IS NULL`
         )
       );
@@ -465,73 +453,29 @@ export async function GET(req: Request) {
       }
     }
 
-    // 7. Include Vacant & Uncontracted Spaces
-    // Safeguard: Check if any uncontracted spaces have an enrolled occupant for that property
-    const unleasedOccupants = await db
-      .select({
-        id: occupant.id,
-        occupant_name: occupant.occupant_name,
-        occupant_code: occupant.occupant_code,
-        source_row_id: occupant.source_row_id,
-      })
-      .from(occupant)
-      .where(
-        isSuperAdmin && !searchParams.get("org_id")
-          ? sql`(${occupant.org_id} = ${effectiveOrgId} OR ${occupant.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d') AND ${occupant.deleted_at} IS NULL`
-          : and(eq(occupant.org_id, effectiveOrgId), sql`${occupant.deleted_at} IS NULL`)
-      );
-
-    const propertyOccupantMap = new Map<string, any>();
-    for (const occ of unleasedOccupants) {
-      let mappedPropId: string | null = null;
-      if (occ.source_row_id) {
-        if (typeof occ.source_row_id === "string" && occ.source_row_id.startsWith("{")) {
-          try {
-            const parsed = JSON.parse(occ.source_row_id);
-            mappedPropId = parsed.property_id || null;
-          } catch {}
-        } else {
-          mappedPropId = occ.source_row_id;
-        }
-      }
-      if (mappedPropId) {
-        propertyOccupantMap.set(mappedPropId, occ);
-      }
-    }
-
-    // Fallback: If there are unleased occupants and only one or few properties, link them
-    if (unleasedOccupants.length > 0 && propertyOccupantMap.size === 0 && propertyFilteredSpaces.length > 0) {
-      const primaryPropId = propertyFilteredSpaces[0].property?.id || propertyFilteredSpaces[0].building?.property_id;
-      if (primaryPropId) {
-        propertyOccupantMap.set(primaryPropId, unleasedOccupants[0]);
-      }
-    }
-
+    // 7. Include Vacant & Uncontracted Spaces (RR-03)
     for (const sp of propertyFilteredSpaces) {
       if (!occupiedSpaceIds.has(sp.space.id)) {
         const area = sp.space.chargeable_area_sqft ? parseFloat(sp.space.chargeable_area_sqft) : 0;
         // RR-33: Only use actual asking rate if saved, never invent ₹85/sqft
         const askingRate = (sp.space as any)?.asking_rate_sqft ? parseFloat((sp.space as any).asking_rate_sqft) : null;
         const askingRent = askingRate ? area * askingRate : null;
-        const propId = sp.property?.id || sp.building?.property_id;
-        const linkedOcc = propId ? propertyOccupantMap.get(propId) : null;
-        const isSpaceMarkedOccupied = (sp.space.occupancy_status as string) === "occupied" || (sp.space.occupancy_status as string) === "leased" || Boolean(linkedOcc);
 
         rows.push({
-          type: isSpaceMarkedOccupied ? "occupied_space" : "vacant_space",
-          row_class: linkedOcc ? "row_occupied" : isSpaceMarkedOccupied ? "row_occupied" : "row_vacant_grey",
+          type: "vacant_space",
+          row_class: "row_vacant_grey",
           id: `space-${sp.space.id}`,
-          contract_code: linkedOcc ? `PENDING-${linkedOcc.occupant_code}` : "—",
+          contract_code: "—",
           space_id: sp.space.id,
           space_code: sp.space.space_code,
           space_name: sp.space.space_name,
           floor: parseFloorInfo(sp.space).floor,
           floor_name: parseFloorInfo(sp.space).floor_name,
           space_type: (sp.space as any)?.space_type || "Commercial Office",
-          occupant_id: linkedOcc ? linkedOcc.id : null,
-          occupant_name: linkedOcc ? linkedOcc.occupant_name : isSpaceMarkedOccupied ? "(Occupied)" : "(Vacant Space)",
-          occupant_code: linkedOcc ? linkedOcc.occupant_code : "—",
-          occupant_trade_name: linkedOcc ? linkedOcc.occupant_name : "—",
+          occupant_id: null,
+          occupant_name: "(Vacant Space)",
+          occupant_code: "—",
+          occupant_trade_name: "—",
           industry: "—",
           is_critical: false,
           area_sqft: area,
@@ -539,10 +483,10 @@ export async function GET(req: Request) {
           seats: sp.building?.total_seats || 0,
           billing_model: "area",
           contract_type: "—",
-          monthly_base_rent: linkedOcc ? (askingRent || 0) : 0,
+          monthly_base_rent: 0,
           cam_monthly_inr: 0,
-          gross_monthly_recurring_inr: linkedOcc ? (askingRent || 0) : 0,
-          current_rate_per_sqft: linkedOcc ? (askingRate || null) : null,
+          gross_monthly_recurring_inr: 0,
+          current_rate_per_sqft: null,
           asking_rent: isLeasing ? null : askingRent,
           asking_rate_per_sqft: askingRate,
           start_date: "—",
@@ -551,7 +495,7 @@ export async function GET(req: Request) {
           days_to_expiry: null,
           lock_in_end_date: null,
           notice_period_months: null,
-          status: linkedOcc ? "lease_pending" : isSpaceMarkedOccupied ? "occupied" : "vacant",
+          status: "vacant",
           approval_status: "—",
           property_name: sp.property?.property_name || "—",
           building_name: sp.building?.building_name || "—",
@@ -560,7 +504,7 @@ export async function GET(req: Request) {
           outstanding_amount_inr: 0,
           aging_bucket: "—",
           data_quality_status: "verified",
-          renewal_stage: linkedOcc ? "Pending Terms" : "Available",
+          renewal_stage: "Available",
         });
       }
     }
@@ -655,13 +599,14 @@ export async function GET(req: Request) {
     const vacancyRatePercent = totalLeasableArea > 0 ? (totalVacantArea / totalLeasableArea) * 100 : 0;
     const totalArrears = contractRows.reduce((sum, r) => sum + (r.outstanding_amount_inr || 0), 0);
 
-    // Formula F-24: WALE (Weighted Average Lease Expiry in years)
+    // Formula F-24: WALE (Weighted Average Lease Expiry in years, RR-09)
     let waleNumerator = 0;
     let waleDenominator = 0;
     let exceptionsCount = 0;
 
-    contractRows.forEach((r) => {
-      const remainingYears = r.days_to_expiry && r.days_to_expiry > 0 ? r.days_to_expiry / 365.25 : 0;
+    const realContracts = contractRows.filter((r) => r.type === "contract" && r.days_to_expiry && r.days_to_expiry > 0);
+    realContracts.forEach((r) => {
+      const remainingYears = (r.days_to_expiry as number) / 365.25;
       const weight = (r.monthly_base_rent || 0) > 0 ? r.monthly_base_rent : (r.area_sqft || 0);
       waleNumerator += remainingYears * weight;
       waleDenominator += weight;

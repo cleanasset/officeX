@@ -203,8 +203,8 @@ export function assertRolePermission(
   return { allowed: true };
 }
 
-export { getDeterministicOrgId, getDeterministicClientAccountId } from "./ensure-org";
-import { getDeterministicOrgId, getDeterministicClientAccountId } from "./ensure-org";
+export { getDeterministicOrgId, getDeterministicClientAccountId, getDeterministicUserId } from "./ensure-org";
+import { getDeterministicOrgId, getDeterministicClientAccountId, getDeterministicUserId } from "./ensure-org";
 
 export interface RentRollAuthContext {
   orgId: string;
@@ -213,13 +213,30 @@ export interface RentRollAuthContext {
   role: SpecRoleKey;
   isPortfolioRole: boolean;
   userEmail?: string | null;
+  isAuthenticated: boolean;
+  isSuperAdmin: boolean;
+}
+
+export function isAuthenticated(req: Request | NextRequest): boolean {
+  const headers = req.headers;
+  const cookieHeader = headers.get("cookie") || "";
+  const authCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
+  const rawEmail = headers.get("x-user-email") || cookieHeader.split(";").find(c => c.trim().startsWith("officex_user_email="))?.split("=")[1];
+  const userEmail = rawEmail ? decodeURIComponent(rawEmail.trim()).toLowerCase() : "";
+  const hasAuthHeader = Boolean(headers.get("authorization"));
+  return Boolean(hasAuthHeader || (authCookie && userEmail && userEmail.includes("@") && !userEmail.endsWith("@officex.pro")));
+}
+
+export function isSuperAdmin(req: Request | NextRequest): boolean {
+  const auth = getAuthContext(req);
+  return auth.isSuperAdmin;
 }
 
 export function getAuthContext(req: Request | NextRequest): RentRollAuthContext {
   const headers = req.headers;
   let orgId = headers.get("x-org-id") || "";
   let clientAccountId = headers.get("x-client-account-id") || "";
-  let userId = headers.get("x-user-id") || DEFAULT_TEST_USER_ID;
+  let userId = headers.get("x-user-id") || "";
   let role = (headers.get("x-user-role") || "property_manager") as SpecRoleKey;
   const rawHeaderEmail = headers.get("x-user-email");
   let userEmail: string | null =
@@ -248,7 +265,7 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     .find((c) => c.trim().startsWith("officex_user_email="));
   if (!userEmail && emailCookie) {
     const parsedCookieEmail = decodeURIComponent(emailCookie.split("=")[1].trim()).toLowerCase().trim();
-    if (parsedCookieEmail) {
+    if (parsedCookieEmail && !parsedCookieEmail.endsWith("@officex.pro") && parsedCookieEmail.includes("@")) {
       userEmail = parsedCookieEmail;
     }
   }
@@ -274,11 +291,16 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     // ignore
   }
 
-  // Super Admin / Platform Admin should default to master commercial portfolio (a411dd64-65db-462d-8eef-336f9768f44d)
-  const isMasterAdmin = role === "super_admin" || userEmail === "admin@gmail.com" || userEmail === "admin@officex.pro";
+  const isMasterAdmin =
+    role === "super_admin" ||
+    role === "org_admin" ||
+    userEmail === "admin@gmail.com" ||
+    userEmail === "medistationlifecare@gmail.com" ||
+    userEmail === "admin@officex.pro";
 
   // If user is authenticated with an email, isolate data per user email (unless master admin accessing portfolio)
   if (userEmail) {
+    userId = getDeterministicUserId(userEmail);
     const explicitHeaderOrgId = headers.get("x-org-id");
     const explicitHeaderClientId = headers.get("x-client-account-id");
     if (isMasterAdmin && !explicitHeaderOrgId) {
@@ -288,6 +310,10 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
       orgId = explicitHeaderOrgId || getDeterministicOrgId(userEmail);
       clientAccountId = explicitHeaderClientId || getDeterministicClientAccountId(userEmail);
     }
+  }
+
+  if (!userId) {
+    userId = DEFAULT_TEST_USER_ID;
   }
 
   // Fallback to default test constants only if neither email nor orgId was provided
@@ -304,6 +330,10 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     "asset_manager",
   ].includes(role);
 
+  const authCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
+  const hasAuthHeader = Boolean(headers.get("authorization"));
+  const authenticated = Boolean(hasAuthHeader || (authCookie && userEmail && userEmail.includes("@")));
+
   return {
     orgId,
     clientAccountId: isPortfolioRole && clientAccountId === "all" ? null : clientAccountId,
@@ -311,5 +341,7 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     role,
     isPortfolioRole,
     userEmail,
+    isAuthenticated: authenticated,
+    isSuperAdmin: isMasterAdmin && authenticated,
   };
 }

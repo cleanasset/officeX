@@ -125,7 +125,7 @@ export default function Topbar() {
         storedName = "";
       }
 
-      if ((storedName.toLowerCase() === "jiyapatel181224" || !storedName) && storedEmail.toLowerCase().startsWith("jiyapatel181224")) {
+      if ((storedName?.toLowerCase() === "jiyapatel181224" || !storedName) && storedEmail?.toLowerCase().startsWith("jiyapatel181224")) {
         storedName = "jiya";
         localStorage.setItem("officex_user_name", "jiya");
         sessionStorage.setItem("officex_user_name", "jiya");
