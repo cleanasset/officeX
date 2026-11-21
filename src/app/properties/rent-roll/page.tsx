@@ -67,7 +67,7 @@ import BillingRunModal from "@/components/rent-roll/BillingRunModal";
 import MeterReadingsModal from "@/components/rent-roll/MeterReadingsModal";
 import CamPoolModal from "@/components/rent-roll/CamPoolModal";
 import SeatCountModal from "@/components/rent-roll/SeatCountModal";
-import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { getClientAuthHeaders, isUserSubscribedSync } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
   const router = useRouter();
@@ -79,7 +79,16 @@ export default function RentRollRegisterPage() {
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   });
-  const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">("current");
+  const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get("view");
+      if (viewParam === "current" || viewParam === "contracted" || viewParam === "forecast") return viewParam;
+      const stored = sessionStorage.getItem("officex_rentroll_view");
+      if (stored === "current" || stored === "contracted" || stored === "forecast") return stored;
+    }
+    return "current";
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [smartImporterOpen, setSmartImporterOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
@@ -142,11 +151,24 @@ export default function RentRollRegisterPage() {
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  // RR-14: Hydration safe capacity & subscription state (matching SSR and client initial renders)
-  const [licensedCapacity, setLicensedCapacity] = useState<number>(0);
-  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(false);
+  // RR-14: Hydration safe capacity & subscription state (synchronous frame-zero hydration)
+  const [licensedCapacity, setLicensedCapacity] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
+      if (stored && stored > 0) return stored;
+    }
+    return 0;
+  });
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => isUserSubscribedSync());
   const [mounted, setMounted] = useState<boolean>(false);
   const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
+
+  // Persist active view / tab selection across refreshes
+  useEffect(() => {
+    if (typeof window !== "undefined" && currentView) {
+      sessionStorage.setItem("officex_rentroll_view", currentView);
+    }
+  }, [currentView]);
 
   const effectiveAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
   const effectiveCapacity = licensedCapacity > 0 ? licensedCapacity : 500000;
@@ -163,11 +185,7 @@ export default function RentRollRegisterPage() {
     if (typeof window !== "undefined") {
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) setLicensedCapacity(stored);
-      const sub =
-        localStorage.getItem("officex_subscription") === "active" ||
-        localStorage.getItem("officex_subscription_status") === "active" ||
-        localStorage.getItem("officex_owner_subscribed") === "true";
-      setIsUserSubscribed(sub);
+      setIsUserSubscribed(isUserSubscribedSync());
     }
   }, []);
 
@@ -198,9 +216,15 @@ export default function RentRollRegisterPage() {
                 setLicensedCapacity(cap);
                 localStorage.setItem("officex_subscribed_sqft", String(cap));
               }
+              localStorage.setItem(`officex_sub_${userEmail}`, "active");
+              localStorage.setItem("officex_subscription", "active");
+              localStorage.setItem("officex_subscription_status", "active");
+              localStorage.setItem("officex_owner_subscribed", "true");
+              localStorage.setItem("officex_rentroll_subscribed", "true");
             } else {
               setIsUserSubscribed(false);
               setLicensedCapacity(0);
+              localStorage.setItem(`officex_sub_${userEmail}`, "inactive");
               localStorage.removeItem("officex_subscription");
               localStorage.removeItem("officex_subscription_status");
               localStorage.removeItem("officex_owner_subscribed");

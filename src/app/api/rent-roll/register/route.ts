@@ -168,7 +168,32 @@ export async function GET(req: Request) {
 
     const spaceMap = new Map(spacesList.map((s) => [s.space.id, s]));
 
-    // 3. Fetch active charges for contracts (Base Rent vs CAM vs Utilities)
+    // 3. Fetch steps to apply active escalations as-of date AND upcoming escalations
+    const stepsList = await db
+      .select()
+      .from(rent_step)
+      .where(
+        and(
+          eq(rent_step.org_id, effectiveOrgId),
+          sql`${rent_step.deleted_at} IS NULL`
+        )
+      )
+      .orderBy(desc(rent_step.step_no), desc(rent_step.effective_date));
+
+    // Map active stepped rates effective on or before asOfDateStr
+    const activeStepRateMap: Record<string, number> = {};
+    for (const step of stepsList) {
+      if (step.effective_date && step.effective_date <= asOfDateStr && step.contract_charge_id) {
+        if (activeStepRateMap[step.contract_charge_id] === undefined) {
+          const stepRate = parseFloat(step.rate || "0");
+          if (stepRate > 0) {
+            activeStepRateMap[step.contract_charge_id] = stepRate;
+          }
+        }
+      }
+    }
+
+    // 4. Fetch active charges for contracts (Base Rent vs CAM vs Utilities)
     const allCharges = await db
       .select()
       .from(contractCharge)
@@ -181,10 +206,11 @@ export async function GET(req: Request) {
 
     const contractBaseRentMap: Record<string, number> = {};
     const contractCamMap: Record<string, number> = {};
+    const contractCamRateMap: Record<string, number> = {};
     const contractRateMap: Record<string, number> = {};
 
     for (const ch of allCharges) {
-      const rate = parseFloat(ch.rate || "0");
+      const rate = activeStepRateMap[ch.id] !== undefined ? activeStepRateMap[ch.id] : parseFloat(ch.rate || "0");
       let qty = parseFloat(ch.quantity_basis || "1");
       const monthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
 
@@ -196,6 +222,9 @@ export async function GET(req: Request) {
       } else if (ch.component === "cam" || ch.invoice_group === "cam") {
         // RR-06: Store CAM rate or monthly total
         contractCamMap[ch.contract_id] = (contractCamMap[ch.contract_id] || 0) + monthly;
+        if ((ch.calc_basis as string) === "per_area" || (ch.calc_basis as string) === "per_sqft" || (!ch.calc_basis && rate > 0 && rate < 500 && qty <= 1)) {
+          contractCamRateMap[ch.contract_id] = rate;
+        }
       }
     }
 
@@ -234,12 +263,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // 5. Fetch upcoming escalations
-    const stepsList = await db
-      .select()
-      .from(rent_step)
-      .where(eq(rent_step.org_id, auth.orgId));
-
+    // 5. Upcoming escalations mapping (from stepsList)
     // Map charges to contract
     const chargeContractMap: Record<string, string> = {};
     for (const ch of allCharges) {
@@ -386,14 +410,16 @@ export async function GET(req: Request) {
             ? (currentRate > 0 ? Math.round(areaSqft * currentRate) : Math.round(monthlyBase / spacesToEmit.length))
             : monthlyBase;
           
-          // RR-06: Use actual CAM charge, never invent ₹25/sqft
-          let rawContractCam = contractCamMap[c.contract.id] || 0;
-          if (rawContractCam > 0 && rawContractCam < 100 && areaSqft > 0) {
-            rawContractCam = Math.round(rawContractCam * areaSqft);
+          // RR-06: Use actual CAM charge, rate * area if per_sqft, or direct monthly amount
+          let camMonthly = 0;
+          if (contractCamRateMap[c.contract.id] && areaSqft > 0) {
+            camMonthly = Math.round(contractCamRateMap[c.contract.id] * areaSqft);
+          } else {
+            const rawContractCam = contractCamMap[c.contract.id] || 0;
+            camMonthly = spacesToEmit.length > 1
+              ? (rawContractCam > 0 ? Math.round(rawContractCam / spacesToEmit.length) : 0)
+              : rawContractCam;
           }
-          const camMonthly = spacesToEmit.length > 1
-            ? (rawContractCam > 0 ? Math.round(rawContractCam / spacesToEmit.length) : 0)
-            : rawContractCam;
           const grossMonthly = allocatedMonthlyBase + camMonthly;
 
           rows.push({

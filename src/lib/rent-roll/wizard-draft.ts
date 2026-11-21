@@ -124,9 +124,14 @@ export function useWizardDraftResume(
   useEffect(() => {
     const draft = getWizardDraft();
     if (draft && draft.isOpen) {
-      if (setTab && draft.activeTab) setTab(draft.activeTab);
-      if (setPreloadSpaceId && draft.preloadSpaceId) setPreloadSpaceId(draft.preloadSpaceId);
-      setIsOpen(true);
+      const isFresh = Date.now() - (draft.updatedAt || 0) < 15 * 60 * 1000;
+      if (isFresh) {
+        if (setTab && draft.activeTab) setTab(draft.activeTab);
+        if (setPreloadSpaceId && draft.preloadSpaceId) setPreloadSpaceId(draft.preloadSpaceId);
+        setIsOpen(true);
+      } else {
+        setWizardDraftOpen(false);
+      }
     }
   }, [setIsOpen, setTab, setPreloadSpaceId]);
 }

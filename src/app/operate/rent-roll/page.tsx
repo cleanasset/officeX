@@ -28,16 +28,15 @@ import {
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
-import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { getClientAuthHeaders, setAuthCookie, isUserSubscribedSync } from "@/lib/auth-storage";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
-import { setAuthCookie } from "@/lib/auth-storage";
 
 export default function RentRollProductPage() {
   const router = useRouter();
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => isUserSubscribedSync());
 
   useEffect(() => {
     if (typeof window !== "undefined") {

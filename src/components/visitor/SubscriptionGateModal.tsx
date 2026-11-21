@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Zap,
 } from "lucide-react";
+import { getClientUserEmail } from "@/lib/auth-storage";
 
 interface SubscriptionGateModalProps {
   isOpen: boolean;
@@ -104,9 +105,9 @@ export default function SubscriptionGateModal({
           planName: "Commercial Pass",
           billingCycle: "monthly",
           couponCode: appliedCoupon?.code || "",
-          orgName: "CyberCity Commercial Towers",
-          orgId: "org_officex_demo",
-          userEmail: "admin@commercialtower.com",
+          orgName: typeof window !== "undefined" ? localStorage.getItem("officex_org_name") || "Commercial Portfolio" : "Commercial Portfolio",
+          orgId: typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org",
+          userEmail: getClientUserEmail() || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : ""),
         }),
       });
 

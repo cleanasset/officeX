@@ -69,7 +69,7 @@ export default function PropertyManagerDashboardPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [reminderTarget, setReminderTarget] = useState<string | null>(null);
-  const [reminderEmail, setReminderEmail] = useState("admin.cleanasset@gmail.com");
+  const [reminderEmail, setReminderEmail] = useState("");
   const [showCustomEmail, setShowCustomEmail] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [actionSuccessMessage, setActionSuccessMessage] = useState("");
@@ -882,7 +882,7 @@ export default function PropertyManagerDashboardPage() {
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-slate-600">
                   <Mail size={13} className="text-slate-400 shrink-0" />
                   <span className="text-[11px] text-slate-600">Registered Email:</span>
-                  <strong className="text-slate-900 font-mono text-[11px]">{reminderEmail || "admin.cleanasset@gmail.com"}</strong>
+                  <strong className="text-slate-900 font-mono text-[11px]">{reminderEmail || "No email on record"}</strong>
                   <span className="text-[9px] text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded font-bold border border-teal-200">
                     ✓ Auto-Resolved from Lease
                   </span>

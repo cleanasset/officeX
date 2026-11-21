@@ -31,7 +31,8 @@ export default function LiveVisitorsInsidePage() {
 
   const loadData = async () => {
     try {
-      const res = await fetch("/api/vc/dashboard?orgId=org_officex_demo");
+      const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+      const res = await fetch(`/api/vc/dashboard?orgId=${encodeURIComponent(org)}`);
       const json = await res.json();
       if (json.success && json.data.recentVisits) {
         // Filter those who are checked_in

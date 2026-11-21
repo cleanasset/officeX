@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { isUserSubscribedSync } from "@/lib/auth-storage";
 import {
   Building,
   TrendingUp,
@@ -531,23 +532,7 @@ function SidebarInner() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState<number>(30);
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const email = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
-      const isAdmin =
-        email === "admin@gmail.com" ||
-        email === "medistationlifecare@gmail.com" ||
-        localStorage.getItem("officex_admin") === "1" ||
-        localStorage.getItem("officex_role") === "super_admin";
-      if (isAdmin) return true;
-      if (!email) return false;
-
-      // User-scoped check takes absolute precedence to eliminate cross-account leakage
-      const userSub = localStorage.getItem(`officex_sub_${email}`);
-      return userSub === "active";
-    }
-    return false;
-  });
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => isUserSubscribedSync());
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");

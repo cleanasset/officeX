@@ -205,23 +205,23 @@ export async function GET(
       (prop?.property_name ? `${prop.property_name} Operations SPV` : orgRecord?.name || "Commercial Property Asset SPV");
     const supplierAddress =
       supplier?.registeredAddress ||
-      (prop?.address ? `${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}${prop.postal_code ? ` - ${prop.postal_code}` : ""}` : "Commercial Tech District, Gujarat - 380015");
-    const supplierGstin = propMeta.gstin || supplier?.gstin || "24AAACP1234F1Z5";
-    const supplierStateCode = supplierGstin && supplierGstin.length >= 2 ? supplierGstin.slice(0, 2) : "24";
+      (prop?.address ? `${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}${prop.postal_code ? ` - ${prop.postal_code}` : ""}` : "Commercial Tech District");
+    const supplierGstin = propMeta.gstin || prop?.gstin || supplier?.gstin || "—";
+    const supplierStateCode = supplierGstin && supplierGstin.length >= 2 && supplierGstin !== "—" ? supplierGstin.slice(0, 2) : (prop?.state_code || "07");
     const supplierState = prop?.state || supplier?.state || getStateName(supplierStateCode);
-    const supplierPan = propMeta.pan || supplier?.pan || (supplierGstin && supplierGstin.length >= 12 ? supplierGstin.slice(2, 12) : "AAACP1234F");
-    const supplierCin = propMeta.cin || "U70109GJ2018PTC123456";
+    const supplierPan = propMeta.pan || prop?.pan || supplier?.pan || (supplierGstin && supplierGstin.length >= 12 && supplierGstin !== "—" ? supplierGstin.slice(2, 12) : "—");
+    const supplierCin = propMeta.cin || prop?.cin || "—";
 
-    const bankName = supplier?.bankName || "HDFC Bank Ltd";
-    const bankAccount = supplier?.bankAccountNumber || "50200088192044";
-    const bankIfsc = supplier?.bankIfsc || "HDFC0000006";
+    const bankName = supplier?.bankName || propMeta.bank_name || "Commercial Escrow Bank";
+    const bankAccount = supplier?.bankAccountNumber || propMeta.bank_account || "—";
+    const bankIfsc = supplier?.bankIfsc || propMeta.bank_ifsc || "—";
     const bankBranch = supplier?.bankBranch || prop?.city || "Commercial Banking Branch";
 
     const buyerLegalName = occ?.occupant_name || occ?.trade_name || "Commercial Occupant";
-    const buyerGstin = occ?.gst_number || occMeta.gst_number || occMeta.gstin || "27AAACP4455K1Z2";
-    const buyerStateCode = buyerGstin && buyerGstin.length >= 2 ? buyerGstin.slice(0, 2) : supplierStateCode;
+    const buyerGstin = occ?.gst_number || occMeta.gst_number || occMeta.gstin || "Unregistered";
+    const buyerStateCode = buyerGstin && buyerGstin.length >= 2 && buyerGstin !== "Unregistered" ? buyerGstin.slice(0, 2) : supplierStateCode;
     const buyerState = occ?.state || getStateName(buyerStateCode);
-    const buyerPan = occ?.pan_number || occMeta.pan_number || (buyerGstin && buyerGstin.length >= 12 ? buyerGstin.slice(2, 12) : "AAACP4455K");
+    const buyerPan = occ?.pan_number || occMeta.pan_number || (buyerGstin && buyerGstin.length >= 12 && buyerGstin !== "Unregistered" ? buyerGstin.slice(2, 12) : "—");
     const buyerAddress = occ?.address || occMeta.address
       ? `${occ?.address || occMeta.address}${occ?.city ? `, ${occ.city}` : ""}${occ?.state ? `, ${occ.state}` : ""}${occ?.postal_code ? ` - ${occ.postal_code}` : ""}`
       : (sp?.space_name ? `${sp.space_name}, ${prop?.property_name || "Commercial Center"}` : "Demised Premises");

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId") || "org_officex_demo";
+    const orgId = searchParams.get("orgId") || "default_org";
 
     // 0. Fetch Active Subscription
     const subscriptionRecord = await db

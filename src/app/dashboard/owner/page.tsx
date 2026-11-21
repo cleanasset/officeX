@@ -46,7 +46,7 @@ import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/Pro
 import { useWizardDraftResume } from "@/lib/rent-roll/wizard-draft";
 import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
-import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { getClientAuthHeaders, isUserSubscribedSync } from "@/lib/auth-storage";
 
 interface PropertySummary {
   id: string;
@@ -142,13 +142,14 @@ export default function OwnerDashboardPage() {
   const [showBankingBanner, setShowBankingBanner] = useState(true);
   const [showSettingsBanner, setShowSettingsBanner] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
-  const [isRentRollSubscribed, setIsRentRollSubscribed] = useState(false);
+  const [isRentRollSubscribed, setIsRentRollSubscribed] = useState<boolean>(() => isUserSubscribedSync());
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const onboardedFlag = localStorage.getItem("officex_rentroll_onboarded") === "true";
       setIsOnboarded(onboardedFlag);
+      setIsRentRollSubscribed(isUserSubscribedSync());
       const uEmail = (localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       const isOwnerAdmin =
         uEmail === "admin@gmail.com" ||
@@ -164,15 +165,25 @@ export default function OwnerDashboardPage() {
           .then((d) => {
             if (d?.subscribed && d.plan !== "none" && d.plan !== "free") {
               setIsRentRollSubscribed(true);
+              localStorage.setItem(`officex_sub_${uEmail}`, "active");
+              localStorage.setItem("officex_subscription", "active");
+              localStorage.setItem("officex_subscription_status", "active");
+              localStorage.setItem("officex_owner_subscribed", "true");
+              localStorage.setItem("officex_rentroll_subscribed", "true");
             } else {
               setIsRentRollSubscribed(false);
+              localStorage.setItem(`officex_sub_${uEmail}`, "inactive");
+              localStorage.removeItem("officex_subscription");
+              localStorage.removeItem("officex_subscription_status");
+              localStorage.removeItem("officex_owner_subscribed");
+              localStorage.removeItem("officex_rentroll_subscribed");
             }
           })
           .catch(() => {
-            setIsRentRollSubscribed(false);
+            setIsRentRollSubscribed(isUserSubscribedSync());
           });
       } else {
-        setIsRentRollSubscribed(false);
+        setIsRentRollSubscribed(isUserSubscribedSync());
       }
       const logo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
       const bName = localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || "";

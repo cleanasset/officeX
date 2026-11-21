@@ -40,7 +40,7 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
     year: "numeric",
   });
 
-  const period = invoice.period || "October 2026";
+  const period = invoice.period || (invoice.period_start ? new Date(invoice.period_start).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : new Date(rawDate).toLocaleDateString("en-IN", { month: "long", year: "numeric" }));
 
   // Dynamic Landlord Brand / Property Info
   const brandLogo = typeof window !== "undefined"
@@ -221,7 +221,7 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
               <p className="font-bold text-slate-900">
                 {propertyName}
               </p>
-              <p className="text-slate-600">Chargeable Area: {invoice.area_sqft || 15000} sq.ft</p>
+              <p className="text-slate-600">Chargeable Area: {invoice.area_sqft || invoice.chargeable_area_sqft ? `${Number(invoice.area_sqft || invoice.chargeable_area_sqft).toLocaleString("en-IN")} sq.ft` : "—"}</p>
               <p className="text-slate-600 mt-1">Payment Mode: Direct RTGS / Virtual Escrow Account</p>
               <p className="text-teal-700 font-bold mt-0.5">Payment Terms: 10 Days from Invoice Date</p>
             </div>
@@ -304,13 +304,13 @@ export default function InvoiceViewModal({ invoice, onClose }: InvoiceViewModalP
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 space-y-1">
               <span className="font-bold text-slate-900 block">Bank Wire Remittance Coordinates</span>
               <p>
-                <strong>Bank:</strong> HDFC Bank Ltd | Operating Corporate SPV
+                <strong>Bank:</strong> {invoice.bank_name || invoice.property_bank_name || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "") || "Commercial Escrow Bank"}
               </p>
               <p>
-                <strong>A/C No:</strong> 50200049281928 (Escrow Current A/c)
+                <strong>A/C No:</strong> {invoice.bank_account_number || invoice.property_bank_acc || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_account") : "") || "—"}
               </p>
               <p>
-                <strong>IFSC Code:</strong> HDFC0000042
+                <strong>IFSC Code:</strong> {invoice.bank_ifsc || invoice.property_bank_ifsc || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_ifsc") : "") || "—"}
               </p>
             </div>
           </div>

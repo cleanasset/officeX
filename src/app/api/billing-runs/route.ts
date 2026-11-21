@@ -25,41 +25,35 @@ import { eq, and, sql, desc, or, ne } from "drizzle-orm";
  * S-40 Billing Runs API
  * Handles: Pre-run diff checks, Split Invoices Mode (Rent, CAM, Utility separate series), Consolidation option
  */
-function parsePeriodDates(periodStr: string): { yyyyMm: string; pStart: string; pEnd: string } {
-  const monthMap: Record<string, { num: string; days: number }> = {
-    jan: { num: "01", days: 31 },
-    feb: { num: "02", days: 28 },
-    mar: { num: "03", days: 31 },
-    apr: { num: "04", days: 30 },
-    may: { num: "05", days: 31 },
-    jun: { num: "06", days: 30 },
-    jul: { num: "07", days: 31 },
-    aug: { num: "08", days: 31 },
-    sep: { num: "09", days: 30 },
-    oct: { num: "10", days: 31 },
-    nov: { num: "11", days: 30 },
-    dec: { num: "12", days: 31 },
-  };
+function parsePeriodDates(periodStr?: string | null): { yyyyMm: string; pStart: string; pEnd: string; daysInMonth: number } {
+  const d = new Date();
+  const currentYear = d.getFullYear();
+  const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  const currentMonthName = monthNames[d.getMonth()];
+  const fallbackPeriod = `${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)}-${currentYear}`;
 
-  const parts = (periodStr || "Oct-2026").toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(/\s+/);
-  let year = "2026";
-  let month = "10";
-  let days = 31;
+  const clean = (periodStr || fallbackPeriod).toLowerCase().replace(/[^a-z0-9]/g, " ").trim();
+  const parts = clean.split(/\s+/);
+  
+  let year = currentYear;
+  let monthNum = d.getMonth() + 1;
 
   for (const part of parts) {
-    if (/^\d{4}$/.test(part)) year = part;
+    if (/^\d{4}$/.test(part)) year = parseInt(part, 10);
     const prefix = part.slice(0, 3);
-    if (monthMap[prefix]) {
-      month = monthMap[prefix].num;
-      days = monthMap[prefix].days;
+    const idx = monthNames.indexOf(prefix);
+    if (idx !== -1) {
+      monthNum = idx + 1;
     }
   }
 
-  const yyyyMm = `${year}-${month}`;
-  const pStart = `${year}-${month}-01`;
-  const pEnd = `${year}-${month}-${String(days).padStart(2, "0")}`;
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const mm = String(monthNum).padStart(2, "0");
+  const yyyyMm = `${year}-${mm}`;
+  const pStart = `${year}-${mm}-01`;
+  const pEnd = `${year}-${mm}-${String(daysInMonth).padStart(2, "0")}`;
 
-  return { yyyyMm, pStart, pEnd };
+  return { yyyyMm, pStart, pEnd, daysInMonth };
 }
 
 export async function GET(req: Request) {
@@ -76,7 +70,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
     const propertyId = searchParams.get("property_id");
-    const { yyyyMm, pStart, pEnd } = parsePeriodDates(period);
+    const { yyyyMm, pStart, pEnd, daysInMonth } = parsePeriodDates(period);
 
     // 1. Run Pre-checks (Scoped strictly to this organization: RR-01)
     // Pre-check 1: Flex contracts without approved seat count (AL-14)
@@ -273,9 +267,34 @@ export async function GET(req: Request) {
         }
       }
 
-      // RR-04: If contract has a rent commencement date in the future (rent-free fitout period), base rent is 0
-      if (c.commencement_date && c.commencement_date > pEnd) {
+      // Calendar-day proration for leases starting or ending mid-period
+      const leaseStart = c.start_date && c.start_date > pStart ? c.start_date : pStart;
+      const leaseEnd = c.end_date && c.end_date < pEnd ? c.end_date : pEnd;
+      const stDate = new Date(leaseStart + "T00:00:00Z");
+      const enDate = new Date(leaseEnd + "T00:00:00Z");
+      const daysOccupied = Math.max(0, Math.min(daysInMonth, Math.round((enDate.getTime() - stDate.getTime()) / (1000 * 60 * 60 * 24)) + 1));
+      const generalProrationFactor = daysOccupied >= daysInMonth ? 1 : daysOccupied / daysInMonth;
+
+      camAmt = Math.round(camAmt * generalProrationFactor);
+      utilAmt = Math.round(utilAmt * generalProrationFactor);
+
+      // RR-04: Rent-Free Fitout Period & Mid-Month Commencement Proration
+      const rentStartDate = c.commencement_date && c.commencement_date > (c.start_date || pStart)
+        ? c.commencement_date
+        : (c.start_date || pStart);
+
+      if (rentStartDate > pEnd) {
+        // Rent has not yet commenced (100% rent-free fitout in this period)
         baseRentAmt = 0;
+      } else if (rentStartDate > pStart || (c.end_date && c.end_date < pEnd)) {
+        // Prorate base rent for active rent days
+        const rentSt = new Date(rentStartDate + "T00:00:00Z");
+        const rentEn = new Date((c.end_date && c.end_date < pEnd ? c.end_date : pEnd) + "T00:00:00Z");
+        const activeRentDays = Math.max(0, Math.min(daysInMonth, Math.round((rentEn.getTime() - rentSt.getTime()) / (1000 * 60 * 60 * 24)) + 1));
+        const rentProrationFactor = activeRentDays / daysInMonth;
+        baseRentAmt = Math.round(baseRentAmt * rentProrationFactor);
+      } else {
+        baseRentAmt = Math.round(baseRentAmt);
       }
 
       // RR-01/RR-06: NEVER invent fabricated numbers. If no charges entered, amounts remain 0!
@@ -489,7 +508,7 @@ export async function POST(req: Request) {
       dispatch_mode = "buffer", // "buffer" (2-hour safety window) | "instant"
     } = body;
 
-    const { yyyyMm, pStart, pEnd } = parsePeriodDates(period);
+    const { yyyyMm, pStart, pEnd, daysInMonth } = parsePeriodDates(period);
 
     // Calculate default due date: 10 days after invoice date for commercial AP / TDS compliance
     const calculatedDueDate = customDueDate || (() => {
@@ -572,14 +591,23 @@ export async function POST(req: Request) {
                 .select({ email: occupant.email, name: occupant.occupant_name })
                 .from(occupant)
                 .where(eq(occupant.id, d.occupant_id));
-              const recipientEmail = occ?.email || "admin.cleanasset@gmail.com";
+              const recipientEmail = occ?.email ? String(occ.email).trim() : "";
+              if (!recipientEmail || !recipientEmail.includes("@")) {
+                continue;
+              }
+              const invoiceDateStr = d.invoice_date ? String(d.invoice_date).split("T")[0] : new Date().toISOString().split("T")[0];
+              const dueDateStr = d.due_date ? String(d.due_date).split("T")[0] : (() => {
+                const dt = new Date(invoiceDateStr);
+                dt.setDate(dt.getDate() + 10);
+                return dt.toISOString().split("T")[0];
+              })();
               await sendInvoiceNotificationEmail({
                 to: recipientEmail,
                 tenantName: occ?.name || "Commercial Tenant",
                 invoiceNumber: d.invoice_number,
                 grossTotal: d.gross_total,
-                dueDate: d.due_date ? String(d.due_date).split("T")[0] : "31-Oct-2026",
-                invoiceDate: d.invoice_date ? String(d.invoice_date).split("T")[0] : new Date().toISOString().split("T")[0],
+                dueDate: dueDateStr,
+                invoiceDate: invoiceDateStr,
                 bankName: primaryBankName,
                 bankAccountNumber: primaryBankAcc,
                 bankIfsc: primaryBankIfsc,
@@ -760,19 +788,44 @@ export async function POST(req: Request) {
           qty = 1;
         }
 
-        const monthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
+        const fullMonthly = ch.rate_period === "year" ? (rate * qty) / 12 : rate * qty;
         if (ch.component === "base_rent" || ch.invoice_group === "rent") {
-          baseRentAmt += monthly;
+          baseRentAmt += fullMonthly;
         } else if (ch.component === "cam" || ch.invoice_group === "cam") {
-          camAmt += monthly;
+          camAmt += fullMonthly;
         } else if (ch.component === "electricity" || ch.component === "utility" || ch.invoice_group === "utility") {
-          utilAmt += monthly;
+          utilAmt += fullMonthly;
         }
       }
 
-      // RR-04: If contract has rent commencement date after this period (rent-free fit-out), base rent is 0
-      if (c.commencement_date && c.commencement_date > pEnd) {
+      // Calendar-day proration for leases starting or ending mid-period
+      const leaseStart = c.start_date && c.start_date > pStart ? c.start_date : pStart;
+      const leaseEnd = c.end_date && c.end_date < pEnd ? c.end_date : pEnd;
+      const stDate = new Date(leaseStart + "T00:00:00Z");
+      const enDate = new Date(leaseEnd + "T00:00:00Z");
+      const daysOccupied = Math.max(0, Math.min(daysInMonth, Math.round((enDate.getTime() - stDate.getTime()) / (1000 * 60 * 60 * 24)) + 1));
+      const generalProrationFactor = daysOccupied >= daysInMonth ? 1 : daysOccupied / daysInMonth;
+
+      camAmt = Math.round(camAmt * generalProrationFactor);
+      utilAmt = Math.round(utilAmt * generalProrationFactor);
+
+      // RR-04: Rent-Free Fitout Period & Mid-Month Commencement Proration
+      const rentStartDate = c.commencement_date && c.commencement_date > (c.start_date || pStart)
+        ? c.commencement_date
+        : (c.start_date || pStart);
+
+      if (rentStartDate > pEnd) {
+        // Rent has not yet commenced (100% rent-free fitout in this period)
         baseRentAmt = 0;
+      } else if (rentStartDate > pStart || (c.end_date && c.end_date < pEnd)) {
+        // Prorate base rent for active rent days
+        const rentSt = new Date(rentStartDate + "T00:00:00Z");
+        const rentEn = new Date((c.end_date && c.end_date < pEnd ? c.end_date : pEnd) + "T00:00:00Z");
+        const activeRentDays = Math.max(0, Math.min(daysInMonth, Math.round((rentEn.getTime() - rentSt.getTime()) / (1000 * 60 * 60 * 24)) + 1));
+        const rentProrationFactor = activeRentDays / daysInMonth;
+        baseRentAmt = Math.round(baseRentAmt * rentProrationFactor);
+      } else {
+        baseRentAmt = Math.round(baseRentAmt);
       }
 
       // RR-08: Real meter readings for utilities only (no invented defaults!)
@@ -894,10 +947,9 @@ export async function POST(req: Request) {
 
         generatedInvoices.push(createdInv);
 
-        if (targetStatus === "issued") {
-          const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+        if (targetStatus === "issued" && c.occupant_email && c.occupant_email.includes("@")) {
           sendInvoiceNotificationEmail({
-            to: recipientEmail,
+            to: c.occupant_email.trim(),
             tenantName: c.occupant_name || "Commercial Tenant",
             invoiceNumber: invNum,
             propertyName: c.property_name || "Commercial Centre",
@@ -962,10 +1014,9 @@ export async function POST(req: Request) {
 
           generatedInvoices.push(rentInv);
 
-          if (targetStatus === "issued") {
-            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+          if (targetStatus === "issued" && c.occupant_email && c.occupant_email.includes("@")) {
             sendInvoiceNotificationEmail({
-              to: recipientEmail,
+              to: c.occupant_email.trim(),
               tenantName: c.occupant_name || "Commercial Tenant",
               invoiceNumber: invRentNum,
               propertyName: c.property_name || "Commercial Centre",
@@ -984,7 +1035,7 @@ export async function POST(req: Request) {
 
         if (include_groups.includes("cam")) {
           const invCamNum = `INV-CAM-${fy}-${String(invoiceSeq++).padStart(4, "0")}`;
-          const gst = camAmt * 0.18;
+          const gst = Math.round(camAmt * 0.18);
           const gross = camAmt + gst;
 
           const [camInv] = await db
@@ -1028,10 +1079,9 @@ export async function POST(req: Request) {
 
           generatedInvoices.push(camInv);
 
-          if (targetStatus === "issued") {
-            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+          if (targetStatus === "issued" && c.occupant_email && c.occupant_email.includes("@")) {
             sendInvoiceNotificationEmail({
-              to: recipientEmail,
+              to: c.occupant_email.trim(),
               tenantName: c.occupant_name || "Commercial Tenant",
               invoiceNumber: invCamNum,
               propertyName: c.property_name || "Commercial Centre",
@@ -1050,7 +1100,7 @@ export async function POST(req: Request) {
 
         if (include_groups.includes("electricity")) {
           const invUtilNum = `INV-UTIL-${fy}-${String(invoiceSeq++).padStart(4, "0")}`;
-          const gst = utilAmt * 0.18;
+          const gst = Math.round(utilAmt * 0.18);
           const gross = utilAmt + gst;
 
           const [utilInv] = await db
@@ -1094,10 +1144,9 @@ export async function POST(req: Request) {
 
           generatedInvoices.push(utilInv);
 
-          if (targetStatus === "issued") {
-            const recipientEmail = c.occupant_email || "admin.cleanasset@gmail.com";
+          if (targetStatus === "issued" && c.occupant_email && c.occupant_email.includes("@")) {
             sendInvoiceNotificationEmail({
-              to: recipientEmail,
+              to: c.occupant_email.trim(),
               tenantName: c.occupant_name || "Commercial Tenant",
               invoiceNumber: invUtilNum,
               propertyName: c.property_name || "Commercial Centre",

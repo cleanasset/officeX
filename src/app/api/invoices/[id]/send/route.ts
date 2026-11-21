@@ -48,12 +48,19 @@ export async function POST(
     }
 
     if (!recipientEmail) {
-      recipientEmail = "admin.cleanasset@gmail.com";
+      return NextResponse.json(
+        { error: "No recipient email found for this tenant. Please update the tenant's email address in their profile." },
+        { status: 400 }
+      );
     }
 
     // 3. Dispatch official email via SMTP
-    const dueDateStr = inv.due_date ? String(inv.due_date).split("T")[0] : "31-Oct-2026";
     const invoiceDateStr = inv.invoice_date ? String(inv.invoice_date).split("T")[0] : new Date().toISOString().split("T")[0];
+    const dueDateStr = inv.due_date ? String(inv.due_date).split("T")[0] : (() => {
+      const d = new Date(invoiceDateStr);
+      d.setDate(d.getDate() + 10);
+      return d.toISOString().split("T")[0];
+    })();
 
     const emailResult = await sendInvoiceNotificationEmail({
       to: recipientEmail,

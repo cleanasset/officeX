@@ -8,7 +8,7 @@ import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, ArrowLeft, Sp
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { isAuthenticated, getCookie, performClientLogout, getLogoutRedirect } from "@/lib/auth-client";
-import { getClientUserEmail } from "@/lib/auth-storage";
+import { getClientUserEmail, isUserSubscribedSync } from "@/lib/auth-storage";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
 
@@ -63,8 +63,8 @@ export default function SubscriptionGate({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => isUserSubscribedSync());
+  const [isChecking, setIsChecking] = useState<boolean>(() => !isUserSubscribedSync());
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");

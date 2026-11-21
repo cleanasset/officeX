@@ -136,7 +136,6 @@ export async function DELETE(
       auth.role === "org_admin" ||
       auth.role === "admin_ops" ||
       auth.role === "platform_support" ||
-      userEmail === "admin.cleanasset@gmail.com" ||
       userEmail.toLowerCase().includes("admin");
 
     // Action 1: Cancel pending deletion request

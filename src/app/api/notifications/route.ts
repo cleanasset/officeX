@@ -33,7 +33,6 @@ export async function GET(req: Request) {
       auth.role === "org_admin" ||
       auth.role === "admin_ops" ||
       auth.role === "platform_support" ||
-      userEmail === "admin.cleanasset@gmail.com" ||
       userEmail === "admin@officex.pro" ||
       userEmail === "admin@gmail.com" ||
       userEmail.includes("admin");

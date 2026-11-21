@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
+import { getClientUserEmail } from "@/lib/auth-storage";
 
 declare global {
   interface Window {
@@ -127,9 +128,9 @@ function VisitorCompliancePricingContent() {
           planName: "Commercial Pass",
           billingCycle,
           couponCode: appliedCoupon?.code || "",
-          orgName: "CyberCity Commercial Towers",
-          orgId: "org_officex_demo",
-          userEmail: "admin@commercialtower.com",
+          orgName: typeof window !== "undefined" ? localStorage.getItem("officex_org_name") || "Commercial Portfolio" : "Commercial Portfolio",
+          orgId: typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org",
+          userEmail: getClientUserEmail() || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : ""),
         }),
       });
 
@@ -160,6 +161,9 @@ function VisitorCompliancePricingContent() {
         image: "/favicon.ico",
         handler: async function (response: any) {
           try {
+            const userEmail = getClientUserEmail() || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "");
+            const orgId = (typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org");
+            const orgName = (typeof window !== "undefined" ? localStorage.getItem("officex_org_name") || "Commercial Portfolio" : "Commercial Portfolio");
             const verifyRes = await fetch("/api/vc/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -167,8 +171,9 @@ function VisitorCompliancePricingContent() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                orgId: "org_officex_demo",
-                orgName: "CyberCity Commercial Towers",
+                orgId,
+                orgName,
+                userEmail,
                 planName: "Commercial Pass",
                 billingCycle,
                 amount: `${basePrice}.00`,
@@ -186,9 +191,9 @@ function VisitorCompliancePricingContent() {
           }
         },
         prefill: {
-          name: "Building Admin",
-          email: "admin@commercialtower.com",
-          contact: "+919876543210",
+          name: typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || "Commercial Account" : "Commercial Account",
+          email: getClientUserEmail() || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : ""),
+          contact: "",
         },
         theme: {
           color: "#0F172A",

@@ -166,3 +166,47 @@ export function getClientAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+/**
+ * Synchronous client-side check for active subscription.
+ * Checks super admin whitelist, user-scoped sub keys, universal sub keys, and cookies.
+ * Prevents UI stage/state flickering between locked and unlocked on page refresh or navigation.
+ */
+export function isUserSubscribedSync(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const email = (getClientUserEmail() || localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+    
+    // Super admins always have full access across the entire platform
+    const isAdmin =
+      email === "admin@gmail.com" ||
+      email === "medistationlifecare@gmail.com" ||
+      localStorage.getItem("officex_admin") === "1" ||
+      sessionStorage.getItem("officex_admin") === "1" ||
+      getAuthCookie("officex_admin") === "1" ||
+      localStorage.getItem("officex_role") === "super_admin";
+    if (isAdmin) return true;
+
+    if (!email) return false;
+
+    // Check user-scoped key first (prevents cross-tenant pollution)
+    const userScoped = localStorage.getItem(`officex_sub_${email}`);
+    if (userScoped === "active") return true;
+    if (userScoped === "inactive") return false;
+
+    // Check universal active flags across localStorage, sessionStorage, and cookies
+    return Boolean(
+      localStorage.getItem("officex_subscription") === "active" ||
+      localStorage.getItem("officex_subscription_status") === "active" ||
+      localStorage.getItem("officex_owner_subscribed") === "true" ||
+      localStorage.getItem("officex_rentroll_subscribed") === "true" ||
+      sessionStorage.getItem("officex_subscription") === "active" ||
+      sessionStorage.getItem("officex_owner_subscribed") === "true" ||
+      getAuthCookie("officex_subscription") === "active" ||
+      getAuthCookie("officex_owner_subscribed") === "true"
+    );
+  } catch {
+    return false;
+  }
+}
+
+

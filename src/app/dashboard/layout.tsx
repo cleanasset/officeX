@@ -14,7 +14,19 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isVerifying, setIsVerifying] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const email =
+      getClientUserEmail() ||
+      getAuthCookie("officex_user_email") ||
+      localStorage.getItem("officex_user_email") ||
+      sessionStorage.getItem("officex_user_email");
+    const sessionActive =
+      getAuthCookie("officex_session_active") === "1" ||
+      localStorage.getItem("officex_session_active") === "1" ||
+      localStorage.getItem("officex_onboarding_completed") === "1";
+    return !(email || sessionActive);
+  });
 
   // The top-level Workspace Hub (/dashboard) is the sovereign launchpad for all users.
   const isWorkspaceHub = pathname === "/dashboard";

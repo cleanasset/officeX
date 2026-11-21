@@ -20,7 +20,8 @@ export default function VisitorMasterHistoryPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("/api/vc/dashboard?orgId=org_officex_demo")
+    const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+    fetch(`/api/vc/dashboard?orgId=${encodeURIComponent(org)}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success && json.data.recentVisits) {

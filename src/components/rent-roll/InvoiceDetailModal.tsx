@@ -75,7 +75,7 @@ export default function InvoiceDetailModal({
 
   // Email Dispatch State
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
-  const [recipientEmail, setRecipientEmail] = useState("admin.cleanasset@gmail.com");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
   // Approval comment state
@@ -376,15 +376,15 @@ export default function InvoiceDetailModal({
                     {inv.property?.spv_name || `${inv.property?.property_name || 'Commercial Asset'} Operations SPV`}
                   </h3>
                   <p className="text-xs text-slate-700 mt-0.5">
-                    <span className="font-bold text-slate-500">GSTIN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.gstin || "24AAACP1234F1Z5"}</span>
+                    <span className="font-bold text-slate-500">GSTIN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.gstin || "—"}</span>
                     <span className="mx-1.5 text-slate-300">·</span>
-                    <span className="font-bold text-slate-500">PAN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.pan || "AAACP1234F"}</span>
+                    <span className="font-bold text-slate-500">PAN:</span> <span className="font-mono font-bold text-slate-900">{inv.property?.pan || "—"}</span>
                   </p>
                   <p className="text-xs text-slate-700">
                     <span className="font-bold text-slate-500">Property:</span> <span className="font-semibold text-teal-900">{inv.property?.property_name || "Commercial Center"}</span>
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    {inv.property?.address ? `${inv.property.address}, ` : ""}{inv.property?.city || "Ahmedabad"}, {inv.property?.state || "Gujarat"} {inv.property?.postal_code || ""}
+                    {inv.property?.address ? `${inv.property.address}, ` : ""}{inv.property?.city ? `${inv.property.city}, ` : ""}{inv.property?.state || ""}{inv.property?.postal_code ? ` - ${inv.property.postal_code}` : ""}
                   </p>
                 </div>
 
@@ -408,7 +408,7 @@ export default function InvoiceDetailModal({
                     <span className="font-bold text-slate-500">Contract:</span> <span className="font-mono font-bold text-teal-700">{inv.contract?.contract_code || "—"}</span>
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    <span className="font-bold text-slate-500">Place of Supply (POS):</span> {inv.property?.state || "Gujarat"} ({inv.property?.gstin ? inv.property.gstin.slice(0, 2) : "24"})
+                    <span className="font-bold text-slate-500">Place of Supply (POS):</span> {inv.property?.state || "India"}{inv.property?.gstin && inv.property.gstin.length >= 2 ? ` (${inv.property.gstin.slice(0, 2)})` : ""}
                   </p>
                 </div>
               </div>
