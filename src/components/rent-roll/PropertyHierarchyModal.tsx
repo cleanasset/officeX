@@ -9680,4 +9680,548 @@ export default function PropertyHierarchyModal({
                             onChange={(e) =>
                               setDelegationForm({
                                 ...delegationForm,
-... [truncated for diff preview]
+                                managerRights: { ...delegationForm.managerRights, canEnrollTenants: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Onboard &amp; Register Corporate Tenants</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDraftContracts)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDraftContracts: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Draft Lease Agreements &amp; Proposals</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.contractExecution}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Execute &amp; Modify Binding Leases</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canTerminateLeases)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canTerminateLeases: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Issue Lease Eviction / Termination Notices</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category B: Commercial Billing & Financial Rights */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Billing &amp; Financial Operations
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.billingRuns}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.concessions}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers / Credit Notes</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canRecordOfflinePayments)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canRecordOfflinePayments: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Record Manual Offline Payments (NEFT / RTGS)</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.depositRefunds}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Approve Security Deposit Refunds &amp; Deductions</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category C: Facility Operations & Asset Layout */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Facility Operations &amp; Space Layout
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDemarcateSpaces)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDemarcateSpaces: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Demarcate, Merge &amp; Split Suites</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canLogCAM)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canLogCAM: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Log CAM Meters &amp; Utility Expenses</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canManageTickets)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canManageTickets: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Resolve Tenant Helpdesk &amp; Work Orders</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canExportRentRoll)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canExportRentRoll: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Export Rent Roll &amp; Tax Registers</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("contract")}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  ← Back to Lease Contract
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {!isOwnerSubscribed && !checkIsOwnerSubscribed() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubscriptionGateReason("Assign Property Management to External Agency");
+                        setSubscriptionGateModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock size={13} />
+                      <span>Subscribe to Assign Management</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <UserCheck size={13} />
+                      <span>Assign Management &amp; Generate Link</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_rentroll_onboarded", "true");
+                        localStorage.setItem("officex_onboarding_completed", "1");
+                        sessionStorage.setItem("officex_onboarding_completed", "1");
+                        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                      }
+                      clearWizardDraft();
+                      onClose();
+                      onSuccess?.();
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check size={13} />
+                    <span>Finish &amp; Complete Setup ✓</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
+
+        {/* ──── AGREEMENT VARIANCE REVIEW MODAL (POPUP) ──── */}
+        <AgreementVarianceModal
+          isOpen={varianceModalOpen}
+          onClose={() => setVarianceModalOpen(false)}
+          fileName={pendingAgreementFile}
+          differences={agreementDifferences}
+          onKeepCurrent={() => {
+            setVarianceModalOpen(false);
+            showToast("Kept user-entered details unchanged without modifying form.");
+          }}
+          onApplyAgreement={(selectedKeys) => {
+            setVarianceModalOpen(false);
+            if (pendingAgreementData) {
+              applyAgreementTerms(pendingAgreementData, agreementDifferences, selectedKeys);
+            }
+          }}
+        />
+
+        {/* ──── BULK EXCEL IMPORTER MODAL ──── */}
+        <RentRollExcelImporterModal
+          isOpen={excelImporterOpen}
+          onClose={() => setExcelImporterOpen(false)}
+          onSuccess={() => {
+            setExcelImporterOpen(false);
+            showToast("✓ Excel portfolio data imported successfully!");
+            onClose(); // Close the hierarchy/property setup wizard so the user sees the Property Registry
+            onSuccess?.();
+          }}
+        />
+
+        {/* ──── SUBSCRIPTION REQUIRED MODAL (§20 & Portfolio Area Floor Rule) ──── */}
+        {subscriptionGateModalOpen && (() => {
+          const effectivePortfolioSqft = Math.max(totalPortfolioSqft, 1000);
+          const userEnteredSqft = subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft;
+          const isBelowPortfolio = userEnteredSqft < effectivePortfolioSqft;
+          const currentChosenSqft = Math.max(userEnteredSqft, effectivePortfolioSqft);
+          const ratePerSqft = 1.0;
+          const discountPct = subscribeBillingMonths === 12 ? 20 : subscribeBillingMonths === 6 ? 10 : subscribeBillingMonths === 4 ? 7 : subscribeBillingMonths === 2 ? 3 : 0;
+          const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
+          const minCyclePayable = Math.round(minMonthlyPayable * subscribeBillingMonths * (1 - discountPct / 100));
+          const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
+          const chosenCyclePayable = Math.round(monthlyEst * subscribeBillingMonths * (1 - discountPct / 100));
+
+          return (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center my-8">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
+                  <Lock size={26} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-black text-lg text-slate-900">Commercial Pro Subscription Required</h3>
+                  <p className="text-xs text-slate-600 font-medium">
+                    {subscriptionGateReason || "This action requires an active Commercial Pro Subscription."}
+                  </p>
+                </div>
+
+                {/* ──── HIGH-VISIBILITY MINIMUM AMOUNT PAYABLE CARD ──── */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 border-2 border-[#0F8B7D] text-left space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                    <div className="flex items-center gap-1.5 text-[#0F8B7D] font-black text-xs uppercase tracking-wider">
+                      <Building2 size={15} />
+                      <span>Minimum Payable (Based on Added Sq.Ft)</span>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-700 text-white uppercase tracking-wider">
+                      Scale Floor
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Added Property Area</span>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {effectivePortfolioSqft.toLocaleString()} Sq.Ft
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
+                      <span className="text-sm font-black text-teal-800 font-mono">
+                        ₹1.00 / sqft / mo
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700">Minimum Monthly Equivalent:</span>
+                      <span className="font-black text-slate-900 font-mono text-sm">
+                        ₹{minMonthlyPayable.toLocaleString("en-IN")} / mo
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                      <span className="font-black text-teal-950">
+                        Minimum Total Payable ({subscribeBillingMonths === 12 ? "1 Year (365 Days)" : `${subscribeBillingMonths} Month${subscribeBillingMonths > 1 ? "s" : ""} (${subscribeBillingMonths * 30} Days)`}):
+                      </span>
+                      <span className="font-black text-[#0F8B7D] font-mono text-base">
+                        ₹{minCyclePayable.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 pt-0.5">
+                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft × {subscribeBillingMonths} month{subscribeBillingMonths > 1 ? "s" : ""} {discountPct > 0 ? `(${discountPct}% discount applied)` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Interactive Sq.Ft Capacity Selection */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-800 block">
+                      Choose Subscription Capacity (Sq.Ft) *
+                    </label>
+                    <span className="text-[10px] font-bold text-teal-700">
+                      Min: {effectivePortfolioSqft.toLocaleString()} Sq.Ft
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={effectivePortfolioSqft}
+                      step={1000}
+                      value={userEnteredSqft}
+                      onChange={(e) => setSubscribeSqftInput(Number(e.target.value) || 0)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none ${
+                        isBelowPortfolio
+                          ? "border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600"
+                          : "border-slate-300 focus:border-[#0F8B7D] text-slate-900"
+                      }`}
+                      placeholder={`Min ${effectivePortfolioSqft.toLocaleString()}`}
+                    />
+                    <span className="absolute right-3 top-2.5 font-bold text-slate-400 text-xs">
+                      Sq.Ft
+                    </span>
+                  </div>
+
+                  {isBelowPortfolio && (
+                    <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                      <span>⚠️ Compulsory Minimum: You cannot subscribe below your total added property area ({effectivePortfolioSqft.toLocaleString("en-IN")} Sq.Ft).</span>
+                    </p>
+                  )}
+
+                  {/* Quick Capacity Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Capacity:</span>
+                    {[effectivePortfolioSqft, Math.round(effectivePortfolioSqft * 1.25), Math.round(effectivePortfolioSqft * 1.5), Math.round(effectivePortfolioSqft * 2)]
+                      .filter((val, idx, arr) => arr.indexOf(val) === idx)
+                      .slice(0, 4)
+                      .map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setSubscribeSqftInput(preset)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            userEnteredSqft === preset
+                              ? "bg-[#0F8B7D] text-white shadow-2xs"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {preset === effectivePortfolioSqft ? `Min: ${preset.toLocaleString("en-IN")}` : preset.toLocaleString("en-IN")} Sq.Ft
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Duration Selector */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-slate-800 text-[11px]">Select Subscription Duration:</span>
+                      {discountPct > 0 && (
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                          Save {discountPct}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                      {[
+                        { months: 1, days: "30 Days", label: "1 Month", discount: 0 },
+                        { months: 2, days: "60 Days", label: "2 Months", discount: 3 },
+                        { months: 4, days: "120 Days", label: "4 Months", discount: 7 },
+                        { months: 6, days: "180 Days", label: "6 Months", discount: 10 },
+                        { months: 12, days: "365 Days", label: "1 Year", discount: 20 },
+                      ].map((d) => (
+                        <button
+                          key={d.months}
+                          type="button"
+                          onClick={() => {
+                            setSubscribeBillingMonths(d.months);
+                            setSubscribeBillingCycle(d.months === 12 ? "annual" : "monthly");
+                          }}
+                          className={`p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                            subscribeBillingMonths === d.months
+                              ? "border-[#0F8B7D] bg-teal-50 text-slate-900 ring-1 ring-teal-500 font-black"
+                              : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold">{d.label}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full mt-0.5 ${
+                            subscribeBillingMonths === d.months ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {d.days}
+                          </span>
+                          <span className={`text-[8.5px] mt-0.5 ${d.discount > 0 ? "text-emerald-700 font-extrabold" : "text-slate-400 font-medium"}`}>
+                            {d.discount > 0 ? `${d.discount}% OFF` : "Standard"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-600">Total for Selected Capacity:</span>
+                    <span className="font-black text-slate-900 font-mono text-sm">
+                      ₹{chosenCyclePayable.toLocaleString("en-IN")} ({subscribeBillingMonths === 12 ? "365 Days" : `${subscribeBillingMonths * 30} Days`})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionGateModalOpen(false)}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isBelowPortfolio || subscribeLoading}
+                    onClick={async () => {
+                      setSubscribeLoading(true);
+                      try {
+                        const email =
+                          (typeof window !== "undefined" &&
+                            (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) ||
+                          "owner@commercial.com";
+
+                        await fetch("/api/subscription/status", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            email,
+                            plan: "pro",
+                            plan_name: "Rent Roll & Financial Pro Suite",
+                            billing_cycle: subscribeBillingMonths === 12 ? "annual" : subscribeBillingMonths === 6 ? "half_yearly" : subscribeBillingMonths === 4 ? "4_months" : subscribeBillingMonths === 2 ? "bimonthly" : "monthly",
+                            duration_months: subscribeBillingMonths,
+                            amount: chosenCyclePayable,
+                          }),
+                        }).catch(() => {});
+
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("officex_subscription", "active");
+                          localStorage.setItem("officex_owner_subscribed", "true");
+                          localStorage.setItem("officex_rentroll_subscribed", "true");
+                          localStorage.setItem("officex_subscription_status", "active");
+                          localStorage.setItem("officex_subscribed_sqft", String(currentChosenSqft));
+                          localStorage.setItem("officex_rentroll_onboarded", "true");
+                          localStorage.setItem("officex_onboarding_completed", "1");
+                          sessionStorage.setItem("officex_onboarding_completed", "1");
+                          document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                        }
+                        setIsOwnerSubscribed(true);
+                        setSubscribedCapacity(currentChosenSqft);
+                        setSubscriptionGateModalOpen(false);
+                        showToast(`✓ Subscribed successfully! Paid ₹${chosenCyclePayable.toLocaleString("en-IN")} (Min ₹${minCyclePayable.toLocaleString("en-IN")} on ${effectivePortfolioSqft.toLocaleString()} Sq.Ft). Pro features unlocked.`);
+                      } catch {
+                        showToast("Subscription activation encountered an issue", "error");
+                      } finally {
+                        setSubscribeLoading(false);
+                      }
+                    }}
+                    className="w-full sm:flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {subscribeLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={14} />}
+                    <span>Pay Minimum ₹{chosenCyclePayable.toLocaleString("en-IN")} ({currentChosenSqft.toLocaleString()} Sq.Ft) →</span>
+                  </button>
+                </div>
+
+                <div className="pt-1 text-center">
+                  <a
+                    href={`/pricing?min_sqft=${totalPortfolioSqft}`}
+                    onClick={() => setSubscriptionGateModalOpen(false)}
+                    className="text-[11px] font-bold text-teal-800 hover:text-teal-950 underline cursor-pointer"
+                  >
+                    Need enterprise procurement or multi-asset pilot? View Pricing &amp; Custom Proposals →
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
