@@ -5,6 +5,7 @@ import { validateCsrf } from '@/lib/csrf';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { getDeterministicUserId } from '@/lib/rent-roll/ensure-org';
 
 export const revalidate = 0;
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     if (isMasterAdminLogin) {
       userRole = 'Super Administrator';
       userName = norm === 'admin@gmail.com' ? 'OfficeX Super Administrator' : 'Medistn Tech (Master Admin)';
-      userId = '00000000-0000-0000-0000-000000000001';
+      userId = getDeterministicUserId(norm);
 
       // Ensure user row exists in postgres
       try {

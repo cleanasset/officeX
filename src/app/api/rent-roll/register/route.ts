@@ -247,9 +247,10 @@ export async function GET(req: Request) {
         if (!contractNextEscalationMap[contractId] || stepDate < contractNextEscalationMap[contractId].date) {
           const uplift = parseFloat(step.escalation_value || "0");
           const type = step.escalation_type === "percentage" ? `${uplift}%` : `₹${uplift}/sqft`;
+          const cycle = step.cycle_months ? `${step.cycle_months}m` : "12m";
           contractNextEscalationMap[contractId] = {
             date: stepDate,
-            summary: `${type} / 36m`,
+            summary: `${type} / ${cycle}`,
             uplift,
           };
         }

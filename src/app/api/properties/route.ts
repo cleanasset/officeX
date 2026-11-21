@@ -12,31 +12,20 @@ export async function GET(req: Request) {
     const isRentRoll = searchParams.get("rent_roll") === "true" || req.headers.has("x-org-id") || searchParams.has("client_account_id");
     if (isRentRoll) {
       const auth = getAuthContext(req);
-      const isSuperAdmin = auth.role === "super_admin" || auth.userEmail === "admin@gmail.com" || auth.userEmail === "admin@officex.pro";
-      const targetOrg = (isSuperAdmin && (!auth.orgId || auth.orgId !== "a411dd64-65db-462d-8eef-336f9768f44d"))
-        ? "a411dd64-65db-462d-8eef-336f9768f44d"
-        : auth.orgId;
+      const isSuperAdmin = auth.isSuperAdmin;
 
       let rrList = await db
         .select()
         .from(rentRollProperty)
         .where(
           and(
-            isSuperAdmin
-              ? sql`(${rentRollProperty.org_id} = ${targetOrg} OR ${rentRollProperty.org_id} = 'a411dd64-65db-462d-8eef-336f9768f44d')`
-              : eq(rentRollProperty.org_id, targetOrg),
+            isSuperAdmin && !auth.orgId
+              ? sql`1=1`
+              : eq(rentRollProperty.org_id, auth.orgId),
             sql`${rentRollProperty.deleted_at} IS NULL`
           )
         )
         .orderBy(desc(rentRollProperty.created_at));
-
-      if (rrList.length === 0 && isSuperAdmin) {
-        rrList = await db
-          .select()
-          .from(rentRollProperty)
-          .where(sql`${rentRollProperty.deleted_at} IS NULL`)
-          .orderBy(desc(rentRollProperty.created_at));
-      }
 
       return NextResponse.json({ success: true, data: rrList });
     }

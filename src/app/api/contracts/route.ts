@@ -227,37 +227,20 @@ export async function POST(req: Request) {
       ? "hybrid"
       : "area";
 
-    let finalSpaceId = targetSpaceId || body.space_id;
+    const finalSpaceId = targetSpaceId || body.space_id;
     if (!finalSpaceId) {
-      const [anySpace] = await db
-        .select({ id: space.id })
-        .from(space)
-        .where(eq(space.org_id, orgId))
-        .limit(1);
-      if (anySpace) {
-        finalSpaceId = anySpace.id;
-      } else {
-        const [sysSpace] = await db.select({ id: space.id }).from(space).limit(1);
-        if (sysSpace) {
-          finalSpaceId = sysSpace.id;
-        }
-      }
+      return NextResponse.json(
+        { error: "Validation failed: A valid space (unit) must be selected for this lease contract." },
+        { status: 422 }
+      );
     }
 
-    let finalOccupantId = body.occupant_id;
+    const finalOccupantId = body.occupant_id;
     if (!finalOccupantId) {
-      const [latestOcc] = await db
-        .select({ id: occupant.id })
-        .from(occupant)
-        .where(eq(occupant.org_id, orgId))
-        .orderBy(desc(occupant.created_at))
-        .limit(1);
-      if (latestOcc) {
-        finalOccupantId = latestOcc.id;
-      } else {
-        const [anyOcc] = await db.select({ id: occupant.id }).from(occupant).orderBy(desc(occupant.created_at)).limit(1);
-        if (anyOcc) finalOccupantId = anyOcc.id;
-      }
+      return NextResponse.json(
+        { error: "Validation failed: A valid tenant occupant must be selected for this lease contract." },
+        { status: 422 }
+      );
     }
 
     const payload = {
@@ -513,6 +496,7 @@ export async function POST(req: Request) {
               escalation_type: st.escalation_type || "percentage",
               rate: String(st.rate),
               escalation_value: st.escalation_value ? String(st.escalation_value) : null,
+              cycle_months: st.cycle_months || 12,
               status: st.status || "scheduled",
               created_by: auth.userId,
               updated_by: auth.userId,
@@ -544,6 +528,7 @@ export async function POST(req: Request) {
             escalation_type: "percentage",
             rate: String(initialRate),
             escalation_value: "0",
+            cycle_months: cycleMonths,
             status: contractStart <= todayStr ? "applied" : "scheduled",
             created_by: auth.userId,
             updated_by: auth.userId,
@@ -575,6 +560,7 @@ export async function POST(req: Request) {
               escalation_type: "percentage",
               rate: String(currentRate),
               escalation_value: String(escPct),
+              cycle_months: cycleMonths,
               status: isDueOrPast ? "due" : "scheduled",
               created_by: auth.userId,
               updated_by: auth.userId,

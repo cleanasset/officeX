@@ -47,7 +47,7 @@ export default function ContractDetailDrawer({
   onClose,
   onRefresh,
   onOpenDocViewer,
-  currentUserId = "00000000-0000-0000-0000-000000000003",
+  currentUserId = "",
   userRole = "property_manager",
 }: ContractDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "charges" | "dates" | "outstanding" | "documents" | "activity">("summary");

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { entitlements, organizations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAdminPool } from "@/lib/admin-db";
+import { getDeterministicOrgId } from "@/lib/rent-roll/ensure-org";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,8 +22,12 @@ export async function POST(req: NextRequest) {
     // Resolve target organization
     let targetOrgId = orgId;
     if (!targetOrgId) {
-      const [firstOrg] = await db.select({ id: organizations.id }).from(organizations).limit(1);
-      targetOrgId = firstOrg?.id || "a411dd64-65db-462d-8eef-336f9768f44d";
+      if (userEmail) {
+        targetOrgId = getDeterministicOrgId(userEmail);
+      } else {
+        const [firstOrg] = await db.select({ id: organizations.id }).from(organizations).limit(1);
+        targetOrgId = firstOrg?.id || "";
+      }
     }
 
     const validUntil = new Date(Date.now() + 30 * 24 * 3600 * 1000); // 30 days validity

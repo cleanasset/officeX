@@ -3633,6 +3633,7 @@ export default function PropertyHierarchyModal({
           escalation_type: "percentage",
           rate: String(numRate),
           escalation_value: "0",
+          cycle_months: cycleMonths,
           status: cStart <= todayStr ? "applied" : "scheduled",
         });
 
@@ -3657,6 +3658,7 @@ export default function PropertyHierarchyModal({
             escalation_type: "percentage",
             rate: String(currR),
             escalation_value: String(escPctNum),
+            cycle_months: cycleMonths,
             status: dStr <= todayStr ? "due" : "scheduled",
           });
           nextD.setMonth(nextD.getMonth() + cycleMonths);

@@ -313,12 +313,12 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
   }
 
   if (!userId) {
-    userId = DEFAULT_TEST_USER_ID;
+    userId = "";
   }
 
-  // Fallback to default test constants only if neither email nor orgId was provided
-  if (!orgId) orgId = DEFAULT_TEST_ORG_ID;
-  if (!clientAccountId) clientAccountId = DEFAULT_TEST_CLIENT_ID;
+  // If orgId or clientAccountId not provided, leave them empty
+  if (!orgId) orgId = "";
+  if (!clientAccountId) clientAccountId = "";
 
   const isPortfolioRole = [
     "super_admin",
