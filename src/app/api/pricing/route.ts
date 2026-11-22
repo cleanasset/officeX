@@ -14,6 +14,7 @@ export async function GET() {
 
     const defaultPricing = {
       taxConfig: {
+        enabled: true,
         gstMode: "exclusive" as const,
         gstRatePct: 18,
         sacCode: "997212",
@@ -66,8 +67,11 @@ export async function GET() {
         success: true,
         pricing: {
           taxConfig: {
+            enabled: res.rows[0].data?.taxConfig?.enabled ?? true,
             gstMode: res.rows[0].data?.taxConfig?.gstMode || "exclusive",
-            gstRatePct: Number(res.rows[0].data?.taxConfig?.gstRatePct) || 18,
+            gstRatePct: (res.rows[0].data?.taxConfig?.enabled ?? true)
+              ? (Number(res.rows[0].data?.taxConfig?.gstRatePct) ?? 18)
+              : 0,
             sacCode: res.rows[0].data?.taxConfig?.sacCode || "997212",
           },
           cafmSuite: {

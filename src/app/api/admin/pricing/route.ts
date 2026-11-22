@@ -3,6 +3,7 @@ import { getAdminPool } from "@/lib/admin-db";
 
 export interface GlobalPricingConfig {
   taxConfig?: {
+    enabled?: boolean; // toggle: true = GST applicable, false = No GST (0% tax)
     gstMode: "inclusive" | "exclusive"; // 'inclusive': all prices include GST, 'exclusive': GST added on top
     gstRatePct: number; // e.g. 18
     sacCode: string; // e.g. "997212"
@@ -57,6 +58,7 @@ export interface GlobalPricingConfig {
 
 const DEFAULT_GLOBAL_PRICING: GlobalPricingConfig = {
   taxConfig: {
+    enabled: true,
     gstMode: "exclusive",
     gstRatePct: 18,
     sacCode: "997212",
