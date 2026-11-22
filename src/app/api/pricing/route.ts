@@ -73,6 +73,7 @@ export async function GET() {
               ? (Number(res.rows[0].data?.taxConfig?.gstRatePct) ?? 18)
               : 0,
             sacCode: res.rows[0].data?.taxConfig?.sacCode || "997212",
+            itemOverrides: res.rows[0].data?.taxConfig?.itemOverrides || {},
           },
           cafmSuite: {
             essentialsMonthly: saas.cafmEssentialsMonthly || defaultPricing.cafmSuite.essentialsMonthly,

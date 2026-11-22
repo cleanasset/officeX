@@ -46,8 +46,10 @@ function SuperAdminDashboardContent() {
     if (tabParam && ["overview", "db", "pricing", "marketplace", "fm", "saas", "users", "bulk"].includes(tabParam)) {
       setActiveTab(tabParam as any);
       if (tabParam === "pricing" && subParam) {
-        if (["all", "gst", "saas", "marketplace", "fm", "coupons"].includes(subParam)) {
-          setPricingSubTab(subParam as any);
+        if (["all", "marketplace", "saas_suites", "saas_modules", "fm", "coupons", "saas", "gst"].includes(subParam)) {
+          if (subParam === "saas") setPricingSubTab("saas_suites");
+          else if (subParam === "gst") setPricingSubTab("all");
+          else setPricingSubTab(subParam as any);
         }
       }
     }
@@ -105,7 +107,8 @@ function SuperAdminDashboardContent() {
   // TAB 2: MASTER PRICING STATE
   // =========================================================================
   const [pricingConfig, setPricingConfig] = useState<any>(null);
-  const [pricingSubTab, setPricingSubTab] = useState<"all" | "gst" | "saas" | "marketplace" | "fm" | "coupons">("all");
+  const [pricingSubTab, setPricingSubTab] = useState<"all" | "marketplace" | "saas_suites" | "saas_modules" | "fm" | "coupons">("all");
+  const [selectedPricingItem, setSelectedPricingItem] = useState<string>("hotDesk");
   const [pricingLoading, setPricingLoading] = useState<boolean>(false);
   const [pricingSaving, setPricingSaving] = useState<boolean>(false);
   const [bulkPricingCity, setBulkPricingCity] = useState<string>("all");
@@ -1424,13 +1427,13 @@ function SuperAdminDashboardContent() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">OfficeX Master Pricing &amp; Tariffs Matrix</h2>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Commercial Tariffs &amp; Statutory GST Architecture</h2>
                   <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-black uppercase tracking-wider border border-teal-200">
-                    Executive Control Center
+                    Dual-Panel Matrix
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Centralized governance over Office Marketplace starting rates, All-in-One CAFM Suites, Standalone SaaS modules, FM rate cards, and statutory GST taxation.
+                  Configure individual pricing on one side and dedicated GST taxation options on the other side for every Marketplace tier and SaaS subscription.
                 </p>
               </div>
 
@@ -1441,7 +1444,7 @@ function SuperAdminDashboardContent() {
                   className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-60"
                 >
                   <Save size={15} />
-                  <span>{pricingSaving ? "Persisting to Database..." : "Save & Activate Global Pricing"}</span>
+                  <span>{pricingSaving ? "Persisting to Database..." : "Save & Activate All Tariffs"}</span>
                 </button>
               </div>
             </div>
@@ -1449,1375 +1452,1189 @@ function SuperAdminDashboardContent() {
             {pricingLoading || !pricingConfig ? (
               <div className="p-16 text-center text-slate-400 space-y-2">
                 <RefreshCw size={24} className="animate-spin mx-auto text-teal-600" />
-                <p className="text-xs font-semibold">Loading master pricing matrix from system KV store...</p>
+                <p className="text-xs font-semibold">Loading commercial pricing matrix from system KV store...</p>
               </div>
             ) : (() => {
-              const isGstEnabled = pricingConfig.taxConfig?.enabled !== false;
-              const activeGstRate = isGstEnabled ? (Number(pricingConfig.taxConfig?.gstRatePct) ?? 18) : 0;
-              const isGstInclusive = pricingConfig.taxConfig?.gstMode === "inclusive";
-              const sacCode = pricingConfig.taxConfig?.sacCode || "997212";
+              const globalSacCode = pricingConfig.taxConfig?.sacCode || "997212";
+              const globalGstEnabled = pricingConfig.taxConfig?.enabled !== false;
+              const globalGstRate = Number(pricingConfig.taxConfig?.gstRatePct) || 18;
+              const globalGstMode = pricingConfig.taxConfig?.gstMode || "exclusive";
 
-              // Precise tax calculation helper
-              const calcTax = (baseAmount: number) => {
-                if (!isGstEnabled || activeGstRate === 0) {
+              // Per-Item Tax Helper
+              const getItemTax = (itemKey: string) => {
+                const override = pricingConfig.taxConfig?.itemOverrides?.[itemKey];
+                if (override) {
                   return {
-                    net: baseAmount,
-                    gst: 0,
-                    gross: baseAmount,
-                    label: "Zero GST (Exempt)",
+                    enabled: override.enabled !== false,
+                    gstRatePct: Number(override.gstRatePct) ?? globalGstRate,
+                    gstMode: override.gstMode || globalGstMode,
                   };
                 }
-                if (isGstInclusive) {
-                  const net = Math.round((baseAmount / (1 + activeGstRate / 100)) * 100) / 100;
-                  const gst = Math.round((baseAmount - net) * 100) / 100;
-                  return {
-                    net,
-                    gst,
-                    gross: baseAmount,
-                    label: `Inclusive (${activeGstRate}%)`,
-                  };
-                } else {
-                  const gst = Math.round(baseAmount * (activeGstRate / 100));
-                  const gross = baseAmount + gst;
-                  return {
-                    net: baseAmount,
-                    gst,
-                    gross,
-                    label: `+${activeGstRate}% GST Extra`,
-                  };
-                }
+                return {
+                  enabled: globalGstEnabled,
+                  gstRatePct: globalGstRate,
+                  gstMode: globalGstMode,
+                };
               };
+
+              const updateItemTax = (itemKey: string, patch: any) => {
+                const current = getItemTax(itemKey);
+                const updated = { ...current, ...patch };
+                setPricingConfig({
+                  ...pricingConfig,
+                  taxConfig: {
+                    ...pricingConfig.taxConfig,
+                    itemOverrides: {
+                      ...(pricingConfig.taxConfig?.itemOverrides || {}),
+                      [itemKey]: updated,
+                    },
+                  },
+                });
+              };
+
+              // Exact Tax Computation
+              const calcItemTax = (basePrice: number, itemKey: string) => {
+                const tax = getItemTax(itemKey);
+                const isEnabled = tax.enabled;
+                const rate = isEnabled ? (Number(tax.gstRatePct) || 0) : 0;
+                const mode = tax.gstMode;
+
+                let taxable = basePrice;
+                let gstAmount = 0;
+                let grossTotal = basePrice;
+
+                if (!isEnabled || rate === 0) {
+                  return { taxable: basePrice, gstAmount: 0, grossTotal: basePrice, rate: 0, mode, enabled: false };
+                }
+
+                if (mode === "inclusive") {
+                  taxable = Math.round((basePrice / (1 + rate / 100)) * 100) / 100;
+                  gstAmount = Math.round((basePrice - taxable) * 100) / 100;
+                  grossTotal = basePrice;
+                } else {
+                  taxable = basePrice;
+                  gstAmount = Math.round(((basePrice * rate) / 100) * 100) / 100;
+                  grossTotal = taxable + gstAmount;
+                }
+
+                return { taxable, gstAmount, grossTotal, rate, mode, enabled: true };
+              };
+
+              // Quick Bulk Tax Applicator
+              const applyBulkTax = (opts: { enabled?: boolean; rate?: number; mode?: "exclusive" | "inclusive" }) => {
+                const newOverrides: Record<string, any> = { ...(pricingConfig.taxConfig?.itemOverrides || {}) };
+                allCommercialItems.forEach((item) => {
+                  const existing = getItemTax(item.key);
+                  newOverrides[item.key] = {
+                    enabled: opts.enabled !== undefined ? opts.enabled : existing.enabled,
+                    gstRatePct: opts.rate !== undefined ? opts.rate : existing.gstRatePct,
+                    gstMode: opts.mode !== undefined ? opts.mode : existing.gstMode,
+                  };
+                });
+                setPricingConfig({
+                  ...pricingConfig,
+                  taxConfig: {
+                    ...pricingConfig.taxConfig,
+                    enabled: opts.enabled !== undefined ? opts.enabled : pricingConfig.taxConfig?.enabled,
+                    gstRatePct: opts.rate !== undefined ? opts.rate : pricingConfig.taxConfig?.gstRatePct,
+                    gstMode: opts.mode !== undefined ? opts.mode : pricingConfig.taxConfig?.gstMode,
+                    itemOverrides: newOverrides,
+                  },
+                });
+                setToast({ text: "Bulk GST options updated across all packages!", type: "success" });
+              };
+
+              // Master list of all commercial items
+              const allCommercialItems = [
+                // 1. Office Marketplace
+                {
+                  key: "hotDesk",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "Coworking Desk",
+                  icon: "Laptop",
+                  title: "Hot Desk (Flexi Desk)",
+                  desc: "Flexible shared desk in premium open coworking area with high-speed internet & coffee access.",
+                  unit: "per desk / mo",
+                  price: pricingConfig.officeMarketplace?.hotDeskMonthlyMin ?? 7999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, hotDeskMonthlyMin: v }
+                  }),
+                },
+                {
+                  key: "dedicatedDesk",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "Assigned Workstation",
+                  icon: "Laptop",
+                  title: "Dedicated Desk",
+                  desc: "Dedicated personal workstation with lockable storage pedestal and 24/7 biometric access.",
+                  unit: "per desk / mo",
+                  price: pricingConfig.officeMarketplace?.dedicatedDeskMonthlyMin ?? 11999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, dedicatedDeskMonthlyMin: v }
+                  }),
+                },
+                {
+                  key: "privateCabin",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "Private Office",
+                  icon: "Building2",
+                  title: "Private Team Cabin",
+                  desc: "Fully acoustic-insulated private team office suite with executive executive chairs and whiteboards.",
+                  unit: "per cabin / mo",
+                  price: pricingConfig.officeMarketplace?.privateCabinMonthlyMin ?? 15999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, privateCabinMonthlyMin: v }
+                  }),
+                },
+                {
+                  key: "managedOffice",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "Enterprise Suite",
+                  icon: "Building2",
+                  title: "Managed Enterprise Office",
+                  desc: "Custom bespoke buildout floor with dedicated reception, meeting rooms, pantry, and IT server rack.",
+                  unit: "per seat / mo",
+                  price: pricingConfig.officeMarketplace?.managedOfficeMonthlyMin ?? 18500,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, managedOfficeMonthlyMin: v }
+                  }),
+                },
+                {
+                  key: "dayPass",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "Instant Access",
+                  icon: "Calendar",
+                  title: "Coworking Day Pass",
+                  desc: "Single-day access ticket to workspace amenities, high-speed WiFi, and cafeteria lounge.",
+                  unit: "per pass / day",
+                  price: pricingConfig.officeMarketplace?.dayPassRate ?? 499,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, dayPassRate: v }
+                  }),
+                },
+                {
+                  key: "virtualOffice",
+                  category: "Office Marketplace",
+                  categoryType: "marketplace",
+                  badge: "GST Compliance",
+                  icon: "FileText",
+                  title: "Virtual Office & Address",
+                  desc: "Statutory commercial address registration with mail handling, courier forwarding, and GST NOC.",
+                  unit: "per address / mo",
+                  price: pricingConfig.officeMarketplace?.virtualOfficeMonthlyMin ?? 1499,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    officeMarketplace: { ...pricingConfig.officeMarketplace, virtualOfficeMonthlyMin: v }
+                  }),
+                },
+
+                // 2. SaaS Bundles
+                {
+                  key: "cafmEssentials",
+                  category: "All-in-One CAFM Suite",
+                  categoryType: "saas_suites",
+                  badge: "CAFM Core",
+                  icon: "Zap",
+                  title: "CAFM Essentials Bundle",
+                  desc: "Complete operational foundation: 52-Week PPM, QR Maintenance, Asset Registry, and Visitor Flow.",
+                  unit: "per property / mo",
+                  price: pricingConfig.saasModules?.cafmEssentialsMonthly ?? 19999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, cafmEssentialsMonthly: v }
+                  }),
+                },
+                {
+                  key: "cafmPro",
+                  category: "All-in-One CAFM Suite",
+                  categoryType: "saas_suites",
+                  badge: "CAFM Enterprise Scale",
+                  icon: "Zap",
+                  title: "CAFM Pro Bundle",
+                  desc: "Essentials + Rent Roll automation, CAM reconciliation, and IoT sub-metering engine.",
+                  unit: "base rate / mo",
+                  price: pricingConfig.saasModules?.cafmProMonthly ?? 39999,
+                  sqftPrice: pricingConfig.saasModules?.cafmProRatePerSqft ?? 2.0,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, cafmProMonthly: v }
+                  }),
+                  setSqftPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, cafmProRatePerSqft: v }
+                  }),
+                },
+                {
+                  key: "cafmEnterprise",
+                  category: "All-in-One CAFM Suite",
+                  categoryType: "saas_suites",
+                  badge: "Full Portfolio Platform",
+                  icon: "Zap",
+                  title: "CAFM Enterprise Portfolio",
+                  desc: "Unlimited multi-tower CAFM deployment with Custom ERP APIs, Lease CRM, and dedicated SLA support.",
+                  unit: "portfolio base / mo",
+                  price: pricingConfig.saasModules?.cafmEnterpriseMonthly ?? 79999,
+                  sqftPrice: pricingConfig.saasModules?.cafmEnterpriseRatePerSqft ?? 3.5,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, cafmEnterpriseMonthly: v }
+                  }),
+                  setSqftPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, cafmEnterpriseRatePerSqft: v }
+                  }),
+                },
+
+                // 3. SaaS Standalone Modules
+                {
+                  key: "rentRollStarter",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Rent Roll Tier 1",
+                  icon: "Table",
+                  title: "Rent Roll Pro (Starter)",
+                  desc: "Automated lease contracts, indexation escalations, and invoice runs for up to 50 active tenants.",
+                  unit: "up to 50 tenants / mo",
+                  price: pricingConfig.saasModules?.rentRollStarterMonthly ?? 9999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, rentRollStarterMonthly: v }
+                  }),
+                },
+                {
+                  key: "rentRollGrowth",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Rent Roll Tier 2",
+                  icon: "Table",
+                  title: "Rent Roll Pro (Growth)",
+                  desc: "Comprehensive lease tracking, dynamic utility invoicing, and rent collection for up to 200 tenants.",
+                  unit: "up to 200 tenants / mo",
+                  price: pricingConfig.saasModules?.rentRollGrowthMonthly ?? 24999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, rentRollGrowthMonthly: v }
+                  }),
+                },
+                {
+                  key: "rentRollEnterprise",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Rent Roll Unlimited",
+                  icon: "Table",
+                  title: "Rent Roll Pro (Enterprise)",
+                  desc: "Unlimited tenant leases, multi-entity GST invoicing, automated dunning, and payment gateway sync.",
+                  unit: "unlimited tenants / mo",
+                  price: pricingConfig.saasModules?.rentRollEnterpriseMonthly ?? 49999,
+                  sqftPrice: pricingConfig.saasModules?.rentRollRatePerSqft ?? 1.0,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, rentRollEnterpriseMonthly: v }
+                  }),
+                  setSqftPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, rentRollRatePerSqft: v }
+                  }),
+                },
+                {
+                  key: "ppmModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "PPM & QR Asset",
+                  icon: "QrCode",
+                  title: "52-Week PPM & Asset QR Engine",
+                  desc: "Preventive maintenance schedules, digital asset QR tags, mobile engineer checklists, and audit logs.",
+                  unit: "per building / mo",
+                  price: pricingConfig.saasModules?.ppmModuleMonthly ?? 6999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, ppmModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "visitorModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Access Control",
+                  icon: "UserCheck",
+                  title: "Visitor Flow & Speed-Gates",
+                  desc: "QR pre-invitations, facial recognition turnstile sync, contractor NDA capture, and OTP check-in.",
+                  unit: "per speed-gate / mo",
+                  price: pricingConfig.saasModules?.visitorModuleMonthly ?? 4999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, visitorModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "complianceModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Statutory Shield",
+                  icon: "FileCheck2",
+                  title: "Statutory Compliance Calendar",
+                  desc: "Fire safety NOCs, lift licenses, pollution control consents, and factory inspectorate compliance tracker.",
+                  unit: "per property / mo",
+                  price: pricingConfig.saasModules?.complianceModuleMonthly ?? 3999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, complianceModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "leaseCrm",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Deal Pipeline",
+                  icon: "Briefcase",
+                  title: "Commercial Lease Dealflow CRM",
+                  desc: "Broker lead tracking, RFP/LOI generation, tenant fit-out approvals, and space vacancy pipeline.",
+                  unit: "per leasing team / mo",
+                  price: pricingConfig.saasModules?.leaseCrmMonthly ?? 5999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, leaseCrmMonthly: v }
+                  }),
+                },
+                {
+                  key: "helpdeskModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Tenant Experience",
+                  icon: "MessageSquare",
+                  title: "Tenant Helpdesk & Room Booking",
+                  desc: "Multi-tenant ticketing with SLA breach alarms, conference room credit booking, and amenity passes.",
+                  unit: "per building / mo",
+                  price: pricingConfig.saasModules?.helpdeskModuleMonthly ?? 3499,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, helpdeskModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "camModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "CAM Auditor",
+                  icon: "Receipt",
+                  title: "CAM Reconciliation Engine",
+                  desc: "Common area maintenance budgeting, proportionate tenant expense sharing, and audit certificates.",
+                  unit: "per property / mo",
+                  price: pricingConfig.saasModules?.camModuleMonthly ?? 3999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, camModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "submeteringModule",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "IoT Energy",
+                  icon: "RotateCcw",
+                  title: "Smart Sub-metering & Utilities",
+                  desc: "Automated DG & Grid electric meter billing with dual-source tariffs and daily consumption alerts.",
+                  unit: "per building / mo",
+                  price: pricingConfig.saasModules?.submeteringModuleMonthly ?? 2499,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, submeteringModuleMonthly: v }
+                  }),
+                },
+                {
+                  key: "tenantPaymentGateway",
+                  category: "Standalone SaaS Module",
+                  categoryType: "saas_modules",
+                  badge: "Fintech Fee",
+                  icon: "CreditCard",
+                  title: "Tenant Payment Gateway Fee",
+                  desc: "Platform processing fee percentage charged on online tenant rent payments & card collections.",
+                  unit: "% per transaction",
+                  price: pricingConfig.saasModules?.tenantPaymentGatewayFeePct ?? 1.2,
+                  isPercentage: true,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    saasModules: { ...pricingConfig.saasModules, tenantPaymentGatewayFeePct: v }
+                  }),
+                },
+
+                // 4. FM Services & Rates
+                {
+                  key: "fmEmergencyCallout",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Rapid Response",
+                  icon: "Wrench",
+                  title: "Emergency Callout Fee",
+                  desc: "Base emergency dispatch fee for 60-minute critical breakdown support (HVAC, electrical, or plumbing).",
+                  unit: "per incident",
+                  price: pricingConfig.fmMarketplace?.emergencyCalloutFee ?? 999,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: { ...pricingConfig.fmMarketplace, emergencyCalloutFee: v }
+                  }),
+                },
+                {
+                  key: "fmDeepCleaning",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Sanitization",
+                  icon: "Wrench",
+                  title: "Deep Cleaning Service",
+                  desc: "Industrial grade floor scrubbing, carpet shampooing, facade cleaning, and workstation disinfection.",
+                  unit: "per sq.ft (min ₹4,500)",
+                  price: pricingConfig.fmMarketplace?.rateCards?.deepCleaningPerSqft ?? 1.8,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, deepCleaningPerSqft: v }
+                    }
+                  }),
+                },
+                {
+                  key: "fmHvacAmc",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Climate Control",
+                  icon: "Wrench",
+                  title: "HVAC Annual Maintenance (AMC)",
+                  desc: "Comprehensive chiller, VRF/VRV, and AHU servicing including quarterly coil cleaning & gas refills.",
+                  unit: "per TR ton / year",
+                  price: pricingConfig.fmMarketplace?.rateCards?.hvacAmcPerTonAnnual ?? 2200,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, hvacAmcPerTonAnnual: v }
+                    }
+                  }),
+                },
+                {
+                  key: "fmElectricalAudit",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Power & Safety",
+                  icon: "Wrench",
+                  title: "Electrical Safety & Thermography",
+                  desc: "Infrared thermal imaging, transformer oil tests, harmonic distortion audits, and earthing checks.",
+                  unit: "per sq.ft",
+                  price: pricingConfig.fmMarketplace?.rateCards?.electricalAuditPerSqft ?? 1.2,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, electricalAuditPerSqft: v }
+                    }
+                  }),
+                },
+                {
+                  key: "fmSecurityGuard",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Guarding Services",
+                  icon: "ShieldCheck",
+                  title: "Security Guard Deployment",
+                  desc: "PSARA licensed 8-hour shift security guard with uniform, emergency drills, and perimeter surveillance.",
+                  unit: "per guard / mo",
+                  price: pricingConfig.fmMarketplace?.rateCards?.securityGuardPerMonth ?? 24000,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, securityGuardPerMonth: v }
+                    }
+                  }),
+                },
+                {
+                  key: "fmPlumbing",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Piping & Valves",
+                  icon: "Wrench",
+                  title: "Plumbing Base Callout Visit",
+                  desc: "Scheduled master plumber inspection, pressure pump diagnosis, and restroom valve servicing.",
+                  unit: "per visit",
+                  price: pricingConfig.fmMarketplace?.rateCards?.plumbingBaseVisit ?? 1500,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, plumbingBaseVisit: v }
+                    }
+                  }),
+                },
+                {
+                  key: "fmPestControl",
+                  category: "FM Marketplace",
+                  categoryType: "fm",
+                  badge: "Pest Shield",
+                  icon: "Wrench",
+                  title: "Commercial Pest Control",
+                  desc: "Eco-friendly gel-based cockroach, rodent, and termite eradication for commercial offices.",
+                  unit: "per sq.ft",
+                  price: pricingConfig.fmMarketplace?.rateCards?.pestControlPerSqft ?? 0.75,
+                  setPrice: (v: number) => setPricingConfig({
+                    ...pricingConfig,
+                    fmMarketplace: {
+                      ...pricingConfig.fmMarketplace,
+                      rateCards: { ...pricingConfig.fmMarketplace?.rateCards, pestControlPerSqft: v }
+                    }
+                  }),
+                },
+              ];
+
+              // Filter based on active sub tab
+              const filteredCommercialItems = allCommercialItems.filter((item) => {
+                if (pricingSubTab === "all") return true;
+                if (pricingSubTab === "marketplace") return item.categoryType === "marketplace";
+                if (pricingSubTab === "saas_suites") return item.categoryType === "saas_suites";
+                if (pricingSubTab === "saas_modules") return item.categoryType === "saas_modules";
+                if (pricingSubTab === "fm") return item.categoryType === "fm";
+                return true;
+              });
+
+              // Currently selected item for the Live Tax Invoice simulator
+              const activeSimulatedItem = allCommercialItems.find((i) => i.key === selectedPricingItem) || allCommercialItems[0];
+              const simulatedTax = calcItemTax(activeSimulatedItem.price, activeSimulatedItem.key);
 
               return (
                 <div className="space-y-6">
 
-                  {/* Summary Metric KPI Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Marketplace Configs
-                      </span>
-                      <p className="text-xl font-black text-slate-900 mt-1 font-mono">
-                        6 Plans
-                      </p>
-                      <span className="text-[10px] text-teal-700 font-semibold">From ₹{pricingConfig.officeMarketplace?.dayPassRate || 499}/day</span>
+                  {/* SUB-NAVIGATION BAR */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/80">
+                      {[
+                        { id: "all", label: "🌟 All Packages", count: allCommercialItems.length },
+                        { id: "marketplace", label: "🏢 Office Marketplace", count: 6 },
+                        { id: "saas_suites", label: "⚡ CAFM SaaS Suites", count: 3 },
+                        { id: "saas_modules", label: "🧩 Standalone SaaS Modules", count: 11 },
+                        { id: "fm", label: "🛠️ FM Marketplace", count: 7 },
+                        { id: "coupons", label: "🏷️ Discounts & Grants" },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setPricingSubTab(tab.id as any)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            pricingSubTab === tab.id
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          {tab.count !== undefined && (
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                              pricingSubTab === tab.id ? "bg-teal-100 text-teal-800 font-black" : "bg-slate-200 text-slate-600"
+                            }`}>
+                              {tab.count}
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        CAFM Suite Bundles
-                      </span>
-                      <p className="text-xl font-black text-indigo-950 mt-1 font-mono">
-                        3 Tiers
-                      </p>
-                      <span className="text-[10px] text-indigo-700 font-semibold">From ₹{(pricingConfig.saasModules?.cafmEssentialsMonthly || 19999).toLocaleString("en-IN")}/mo</span>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Standalone SaaS Modules
-                      </span>
-                      <p className="text-xl font-black text-slate-900 mt-1 font-mono">
-                        8 Modules
-                      </p>
-                      <span className="text-[10px] text-slate-500 font-medium">Rent Roll, PPM, VC, CRM</span>
-                    </div>
-
-                    <div className={`p-4 rounded-2xl border ${
-                      isGstEnabled
-                        ? "bg-teal-50/60 border-teal-200 text-teal-900"
-                        : "bg-amber-50/60 border-amber-200 text-amber-900"
-                    }`}>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Active GST Status
-                      </span>
-                      <p className="text-lg font-black mt-1">
-                        {isGstEnabled ? `${activeGstRate}% GST Active` : "Zero GST (Disabled)"}
-                      </p>
-                      <span className="text-[10px] font-medium block mt-0.5">
-                        {isGstEnabled
-                          ? isGstInclusive ? "All-Inclusive Pricing" : "Exclusive (+ Tax Added on Top)"
-                          : "Non-Taxable / Tax Exempt"}
-                      </span>
+                    {/* Quick Global Info Pill */}
+                    <div className="flex items-center gap-3 text-xs text-slate-600">
+                      <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                        <Tag size={13} className="text-teal-600" />
+                        <span>Default SAC Code: <strong className="text-slate-900">{globalSacCode}</strong></span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Sub-Navigation Tabs Bar */}
-                  <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl overflow-x-auto border border-slate-200/80">
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("all")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "all"
-                          ? "bg-white text-slate-900 shadow-xs font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Package size={14} className={pricingSubTab === "all" ? "text-teal-600" : ""} />
-                      <span>All Packages Overview</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("gst")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "gst"
-                          ? "bg-white text-teal-800 shadow-xs font-black ring-1 ring-teal-500/20"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <FileText size={14} className={pricingSubTab === "gst" ? "text-teal-600" : ""} />
-                      <span>GST &amp; Tax Engine</span>
-                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                        isGstEnabled ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
-                      }`}>
-                        {isGstEnabled ? `${activeGstRate}%` : "0%"}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("saas")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "saas"
-                          ? "bg-white text-indigo-900 shadow-xs font-black ring-1 ring-indigo-500/20"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Layers size={14} className={pricingSubTab === "saas" ? "text-indigo-600" : ""} />
-                      <span>SaaS Packages &amp; Modules</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("marketplace")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "marketplace"
-                          ? "bg-white text-slate-900 shadow-xs font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Building2 size={14} className={pricingSubTab === "marketplace" ? "text-teal-600" : ""} />
-                      <span>Office Marketplace Tariffs</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("fm")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "fm"
-                          ? "bg-white text-slate-900 shadow-xs font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Briefcase size={14} className={pricingSubTab === "fm" ? "text-teal-600" : ""} />
-                      <span>FM Marketplace &amp; Rates</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPricingSubTab("coupons")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                        pricingSubTab === "coupons"
-                          ? "bg-white text-slate-900 shadow-xs font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <CreditCard size={14} className={pricingSubTab === "coupons" ? "text-teal-600" : ""} />
-                      <span>Coupons &amp; Special Grants</span>
-                    </button>
-                  </div>
-
-                  {/* =========================================================================
-                      SUB-TAB 1: ALL PACKAGES OVERVIEW (Unified High-Level View)
-                      ========================================================================= */}
-                  {pricingSubTab === "all" && (
+                  {/* COUPOUNS TAB */}
+                  {pricingSubTab === "coupons" ? (
                     <div className="space-y-6">
-                      <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50/80 to-slate-50 border border-teal-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                            <Sparkles size={15} className="text-teal-600" />
-                            <span>Complete Platform Packages &amp; Pricing Directory</span>
-                          </h3>
-                          <p className="text-xs text-slate-600">
-                            Review all live Marketplace starting tariffs and SaaS subscription modules side-by-side. All prices reflect current statutory GST tax settings.
-                          </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Discount Coupons &amp; Enterprise Grants</h3>
+                          <p className="text-xs text-slate-500">Configure promotional vouchers, client-specific fee waivers, and introductory credits.</p>
                         </div>
                         <button
-                          type="button"
-                          onClick={() => setPricingSubTab("gst")}
-                          className="px-3.5 py-1.5 rounded-xl bg-white border border-teal-300 text-teal-800 hover:bg-teal-50 text-xs font-bold transition cursor-pointer shrink-0 shadow-2xs"
+                          onClick={() => {
+                            const code = prompt("Enter new Coupon Code (e.g. WELCOME20):");
+                            if (!code) return;
+                            const pct = prompt("Enter Discount Percentage (e.g. 20):", "20");
+                            if (!pct) return;
+                            const existing = pricingConfig.coupons || [];
+                            setPricingConfig({
+                              ...pricingConfig,
+                              coupons: [...existing, { code: code.toUpperCase(), discountPct: Number(pct), active: true }]
+                            });
+                          }}
+                          className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
                         >
-                          Configure GST Settings →
+                          <Plus size={14} />
+                          <span>Create New Coupon</span>
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Column 1: Office Marketplace Starting Packages */}
-                        <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
-                          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <div className="flex items-center gap-2">
-                              <Building2 size={16} className="text-[#0F8B7D]" />
-                              <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">
-                                Office Marketplace Packages
-                              </h4>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setPricingSubTab("marketplace")}
-                              className="text-xs font-bold text-teal-700 hover:underline"
-                            >
-                              Edit Rates →
-                            </button>
-                          </div>
-
-                          <div className="space-y-2.5">
-                            {[
-                              { name: "Hot Desk (Coworking Flex)", base: pricingConfig.officeMarketplace?.hotDeskMonthlyMin || 7999, unit: "/ desk / mo" },
-                              { name: "Dedicated Desk (Reserved Seat)", base: pricingConfig.officeMarketplace?.dedicatedDeskMonthlyMin || 11999, unit: "/ desk / mo" },
-                              { name: "Private Cabin (Acoustic Suite)", base: pricingConfig.officeMarketplace?.privateCabinMonthlyMin || 15999, unit: "/ desk / mo" },
-                              { name: "Managed Office (Turnkey Floor)", base: pricingConfig.officeMarketplace?.managedOfficeMonthlyMin || 18500, unit: "/ desk / mo" },
-                              { name: "Day Pass (On-Demand Walk-In)", base: pricingConfig.officeMarketplace?.dayPassRate || 499, unit: "/ day pass" },
-                              { name: "Virtual Office (GST Registration)", base: pricingConfig.officeMarketplace?.virtualOfficeMonthlyMin || 1499, unit: "/ month" },
-                            ].map((item, idx) => {
-                              const tax = calcTax(item.base);
-                              return (
-                                <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-3 text-xs">
-                                  <div>
-                                    <span className="font-bold text-slate-900 block">{item.name}</span>
-                                    <span className="text-[11px] text-slate-500 font-mono">
-                                      Base Net: ₹{item.base.toLocaleString("en-IN")} {item.unit}
-                                    </span>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="font-black text-slate-900 block font-mono text-sm">
-                                      ₹{tax.gross.toLocaleString("en-IN")}
-                                    </span>
-                                    <span className="text-[10px] text-teal-700 font-semibold block">
-                                      {isGstEnabled
-                                        ? `Incl. ₹${tax.gst.toLocaleString("en-IN")} GST (${activeGstRate}%)`
-                                        : "Zero GST (Exempt)"}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Column 2: SaaS Platform Packages & Modules */}
-                        <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
-                          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <div className="flex items-center gap-2">
-                              <Layers size={16} className="text-indigo-600" />
-                              <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">
-                                SaaS Platform Packages &amp; Modules
-                              </h4>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setPricingSubTab("saas")}
-                              className="text-xs font-bold text-indigo-700 hover:underline"
-                            >
-                              Edit Plans →
-                            </button>
-                          </div>
-
-                          <div className="space-y-2.5">
-                            {/* Bundles */}
-                            <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3 text-xs">
-                              <div>
-                                <span className="font-bold text-indigo-950 block">CAFM Essentials (All 6 Modules)</span>
-                                <span className="text-[11px] text-indigo-700 font-mono">Base up to 25,000 sq.ft</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-black text-indigo-950 block font-mono text-sm">
-                                  ₹{calcTax(pricingConfig.saasModules?.cafmEssentialsMonthly || 19999).gross.toLocaleString("en-IN")}/mo
-                                </span>
-                                <span className="text-[10px] text-indigo-600 font-semibold block">
-                                  Base ₹{(pricingConfig.saasModules?.cafmEssentialsMonthly || 19999).toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3 text-xs">
-                              <div>
-                                <span className="font-bold text-indigo-950 block">CAFM Pro (Full Platform Suite)</span>
-                                <span className="text-[11px] text-indigo-700 font-mono">₹{pricingConfig.saasModules?.cafmProRatePerSqft || 2.0}/sq.ft/mo</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-black text-indigo-950 block font-mono text-sm">
-                                  ₹{calcTax(pricingConfig.saasModules?.cafmProMonthly || 39999).gross.toLocaleString("en-IN")}/mo
-                                </span>
-                                <span className="text-[10px] text-indigo-600 font-semibold block">
-                                  Base ₹{(pricingConfig.saasModules?.cafmProMonthly || 39999).toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Standalone modules */}
-                            {[
-                              { name: "Rent Roll & Lease Administration", base: pricingConfig.saasModules?.rentRollStarterMonthly || 9999, sub: "Starter tier (₹1.0/sqft)" },
-                              { name: "52-Week Preventive Maintenance (PPM)", base: pricingConfig.saasModules?.ppmModuleMonthly || 6999, sub: "per building / mo" },
-                              { name: "Visitor Flow & Speed-Gates (VC)", base: pricingConfig.saasModules?.visitorModuleMonthly || 4999, sub: "per speed-gate / mo" },
-                              { name: "Statutory Compliance Calendar", base: pricingConfig.saasModules?.complianceModuleMonthly || 3999, sub: "per property / mo" },
-                            ].map((item, idx) => {
-                              const tax = calcTax(item.base);
-                              return (
-                                <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-3 text-xs">
-                                  <div>
-                                    <span className="font-bold text-slate-900 block">{item.name}</span>
-                                    <span className="text-[11px] text-slate-500 font-mono">{item.sub}</span>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="font-black text-slate-900 block font-mono text-sm">
-                                      ₹{tax.gross.toLocaleString("en-IN")}/mo
-                                    </span>
-                                    <span className="text-[10px] text-teal-700 font-semibold block">
-                                      Base ₹{item.base.toLocaleString("en-IN")}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      SUB-TAB 2: GST & STATUTORY TAX ENGINE (Toggle ON/OFF & Exact Calculations)
-                      ========================================================================= */}
-                  {pricingSubTab === "gst" && (
-                    <div className="space-y-6">
-                      {/* Master GST Toggle Card */}
-                      <div className="bg-gradient-to-r from-teal-50 via-slate-50 to-emerald-50 border-2 border-teal-200 rounded-3xl p-6 space-y-6 shadow-sm">
-                        
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-teal-200/70">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Receipt size={18} className="text-[#0F8B7D]" />
-                              <h3 className="text-base font-black text-slate-900 tracking-tight">
-                                Platform GST &amp; Statutory Taxation Master Switch
-                              </h3>
-                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                                isGstEnabled
-                                  ? "bg-emerald-500 text-white"
-                                  : "bg-slate-500 text-white"
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(pricingConfig.coupons || [
+                          { code: "OFFICEX20", discountPct: 20, active: true },
+                          { code: "STARTUP50", discountPct: 50, active: true },
+                          { code: "FOUNDERFREE", discountPct: 100, active: false },
+                        ]).map((c: any, idx: number) => (
+                          <div key={idx} className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-sm font-black text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                                {c.code}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                c.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
                               }`}>
-                                {isGstEnabled ? "GST Active" : "GST Disabled"}
+                                {c.active ? "Active" : "Inactive"}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-600 mt-1">
-                              Control whether platform checkouts, invoices, and SaaS subscriptions include statutory Goods and Services Tax (GST).
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-600">Want GST applied?</span>
-                            <div className="flex items-center bg-white p-1 rounded-xl border border-teal-300 shadow-2xs">
+                            <div className="text-xs text-slate-600 flex items-center justify-between">
+                              <span>Discount Rate:</span>
+                              <span className="text-base font-black text-slate-900">{c.discountPct}% OFF</span>
+                            </div>
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                               <button
-                                type="button"
-                                onClick={() => setPricingConfig({
-                                  ...pricingConfig,
-                                  taxConfig: {
-                                    ...pricingConfig.taxConfig,
-                                    enabled: true,
-                                    gstMode: pricingConfig.taxConfig?.gstMode || "exclusive",
-                                    gstRatePct: pricingConfig.taxConfig?.gstRatePct || 18,
-                                    sacCode: pricingConfig.taxConfig?.sacCode || "997212",
-                                  }
-                                })}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                                  isGstEnabled
-                                    ? "bg-[#0F8B7D] text-white shadow-xs font-black"
-                                    : "text-slate-600 hover:text-slate-900"
-                                }`}
+                                onClick={() => {
+                                  const list = [...(pricingConfig.coupons || [])];
+                                  list[idx] = { ...list[idx], active: !list[idx].active };
+                                  setPricingConfig({ ...pricingConfig, coupons: list });
+                                }}
+                                className="text-teal-700 hover:underline font-semibold"
                               >
-                                <Check size={12} />
-                                <span>YES (GST Enabled)</span>
+                                {c.active ? "Deactivate" : "Activate"}
                               </button>
-
                               <button
-                                type="button"
-                                onClick={() => setPricingConfig({
-                                  ...pricingConfig,
-                                  taxConfig: {
-                                    ...pricingConfig.taxConfig,
-                                    enabled: false,
-                                    gstMode: pricingConfig.taxConfig?.gstMode || "exclusive",
-                                    gstRatePct: 0,
-                                    sacCode: pricingConfig.taxConfig?.sacCode || "997212",
-                                  }
-                                })}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                                  !isGstEnabled
-                                    ? "bg-rose-600 text-white shadow-xs font-black"
-                                    : "text-slate-600 hover:text-slate-900"
-                                }`}
+                                onClick={() => {
+                                  const list = (pricingConfig.coupons || []).filter((_: any, i: number) => i !== idx);
+                                  setPricingConfig({ ...pricingConfig, coupons: list });
+                                }}
+                                className="text-rose-600 hover:underline font-semibold"
                               >
-                                <X size={12} />
-                                <span>NO (Zero GST)</span>
+                                Delete
                               </button>
                             </div>
                           </div>
-                        </div>
-
-                        {/* If GST is Disabled Notice */}
-                        {!isGstEnabled && (
-                          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium space-y-1">
-                            <div className="flex items-center gap-2 font-bold text-amber-950">
-                              <AlertTriangle size={15} className="text-amber-600" />
-                              <span>Zero GST Mode Active (Tax Exempt)</span>
-                            </div>
-                            <p>
-                              All SaaS subscriptions, marketplace tariffs, and modules will be billed at flat net rates with zero tax (0.00% GST). Generated tax invoices will state <em>&quot;Supply of tax-exempt service under GST regulations&quot;</em>.
-                            </p>
-                          </div>
-                        )}
-
-                        {/* If GST is Enabled: Mode, Rate, SAC & Breakdown */}
-                        {isGstEnabled && (
-                          <div className="space-y-6">
-                            {/* Mode Selection (Exclusive vs Inclusive) */}
-                            <div>
-                              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block mb-2">
-                                1. GST Invoicing Calculation Mode
-                              </label>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div
-                                  onClick={() => setPricingConfig({
-                                    ...pricingConfig,
-                                    taxConfig: {
-                                      ...pricingConfig.taxConfig,
-                                      gstMode: "exclusive",
-                                    }
-                                  })}
-                                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                                    !isGstInclusive
-                                      ? "bg-white border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-sm"
-                                      : "bg-slate-50/70 border-slate-200 hover:border-slate-300 opacity-80"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-black text-xs text-slate-900">
-                                          Exclusive of GST (+{activeGstRate}% GST Extra)
-                                        </span>
-                                        {!isGstInclusive && <CheckCircle2 size={16} className="text-[#0F8B7D]" />}
-                                      </div>
-                                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                        Listed package prices are pure net rates. At checkout and on statutory invoices, {activeGstRate}% GST is added as a separate line item.
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-mono text-slate-700 flex justify-between font-bold">
-                                    <span>Sample Checkout:</span>
-                                    <span className="text-[#0F8B7D]">₹10,000 Net + ₹1,800 GST = ₹11,800 Total</span>
-                                  </div>
-                                </div>
-
-                                <div
-                                  onClick={() => setPricingConfig({
-                                    ...pricingConfig,
-                                    taxConfig: {
-                                      ...pricingConfig.taxConfig,
-                                      gstMode: "inclusive",
-                                    }
-                                  })}
-                                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                                    isGstInclusive
-                                      ? "bg-white border-emerald-600 ring-2 ring-emerald-600/20 shadow-sm"
-                                      : "bg-slate-50/70 border-slate-200 hover:border-slate-300 opacity-80"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-black text-xs text-slate-900">
-                                          Inclusive of GST (All Taxes Included in Price)
-                                        </span>
-                                        {isGstInclusive && <CheckCircle2 size={16} className="text-emerald-600" />}
-                                      </div>
-                                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                        What customers see is the final gross price they pay. GST is reverse-calculated and itemized cleanly on the official tax receipt.
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-mono text-slate-700 flex justify-between font-bold">
-                                    <span>Sample Checkout:</span>
-                                    <span className="text-emerald-700">₹8,474.58 Net + ₹1,525.42 GST = ₹10,000 Total</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Rate (%) and SAC Code Configuration */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                              {/* Rate % Input */}
-                              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
-                                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
-                                  2. Statutory GST Rate (%)
-                                </label>
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number"
-                                    step="0.5"
-                                    min="0"
-                                    max="28"
-                                    value={pricingConfig.taxConfig?.gstRatePct ?? 18}
-                                    onChange={(e) => setPricingConfig({
-                                      ...pricingConfig,
-                                      taxConfig: {
-                                        ...pricingConfig.taxConfig,
-                                        gstRatePct: Number(e.target.value) || 0,
-                                      }
-                                    })}
-                                    className="w-full text-xl font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-mono outline-none focus:border-teal-500"
-                                  />
-                                  <span className="font-black text-slate-500 text-lg">%</span>
-                                </div>
-
-                                {/* Presets */}
-                                <div className="flex items-center gap-1.5 pt-1">
-                                  {[18, 12, 5, 0].map((rate) => (
-                                    <button
-                                      key={rate}
-                                      type="button"
-                                      onClick={() => setPricingConfig({
-                                        ...pricingConfig,
-                                        taxConfig: {
-                                          ...pricingConfig.taxConfig,
-                                          gstRatePct: rate,
-                                        }
-                                      })}
-                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
-                                        pricingConfig.taxConfig?.gstRatePct === rate
-                                          ? "bg-teal-100 text-teal-800 border-teal-300 font-black"
-                                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                                      }`}
-                                    >
-                                      {rate}% {rate === 18 ? "(Std)" : ""}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* SAC Code Input */}
-                              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
-                                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
-                                  3. Statutory SAC / HSN Code
-                                </label>
-                                <input
-                                  type="text"
-                                  value={sacCode}
-                                  onChange={(e) => setPricingConfig({
-                                    ...pricingConfig,
-                                    taxConfig: {
-                                      ...pricingConfig.taxConfig,
-                                      sacCode: e.target.value.trim(),
-                                    }
-                                  })}
-                                  className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-mono outline-none focus:border-teal-500"
-                                />
-                                <span className="text-[10px] text-slate-500 block leading-tight">
-                                  SAC 997212: Real estate operational leasing &amp; workspace services
-                                </span>
-                              </div>
-
-                              {/* Live Checkout Formula Card */}
-                              <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-4 space-y-1.5">
-                                <span className="text-[10px] font-black uppercase text-teal-900 block tracking-wider">
-                                  4. Active Invoice Formula
-                                </span>
-                                <p className="text-sm font-mono font-bold text-teal-950">
-                                  {isGstInclusive
-                                    ? `Total = Base (Includes ${activeGstRate}% GST)`
-                                    : `Total = Base + ${activeGstRate}% GST Extra`}
-                                </p>
-                                <p className="text-[11px] text-teal-800 leading-snug">
-                                  Applied across all modules, client subscriptions, owner statements, and Razorpay modal.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        ))}
                       </div>
+                    </div>
+                  ) : (
 
-                      {/* Live Dynamic Tax Breakdown Table for All Offerings */}
-                      <div className="border border-slate-200 rounded-3xl p-6 bg-white space-y-4 shadow-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    /* SPLIT DUAL-PANEL LAYOUT (LEFT: PRICING + GST SIDES, RIGHT: LIVE SIMULATOR) */
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+                      {/* ============================================================== */}
+                      {/* LEFT COLUMN: PACKAGES CARDS WITH TWO SIDES (PRICING & GST)     */}
+                      {/* ============================================================== */}
+                      <div className="xl:col-span-8 space-y-4">
+                        
+                        {/* Section Bar */}
+                        <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-2xl">
                           <div>
-                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">
-                              Live Package Pricing &amp; Tax Impact Matrix
-                            </h4>
-                            <p className="text-xs text-slate-500">
-                              Real-time breakdown showing how much GST is calculated and billed for each platform offering under your current settings.
+                            <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                              Commercial Packages &amp; Dual-Side Configuration
+                            </span>
+                            <p className="text-[11px] text-slate-500">
+                              Each card provides pricing inputs on the left and dedicated GST options on the right. Click any card to preview in the live invoice simulator.
                             </p>
                           </div>
-                          <span className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-xl">
-                            Tax Mode: {isGstEnabled ? `${activeGstRate}% ${isGstInclusive ? "Inclusive" : "Exclusive"}` : "0% (Exempt)"}
+                          <span className="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl">
+                            {filteredCommercialItems.length} Available
                           </span>
                         </div>
 
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-extrabold border-b border-slate-200">
-                              <tr>
-                                <th className="p-3">Package / Offering</th>
-                                <th className="p-3">Category</th>
-                                <th className="p-3">Billing Basis</th>
-                                <th className="p-3 text-right">Net Base (₹)</th>
-                                <th className="p-3 text-right">GST %</th>
-                                <th className="p-3 text-right">GST Amount (₹)</th>
-                                <th className="p-3 text-right font-black">Gross Invoiced (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 font-medium">
-                              {[
-                                // SaaS Bundles
-                                { name: "CAFM Essentials (All 6 Modules)", cat: "SaaS Bundle", unit: "Per Month (up to 25k sqft)", base: pricingConfig.saasModules?.cafmEssentialsMonthly || 19999 },
-                                { name: "CAFM Pro Suite Base", cat: "SaaS Bundle", unit: "Per Month Base", base: pricingConfig.saasModules?.cafmProMonthly || 39999 },
-                                { name: "CAFM Enterprise Suite Base", cat: "SaaS Bundle", unit: "Per Month Base", base: pricingConfig.saasModules?.cafmEnterpriseMonthly || 79999 },
-                                // Standalone SaaS Modules
-                                { name: "Rent Roll & Leases Starter", cat: "Standalone SaaS", unit: "Per Month Base", base: pricingConfig.saasModules?.rentRollStarterMonthly || 9999 },
-                                { name: "52-Week Preventive Maintenance (PPM)", cat: "Standalone SaaS", unit: "Per Building / Month", base: pricingConfig.saasModules?.ppmModuleMonthly || 6999 },
-                                { name: "Visitor Flow & Speed-Gates (VC)", cat: "Standalone SaaS", unit: "Per Speed-Gate / Month", base: pricingConfig.saasModules?.visitorModuleMonthly || 4999 },
-                                { name: "Statutory Compliance Calendar", cat: "Standalone SaaS", unit: "Per Property / Month", base: pricingConfig.saasModules?.complianceModuleMonthly || 3999 },
-                                { name: "Commercial Lease CRM & LOIs", cat: "Standalone SaaS", unit: "Per Team / Month", base: pricingConfig.saasModules?.leaseCrmMonthly || 5999 },
-                                { name: "Tenant Helpdesk & Room Booking", cat: "Standalone SaaS", unit: "Per Building / Month", base: pricingConfig.saasModules?.helpdeskModuleMonthly || 3499 },
-                                { name: "CAM Expense Pooling & True-Up", cat: "Standalone SaaS", unit: "Per Month", base: pricingConfig.saasModules?.camModuleMonthly || 3999 },
-                                { name: "Submetering Utility Splitter", cat: "Standalone SaaS", unit: "Per Month", base: pricingConfig.saasModules?.submeteringModuleMonthly || 2499 },
-                                // Office Marketplace
-                                { name: "Hot Desk Standard", cat: "Marketplace", unit: "Per Seat / Month", base: pricingConfig.officeMarketplace?.hotDeskMonthlyMin || 7999 },
-                                { name: "Dedicated Desk Standard", cat: "Marketplace", unit: "Per Seat / Month", base: pricingConfig.officeMarketplace?.dedicatedDeskMonthlyMin || 11999 },
-                                { name: "Private Acoustic Cabin", cat: "Marketplace", unit: "Per Seat / Month", base: pricingConfig.officeMarketplace?.privateCabinMonthlyMin || 15999 },
-                                { name: "Managed Turnkey Office", cat: "Marketplace", unit: "Per Seat / Month", base: pricingConfig.officeMarketplace?.managedOfficeMonthlyMin || 18500 },
-                                { name: "Flex Co-working Day Pass", cat: "Marketplace", unit: "Per Day Pass", base: pricingConfig.officeMarketplace?.dayPassRate || 499 },
-                                { name: "Virtual Office Plan", cat: "Marketplace", unit: "Per Month", base: pricingConfig.officeMarketplace?.virtualOfficeMonthlyMin || 1499 },
-                              ].map((row, idx) => {
-                                const tax = calcTax(row.base);
-                                return (
-                                  <tr key={idx} className="hover:bg-slate-50/70 transition">
-                                    <td className="p-3 font-bold text-slate-900">{row.name}</td>
-                                    <td className="p-3">
-                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                        row.cat === "SaaS Bundle"
-                                          ? "bg-indigo-100 text-indigo-800"
-                                          : row.cat === "Standalone SaaS"
-                                          ? "bg-teal-100 text-teal-800"
-                                          : "bg-blue-100 text-blue-800"
-                                      }`}>
-                                        {row.cat}
-                                      </span>
-                                    </td>
-                                    <td className="p-3 text-slate-500 font-mono text-[11px]">{row.unit}</td>
-                                    <td className="p-3 text-right font-mono font-semibold text-slate-800">
-                                      ₹{tax.net.toLocaleString("en-IN", { minimumFractionDigits: isGstInclusive ? 2 : 0 })}
-                                    </td>
-                                    <td className="p-3 text-right font-mono text-slate-600">
-                                      {activeGstRate}%
-                                    </td>
-                                    <td className="p-3 text-right font-mono font-bold text-teal-700">
-                                      ₹{tax.gst.toLocaleString("en-IN", { minimumFractionDigits: isGstInclusive ? 2 : 0 })}
-                                    </td>
-                                    <td className="p-3 text-right font-mono font-black text-slate-900 text-xs">
-                                      ₹{tax.gross.toLocaleString("en-IN")}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                        {/* Package Cards List */}
+                        <div className="space-y-4">
+                          {filteredCommercialItems.map((pkg) => {
+                            const isSelected = selectedPricingItem === pkg.key;
+                            const tax = getItemTax(pkg.key);
+                            const itemPrice = pkg.price;
+                            const math = calcItemTax(itemPrice, pkg.key);
 
-                  {/* =========================================================================
-                      SUB-TAB 3: SAAS PACKAGES & MODULES CONFIGURATION
-                      ========================================================================= */}
-                  {pricingSubTab === "saas" && (
-                    <div className="space-y-6">
-                      {/* Section A: All-in-One CAFM Suite Bundles */}
-                      <div className="bg-indigo-50/50 border border-indigo-200 rounded-3xl p-6 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-indigo-100">
-                          <div>
-                            <span className="text-xs font-black uppercase text-indigo-950 flex items-center gap-1.5 tracking-wide">
-                              <Building2 size={16} className="text-indigo-600" />
-                              All-in-One CAFM Operations Suite Bundles
-                            </span>
-                            <p className="text-xs text-indigo-800/70 mt-0.5">
-                              Institutional package covering all 6 modules (Rent Roll, PPM, Turnstiles, Compliance, CRM &amp; Helpdesk).
-                            </p>
-                          </div>
-                          <span className="text-[10px] font-bold bg-indigo-100 text-indigo-900 px-3 py-1 rounded-full border border-indigo-200">
-                            Includes all 6 modules
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
-                          {/* CAFM Essentials */}
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1.5 shadow-2xs">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Essentials (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.cafmEssentialsMonthly ?? 19999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  cafmEssentialsMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Up to 25,000 sq.ft</span>
-                            <span className="text-[10px] text-indigo-700 font-bold block pt-1 border-t border-slate-100">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.cafmEssentialsMonthly ?? 19999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* CAFM Pro Base */}
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1.5 shadow-2xs">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Pro Base (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.cafmProMonthly ?? 39999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  cafmProMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Up to 100,000 sq.ft</span>
-                            <span className="text-[10px] text-indigo-700 font-bold block pt-1 border-t border-slate-100">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.cafmProMonthly ?? 39999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* CAFM Pro Area Rate */}
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1.5 shadow-2xs">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Pro (₹/sqft/mo)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.saasModules?.cafmProRatePerSqft ?? 2.0}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  cafmProRatePerSqft: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Area calculation</span>
-                            <span className="text-[10px] text-indigo-700 font-bold block pt-1 border-t border-slate-100">
-                              +₹{calcTax(pricingConfig.saasModules?.cafmProRatePerSqft ?? 2.0).gross}/sqft
-                            </span>
-                          </div>
-
-                          {/* CAFM Enterprise Base */}
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1.5 shadow-2xs">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Enterprise Base (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.cafmEnterpriseMonthly ?? 79999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  cafmEnterpriseMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Multi-property</span>
-                            <span className="text-[10px] text-indigo-700 font-bold block pt-1 border-t border-slate-100">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.cafmEnterpriseMonthly ?? 79999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* CAFM Enterprise Area Rate */}
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1.5 shadow-2xs">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Enterprise (₹/sqft/mo)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.saasModules?.cafmEnterpriseRatePerSqft ?? 3.5}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  cafmEnterpriseRatePerSqft: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Full integration</span>
-                            <span className="text-[10px] text-indigo-700 font-bold block pt-1 border-t border-slate-100">
-                              +₹{calcTax(pricingConfig.saasModules?.cafmEnterpriseRatePerSqft ?? 3.5).gross}/sqft
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section B: Individual Standalone SaaS Modules */}
-                      <div className="border border-slate-200 rounded-3xl p-6 bg-white space-y-4 shadow-xs">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <div>
-                            <span className="text-xs font-black uppercase text-slate-900 flex items-center gap-1.5 tracking-wide">
-                              <Layers size={16} className="text-teal-600" />
-                              Individual Standalone SaaS Modules (A-la-Carte)
-                            </span>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Pricing for clients who subscribe to single modules independently without the full CAFM suite.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-                          {/* Rent Roll Starter */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Starter (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.rentRollStarterMonthly ?? 9999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  rentRollStarterMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Up to 50k sq.ft</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.rentRollStarterMonthly ?? 9999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Rent Roll Sqft Rate */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Rent Roll Rate (₹/sqft)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.saasModules?.rentRollRatePerSqft ?? 1.0}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  rentRollRatePerSqft: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Area-based calculation</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.rentRollRatePerSqft ?? 1.0).gross}/sqft
-                            </span>
-                          </div>
-
-                          {/* 52-Week PPM */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">52-Week PPM (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.ppmModuleMonthly ?? 6999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  ppmModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Asset QR &amp; Maintenance</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.ppmModuleMonthly ?? 6999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Visitor Flow */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Visitor Flow (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.visitorModuleMonthly ?? 4999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  visitorModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Turnstile &amp; Barcodes</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.visitorModuleMonthly ?? 4999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Statutory Compliance Calendar */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Compliance Cal. (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.complianceModuleMonthly ?? 3999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  complianceModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Audit &amp; License Vault</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.complianceModuleMonthly ?? 3999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Commercial Lease CRM */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Lease CRM (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.leaseCrmMonthly ?? 5999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  leaseCrmMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Dealflow &amp; LOI Stacking</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.leaseCrmMonthly ?? 5999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Tenant Helpdesk */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Tenant Helpdesk (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.helpdeskModuleMonthly ?? 3499}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  helpdeskModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Ticketing &amp; Rooms</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.helpdeskModuleMonthly ?? 3499).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* CAM True-Up */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">CAM Recon (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.camModuleMonthly ?? 3999}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  camModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">True-up pooling</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.camModuleMonthly ?? 3999).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Submetering */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Submetering (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.saasModules?.submeteringModuleMonthly ?? 2499}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  submeteringModuleMonthly: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Utility calculation</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Gross: ₹{calcTax(pricingConfig.saasModules?.submeteringModuleMonthly ?? 2499).gross.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-
-                          {/* Payment Gateway Fee */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">PG Fee (%)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.saasModules?.tenantPaymentGatewayFeePct ?? 1.2}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                saasModules: {
-                                  ...pricingConfig.saasModules,
-                                  tenantPaymentGatewayFeePct: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400 block">Tenant collections</span>
-                            <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                              Razorpay Escrow
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      SUB-TAB 4: OFFICE MARKETPLACE TARIFFS & BULK MODIFIER
-                      ========================================================================= */}
-                  {pricingSubTab === "marketplace" && (
-                    <div className="space-y-6">
-                      <div className="border border-slate-200 rounded-3xl p-6 bg-white space-y-4 shadow-xs">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <div>
-                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                              <Building2 size={16} className="text-[#0F8B7D]" />
-                              <span>Office Marketplace Starting &amp; Floor Rates</span>
-                            </h3>
-                            <p className="text-xs text-slate-500">Base monthly rates for desk configurations, private suites, and passes.</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-                          {[
-                            { key: "hotDeskMonthlyMin", label: "Hot Desk (₹/mo)", def: 7999, sub: "Starting flex rate" },
-                            { key: "dedicatedDeskMonthlyMin", label: "Dedicated Desk (₹/mo)", def: 11999, sub: "Reserved seat standard" },
-                            { key: "privateCabinMonthlyMin", label: "Private Cabin (₹/mo)", def: 15999, sub: "Acoustic private suite" },
-                            { key: "managedOfficeMonthlyMin", label: "Managed Office (₹/mo)", def: 18500, sub: "Enterprise turnkey unit" },
-                            { key: "dayPassRate", label: "Day Pass (₹/day)", def: 499, sub: "Walk-in daily tariff" },
-                            { key: "virtualOfficeMonthlyMin", label: "Virtual Office (₹/mo)", def: 1499, sub: "GST Registration & Mail" },
-                          ].map((item) => {
-                            const val = pricingConfig.officeMarketplace?.[item.key] || item.def;
-                            const tax = calcTax(val);
                             return (
-                              <div key={item.key} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 block">{item.label}</label>
-                                <input
-                                  type="number"
-                                  value={val}
-                                  onChange={(e) => setPricingConfig({
-                                    ...pricingConfig,
-                                    officeMarketplace: {
-                                      ...pricingConfig.officeMarketplace,
-                                      [item.key]: Number(e.target.value)
-                                    }
-                                  })}
-                                  className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                                />
-                                <span className="text-[10px] text-slate-400 block">{item.sub}</span>
-                                <span className="text-[10px] text-teal-700 font-bold block pt-1 border-t border-slate-200/60">
-                                  Gross: ₹{tax.gross.toLocaleString("en-IN")}
-                                </span>
+                              <div
+                                key={pkg.key}
+                                onClick={() => setSelectedPricingItem(pkg.key)}
+                                className={`bg-white rounded-3xl border transition-all duration-200 overflow-hidden cursor-pointer ${
+                                  isSelected
+                                    ? "border-teal-500 ring-2 ring-teal-500/20 shadow-md"
+                                    : "border-slate-200 hover:border-slate-300 shadow-xs"
+                                }`}
+                              >
+                                <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+
+                                  {/* -------------------------------------------------------- */}
+                                  {/* SIDE 1: PRICINGS SIDE (LEFT)                             */}
+                                  {/* -------------------------------------------------------- */}
+                                  <div className="p-5 md:col-span-6 space-y-4 flex flex-col justify-between">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                                          {pkg.badge}
+                                        </span>
+                                        <span className="text-[10px] font-semibold text-slate-400">
+                                          {pkg.category}
+                                        </span>
+                                      </div>
+
+                                      <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                        <span>{pkg.title}</span>
+                                        {isSelected && (
+                                          <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" title="Active in Invoice Simulator" />
+                                        )}
+                                      </h3>
+
+                                      <p className="text-xs text-slate-500 leading-relaxed">
+                                        {pkg.desc}
+                                      </p>
+                                    </div>
+
+                                    {/* Base Price Input Box */}
+                                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                                      <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                                        <span>Base Price (INR)</span>
+                                        <span className="text-[10px] font-normal text-slate-500">{pkg.unit}</span>
+                                      </label>
+
+                                      <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                                          {pkg.isPercentage ? "%" : "₹"}
+                                        </span>
+                                        <input
+                                          type="number"
+                                          step={pkg.isPercentage ? "0.1" : "1"}
+                                          value={pkg.price}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onChange={(e) => pkg.setPrice(Number(e.target.value))}
+                                          className="w-full pl-8 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
+                                        />
+                                      </div>
+
+                                      {/* Secondary Sq.ft Surcharge for Pro / Enterprise Suites */}
+                                      {pkg.sqftPrice !== undefined && (
+                                        <div className="pt-2">
+                                          <label className="text-[10px] font-bold text-slate-600 flex items-center justify-between mb-1">
+                                            <span>Surcharge Per Sq.ft / Mo</span>
+                                            <span className="text-slate-400">Area-based</span>
+                                          </label>
+                                          <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                                            <input
+                                              type="number"
+                                              step="0.1"
+                                              value={pkg.sqftPrice}
+                                              onClick={(e) => e.stopPropagation()}
+                                              onChange={(e) => pkg.setSqftPrice && pkg.setSqftPrice(Number(e.target.value))}
+                                              className="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* -------------------------------------------------------- */}
+                                  {/* SIDE 2: GST OPTIONS & TAX ENGINE (RIGHT)                 */}
+                                  {/* -------------------------------------------------------- */}
+                                  <div className="p-5 md:col-span-6 bg-slate-50/70 space-y-4 flex flex-col justify-between">
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                                        <div className="flex items-center gap-1.5">
+                                          <Receipt size={14} className="text-teal-600" />
+                                          <span className="text-xs font-black text-slate-800">GST Options</span>
+                                        </div>
+
+                                        {/* Individual GST YES / NO Toggle Button */}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateItemTax(pkg.key, { enabled: !tax.enabled });
+                                          }}
+                                          className={`px-3 py-1 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                            tax.enabled
+                                              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                              : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                                          }`}
+                                        >
+                                          {tax.enabled ? (
+                                            <>
+                                              <CheckCircle2 size={13} />
+                                              <span>GST: YES (Taxable)</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <X size={13} />
+                                              <span>GST: NO (Exempt)</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+
+                                      {/* GST Rate & Mode Selectors (Visible when GST is Enabled) */}
+                                      {tax.enabled ? (
+                                        <div className="space-y-3">
+                                          {/* GST Rate Preset Buttons */}
+                                          <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GST Rate %</span>
+                                              <span className="text-[10px] font-black text-teal-700">{tax.gstRatePct}% Applied</span>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                              {[18, 12, 5, 0].map((rate) => (
+                                                <button
+                                                  key={rate}
+                                                  type="button"
+                                                  onClick={() => updateItemTax(pkg.key, { gstRatePct: rate })}
+                                                  className={`py-1 rounded-lg text-xs font-black transition cursor-pointer ${
+                                                    tax.gstRatePct === rate
+                                                      ? "bg-[#0F8B7D] text-white shadow-xs"
+                                                      : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                                                  }`}
+                                                >
+                                                  {rate}%
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+
+                                          {/* GST Calculation Mode Toggle */}
+                                          <div>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tax Mode</span>
+                                            <div className="grid grid-cols-2 gap-1.5 p-1 bg-white rounded-xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
+                                              <button
+                                                type="button"
+                                                onClick={() => updateItemTax(pkg.key, { gstMode: "exclusive" })}
+                                                className={`py-1 text-[11px] font-bold rounded-lg transition cursor-pointer text-center ${
+                                                  tax.gstMode === "exclusive"
+                                                    ? "bg-slate-900 text-white shadow-2xs"
+                                                    : "text-slate-600 hover:text-slate-900"
+                                                }`}
+                                              >
+                                                + Exclusive (+GST)
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => updateItemTax(pkg.key, { gstMode: "inclusive" })}
+                                                className={`py-1 text-[11px] font-bold rounded-lg transition cursor-pointer text-center ${
+                                                  tax.gstMode === "inclusive"
+                                                    ? "bg-slate-900 text-white shadow-2xs"
+                                                    : "text-slate-600 hover:text-slate-900"
+                                                }`}
+                                              >
+                                                Inclusive (Taxes In)
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-amber-900 text-xs space-y-1">
+                                          <div className="flex items-center gap-1.5 font-black text-[11px]">
+                                            <ShieldCheck size={14} className="text-amber-600" />
+                                            <span>Tax Exempt / Zero-Rated</span>
+                                          </div>
+                                          <p className="text-[10px] text-amber-800 leading-normal">
+                                            No GST is levied on this package. Invoices will be generated at 0% tax.
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Live Price Breakdown Tag for this Item */}
+                                    <div className="pt-2 border-t border-slate-200/60">
+                                      {math.enabled ? (
+                                        <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 space-y-1 text-xs">
+                                          <div className="flex items-center justify-between text-slate-500 text-[11px]">
+                                            <span>Taxable Value:</span>
+                                            <span className="font-semibold text-slate-700">₹{math.taxable.toLocaleString("en-IN")}</span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-teal-700 text-[11px]">
+                                            <span>GST ({math.rate}% {math.mode}):</span>
+                                            <span className="font-bold">+ ₹{math.gstAmount.toLocaleString("en-IN")}</span>
+                                          </div>
+                                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 font-black text-slate-900">
+                                            <span>Total Customer Price:</span>
+                                            <span className="text-teal-800 font-black">₹{math.grossTotal.toLocaleString("en-IN")}</span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 space-y-0.5 text-xs text-emerald-900">
+                                          <div className="flex items-center justify-between font-black">
+                                            <span>Net Payable (0% Tax):</span>
+                                            <span className="text-emerald-950 font-black text-sm">₹{math.grossTotal.toLocaleString("en-IN")}</span>
+                                          </div>
+                                          <span className="text-[10px] text-emerald-700 block">Exempt from statutory GST</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                  </div>
+
+                                </div>
                               </div>
                             );
                           })}
                         </div>
+
+                        {/* City Multipliers & Bulk Pricing (If viewing Marketplace or All) */}
+                        {(pricingSubTab === "all" || pricingSubTab === "marketplace") && (
+                          <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                              <div>
+                                <h3 className="text-sm font-black text-slate-900">Tier-1 &amp; Tier-2 City Rate Multipliers</h3>
+                                <p className="text-xs text-slate-500">Marketplace minimum tariffs scale automatically based on regional commercial real estate benchmarks.</p>
+                              </div>
+                              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-xl">
+                                9 Cities Configured
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                              {Object.entries(pricingConfig.officeMarketplace?.cityMultipliers || {}).map(([cityName, data]: [string, any]) => (
+                                <div key={cityName} className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-slate-900">{cityName}</span>
+                                    <span className="text-[10px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-md">
+                                      {data.multiplier}x Multiplier
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                      <label className="text-[10px] text-slate-400 block mb-0.5">Factor</label>
+                                      <input
+                                        type="number"
+                                        step="0.05"
+                                        value={data.multiplier}
+                                        onChange={(e) => {
+                                          const mult = Number(e.target.value);
+                                          setPricingConfig({
+                                            ...pricingConfig,
+                                            officeMarketplace: {
+                                              ...pricingConfig.officeMarketplace,
+                                              cityMultipliers: {
+                                                ...pricingConfig.officeMarketplace.cityMultipliers,
+                                                [cityName]: { ...data, multiplier: mult }
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        className="w-full px-2.5 py-1 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-900"
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <label className="text-[10px] text-slate-400 block mb-0.5">Floor (₹)</label>
+                                      <input
+                                        type="number"
+                                        step="500"
+                                        value={data.minPrice}
+                                        onChange={(e) => {
+                                          const floor = Number(e.target.value);
+                                          setPricingConfig({
+                                            ...pricingConfig,
+                                            officeMarketplace: {
+                                              ...pricingConfig.officeMarketplace,
+                                              cityMultipliers: {
+                                                ...pricingConfig.officeMarketplace.cityMultipliers,
+                                                [cityName]: { ...data, minPrice: floor }
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        className="w-full px-2.5 py-1 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-900"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                       </div>
 
-                      {/* Bulk Marketplace Listing Price Modifier */}
-                      <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div>
-                          <h4 className="text-xs font-black text-slate-900">Bulk Marketplace Listings Price Modifier</h4>
-                          <p className="text-[11px] text-slate-600 mt-0.5">
-                            Adjust starting prices across live marketplace listings in one click by applying a percentage markup or discount.
+                      {/* ============================================================== */}
+                      {/* RIGHT COLUMN: STICKY COMMERCIAL INSPECTOR & INVOICE SIMULATOR   */}
+                      {/* ============================================================== */}
+                      <div className="xl:col-span-4 space-y-4 xl:sticky xl:top-6">
+                        
+                        {/* 1. LIVE CUSTOMER TAX INVOICE SIMULATOR */}
+                        <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-lg border border-slate-800 space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div className="flex items-center gap-2">
+                              <Receipt size={16} className="text-teal-400" />
+                              <h3 className="text-xs font-black uppercase tracking-wider text-teal-400">Live Customer Tax Invoice</h3>
+                            </div>
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase">
+                              Active Preview
+                            </span>
+                          </div>
+
+                          {/* Invoice Header */}
+                          <div className="text-[11px] space-y-1 text-slate-400">
+                            <div className="flex justify-between">
+                              <span>Billed By:</span>
+                              <strong className="text-slate-200">OfficeX Technologies Pvt Ltd</strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Statutory SAC Code:</span>
+                              <span className="font-mono text-teal-300">{globalSacCode}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Selected Package:</span>
+                              <strong className="text-white truncate max-w-[180px]">{activeSimulatedItem.title}</strong>
+                            </div>
+                          </div>
+
+                          {/* Invoice Line Item Card */}
+                          <div className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-200">{activeSimulatedItem.title}</span>
+                              <span className="font-mono text-slate-300">₹{simulatedTax.taxable.toLocaleString("en-IN")}</span>
+                            </div>
+
+                            {/* Tax Breakdown Rows */}
+                            {simulatedTax.enabled && simulatedTax.rate > 0 ? (
+                              <div className="space-y-1 text-[11px] pt-2 border-t border-slate-700 text-slate-400">
+                                <div className="flex justify-between">
+                                  <span>CGST ({(simulatedTax.rate / 2)}%):</span>
+                                  <span className="font-mono text-slate-300">+ ₹{(simulatedTax.gstAmount / 2).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>SGST ({(simulatedTax.rate / 2)}%):</span>
+                                  <span className="font-mono text-slate-300">+ ₹{(simulatedTax.gstAmount / 2).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between text-teal-400 font-bold">
+                                  <span>Total GST ({simulatedTax.rate}% {simulatedTax.mode}):</span>
+                                  <span className="font-mono">+ ₹{simulatedTax.gstAmount.toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pt-2 border-t border-slate-700 text-[10px] text-amber-400 flex items-center gap-1">
+                                <ShieldCheck size={12} />
+                                <span>Zero-Rated / Exempt from GST</span>
+                              </div>
+                            )}
+
+                            {/* Grand Total Row */}
+                            <div className="pt-2.5 border-t border-slate-600 flex items-center justify-between text-sm font-black">
+                              <span className="text-white">Net Total Payable:</span>
+                              <span className="text-lg font-black text-teal-300 font-mono">
+                                ₹{simulatedTax.grossTotal.toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-500 text-center">
+                            Calculations are simulated in real-time according to statutory CGST/SGST rules.
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <select
-                            value={bulkPricingCity}
-                            onChange={(e) => setBulkPricingCity(e.target.value)}
-                            className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white font-medium outline-none"
-                          >
-                            <option value="all">All Cities (Nationwide)</option>
-                            <option value="Bengaluru">Bengaluru</option>
-                            <option value="Mumbai">Mumbai</option>
-                            <option value="Delhi">Delhi</option>
-                            <option value="Gurgaon">Gurgaon</option>
-                            <option value="Noida">Noida</option>
-                            <option value="Hyderabad">Hyderabad</option>
-                            <option value="Pune">Pune</option>
-                          </select>
+                        {/* 2. STATUTORY DEFAULTS & GLOBAL SAC CONTROLLER */}
+                        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
+                          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                            <Tag size={15} className="text-teal-600" />
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Statutory Tax Defaults</h3>
+                          </div>
 
-                          <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-xl px-2.5 py-1 text-xs">
-                            <span className="font-bold text-slate-500">%</span>
+                          {/* SAC Code Input */}
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                              <span>Master SAC / HSN Code</span>
+                              <span className="text-[10px] font-normal text-slate-500">Real Estate / IT</span>
+                            </label>
                             <input
-                              type="number"
-                              value={bulkPricingPct}
-                              onChange={(e) => setBulkPricingPct(Number(e.target.value))}
-                              className="w-14 font-mono font-bold text-slate-900 outline-none"
+                              type="text"
+                              value={pricingConfig.taxConfig?.sacCode || "997212"}
+                              onChange={(e) => setPricingConfig({
+                                ...pricingConfig,
+                                taxConfig: { ...pricingConfig.taxConfig, sacCode: e.target.value }
+                              })}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                             />
                           </div>
 
+                          {/* Global Default Rate */}
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-700">Default GST Rate (%)</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[18, 12, 5].map((rate) => (
+                                <button
+                                  key={rate}
+                                  type="button"
+                                  onClick={() => setPricingConfig({
+                                    ...pricingConfig,
+                                    taxConfig: { ...pricingConfig.taxConfig, gstRatePct: rate }
+                                  })}
+                                  className={`py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                                    (Number(pricingConfig.taxConfig?.gstRatePct) || 18) === rate
+                                      ? "bg-slate-900 text-white"
+                                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                  }`}
+                                >
+                                  {rate}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. BATCH QUICK ACTIONS */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 shadow-xs space-y-3">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                            Quick Batch Tax Actions
+                          </span>
+                          
+                          <div className="space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => applyBulkTax({ enabled: true, rate: 18, mode: "exclusive" })}
+                              className="w-full py-2 px-3 rounded-xl bg-white border border-slate-200 hover:border-teal-500 text-xs font-bold text-slate-800 transition flex items-center justify-between shadow-2xs cursor-pointer"
+                            >
+                              <span>⚡ Set All Packages to 18% Exclusive</span>
+                              <ChevronRight size={14} className="text-slate-400" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => applyBulkTax({ enabled: false, rate: 0 })}
+                              className="w-full py-2 px-3 rounded-xl bg-white border border-slate-200 hover:border-amber-500 text-xs font-bold text-slate-800 transition flex items-center justify-between shadow-2xs cursor-pointer"
+                            >
+                              <span>⚪ Set All Packages to Zero GST (Exempt)</span>
+                              <ChevronRight size={14} className="text-slate-400" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => applyBulkTax({ mode: "inclusive" })}
+                              className="w-full py-2 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 text-xs font-bold text-slate-800 transition flex items-center justify-between shadow-2xs cursor-pointer"
+                            >
+                              <span>🔄 Switch All to Inclusive (Tax Included)</span>
+                              <ChevronRight size={14} className="text-slate-400" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 4. PERSISTENCE SAVE BUTTON */}
+                        <div className="pt-2">
                           <button
-                            disabled={bulkPricingApplying}
-                            onClick={handleApplyBulkMarketplacePricing}
-                            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition cursor-pointer disabled:opacity-60"
+                            disabled={pricingSaving || !pricingConfig}
+                            onClick={handleSavePricing}
+                            className="w-full py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer disabled:opacity-60"
                           >
-                            {bulkPricingApplying ? "Updating..." : "Apply Price Adjustment"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      SUB-TAB 5: FM MARKETPLACE & COMMISSIONS
-                      ========================================================================= */}
-                  {pricingSubTab === "fm" && (
-                    <div className="space-y-6">
-                      <div className="border border-slate-200 rounded-3xl p-6 bg-white space-y-4 shadow-xs">
-                        <div className="pb-3 border-b border-slate-100">
-                          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                            <Briefcase size={16} className="text-teal-700" />
-                            <span>Facility Management (FM) Rate Cards &amp; Platform Commission</span>
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            Standard vendor callout fees, category rate cards, and OfficeX platform fee on awarded contracts.
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Platform Commission %</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.fmMarketplace?.platformCommissionPct || 5.0}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                fmMarketplace: {
-                                  ...pricingConfig.fmMarketplace,
-                                  platformCommissionPct: Number(e.target.value)
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-teal-700 font-semibold">% fee on awarded RFQ contracts</span>
-                          </div>
-
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Deep Cleaning (₹/sqft)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={pricingConfig.fmMarketplace?.rateCards?.deepCleaningPerSqft || 1.8}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                fmMarketplace: {
-                                  ...pricingConfig.fmMarketplace,
-                                  rateCards: {
-                                    ...pricingConfig.fmMarketplace?.rateCards,
-                                    deepCleaningPerSqft: Number(e.target.value)
-                                  }
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400">Institutional floor rate</span>
-                          </div>
-
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">HVAC AMC (₹/ton/yr)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.fmMarketplace?.rateCards?.hvacAmcPerTonAnnual || 2200}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                fmMarketplace: {
-                                  ...pricingConfig.fmMarketplace,
-                                  rateCards: {
-                                    ...pricingConfig.fmMarketplace?.rateCards,
-                                    hvacAmcPerTonAnnual: Number(e.target.value)
-                                  }
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400">Chiller &amp; VRV annual plan</span>
-                          </div>
-
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 block">Security Guard (₹/mo)</label>
-                            <input
-                              type="number"
-                              value={pricingConfig.fmMarketplace?.rateCards?.securityGuardPerMonth || 24000}
-                              onChange={(e) => setPricingConfig({
-                                ...pricingConfig,
-                                fmMarketplace: {
-                                  ...pricingConfig.fmMarketplace,
-                                  rateCards: {
-                                    ...pricingConfig.fmMarketplace?.rateCards,
-                                    securityGuardPerMonth: Number(e.target.value)
-                                  }
-                                }
-                              })}
-                              className="w-full text-base font-black text-slate-900 bg-white border border-slate-300 rounded-xl px-2.5 py-1 font-mono outline-none focus:border-teal-500"
-                            />
-                            <span className="text-[10px] text-slate-400">PSARA certified 8-hr shift</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      SUB-TAB 6: DISCOUNTS, COUPONS & USER-SPECIFIC GRANTS
-                      ========================================================================= */}
-                  {pricingSubTab === "coupons" && (
-                    <div className="space-y-6">
-                      <div className="border border-slate-200 rounded-3xl p-6 bg-white space-y-4 shadow-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                          <div>
-                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                              <CreditCard size={16} className="text-[#0F8B7D]" />
-                              <span>Discounts, Coupons &amp; User-Specific Special Grants</span>
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                              Create global discount codes or grant individual custom special discounts to specific user email accounts.
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setShowAddDiscountModal(true)}
-                            className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
-                          >
-                            <Plus size={14} />
-                            <span>Add Coupon / User Grant</span>
+                            <Save size={16} />
+                            <span>{pricingSaving ? "Persisting Changes..." : "Save All Tariffs & GST Options"}</span>
                           </button>
                         </div>
 
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                          <table className="w-full text-left text-xs text-slate-700">
-                            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-extrabold border-b border-slate-200">
-                              <tr>
-                                <th className="p-3">Coupon Code</th>
-                                <th className="p-3">Discount %</th>
-                                <th className="p-3">Eligibility Scope</th>
-                                <th className="p-3">Target Email</th>
-                                <th className="p-3">Used Count</th>
-                                <th className="p-3">Status</th>
-                                <th className="p-3 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {discountsLoading ? (
-                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">Loading discount codes...</td></tr>
-                              ) : discountsList.length === 0 ? (
-                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No active discount codes configured.</td></tr>
-                              ) : (
-                                discountsList.map((d) => (
-                                  <tr key={d.id} className="hover:bg-slate-50/60 transition">
-                                    <td className="p-3 font-mono font-bold text-[#0F8B7D]">
-                                      {d.code}
-                                    </td>
-                                    <td className="p-3 font-black text-slate-900">
-                                      <span className="px-2 py-0.5 rounded font-mono font-bold bg-emerald-100 text-emerald-800 text-[11px]">
-                                        {d.discountPct}% OFF
-                                      </span>
-                                    </td>
-                                    <td className="p-3">
-                                      {d.type === "user_specific" ? (
-                                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold uppercase">
-                                          Individual User Grant
-                                        </span>
-                                      ) : (
-                                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold uppercase">
-                                          Global Public Code
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-3">
-                                      {d.targetUserEmail ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => setInspectingTargetEmail(d)}
-                                          className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1 cursor-pointer"
-                                          title="Click to inspect target user and eligibility"
-                                        >
-                                          <Eye size={11} />
-                                          <span>{d.targetUserEmail}</span>
-                                        </button>
-                                      ) : (
-                                        <span className="text-slate-400 font-medium">All Users (Global)</span>
-                                      )}
-                                    </td>
-                                    <td className="p-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => setInspectingTargetEmail(d)}
-                                        className="font-mono text-xs font-bold text-slate-800 hover:text-teal-700 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded cursor-pointer transition"
-                                        title="Click to view redemptions audit"
-                                      >
-                                        {d.usedCount || 0} used
-                                      </button>
-                                    </td>
-                                    <td className="p-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleDiscount(d.id)}
-                                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition cursor-pointer ${
-                                          d.isActive ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                                        }`}
-                                      >
-                                        {d.isActive ? "Active" : "Disabled"}
-                                      </button>
-                                    </td>
-                                    <td className="p-3 text-right">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteDiscount(d.id)}
-                                        className="p-1 rounded text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                                        title="Revoke Discount"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
                       </div>
+
                     </div>
                   )}
 

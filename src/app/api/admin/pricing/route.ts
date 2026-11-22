@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPool } from "@/lib/admin-db";
 
+export interface ItemTaxSetting {
+  enabled: boolean; // toggle: true = GST applicable, false = No GST (0% tax)
+  gstRatePct: number; // e.g. 18, 12, 5, 0
+  gstMode?: "inclusive" | "exclusive"; // 'inclusive': price includes GST, 'exclusive': GST added on top
+}
+
 export interface GlobalPricingConfig {
   taxConfig?: {
-    enabled?: boolean; // toggle: true = GST applicable, false = No GST (0% tax)
+    enabled?: boolean; // master toggle: true = GST applicable globally, false = No GST (0% tax)
     gstMode: "inclusive" | "exclusive"; // 'inclusive': all prices include GST, 'exclusive': GST added on top
     gstRatePct: number; // e.g. 18
     sacCode: string; // e.g. "997212"
+    itemOverrides?: Record<string, ItemTaxSetting>; // individual GST options per marketplace package and SaaS module
   };
   officeMarketplace: {
     hotDeskMonthlyMin: number;
