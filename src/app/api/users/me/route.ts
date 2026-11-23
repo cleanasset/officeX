@@ -195,9 +195,7 @@ export async function GET(req: NextRequest) {
       fullName = email.split("@")[0] || "User";
     }
 
-    if ((fullName.toLowerCase() === email.split("@")[0].toLowerCase() || !fullName) && email.toLowerCase().startsWith("jiyapatel181224")) {
-      fullName = "jiya";
-    }
+
 
     const currentStoredRole = cookieHeader
       .split(";")

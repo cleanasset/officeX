@@ -221,9 +221,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if ((userName.toLowerCase() === norm.split('@')[0].toLowerCase() || !userName) && norm.toLowerCase().startsWith('jiyapatel181224')) {
-      userName = 'jiya';
-    }
+
 
     const isSuperAdmin = userRole === 'Super Administrator' || norm === 'admin@gmail.com' || norm === 'medistationlifecare@gmail.com';
     const effectiveUserId = String(supaUser?.id || userId || `usr_${Date.now()}`);

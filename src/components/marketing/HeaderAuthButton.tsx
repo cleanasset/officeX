@@ -8,7 +8,9 @@ import {
   LogOut,
   LayoutDashboard,
   ChevronDown,
-  CheckCircle2
+  CheckCircle2,
+  Building,
+  CreditCard
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -72,14 +74,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
           localStorage.getItem("officex_user_name") ||
           "";
 
-        // If email belongs to jiya and name was defaulting to email prefix, normalize to "jiya"
-        if ((!name || name.toLowerCase() === email.split("@")[0].toLowerCase() || name.toLowerCase() === "jiyapatel181224") && email.toLowerCase().startsWith("jiyapatel181224")) {
-          name = "jiya";
-          if (typeof window !== "undefined") {
-            localStorage.setItem("officex_user_name", "jiya");
-            sessionStorage.setItem("officex_user_name", "jiya");
-          }
-        }
+
 
         if (!name && email) {
           name = email.split("@")[0].replace(/[._-]/g, " ");
@@ -214,14 +209,16 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
 
   const getDashboardTarget = () => {
     const p = (pathname || "").toLowerCase();
+    const isTenant = userRole.toLowerCase().includes("tenant");
+
     if (p.includes("/operate/rent-roll") || p.includes("/properties/rent-roll") || p.includes("/properties/registry")) {
       if (isSubscribed) {
         return { href: "/properties/rent-roll", label: "Open Rent Roll Dashboard", sub: "Institutional Leases & Billing" };
       }
       return { href: "/properties/registry", label: "Open Property Registry", sub: "Properties, Units & Leases" };
     }
-    if (p.includes("/operate/visitors")) {
-      return { href: "/visitors", label: "Open Visitor Management", sub: "Digital Kiosk & QR Passes" };
+    if (p.includes("/operate/visitors") || p.includes("/visitor-compliance") || p.includes("/vc")) {
+      return { href: "/vc/dashboard", label: "Open Visitor Management", sub: "Digital Kiosk & QR Passes" };
     }
     if (p.includes("/operate/ppm")) {
       return { href: "/operate/ppm", label: "Open PPM Maintenance", sub: "52-Week MEP Maintenance" };
@@ -244,6 +241,9 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
     if (p.includes("/fm-marketplace")) {
       return { href: "/fm-marketplace", label: "Open FM Procurement Desk", sub: "RFQs, Vendor Bids & Work Orders" };
     }
+    if (isTenant) {
+      return { href: "/portal", label: "Open Tenant Workplace", sub: "Invoices, Payments & Passes" };
+    }
     return { href: "/dashboard", label: "Go to My Dashboard", sub: "Choose Your Active Workspace" };
   };
 
@@ -257,7 +257,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
   const handleProfileClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setMenuOpen(false);
-    router.push("/settings");
+    router.push("/profile");
   };
 
   if (!mounted) {
@@ -325,7 +325,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
                 );
               })()}
 
-              {/* Profile & KYC */}
+              {/* Account & Subscriptions */}
               <button
                 type="button"
                 onClick={handleProfileClick}
@@ -335,12 +335,35 @@ export default function HeaderAuthButton({ className = "", loginContext = "", re
                   <User size={13} className="stroke-[2.2]" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Profile &amp; KYC</span>
+                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Account &amp; Subscriptions</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {isSubscribed ? "Account &amp; Organization" : "Subscription Required"}
+                    All Modules, Quotas &amp; Security
                   </span>
                 </div>
               </button>
+
+              {/* Entity & SPV Settings (For Landlords, Asset Managers, Admins) */}
+              {(userRole.toLowerCase().includes("owner") ||
+                userRole.toLowerCase().includes("admin") ||
+                userRole.toLowerCase().includes("manager") ||
+                isSubscribed) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push("/settings");
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-slate-100 group-hover:bg-[#0F8B7D] text-slate-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                    <Building size={12} className="stroke-[2.2]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-700 group-hover:text-[#0F8B7D] transition-colors">Company &amp; SPV Settings</span>
+                    <span className="text-[10px] text-slate-400 font-medium">GSTIN, Invoicing &amp; Bank Rules</span>
+                  </div>
+                </button>
+              )}
             </div>
 
             {/* Sign Out */}

@@ -809,9 +809,6 @@ export default function SignInForm({
       localStorage.setItem("officex_user_role", roleName);
 
       let rawName = userNameParam || successUserName;
-      if (cleanVal.startsWith("jiyapatel181224") && (!rawName || rawName.toLowerCase() === "jiyapatel181224")) {
-        rawName = "jiya";
-      }
       if (rawName && /[a-zA-Z]/.test(rawName)) {
         localStorage.setItem("officex_user_name", rawName.trim());
         sessionStorage.setItem("officex_user_name", rawName.trim());

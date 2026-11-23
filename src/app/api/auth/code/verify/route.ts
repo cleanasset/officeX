@@ -109,11 +109,6 @@ export async function POST(request: Request) {
             }
           }
 
-          // Special resolution: if user is jiyapatel181224@gmail.com and name not properly set or equals email username, resolve to 'jiya'
-          if ((!resolvedFullName || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase()) && userEmail.toLowerCase().startsWith('jiyapatel181224')) {
-            resolvedFullName = 'jiya';
-          }
-
           const finalName = resolvedFullName || emailPrefix || 'Commercial Member';
 
           await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
@@ -126,11 +121,6 @@ export async function POST(request: Request) {
           });
           resolvedFullName = finalName;
         } else {
-          // Special resolution for new account with this email
-          if ((!resolvedFullName || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase()) && userEmail.toLowerCase().startsWith('jiyapatel181224')) {
-            resolvedFullName = 'jiya';
-          }
-
           const finalName = resolvedFullName || emailPrefix || 'Commercial Member';
 
           const { data: newAuthUser } = await supabaseAdmin.auth.admin.createUser({
@@ -153,11 +143,7 @@ export async function POST(request: Request) {
 
     // Default fallback if still unresolved
     if (!resolvedFullName || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase()) {
-      if (userEmail.toLowerCase().startsWith('jiyapatel181224')) {
-        resolvedFullName = 'jiya';
-      } else {
-        resolvedFullName = emailPrefix || 'Member';
-      }
+      resolvedFullName = emailPrefix || 'Member';
     }
 
     // Ensure Postgres user row is synced with this accurate full name
