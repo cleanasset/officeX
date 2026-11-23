@@ -83,6 +83,12 @@ export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingR
   }
 
   async function handleExecuteRun(action: "generate" | "approve" | "issue") {
+    const activeCount = (runData?.tenant_billings || []).length;
+    if (activeCount === 0) {
+      setBannerMessage("No active contracts found for billing. Please add a property, tenant, and lease contract before generating invoices.");
+      return;
+    }
+
     try {
       setExecuting(true);
       setBannerMessage(null);
@@ -174,6 +180,7 @@ export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingR
   const preChecks = runData?.pre_checks || [];
   const tenantBillings = runData?.tenant_billings || [];
   const draftInvoices = runData?.draft_invoices || [];
+  const hasActiveLeases = tenantBillings.length > 0;
 
   // Compute live summary accounting for manual adjustments in UI
   let adjustedTaxable = Number(rawSummary.total_taxable || 0);
@@ -472,8 +479,10 @@ export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingR
               ) : tenantBillings.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 space-y-2">
                   <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-                  <p className="font-semibold text-slate-700">No active contracts found for billing.</p>
-                  <p className="text-xs text-slate-400">Add contracts in Contract Registry to run monthly billing.</p>
+                  <p className="font-bold text-slate-700 text-sm">No active contracts found for billing</p>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    In commercial real estate, invoices are contract-driven. Please add a property, tenant, and active lease contract to run billing.
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -666,16 +675,18 @@ export default function BillingRunModal({ isOpen, onClose, onSuccess }: BillingR
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => handleExecuteRun("generate")}
-                disabled={executing}
-                className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold transition shadow-xs cursor-pointer"
+                disabled={executing || !hasActiveLeases}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 text-xs font-bold transition shadow-xs cursor-pointer"
+                title={!hasActiveLeases ? "No active leases to bill" : ""}
               >
                 {executing ? "Processing..." : "Regenerate Drafts"}
               </button>
 
               <button
                 onClick={() => handleExecuteRun("issue")}
-                disabled={executing}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                disabled={executing || !hasActiveLeases}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md transition cursor-pointer"
+                title={!hasActiveLeases ? "Add contracts first to generate invoices" : ""}
               >
                 <Send className="w-3.5 h-3.5" />
                 {dispatchMode === "buffer"

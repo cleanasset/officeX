@@ -118,8 +118,8 @@ export default function RentRollPricingPage() {
       a: "No. OfficeX Rent Roll is offered under a single, transparent fixed rate of ₹1 per sq.ft / month. You get 100% full access to all 39 points of canonical lease management, automated escalations, CAM pooling, GST/TDS tax accounting, and tenant self-service without feature paywalls.",
     },
     {
-      q: "How does the 100% free launch coupon work?",
-      a: "During our launch window, enter coupon code OFFICEX100 or RENTROLL12 at the subscription gate. This unlocks the entire live engine with ₹0 due and no credit card required.",
+      q: "Do you offer promotional or partner discounts?",
+      a: "Yes. If your organization has received an authorized partner promo code or enterprise voucher, you can apply it at checkout to redeem your eligible discount.",
     },
     {
       q: "What is the Multi-Client Operator add-on?",
@@ -186,7 +186,7 @@ export default function RentRollPricingPage() {
             </span>
             <span className="text-slate-300">•</span>
             <span className="flex items-center gap-1.5 text-teal-800 font-black">
-              <Sparkles size={14} className="text-[#0D7B6C]" /> Launch Offer: 100% OFF with Coupon <code className="font-mono bg-teal-100/80 text-teal-900 px-2 py-0.5 rounded-md border border-teal-300">RENTROLL12</code>
+              <Sparkles size={14} className="text-[#0D7B6C]" /> Institutional Grade · Zero Lock-In
             </span>
             <span className="text-slate-300">•</span>
             <span className="flex items-center gap-1.5 text-slate-600">

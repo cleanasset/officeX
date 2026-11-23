@@ -295,7 +295,7 @@ export default function RentRollPricingTable({
         }
       }
     } else {
-      setCouponError("Invalid coupon code. Use OFFICEX100 or RENTROLL12 for launch access.");
+      setCouponError("Invalid or expired promo code. Please check and try again.");
     }
   };
 
@@ -942,33 +942,8 @@ export default function RentRollPricingTable({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                   <Tag size={13} className="text-[#0D7B6C]" />
-                  <span>Have a Promo Voucher or Launch Code?</span>
+                  <span>Have a Promo Voucher or Coupon Code?</span>
                 </span>
-                {!appliedCoupon && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCouponInput("OFFICEX100");
-                      setAppliedCoupon("OFFICEX100");
-                      setCouponError(null);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("officex_applied_coupon", "OFFICEX100");
-                        sessionStorage.setItem("officex_applied_coupon", "OFFICEX100");
-                        localStorage.setItem("officex_subscription", "active");
-                        sessionStorage.setItem("officex_subscription", "active");
-                        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-                        if (userEmail) {
-                          localStorage.setItem(`officex_sub_${userEmail}`, "active");
-                          document.cookie = `officex_sub_${encodeURIComponent(userEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
-                        }
-                      }
-                    }}
-                    className="text-[10px] font-black text-[#0D7B6C] bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-0.5 rounded-full transition cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles size={10} />
-                    <span>Quick Apply: OFFICEX100</span>
-                  </button>
-                )}
               </div>
 
               {!appliedCoupon ? (
@@ -976,7 +951,7 @@ export default function RentRollPricingTable({
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Enter OFFICEX100 or RENTROLL12"
+                      placeholder="Enter promo or voucher code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       className="flex-1 px-3 py-2 text-xs font-mono font-bold rounded-lg border border-slate-300 bg-white text-slate-900 focus:border-[#0D7B6C] focus:ring-1 focus:ring-[#0D7B6C] outline-none uppercase"
@@ -1000,7 +975,7 @@ export default function RentRollPricingTable({
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 size={14} className="text-emerald-600" />
                     <span>
-                      Coupon <strong>{appliedCoupon}</strong> Applied: <strong>100% FREE Access Activated!</strong>
+                      Coupon <strong>{appliedCoupon}</strong> Applied: <strong>Discount Activated!</strong>
                     </span>
                   </span>
                   <button
@@ -1034,7 +1009,7 @@ export default function RentRollPricingTable({
                   ) : (
                     <>
                       <ShieldCheck size={16} />
-                      <span>Activate Free Access (₹0) &amp; Enter Dashboard</span>
+                      <span>Activate Access &amp; Enter Dashboard</span>
                       <ArrowRight size={14} />
                     </>
                   )}
@@ -1059,19 +1034,6 @@ export default function RentRollPricingTable({
                         <ArrowRight size={14} />
                       </>
                     )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCouponInput("OFFICEX100");
-                      setAppliedCoupon("OFFICEX100");
-                      setCouponError(null);
-                    }}
-                    className="w-full py-2 px-3 rounded-lg bg-teal-50/70 hover:bg-teal-100/70 border border-teal-200/70 text-[11px] font-extrabold text-[#0D7B6C] transition text-center cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Sparkles size={12} />
-                    <span>Have launch coupon? Apply OFFICEX100 for 100% Free Access</span>
                   </button>
                 </div>
               )}

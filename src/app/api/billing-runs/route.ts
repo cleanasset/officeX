@@ -160,11 +160,17 @@ export async function GET(req: Request) {
 
     // 3. Fetch active contracts to build the tenant-by-tenant billing verification grid
     // RR-01: Scoped strictly to auth.orgId
-    // RR-03: Exclude contracts whose start_date is AFTER this billing period
+    // RR-03: Exclude contracts whose start_date is AFTER this billing period or whose end_date has expired
     const contractWhere = [
       eq(contract.org_id, auth.orgId),
       sql`${contract.deleted_at} IS NULL`,
       sql`${contract.start_date} <= ${pEnd}`,
+      or(sql`${contract.end_date} IS NULL`, sql`${contract.end_date} >= ${pStart}`),
+      or(
+        eq(contract.contract_status, "active"),
+        eq(contract.contract_status, "notice_served"),
+        eq(contract.contract_status, "holding_over")
+      ),
     ];
     if (propertyId && propertyId !== "all") {
       contractWhere.push(eq(property.id, propertyId));
@@ -682,7 +688,13 @@ export async function POST(req: Request) {
         and(
           eq(contract.org_id, auth.orgId),
           sql`${contract.deleted_at} IS NULL`,
-          sql`${contract.start_date} <= ${pEnd}`
+          sql`${contract.start_date} <= ${pEnd}`,
+          or(sql`${contract.end_date} IS NULL`, sql`${contract.end_date} >= ${pStart}`),
+          or(
+            eq(contract.contract_status, "active"),
+            eq(contract.contract_status, "notice_served"),
+            eq(contract.contract_status, "holding_over")
+          )
         )
       )
       .limit(50);
@@ -828,19 +840,22 @@ export async function POST(req: Request) {
         baseRentAmt = Math.round(baseRentAmt);
       }
 
-      // RR-08: Real meter readings for utilities only (no invented defaults!)
-      const [latestReading] = await db
-        .select()
-        .from(meterReadings)
-        .where(
-          and(
-            eq(meterReadings.org_id, auth.orgId),
-            eq(meterReadings.period, period)
+      // RR-08: Real meter readings for utilities scoped to this contract's space (no cross-tenant leakage!)
+      if (c.space_id) {
+        const [latestReading] = await db
+          .select()
+          .from(meterReadings)
+          .where(
+            and(
+              eq(meterReadings.org_id, auth.orgId),
+              eq(meterReadings.period, period),
+              eq(meterReadings.space_id, c.space_id)
+            )
           )
-        )
-        .limit(1);
-      if (latestReading?.amount) {
-        utilAmt = parseFloat(latestReading.amount);
+          .limit(1);
+        if (latestReading?.amount) {
+          utilAmt = parseFloat(latestReading.amount);
+        }
       }
 
       // Check for user-specified manual adjustments / concessions for this tenant
@@ -852,7 +867,11 @@ export async function POST(req: Request) {
         // Consolidated single invoice per contract
         const invNum = `INV-${fy}-${String(invoiceSeq++).padStart(4, "0")}`;
         const subtotal = Math.max(0, baseRentAmt + camAmt + utilAmt + adjAmount);
-        const gst = Math.round(subtotal * 0.18);
+        const rentTax = Math.round(baseRentAmt * 0.18);
+        const camTax = Math.round(camAmt * 0.18);
+        const utilTax = Math.round(utilAmt * 0.18);
+        const adjTax = Math.round(adjAmount * 0.18);
+        const gst = rentTax + camTax + utilTax + adjTax;
         const gross = subtotal + gst;
 
         const [createdInv] = await db
@@ -893,7 +912,7 @@ export async function POST(req: Request) {
           rate: String(baseRentAmt),
           amount_inr: String(baseRentAmt),
           tax_rate_percent: "18.00",
-          tax_amount_inr: String(Math.round(baseRentAmt * 0.18)),
+          tax_amount_inr: String(rentTax),
           created_by: auth.userId,
           updated_by: auth.userId,
         });
@@ -908,7 +927,7 @@ export async function POST(req: Request) {
           rate: String(camAmt),
           amount_inr: String(camAmt),
           tax_rate_percent: "18.00",
-          tax_amount_inr: String(Math.round(camAmt * 0.18)),
+          tax_amount_inr: String(camTax),
           created_by: auth.userId,
           updated_by: auth.userId,
         });
@@ -923,7 +942,7 @@ export async function POST(req: Request) {
           rate: String(utilAmt),
           amount_inr: String(utilAmt),
           tax_rate_percent: "18.00",
-          tax_amount_inr: String(Math.round(utilAmt * 0.18)),
+          tax_amount_inr: String(utilTax),
           created_by: auth.userId,
           updated_by: auth.userId,
         });
@@ -939,7 +958,7 @@ export async function POST(req: Request) {
             rate: String(adjAmount),
             amount_inr: String(adjAmount),
             tax_rate_percent: "18.00",
-            tax_amount_inr: String(Math.round(adjAmount * 0.18)),
+            tax_amount_inr: String(adjTax),
             created_by: auth.userId,
             updated_by: auth.userId,
           });

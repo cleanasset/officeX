@@ -228,7 +228,7 @@ export default function SubscriptionGateModal({
                 setCouponCode(e.target.value);
                 setCouponError("");
               }}
-              placeholder="e.g. visitor001"
+              placeholder="Enter promo code"
               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 uppercase tracking-wider"
             />
             <button
