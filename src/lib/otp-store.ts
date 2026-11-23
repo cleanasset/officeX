@@ -1,4 +1,5 @@
 import { normalizeIdentifier } from '@/lib/auth-utils';
+import crypto from 'crypto';
 
 interface OtpRecord {
   code: string;
@@ -83,7 +84,7 @@ export function generateAndStoreOtp(identifier: string): {
   }
 
   // Generate cryptographically secure random 6-digit numeric OTP
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
 
   otpStore.set(cleanId, {
     code,

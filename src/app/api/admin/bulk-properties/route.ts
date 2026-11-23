@@ -3,9 +3,13 @@ import { db } from "@/db";
 import { property, client_account } from "@/db/rent-roll-schema";
 import { getCleanPrefixFromName } from "@/app/api/rent-roll/properties/generate-code/route";
 import { eq, sql } from "drizzle-orm";
+import { requireAdmin } from "@/lib/api-auth-guard";
 
 export async function POST(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const body = await request.json();
     const { properties: inputProps, orgId, simulateOnly } = body;
 

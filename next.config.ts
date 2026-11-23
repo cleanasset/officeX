@@ -1,6 +1,21 @@
 import type { NextConfig } from "next";
 
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://maps.googleapis.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  img-src 'self' blob: data: https:;
+  font-src 'self' data: https://fonts.gstatic.com;
+  frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://calendly.com;
+  connect-src 'self' https://*.supabase.co https://api.razorpay.com https://maps.googleapis.com https://*.google.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  frame-ancestors 'self';
+`.replace(/\s{2,}/g, ' ').trim();
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
@@ -14,6 +29,22 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value: cspHeader
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(self)"
+          },
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on"
+          },
+          {
+            key: "X-Permitted-Cross-Domain-Policies",
+            value: "none"
+          },
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload"

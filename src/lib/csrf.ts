@@ -58,6 +58,22 @@ export function validateCsrf(request: Request): { valid: boolean; error?: string
     }
   }
 
-  // For testing tools / server-side non-browser calls that don't supply Origin/Referer
+  // If neither Origin nor Referer is provided, check if it's a programmatic API call
+  // Standard HTML form submission without Origin/Referer in cross-site context is prevented
+  // by ensuring Sec-Fetch-Mode is not "navigate" or requiring custom header / JSON content
+  const secFetchMode = request.headers.get('sec-fetch-mode');
+  if (secFetchMode === 'navigate') {
+    return { valid: false, error: 'Direct navigation POST without Origin/Referer blocked.' };
+  }
+
+  // Require JSON or custom header for state-changing endpoints without Origin/Referer
+  const contentType = request.headers.get('content-type') || '';
+  const hasAuthHeader = Boolean(request.headers.get('authorization'));
+  const hasCustomHeader = Boolean(request.headers.get('x-user-email') || request.headers.get('x-requested-with'));
+
+  if (!contentType.includes('application/json') && !contentType.includes('multipart/form-data') && !hasAuthHeader && !hasCustomHeader) {
+    return { valid: false, error: 'Missing Origin and Referer headers on state-changing request.' };
+  }
+
   return { valid: true };
 }

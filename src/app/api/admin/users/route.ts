@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPool } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/api-auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
 
     // 1. Fetch all users from public.profiles (and union with admin_users / users)
@@ -214,6 +218,9 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
     const body = await request.json();
     const { orgId, subscriptionStatus, userId, userRole } = body;

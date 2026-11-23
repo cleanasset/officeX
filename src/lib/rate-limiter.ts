@@ -38,6 +38,15 @@ function readRateLimitsFromDisk(): Map<string, RateLimitEntry> {
   return map;
 }
 
+let saveTimeout: NodeJS.Timeout | null = null;
+function schedulePersist(map: Map<string, RateLimitEntry>) {
+  if (saveTimeout) return;
+  saveTimeout = setTimeout(() => {
+    saveTimeout = null;
+    persistRateLimitsToDisk(map);
+  }, 2000);
+}
+
 function persistRateLimitsToDisk(map: Map<string, RateLimitEntry>) {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -81,7 +90,7 @@ export function checkRateLimit(
   if (!entry || entry.resetAt < now) {
     entry = { count: 1, resetAt: now + windowMs };
     memoryStore.set(key, entry);
-    persistRateLimitsToDisk(memoryStore);
+    schedulePersist(memoryStore);
     return { allowed: true, remaining: maxRequests - 1, retryAfterSeconds: 0 };
   }
 
@@ -92,7 +101,7 @@ export function checkRateLimit(
 
   entry.count += 1;
   memoryStore.set(key, entry);
-  persistRateLimitsToDisk(memoryStore);
+  schedulePersist(memoryStore);
 
   return {
     allowed: true,

@@ -10,11 +10,15 @@ export function getAdminPool(): Pool {
     ? rawUrl.replace("officeX@18129001", "officeX%4018129001")
     : rawUrl;
 
+  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === "true";
+
   const adminPool = new Pool({
     connectionString: connStr,
-    ssl: {
-      rejectUnauthorized: false
-    },
+    ssl: connStr.includes("localhost") || connStr.includes("127.0.0.1")
+      ? false
+      : {
+          rejectUnauthorized: rejectUnauthorized,
+        },
     max: 2,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 5000

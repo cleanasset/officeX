@@ -20,8 +20,8 @@ import {
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +66,7 @@ export default function AdminLoginPage() {
     }
   };
 
-  const fillDefaultCredentials = () => {
-    setEmail("admin@gmail.com");
-    setPassword("admin123");
-    setError(null);
-  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -147,7 +143,6 @@ export default function AdminLoginPage() {
                 <label className="block text-xs font-bold text-slate-300">
                   Password
                 </label>
-                <span className="text-[10px] text-teal-400 font-mono">admin123</span>
               </div>
               <div className="relative">
                 <input
@@ -155,7 +150,7 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="admin123"
+                  placeholder="Enter admin password"
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-medium text-xs focus:border-teal-400 outline-none transition placeholder:text-slate-600"
                 />
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -168,16 +163,6 @@ export default function AdminLoginPage() {
                 </button>
               </div>
             </div>
-
-            {/* Quick Fill Preset Button */}
-            <button
-              type="button"
-              onClick={fillDefaultCredentials}
-              className="w-full py-2 px-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-teal-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              <Zap size={13} className="text-teal-400" />
-              <span>Use Admin Credentials (`admin@gmail.com` / `admin123`)</span>
-            </button>
 
             <button
               type="submit"

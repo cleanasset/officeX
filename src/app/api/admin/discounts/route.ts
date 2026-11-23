@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPool } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/api-auth-guard";
 
 export interface DiscountItem {
   id: string;
@@ -54,6 +55,9 @@ const DEFAULT_DISCOUNTS: DiscountItem[] = [
 
 export async function GET(req: NextRequest) {
   try {
+    const guard = requireAdmin(req);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
     await pool.query(`
       CREATE TABLE IF NOT EXISTS system_kv_store (
@@ -92,6 +96,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const guard = requireAdmin(req);
+    if (guard.error) return guard.error;
+
     const body = await req.json();
     const { action, discount, id, discounts: updatedList } = body;
     const pool = getAdminPool();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { property, building, space } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { requireAdmin } from "@/lib/api-auth-guard";
 
 // Memory & DB change requests store
 let memoryChangeRequests: Array<{
@@ -19,6 +20,9 @@ let memoryChangeRequests: Array<{
 
 export async function GET(req: Request) {
   try {
+    const guard = requireAdmin(req);
+    if (guard.error) return guard.error;
+
     return NextResponse.json({
       success: true,
       data: memoryChangeRequests,
@@ -31,6 +35,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const guard = requireAdmin(req);
+    if (guard.error) return guard.error;
+
     const body = await req.json();
     const newRequest = {
       id: `CR-${Date.now()}`,

@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getDeterministicUserId } from '@/lib/rent-roll/ensure-org';
+import { hashPassword, verifyPassword } from '@/lib/password-utils';
 
 export const revalidate = 0;
 
@@ -49,16 +50,17 @@ export async function POST(request: Request) {
     let userId = `user_${Date.now()}`;
 
     // Master Sovereign Admin authentication check
+    const configuredAdminPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || 'admin123';
     const isMasterAdminLogin =
-      (norm === 'admin@gmail.com' && (password === 'admin123' || password === 'admin001')) ||
-      (norm === 'medistationlifecare@gmail.com' && (password === 'admin123' || password === 'admin001'));
+      (norm === 'admin@gmail.com' || norm === 'medistationlifecare@gmail.com') &&
+      (password === configuredAdminPass || password === 'admin123' || password === 'admin001');
 
     if (isMasterAdminLogin) {
       userRole = 'Super Administrator';
       userName = norm === 'admin@gmail.com' ? 'OfficeX Super Administrator' : 'Medistn Tech (Master Admin)';
       userId = getDeterministicUserId(norm);
 
-      // Ensure user row exists in postgres
+      // Ensure user row exists in postgres with bcrypt hashed password
       try {
         const dbUsers = await db
           .select()
@@ -67,15 +69,21 @@ export async function POST(request: Request) {
           .limit(1);
 
         if (dbUsers.length === 0) {
+          const hashedPassword = await hashPassword(password);
           await db.insert(users).values({
             id: userId as any,
             email: norm.toLowerCase().trim(),
             fullName: userName,
-            passwordHash: password,
+            passwordHash: hashedPassword,
             role: 'super_admin'
           });
         } else {
           userId = dbUsers[0].id;
+          // Auto upgrade to bcrypt if plain text
+          if (dbUsers[0].passwordHash && !dbUsers[0].passwordHash.startsWith('$2')) {
+            const hashedPassword = await hashPassword(password);
+            await db.update(users).set({ passwordHash: hashedPassword }).where(eq(users.id, dbUsers[0].id));
+          }
         }
       } catch (err) {
         console.warn('Admin user auto-seed notice:', err);
@@ -123,13 +131,22 @@ export async function POST(request: Request) {
           if (
             dbUser.passwordHash &&
             dbUser.passwordHash !== 'SUPABASE_AUTH_MANAGED' &&
-            dbUser.passwordHash !== 'INVITED_DELEGATION' &&
-            dbUser.passwordHash !== password
+            dbUser.passwordHash !== 'INVITED_DELEGATION'
           ) {
-            return NextResponse.json(
-              { error: 'Incorrect password. Please verify your credentials or click "Forgot password" to reset.' },
-              { status: 401 }
-            );
+            const isMatch = await verifyPassword(password, dbUser.passwordHash);
+            if (!isMatch) {
+              return NextResponse.json(
+                { error: 'Incorrect password. Please verify your credentials or click "Forgot password" to reset.' },
+                { status: 401 }
+              );
+            }
+            // Upgrade legacy plain text password to bcrypt
+            if (!dbUser.passwordHash.startsWith('$2')) {
+              try {
+                const newHash = await hashPassword(password);
+                await db.update(users).set({ passwordHash: newHash }).where(eq(users.id, dbUser.id));
+              } catch {}
+            }
           } else if (dbUser.passwordHash === 'SUPABASE_AUTH_MANAGED') {
             return NextResponse.json(
               { error: 'Incorrect password. If you cannot remember your password, please click "Email me a one-time sign-in code instead" or "Forgot password".' },

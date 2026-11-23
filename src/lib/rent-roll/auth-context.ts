@@ -278,26 +278,35 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     orgId = decodeURIComponent(orgCookie.split("=")[1].trim());
   }
 
-  // Check URL query params if present
+  // Check URL query params if present (safe filters only, not role escalation)
   try {
     const url = new URL(req.url);
     if (url.searchParams.get("org_id")) orgId = url.searchParams.get("org_id")!;
     if (url.searchParams.get("client_account_id")) clientAccountId = url.searchParams.get("client_account_id")!;
     if (url.searchParams.get("user_id")) userId = url.searchParams.get("user_id")!;
-    if (url.searchParams.get("role")) role = url.searchParams.get("role") as SpecRoleKey;
-    if (!userEmail && url.searchParams.get("user_email")) {
-      userEmail = url.searchParams.get("user_email")!.toLowerCase().trim();
+    
+    // Only allow query param role switching if user has verified admin session
+    const reqAuthCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
+    const reqAdminCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_admin=1") || c.trim().startsWith("officex_role=super_admin"));
+    const requestedRole = url.searchParams.get("role");
+    if (requestedRole && reqAuthCookie && reqAdminCookie) {
+      role = requestedRole as SpecRoleKey;
     }
   } catch (e) {
     // ignore
   }
 
+  const authCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
+  const hasAuthHeader = Boolean(headers.get("authorization"));
+  const authenticated = Boolean(hasAuthHeader || (authCookie && userEmail && userEmail.includes("@")));
+
   const isMasterAdmin =
-    role === "super_admin" ||
-    role === "org_admin" ||
-    userEmail === "admin@gmail.com" ||
-    userEmail === "medistationlifecare@gmail.com" ||
-    userEmail === "admin@officex.pro";
+    authenticated &&
+    (role === "super_admin" ||
+     role === "org_admin" ||
+     userEmail === "admin@gmail.com" ||
+     userEmail === "medistationlifecare@gmail.com" ||
+     userEmail === "admin@officex.pro");
 
   // If user is authenticated with an email, isolate data per user email (unless master admin accessing portfolio)
   if (userEmail) {
@@ -331,10 +340,6 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     "asset_manager",
   ].includes(role);
 
-  const authCookie = cookieHeader.split(";").some(c => c.trim().startsWith("officex_auth=1") || c.trim().startsWith("officex_session_active=1"));
-  const hasAuthHeader = Boolean(headers.get("authorization"));
-  const authenticated = Boolean(hasAuthHeader || (authCookie && userEmail && userEmail.includes("@")));
-
   return {
     orgId,
     clientAccountId: isPortfolioRole && clientAccountId === "all" ? null : clientAccountId,
@@ -343,6 +348,6 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     isPortfolioRole,
     userEmail,
     isAuthenticated: authenticated,
-    isSuperAdmin: isMasterAdmin && authenticated,
+    isSuperAdmin: isMasterAdmin,
   };
 }

@@ -29,15 +29,15 @@ function PortalLayoutContent({
         ""
       ).toLowerCase().trim();
 
+      const isAuthActive = getAuthCookie("officex_session_active") === "1" || getAuthCookie("officex_auth") === "1";
       const isAdminCookie = getAuthCookie("officex_admin") === "1";
-      const isAdminLocal = localStorage.getItem("officex_admin") === "1" || sessionStorage.getItem("officex_admin") === "1";
-      const isSuperAdminRole = localStorage.getItem("officex_role") === "super_admin" || getAuthCookie("officex_role") === "super_admin";
+      const isSuperAdminRole = getAuthCookie("officex_role") === "super_admin";
 
       const isPermittedAdminEmail =
         email === "admin@gmail.com" ||
         email === "medistationlifecare@gmail.com";
 
-      if ((isAdminCookie || isAdminLocal || isSuperAdminRole) && isPermittedAdminEmail) {
+      if (isAuthActive && (isAdminCookie || isSuperAdminRole) && isPermittedAdminEmail) {
         setIsAuthorized(true);
       } else {
         setIsAuthorized(false);

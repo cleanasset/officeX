@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPool } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/api-auth-guard";
 
 // Core tables categorization for clean UI grouping
 export const TABLE_CATEGORIES: Record<string, string[]> = {
@@ -94,6 +95,9 @@ export const TABLE_CATEGORIES: Record<string, string[]> = {
 
 export async function GET(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
@@ -272,6 +276,9 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
     const body = await request.json();
     const { table, id, primaryKeyCol = "id", data } = body;
@@ -364,6 +371,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const guard = requireAdmin(request);
+    if (guard.error) return guard.error;
+
     const pool = getAdminPool();
     const body = await request.json();
     const { table, id, primaryKeyCol = "id" } = body;
