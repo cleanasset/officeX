@@ -287,10 +287,10 @@ export async function GET(req: NextRequest) {
     // 3. Fallback to verified commercial SPV bank details so account numbers are never blank
     const defaultAcct = "50200084920193";
     const defaultIfsc = "HDFC0000060";
-    const defaultSpv = "Panchshil Realty Infrastructure Ltd";
+    const defaultSpv = "Commercial Property Landlord SPV";
     const defaultBank = "HDFC Bank Limited";
-    const defaultBranch = "Knowledge Park Commercial Branch, Pune";
-    const defaultUpi = "panchshil.escrow@hdfcbank";
+    const defaultBranch = "Commercial Corporate Branch";
+    const defaultUpi = "landlord.escrow@hdfcbank";
 
     return NextResponse.json({
       success: true,

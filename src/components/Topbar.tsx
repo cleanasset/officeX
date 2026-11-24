@@ -70,6 +70,7 @@ export default function Topbar() {
   // Notification Drawer State - Real notifications only, zero synthetic mocks
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const lastNotificationFetchRef = useRef<number>(0);
   const [notifications, setNotifications] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -192,7 +193,12 @@ export default function Topbar() {
   }, [searchQuery]);
 
   // Fetch live notifications from API and sync with local event bus
-  const fetchLiveNotifications = async () => {
+  const fetchLiveNotifications = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastNotificationFetchRef.current < 15000) {
+      return; // Throttle: don't hammer the API more than once every 15s on rapid window focus
+    }
+    lastNotificationFetchRef.current = now;
     try {
       const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/notifications", { headers: authHeaders }).catch(() => null);

@@ -85,12 +85,12 @@ function TenantInvoicesContent() {
   const [netBankingModalOpen, setNetBankingModalOpen] = useState(false);
   const [gatewayNotConnectedModalOpen, setGatewayNotConnectedModalOpen] = useState(false);
   const [landlordBankDetails, setLandlordBankDetails] = useState<any>({
-    name: "Panchshil Realty Infrastructure Ltd",
+    name: "Commercial Property Landlord SPV",
     bankName: "HDFC Bank Limited",
     bankAccountNumber: "50200084920193",
     bankIfscCode: "HDFC0000060",
-    bankBranch: "Knowledge Park Commercial Branch, Pune",
-    upiId: "panchshil.escrow@hdfcbank",
+    bankBranch: "Commercial Corporate Branch",
+    upiId: "landlord.escrow@hdfcbank",
   });
   const [utrNumber, setUtrNumber] = useState("");
   const [remittingBank, setRemittingBank] = useState("");
@@ -376,11 +376,11 @@ function TenantInvoicesContent() {
         const acct = bd?.bankAccountNumber || bd?.account_number || bd?.bank_account_number;
         if (acct) {
           setLandlordBankDetails({
-            name: bd.name || bd.spv_name || bd.legal_name || "Panchshil Realty Infrastructure Ltd",
+            name: bd.name || bd.spv_name || bd.legal_name || "Commercial Property Landlord SPV",
             bankName: bd.bankName || bd.bank_name || "HDFC Bank Limited",
             bankAccountNumber: acct,
             bankIfscCode: bd.bankIfscCode || bd.ifsc_code || bd.bank_ifsc || "HDFC0000060",
-            bankBranch: bd.bankBranch || bd.branch || "Knowledge Park Commercial Branch, Pune",
+            bankBranch: bd.bankBranch || bd.branch || "Commercial Corporate Branch",
             upiId: bd.upiId || bd.upi_id || `oxpay.${String(acct).slice(-4)}@hdfcbank`,
           });
           return;
@@ -399,32 +399,32 @@ function TenantInvoicesContent() {
 
       if (storedBankAcc && storedBankIfsc) {
         setLandlordBankDetails({
-          name: storedSpv || "Panchshil Realty Infrastructure Ltd",
+          name: storedSpv || "Commercial Property Landlord SPV",
           bankName: storedBankName || "HDFC Bank Limited",
           bankAccountNumber: storedBankAcc,
           bankIfscCode: storedBankIfsc,
           bankBranch:
             typeof window !== "undefined"
-              ? localStorage.getItem("officex_bank_branch") || "Knowledge Park Commercial Branch, Pune"
-              : "Knowledge Park Commercial Branch, Pune",
+              ? localStorage.getItem("officex_bank_branch") || "Commercial Corporate Branch"
+              : "Commercial Corporate Branch",
         });
       } else {
         setLandlordBankDetails({
-          name: "Panchshil Realty Infrastructure Ltd",
+          name: "Commercial Property Landlord SPV",
           bankName: "HDFC Bank Limited",
           bankAccountNumber: "50200084920193",
           bankIfscCode: "HDFC0000060",
-          bankBranch: "Knowledge Park Commercial Branch, Pune",
+          bankBranch: "Commercial Corporate Branch",
         });
       }
     } catch (e) {
       console.error("Failed to load landlord bank details:", e);
       setLandlordBankDetails({
-        name: "Panchshil Realty Infrastructure Ltd",
+        name: "Commercial Property Landlord SPV",
         bankName: "HDFC Bank Limited",
         bankAccountNumber: "50200084920193",
         bankIfscCode: "HDFC0000060",
-        bankBranch: "Knowledge Park Commercial Branch, Pune",
+        bankBranch: "Commercial Corporate Branch",
       });
     }
   }

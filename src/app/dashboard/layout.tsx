@@ -14,24 +14,14 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isVerifying, setIsVerifying] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const email =
-      getClientUserEmail() ||
-      getAuthCookie("officex_user_email") ||
-      localStorage.getItem("officex_user_email") ||
-      sessionStorage.getItem("officex_user_email");
-    const sessionActive =
-      getAuthCookie("officex_session_active") === "1" ||
-      localStorage.getItem("officex_session_active") === "1" ||
-      localStorage.getItem("officex_onboarding_completed") === "1";
-    return !(email || sessionActive);
-  });
+  const [mounted, setMounted] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   // The top-level Workspace Hub (/dashboard) is the sovereign launchpad for all users.
   const isWorkspaceHub = pathname === "/dashboard";
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       const email =
         getClientUserEmail() ||
@@ -88,7 +78,7 @@ export default function DashboardLayout({
     return <>{children}</>;
   }
 
-  if (isVerifying) {
+  if (!mounted || isVerifying) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
