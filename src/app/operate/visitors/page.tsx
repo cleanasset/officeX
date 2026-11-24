@@ -32,6 +32,45 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import VisitorManagementConsole from "@/components/visitor/VisitorManagementConsole";
 import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
 
+const DEFAULT_VISITS = [
+  {
+    id: "vis-1",
+    visitorName: "Rajesh Sharma",
+    passId: "PASS-7701",
+    company: "Tata Consultancy",
+    hostName: "Vikram Malhotra (Floor 14)",
+    status: "checked_in",
+    zone: "Tower A · Optical Speed-Gate 2"
+  },
+  {
+    id: "vis-2",
+    visitorName: "Priya Nair",
+    passId: "PASS-7702",
+    company: "McKinsey & Co",
+    hostName: "Ananya Iyer (Floor 9)",
+    status: "checked_in",
+    zone: "Executive Lobby · Turnstile 1"
+  },
+  {
+    id: "vis-3",
+    visitorName: "Amit Patel",
+    passId: "PASS-7703",
+    company: "Schindler Technical",
+    hostName: "Sunil Verma (FM Head)",
+    status: "checked_in",
+    zone: "Service Core · Turnstile 4"
+  },
+  {
+    id: "vis-4",
+    visitorName: "Rohan Kapoor",
+    passId: "PASS-7704",
+    company: "Goldman Sachs",
+    hostName: "Kavita Rao (Floor 18)",
+    status: "overstay",
+    zone: "Tower B · Turnstile 3"
+  }
+];
+
 export default function VisitorsProductPage() {
   // Default viewMode MUST BE overview (the landing page showcase), just like rent-roll
   const [viewMode, setViewMode] = useState<"workspace" | "overview">("overview");
@@ -42,9 +81,9 @@ export default function VisitorsProductPage() {
   const [subGateOpen, setSubGateOpen] = useState(false);
   const [pendingModule, setPendingModule] = useState<"visitors" | "compliance">("visitors");
 
-  // Live telemetry for preview card
-  const [liveVisits, setLiveVisits] = useState<any[]>([]);
-  const [loadingVisits, setLoadingVisits] = useState(true);
+  // Live telemetry for preview card with instant high-fidelity fallback
+  const [liveVisits, setLiveVisits] = useState<any[]>(DEFAULT_VISITS);
+  const [loadingVisits, setLoadingVisits] = useState(false);
 
   useEffect(() => {
     // 1. Check local storage / cookies for active subscription
@@ -76,11 +115,21 @@ export default function VisitorsProductPage() {
 
     async function loadTelemetry() {
       try {
-        const res = await fetch("/api/v1/visits");
+        const res = await fetch("/api/vc/visitors");
         if (res.ok) {
           const data = await res.json();
-          if (data.visits && data.visits.length > 0) {
-            setLiveVisits(data.visits.slice(0, 4));
+          if (data.visitors && data.visitors.length > 0) {
+            setLiveVisits(
+              data.visitors.slice(0, 4).map((v: any) => ({
+                id: v.id,
+                visitorName: v.full_name || v.visitor_name,
+                passId: v.pass_code || `PASS-${v.id.slice(0, 4).toUpperCase()}`,
+                company: v.company_name || "Enterprise Guest",
+                hostName: v.host_name ? `${v.host_name} (${v.host_department || "Tenant"})` : "Facility Host",
+                status: v.status || "checked_in",
+                zone: v.access_zone || "Main Lobby Speed-Gate",
+              }))
+            );
           }
         }
       } catch (err) {
@@ -152,45 +201,40 @@ export default function VisitorsProductPage() {
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
       <MarketingHeader activePath="/operate" />
 
-      {/* ── Breadcrumb & Top Mode Switcher Bar ── */}
+      {/* ── Top Navigation & Enterprise Module Switcher Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium flex-wrap">
-            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">SaaS Flow:</span>
-            <Link href="/visitor-compliance" className="text-[#0D7B6C] font-semibold hover:underline">
-              1. Landing Page
+          {/* Breadcrumb & Live Gate Telemetry Status */}
+          <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
+            <Link href="/operate" className="text-slate-500 hover:text-slate-800 transition-colors">
+              Operate
             </Link>
-            <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/operate/pricing?mode=standalone&module=visitor" className="text-[#0D7B6C] font-semibold hover:underline">
-              2. Subscription (₹4,999/mo)
-            </Link>
-            <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/vc/dashboard" className="text-slate-800 font-bold hover:underline">
-              3. Sovereign Command Center
-            </Link>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-900 font-bold">Visitor Management</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200 ml-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Speed-Gates Active
+            </span>
           </div>
 
-          {/* Unified SaaS Mode Switcher Bar */}
+          {/* Module Switcher & Console Launch */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Active: Visitor Flow Lens */}
-            <Link
-              href="/operate/visitors"
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0D7B6C] text-white shadow-xs"
-            >
-              <Sparkles size={13} />
-              <span>⚡ Visitor Flow (VC-01..15)</span>
-            </Link>
+            {/* Active: Visitor Management */}
+            <span className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0D7B6C] text-white shadow-xs">
+              <Users size={13} />
+              <span>Visitor Management</span>
+            </span>
 
-            {/* Switch to Compliance Lens */}
+            {/* Switch to Statutory Compliance */}
             <Link
               href="/operate/compliance"
               className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 border border-slate-200"
             >
               <ShieldCheck size={13} />
-              <span>🛡️ Statutory Compliance (CM-01..16)</span>
+              <span>Statutory Compliance</span>
             </Link>
 
-            {/* Spec / Architecture Toggle */}
+            {/* Interactive Workspace Toggle */}
             <button
               type="button"
               onClick={() => {
@@ -200,34 +244,18 @@ export default function VisitorsProductPage() {
                   handleOpenWorkspace("visitors");
                 }
               }}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
             >
               <Layers size={13} />
-              <span>{viewMode === "workspace" ? "📖 Spec & Architecture" : "⚡ Back to Live Console"}</span>
-            </button>
-
-            {/* Launch Full Sovereign Command Center */}
-            <button
-              type="button"
-              onClick={() => {
-                if (isSubscribed) {
-                  window.location.href = "/vc/dashboard?mode=visitor";
-                } else {
-                  setSubGateOpen(true);
-                }
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-900 text-cyan-300 hover:bg-slate-800 shadow-xs border border-slate-800 cursor-pointer"
-            >
-              <ExternalLink size={12} />
-              <span>Launch 31-Screen Center</span>
+              <span>{viewMode === "workspace" ? "Overview & Features" : "Live Speed-Gate Console"}</span>
             </button>
 
             {/* Pricing Link */}
             <Link
               href="/operate/pricing?mode=standalone&module=visitor"
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
             >
-              <span>View Visitor Pricing →</span>
+              <span>Pricing →</span>
             </Link>
           </div>
         </div>
@@ -260,7 +288,7 @@ export default function VisitorsProductPage() {
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/25 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Sparkles size={16} />
-                  <span>Activate License (100% Free with visitor001)</span>
+                  <span>Activate Enterprise License</span>
                 </button>
                 <button
                   type="button"
@@ -273,44 +301,9 @@ export default function VisitorsProductPage() {
             </div>
           ) : (
             <>
-              {/* Architecture Clarification Callout Banner */}
-              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-slate-50 to-emerald-50 border border-teal-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5 text-slate-800">
-                  <div className="w-8 h-8 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 flex items-center gap-2">
-                      <span>One SaaS, Two Coordinated Lenses: Visitor Flow &amp; Statutory Compliance</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-100 text-[#0D7B6C] font-extrabold">ONE CORE PLATFORM</span>
-                    </div>
-                    <div className="text-slate-500 text-[11px] mt-0.5">
-                      Front-desk turnstiles and building statutory NOCs share canonical properties, tenants, and contractor permits.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
-                  <Link
-                    href="/operate/compliance"
-                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#0D7B6C]" />
-                    <span>Switch to Compliance Lens &rarr;</span>
-                  </Link>
-                  <Link
-                    href="/vc/dashboard"
-                    className="px-3.5 py-1.5 rounded-xl bg-[#0D7B6C] text-white font-bold hover:bg-[#0A6357] transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center gap-1.5"
-                  >
-                    <span>Open All-In-One Hub</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-
               <VisitorManagementConsole
                 portalRole="security"
                 defaultProperty="Devasya Gold - Commercial Tower"
-                initialModule={activeWorkspaceModule}
               />
             </>
           )}
@@ -331,7 +324,7 @@ export default function VisitorsProductPage() {
                 <div className="lg:col-span-6 flex flex-col items-start text-left">
                   <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 sm:mb-5 shadow-2xs">
                     <Users size={15} className="text-[#0D7B6C]" />
-                    <span>OFFICEX · VISITOR &amp; STATUTORY COMPLIANCE SAAS</span>
+                    <span>OFFICEX · VISITOR ACCESS PLATFORM</span>
                   </div>
 
                   <h1 className="text-3xl sm:text-5xl lg:text-[46px] font-extrabold tracking-tight text-[#0F172A] leading-[1.14] mb-4">
@@ -342,7 +335,7 @@ export default function VisitorsProductPage() {
                   </h1>
 
                   <p className="text-base sm:text-lg text-slate-600 leading-relaxed mb-8 max-w-xl">
-                    Deliver an executive lobby arrival experience. Eliminate reception queues with instant WhatsApp QR passes, optical turnstile gate relays, statutory compliance tracking, and real-time campus security.
+                    Deliver an executive lobby arrival experience. Eliminate reception queues with instant WhatsApp QR passes, optical turnstile gate relays, host arrival alerts, and real-time campus security.
                   </p>
 
                   <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
@@ -352,16 +345,16 @@ export default function VisitorsProductPage() {
                       className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                     >
                       {isSubscribed ? <Sparkles size={16} /> : <Lock size={16} />}
-                      <span>{isSubscribed ? "Open Live Visitor Console" : "Get Started · Subscribe (visitor001 Free)"}</span>
+                      <span>{isSubscribed ? "Open Live Visitor Console" : "Start 14-Day Free Trial"}</span>
                       <ArrowRight size={15} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleOpenWorkspace("compliance")}
+                      onClick={() => handleOpenWorkspace("visitors")}
                       className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                     >
-                      <ShieldCheck size={15} className="text-[#0D7B6C]" />
-                      <span>Statutory Compliance Radar</span>
+                      <Sparkles size={15} className="text-[#0D7B6C]" />
+                      <span>Interactive Gate Demo</span>
                     </button>
                     <Link
                       href="/operate/pricing?mode=standalone&module=visitor"
@@ -376,6 +369,7 @@ export default function VisitorsProductPage() {
                     <span className="flex items-center gap-1.5"><Clock size={15} className="text-[#0D7B6C]" /> 18-Sec Transit</span>
                     <span className="flex items-center gap-1.5"><QrCode size={15} className="text-[#0D7B6C]" /> WhatsApp Passes</span>
                     <span className="flex items-center gap-1.5"><ShieldCheck size={15} className="text-[#0D7B6C]" /> Turnstile Relay</span>
+                    <span className="flex items-center gap-1.5"><BellRing size={15} className="text-[#0D7B6C]" /> Host Instant Alerts</span>
                   </div>
                 </div>
 
@@ -527,7 +521,7 @@ export default function VisitorsProductPage() {
                 Transform Your Lobby with 18-Second Touchless Transit
               </h2>
               <p className="text-sm sm:text-base text-teal-50 mb-8 font-medium max-w-xl mx-auto leading-relaxed">
-                Eliminate reception logbooks and queues today. Experience the live institutional visitor and compliance system now.
+                Eliminate reception logbooks and queues today. Experience the live institutional visitor access platform now.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3.5">
                 <button
@@ -536,7 +530,7 @@ export default function VisitorsProductPage() {
                   className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
                 >
                   {isSubscribed ? <Sparkles size={16} /> : <Lock size={16} />}
-                  <span>{isSubscribed ? "Open Live Interactive Workspace" : "Subscribe to Enter Workspace (visitor001 Free)"}</span>
+                  <span>{isSubscribed ? "Open Live Interactive Workspace" : "Start 14-Day Free Trial"}</span>
                 </button>
                 <button
                   type="button"

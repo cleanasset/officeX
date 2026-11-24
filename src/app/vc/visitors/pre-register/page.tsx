@@ -17,10 +17,16 @@ import {
   Copy,
   Printer,
   ChevronLeft,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function VisitorPreRegistrationPage() {
   const router = useRouter();
+
+  // Dynamic default dates
+  const today = new Date().toISOString().split("T")[0];
+  const defaultHour = String(new Date().getHours() + 1).padStart(2, "0") + ":00";
 
   // Form state
   const [visitorName, setVisitorName] = useState("");
@@ -28,45 +34,78 @@ export default function VisitorPreRegistrationPage() {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [visitorType, setVisitorType] = useState("guest");
-  const [hostName, setHostName] = useState("Arun Jaitley (Director)");
-  const [tenantName, setTenantName] = useState("TechCorp Solutions Ltd");
-  const [purpose, setPurpose] = useState("Commercial Advisory Review");
-  const [visitDate, setVisitDate] = useState("2026-10-26");
-  const [visitTime, setVisitTime] = useState("10:00");
+  const [hostName, setHostName] = useState("");
+  const [tenantName, setTenantName] = useState("");
+  const [purpose, setPurpose] = useState("Business Meeting");
+  const [visitDate, setVisitDate] = useState(today);
+  const [visitTime, setVisitTime] = useState(defaultHour);
   const [vehicleNo, setVehicleNo] = useState("");
   const [zone, setZone] = useState("Floor 8 East Wing");
   const [specialInstructions, setSpecialInstructions] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [createdPass, setCreatedPass] = useState<{
     passNumber: string;
     qrToken: string;
     visitorName: string;
     hostName: string;
     validDate: string;
+    approvalStatus: string;
+    isWatchlisted: boolean;
   } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMsg("");
 
     try {
-      // Generate simulated pass
-      const passNum = `PASS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const qrToken = `QR_${visitorType.toUpperCase()}_${passNum}`;
+      const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+      const startDateTime = new Date(`${visitDate}T${visitTime}:00`);
+      const endDateTime = new Date(startDateTime.getTime() + 4 * 60 * 60 * 1000); // 4 hours validity
 
-      setTimeout(() => {
-        setCreatedPass({
-          passNumber: passNum,
-          qrToken,
-          visitorName,
-          hostName,
-          validDate: `${visitDate} at ${visitTime}`,
-        });
+      const res = await fetch("/api/vc/visitors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId: org,
+          name: visitorName,
+          company,
+          mobile,
+          email,
+          visitorType,
+          hostName: hostName || "Reception Desk",
+          tenantName: tenantName || "OfficeX Facility",
+          purpose,
+          visitStart: startDateTime.toISOString(),
+          visitEnd: endDateTime.toISOString(),
+          floor: zone,
+          vehicleReg: vehicleNo || undefined,
+          specialInstructions,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setErrorMsg(json.message || "Failed to create visitor pass");
         setIsSubmitting(false);
-      }, 700);
-    } catch (err) {
-      console.error(err);
+        return;
+      }
+
+      setCreatedPass({
+        passNumber: json.data.passNumber,
+        qrToken: json.data.qrToken,
+        visitorName,
+        hostName: hostName || "Reception Desk",
+        validDate: `${visitDate} at ${visitTime}`,
+        approvalStatus: json.data.approvalStatus,
+        isWatchlisted: json.data.isWatchlisted,
+      });
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setErrorMsg("Network error creating pre-registration pass");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -96,6 +135,13 @@ export default function VisitorPreRegistrationPage() {
         </Link>
       </div>
 
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       {!createdPass ? (
         <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
           {/* Section 1: Guest Identity */}
@@ -122,12 +168,11 @@ export default function VisitorPreRegistrationPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Organization / Company *
+                  Organization / Company
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Bain & Company"
+                  placeholder="e.g. Bain & Company or Individual"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -136,7 +181,7 @@ export default function VisitorPreRegistrationPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Mobile Number (for SMS QR Link) *
+                  Mobile Number (for WhatsApp / SMS Pass) *
                 </label>
                 <input
                   type="tel"
@@ -154,7 +199,7 @@ export default function VisitorPreRegistrationPage() {
                 </label>
                 <input
                   type="email"
-                  placeholder="shalini@bain.com"
+                  placeholder="shalini@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -203,11 +248,12 @@ export default function VisitorPreRegistrationPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Host Person *
+                  Host Person / Employee *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="e.g. Arun Jaitley (Director)"
                   value={hostName}
                   onChange={(e) => setHostName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -216,11 +262,12 @@ export default function VisitorPreRegistrationPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Tenant Company *
+                  Tenant / Organization *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="e.g. TechCorp Solutions Ltd"
                   value={tenantName}
                   onChange={(e) => setTenantName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -296,16 +343,19 @@ export default function VisitorPreRegistrationPage() {
           <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Automatic watchlist screening will be conducted</span>
+              <span>Real-time watchlist & tenant verification applied</span>
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-lg shadow-blue-600/30"
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-lg shadow-blue-600/30 disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Generating Digital QR Pass...</span>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Issuing Pass to Database...</span>
+                </>
               ) : (
                 <>
                   <span>Create Pre-Registration Pass</span>
@@ -323,9 +373,9 @@ export default function VisitorPreRegistrationPage() {
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-2xl font-black text-white">Digital Pass Issued Successfully!</h2>
+            <h2 className="text-2xl font-black text-white">Digital Pass Issued in Live Database!</h2>
             <p className="text-xs text-slate-400">
-              Invitation QR link has been dispatched to {mobile || email}.
+              Pass record saved. Pass reference ready for turnstile verification.
             </p>
           </div>
 
@@ -333,8 +383,10 @@ export default function VisitorPreRegistrationPage() {
           <div className="max-w-sm mx-auto p-6 rounded-2xl bg-slate-950 border border-slate-800 shadow-xl space-y-4 text-left">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <span className="text-xs font-mono font-bold text-blue-400">{createdPass.passNumber}</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded">
-                PRE-APPROVED
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                createdPass.isWatchlisted ? "bg-red-500/20 text-red-400" : "bg-emerald-500/20 text-emerald-400"
+              }`}>
+                {createdPass.isWatchlisted ? "WATCHLIST RESTRICTED" : createdPass.approvalStatus.toUpperCase()}
               </span>
             </div>
 
@@ -355,18 +407,32 @@ export default function VisitorPreRegistrationPage() {
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(`https://officex.ai/pass/${createdPass.qrToken}`);
-                alert("Pass link copied to clipboard!");
+                navigator.clipboard.writeText(createdPass.passNumber);
+                alert(`Pass number ${createdPass.passNumber} copied to clipboard!`);
               }}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center gap-2"
             >
               <Copy className="w-4 h-4" />
-              <span>Copy Pass Link</span>
+              <span>Copy Pass Number</span>
             </button>
+
+            <Link
+              href={`/vc/visitors/check-in`}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg"
+            >
+              <span>Test Guard Check-In Now</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
 
             <button
               type="button"
-              onClick={() => setCreatedPass(null)}
+              onClick={() => {
+                setCreatedPass(null);
+                setVisitorName("");
+                setCompany("");
+                setMobile("");
+                setEmail("");
+              }}
               className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg"
             >
               <UserPlus className="w-4 h-4" />

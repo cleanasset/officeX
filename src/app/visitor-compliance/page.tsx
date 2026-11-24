@@ -192,10 +192,10 @@ export default function VisitorComplianceLandingPage() {
           {/* Action CTAs */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/visitor-compliance/pricing?coupon=visitor001"
+              href="/operate/pricing"
               className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-cyan-600/30 transition-all flex items-center gap-2.5 group hover:scale-[1.02]"
             >
-              <span>Step 2: Subscribe &amp; Activate License (₹999/mo)</span>
+              <span>Start 14-Day Free Trial</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
 
@@ -204,21 +204,14 @@ export default function VisitorComplianceLandingPage() {
               className="px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-850 text-slate-200 border border-slate-700/80 font-bold text-sm sm:text-base transition-all flex items-center gap-2 shadow-xl hover:border-cyan-500/50"
             >
               <Activity className="w-4 h-4 text-emerald-400" />
-              <span>Preview 31-Screen Dashboard</span>
+              <span>Launch Operations Console</span>
             </Link>
           </div>
 
-          {/* Launch Offer Promo Note */}
+          {/* Institutional Deployment Note */}
           <div className="text-xs text-slate-400 flex items-center justify-center gap-2 pt-1">
-            <span className="text-emerald-400 font-bold">✓ Launch Offer:</span>
-            <span>Use coupon code</span>
-            <Link
-              href="/visitor-compliance/pricing?coupon=visitor001"
-              className="text-cyan-300 font-mono font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-700 hover:border-cyan-400 transition-colors"
-            >
-              visitor001
-            </Link>
-            <span>for 100% free instant access</span>
+            <span className="text-emerald-400 font-bold">✓ Production Ready:</span>
+            <span>Real-time optical speed-gates &amp; 48 statutory building NOC governance</span>
           </div>
 
           {/* HERO VISUAL: 3D ANGLED FLOATING CARDS (MATCHING USER REFERENCE) */}
@@ -997,10 +990,10 @@ export default function VisitorComplianceLandingPage() {
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
-              href={`/visitor-compliance/pricing?coupon=${encodeURIComponent(sandboxCoupon.trim() || "visitor001")}`}
+              href="/operate/pricing"
               className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/30 flex items-center gap-2"
             >
-              <span>Step 2: Proceed to Checkout ({couponApplied ? "Free via visitor001" : "₹999/mo"})</span>
+              <span>Get Started with Free Trial</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -1008,7 +1001,7 @@ export default function VisitorComplianceLandingPage() {
               className="px-8 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm flex items-center gap-2"
             >
               <Activity className="w-4 h-4 text-emerald-400" />
-              <span>Step 3: Preview SaaS Dashboard</span>
+              <span>Open Operations Console</span>
             </Link>
           </div>
         </div>

@@ -29,7 +29,7 @@ export default function SubscriptionGateModal({
   onSuccess,
   moduleName = "Visitor & Statutory Compliance Console",
 }: SubscriptionGateModalProps) {
-  const [couponCode, setCouponCode] = useState("visitor001");
+  const [couponCode, setCouponCode] = useState("");
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
@@ -37,15 +37,9 @@ export default function SubscriptionGateModal({
     discountAmount: number;
     finalPrice: number;
     badge: string;
-  } | null>({
-    code: "visitor001",
-    discountPercent: 100,
-    discountAmount: 999,
-    finalPrice: 0,
-    badge: "100% OFF Launch Partner Access",
-  });
+  } | null>(null);
   const [couponError, setCouponError] = useState("");
-  const [couponSuccess, setCouponSuccess] = useState("Launch Offer: 100% discount with visitor001");
+  const [couponSuccess, setCouponSuccess] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -253,28 +247,6 @@ export default function SubscriptionGateModal({
               <span>{couponError}</span>
             </p>
           )}
-
-          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-0.5">
-            <span>💡 Tip:</span>
-            <button
-              type="button"
-              onClick={() => {
-                setCouponCode("visitor001");
-                setAppliedCoupon({
-                  code: "visitor001",
-                  discountPercent: 100,
-                  discountAmount: 999,
-                  finalPrice: 0,
-                  badge: "100% OFF Launch Partner Access",
-                });
-                setCouponSuccess("Applied visitor001 (100% OFF Free Access)");
-              }}
-              className="text-cyan-400 font-mono font-bold hover:underline"
-            >
-              visitor001
-            </button>
-            <span>gives 100% free activation.</span>
-          </div>
         </div>
 
         {errorMsg && (
@@ -303,7 +275,7 @@ export default function SubscriptionGateModal({
               </div>
             ) : appliedCoupon && appliedCoupon.finalPrice === 0 ? (
               <>
-                <span>Activate Free Commercial Access with visitor001</span>
+                <span>Activate License</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : (
@@ -316,7 +288,7 @@ export default function SubscriptionGateModal({
 
           <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
             <Link
-              href="/visitor-compliance/pricing?coupon=visitor001"
+              href="/operate/pricing"
               className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px]"
             >
               <span>View full pricing editions &rarr;</span>

@@ -142,9 +142,9 @@ export default function MarketingHeader({
                     <Link href="/vc/dashboard" className="block p-2 rounded-xl bg-teal-50/70 border border-teal-200/80 hover:bg-teal-100/70 transition-colors">
                       <div className="text-xs font-black text-[#0D7B6C] flex items-center justify-between">
                         <span>Visitor &amp; Compliance Center</span>
-                        <span className="text-[9px] bg-[#0D7B6C] text-white px-1.5 py-0.5 rounded font-extrabold">31 Screens</span>
+                        <span className="text-[9px] bg-[#0D7B6C] text-white px-1.5 py-0.5 rounded font-extrabold">Live Hub</span>
                       </div>
-                      <div className="text-[11px] text-slate-600">Dual-mode console · ₹999/mo (visitor001 Free)</div>
+                      <div className="text-[11px] text-slate-600">Dual-mode console · Live speed-gates &amp; tower governance</div>
                     </Link>
                     <Link href="/operate/ppm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">52-Week PPM &amp; CAFM</div>

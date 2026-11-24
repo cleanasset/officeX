@@ -13,22 +13,61 @@ import {
   ArrowRight,
   ShieldCheck,
   Sparkles,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function WalkInRegistrationPage() {
   const [visitorName, setVisitorName] = useState("");
   const [company, setCompany] = useState("");
   const [mobile, setMobile] = useState("");
-  const [hostName, setHostName] = useState("Arun Jaitley (Director)");
-  const [purpose, setPurpose] = useState("Immediate Consultation");
+  const [hostName, setHostName] = useState("");
+  const [purpose, setPurpose] = useState("Consultation / Meeting");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [passNumber, setPassNumber] = useState("");
+  const [qrToken, setQrToken] = useState("");
 
-  const handleWalkInSubmit = (e: React.FormEvent) => {
+  const handleWalkInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newPass = `WALK-${Math.floor(1000 + Math.random() * 9000)}`;
-    setPassNumber(newPass);
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+      const res = await fetch("/api/vc/visitors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId: org,
+          name: visitorName,
+          company,
+          mobile,
+          hostName: hostName || "Reception Duty Officer",
+          purpose,
+          visitorType: "guest",
+          isWalkIn: true,
+          floor: "Lobby",
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setErrorMsg(json.message || "Failed to register walk-in visitor");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setPassNumber(json.data.passNumber);
+      setQrToken(json.data.qrToken);
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error("Walk-in error:", err);
+      setErrorMsg("Network error connecting to kiosk service");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,6 +93,13 @@ export default function WalkInRegistrationPage() {
         </Link>
       </div>
 
+      {errorMsg && (
+        <div className="p-3 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       {!submitted ? (
         <form onSubmit={handleWalkInSubmit} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-5">
           <div className="flex items-center gap-2 text-xs text-blue-400 font-bold uppercase tracking-wider bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20">
@@ -75,11 +121,10 @@ export default function WalkInRegistrationPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Company / Organization *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Company / Organization</label>
               <input
                 type="text"
-                required
-                placeholder="e.g. PwC India"
+                placeholder="e.g. Individual or PwC India"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -103,6 +148,7 @@ export default function WalkInRegistrationPage() {
               <input
                 type="text"
                 required
+                placeholder="e.g. Arun Jaitley or Company Name"
                 value={hostName}
                 onChange={(e) => setHostName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -128,10 +174,20 @@ export default function WalkInRegistrationPage() {
 
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
             >
-              <span>Submit & Open Gate</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Issuing Pass...</span>
+                </>
+              ) : (
+                <>
+                  <span>Submit & Request Access</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -140,13 +196,19 @@ export default function WalkInRegistrationPage() {
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-black text-white">Walk-In Pass Generated!</h2>
+          <h2 className="text-2xl font-black text-white">Walk-In Pass Generated in Database!</h2>
           <div className="text-xs font-mono font-bold text-blue-400">{passNumber}</div>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Host {hostName} has been notified. Please scan the QR code at Turnstile Speed-Gate #3.
+            Host {hostName || "Reception"} notified. Record saved to database. Present pass number at reception.
           </p>
 
           <div className="flex justify-center gap-3 pt-3">
+            <Link
+              href={`/vc/visitors/check-in`}
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow-md"
+            >
+              Check In At Desk Now
+            </Link>
             <button
               type="button"
               onClick={() => {
@@ -154,8 +216,9 @@ export default function WalkInRegistrationPage() {
                 setVisitorName("");
                 setCompany("");
                 setMobile("");
+                setHostName("");
               }}
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md"
+              className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold shadow-md"
             >
               Register Another Walk-In
             </button>

@@ -178,8 +178,8 @@ function OperatePricingInner({
       enterpriseMonthly: 49999,
     },
     ppm: { monthly: 6999, unit: "per building / mo", title: "52-Week PPM & Asset QR" },
-    visitor: { monthly: 4999, unit: "per speed-gate / mo", title: "Visitor Flow & Speed-Gate Access" },
-    compliance: { monthly: 3999, unit: "per property / mo", title: "Statutory Compliance Calendar" },
+    visitor: { monthly: 1499, unit: "per building / mo", title: "Visitor Flow & Speed-Gate Access" },
+    compliance: { monthly: 1999, unit: "per property / mo", title: "Statutory Compliance Calendar" },
     leaseCrm: { monthly: 5999, unit: "per leasing team / mo", title: "Commercial Lease Dealflow CRM" },
     helpdesk: { monthly: 3499, unit: "per building / mo", title: "Tenant Helpdesk & Room Booking" },
   };
@@ -1036,22 +1036,22 @@ function OperatePricingInner({
                   18-second lobby transit with WhatsApp QR passes and optical turnstile integration (Boon Edam &amp; Gunnebo).
                 </p>
 
-                {/* PRICE BOX: FLAT PER SPEED-GATE / MONTH (NO SQ.FT) */}
+                {/* PRICE BOX: FLAT PER BUILDING / MONTH */}
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 mb-5 space-y-2">
                   {/* Main: Per Month */}
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-black text-slate-900 font-mono">
                       ₹{Math.round(standalone.visitor.monthly * annualMultiplier).toLocaleString("en-IN")}
                     </span>
-                    <span className="text-xs font-semibold text-slate-500">/ gate / mo</span>
+                    <span className="text-xs font-semibold text-slate-500">/ building / mo</span>
                   </div>
 
-                  {/* Below: Flat per gate info (NO SQ FT) */}
+                  {/* Tier info */}
                   <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700">
-                      Per Turnstile Gate
+                      Starter Plan
                     </span>
-                    <span className="text-[11px] text-slate-600 font-medium">Unlimited visitor QR passes &amp; WhatsApp logs</span>
+                    <span className="text-[11px] text-slate-600 font-medium">Front-Desk check-in · Speed-Gate Pro: ₹2,999/mo</span>
                   </div>
                 </div>
 
@@ -1123,7 +1123,7 @@ function OperatePricingInner({
                   48 Pre-configured commercial tower licenses with automated 90-day alert escalations and REIT vault.
                 </p>
 
-                {/* PRICE BOX: MAIN IS PER MONTH, PER SQ FT SHOWN RIGHT BELOW */}
+                {/* PRICE BOX: FLAT PER PROPERTY / MONTH */}
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 mb-5 space-y-2">
                   {/* Main: Per Month */}
                   <div className="flex items-baseline gap-1">
@@ -1133,13 +1133,12 @@ function OperatePricingInner({
                     <span className="text-xs font-semibold text-slate-500">/ property / mo</span>
                   </div>
 
-                  {/* Below: Per Sq.Ft Rate */}
+                  {/* Tier info */}
                   <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-black font-mono text-emerald-700">
-                      ₹{formatSqftRate(Math.round(standalone.compliance.monthly * annualMultiplier))}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
+                      Core Radar
                     </span>
-                    <span className="text-[11px] font-bold text-slate-700">/ sq.ft / mo</span>
-                    <span className="text-[10px] text-slate-400">({safeSqft.toLocaleString()} sq.ft)</span>
+                    <span className="text-[11px] text-slate-600 font-medium">15 Core Licenses · Institutional: ₹3,499/mo</span>
                   </div>
                 </div>
 

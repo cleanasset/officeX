@@ -24,7 +24,7 @@ export default function VisitorComplianceBillingPage() {
     name: "Commercial Facility Pass",
     amount: "₹999.00 / month",
     status: "Active",
-    discountBadge: "100% OFF (visitor001)",
+    discountBadge: "Annual Enterprise Tier",
     renewalDate: "November 25, 2026",
     billingCycle: "Monthly",
     paymentMethod: "Razorpay Verified / VIP Partner Code",
@@ -131,7 +131,7 @@ export default function VisitorComplianceBillingPage() {
               type="text"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value)}
-              placeholder="e.g. visitor001"
+              placeholder="Enter promo code"
               className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white uppercase placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono tracking-wider"
             />
             <button
@@ -167,8 +167,8 @@ export default function VisitorComplianceBillingPage() {
               <tr>
                 <td className="py-3 px-4 font-mono text-blue-400 font-bold">INV-VC-2026-001</td>
                 <td className="py-3 px-4">Oct 25, 2026</td>
-                <td className="py-3 px-4">Commercial Pass (Launch Partner Coupon visitor001)</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">₹0.00 (100% off)</td>
+                <td className="py-3 px-4">Commercial Facility Pass • Active Plan</td>
+                <td className="py-3 px-4 font-bold text-emerald-400">₹999.00</td>
                 <td className="py-3 px-4">
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">
                     PAID

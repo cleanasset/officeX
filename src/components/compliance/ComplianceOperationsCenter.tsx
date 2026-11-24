@@ -9,6 +9,7 @@ import {
   BarChart3, Layers, SlidersHorizontal, Lock, CheckCircle2, ArrowRight,
   Compass, Building2
 } from "lucide-react";
+import { getComplianceEntitlements, ComplianceEntitlements } from "@/lib/vc-entitlements";
 
 interface ComplianceOperationsCenterProps {
   portalRole?: "owner" | "fm" | "admin";
@@ -168,6 +169,27 @@ export default function ComplianceOperationsCenter({
   const [selectedProperty, setSelectedProperty] = useState(defaultProperty);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Package Entitlements & Feature Restrictions State
+  const [entitlements, setEntitlements] = useState<ComplianceEntitlements>(getComplianceEntitlements("essential"));
+  const [showUpgradeModal, setShowUpgradeModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadSub() {
+      try {
+        const res = await fetch("/api/vc/subscription/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.complianceEntitlements) {
+            setEntitlements(data.complianceEntitlements);
+          } else if (data.subscribed) {
+            setEntitlements(getComplianceEntitlements(data.planName || "enterprise"));
+          }
+        }
+      } catch {}
+    }
+    loadSub();
+  }, []);
 
   // Modals & Upload State
   const [selectedObligation, setSelectedObligation] = useState<any | null>(null);
@@ -580,24 +602,31 @@ Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
         </div>
       )}
 
-      {/* Navigation Tabs (CM-01 to CM-16) */}
+      {/* Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
-          { key: "dashboard", label: "Dashboard (CM-01)", icon: BarChart3 },
-          { key: "register", label: "Obligations Register (CM-02)", icon: FileText, badge: obligations.length },
-          { key: "calendar", label: "52-Week Calendar (CM-04)", icon: Calendar },
-          { key: "evidence", label: "Evidence Vault (CM-05)", icon: Upload },
-          { key: "incidents", label: "Incidents Register (CM-07)", icon: AlertCircle, badge: incidents.length },
-          { key: "capa", label: "CAPA Board (CM-08)", icon: CheckCircle2, badge: capas.filter(c => c.status !== "closed").length, badgeColor: "bg-amber-100 text-amber-800" },
-          { key: "permits", label: "Permits to Work (CM-09)", icon: ShieldCheck, badge: permits.length },
-          { key: "risks", label: "Risk Matrix 5x5 (CM-13)", icon: ShieldAlert, badge: risks.length }
+          { key: "dashboard", label: "Dashboard", icon: BarChart3, enterpriseOnly: false },
+          { key: "register", label: "Obligations Register", icon: FileText, badge: entitlements.maxLicenses < 48 ? Math.min(15, obligations.length) : obligations.length, enterpriseOnly: false },
+          { key: "calendar", label: "52-Week Calendar", icon: Calendar, enterpriseOnly: false },
+          { key: "evidence", label: "Evidence Vault", icon: Upload, enterpriseOnly: false },
+          { key: "incidents", label: "Incidents Register", icon: AlertCircle, badge: incidents.length, enterpriseOnly: false },
+          { key: "capa", label: "CAPA Board", icon: CheckCircle2, badge: capas.filter(c => c.status !== "closed").length, badgeColor: "bg-amber-100 text-amber-800", enterpriseOnly: true },
+          { key: "permits", label: "Permits to Work (PTW)", icon: ShieldCheck, badge: permits.length, enterpriseOnly: true },
+          { key: "risks", label: "Risk Matrix 5x5", icon: ShieldAlert, badge: risks.length, enterpriseOnly: true }
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.key;
+          const isLocked = t.enterpriseOnly && !entitlements.canAccessCapa;
           return (
             <button
               key={t.key}
-              onClick={() => setActiveTab(t.key as any)}
+              onClick={() => {
+                if (isLocked) {
+                  setShowUpgradeModal(t.label);
+                } else {
+                  setActiveTab(t.key as any);
+                }
+              }}
               className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 isActive
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-teal-50/50"
@@ -606,11 +635,15 @@ Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
             >
               <Icon size={14} />
               <span>{t.label}</span>
-              {t.badge !== undefined && t.badge > 0 && (
+              {isLocked ? (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 ml-0.5">
+                  <Lock size={9} /> Enterprise
+                </span>
+              ) : t.badge !== undefined && t.badge > 0 ? (
                 <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${t.badgeColor || "bg-slate-100 text-slate-700"}`}>
                   {t.badge}
                 </span>
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -1493,6 +1526,67 @@ Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: COMPLIANCE TIER UPGRADE MODAL                                      */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 sm:p-7 animate-in fade-in space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#0D7B6C] flex items-center justify-center">
+              <ShieldCheck size={26} />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-black uppercase tracking-wider mb-2">
+                Institutional Governance Plan Required
+              </div>
+              <h4 className="text-lg font-black text-slate-900">
+                {showUpgradeModal} is Restricted
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                This institutional feature requires the <strong>Institutional Governance Plan (₹3,499/month)</strong>. Your current Core Statutory Radar license covers 15 baseline building licenses (Fire NOC, Lift Act, DG sets, Pollution CTO).
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Unlocked with Institutional Governance:</div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>All 48 Commercial Building Statutory Licenses</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>Locked CAPA Root-Cause Workflows &amp; Proof Verification</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>High-Risk Permits to Work (PTW) Approval Engine</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>1-Click REIT &amp; Institutional Due Diligence Audit Pack</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(null)}
+                className="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <a
+                href="/operate/pricing?mode=standalone&module=compliance"
+                className="px-5 py-2.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-black rounded-xl transition-all shadow-md shadow-[#0D7B6C]/25 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Upgrade to Enterprise (₹3,499/mo)</span>
+                <ArrowRight size={13} />
+              </a>
+            </div>
           </div>
         </div>
       )}

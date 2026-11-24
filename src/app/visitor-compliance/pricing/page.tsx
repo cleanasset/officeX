@@ -427,7 +427,7 @@ function VisitorCompliancePricingContent() {
                           setCouponCode(e.target.value);
                           setCouponError("");
                         }}
-                        placeholder="e.g. visitor001"
+                        placeholder="Enter promo code"
                         className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 uppercase font-mono tracking-wider"
                       />
                       <button
@@ -468,21 +468,6 @@ function VisitorCompliancePricingContent() {
                   {couponError && (
                     <p className="text-xs text-rose-400">{couponError}</p>
                   )}
-
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
-                    <span>💡 Tip: Enter</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCouponCode("visitor001");
-                        handleApplyCoupon();
-                      }}
-                      className="text-blue-400 font-mono font-bold hover:underline"
-                    >
-                      visitor001
-                    </button>
-                    <span>for 100% free activation.</span>
-                  </div>
                 </div>
 
                 {/* Summary Table */}
@@ -623,7 +608,7 @@ function VisitorCompliancePricingContent() {
                   <td className="py-3 px-4 sm:px-6 font-medium">Pricing Model</td>
                   <td className="py-3 px-4 sm:px-6 text-slate-400">Per flat high recurring maintenance fees</td>
                   <td className="py-3 px-4 sm:px-6 text-emerald-300 bg-emerald-950/10 font-bold">
-                    Flat ₹999/month per facility (or free with visitor001)
+                    Flat ₹999/month per facility
                   </td>
                 </tr>
               </tbody>
@@ -640,10 +625,10 @@ function VisitorCompliancePricingContent() {
         <div className="space-y-4">
           <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
             <h4 className="text-sm font-bold text-white">
-              How does the coupon code visitor001 work?
+              Can we start with a free trial?
             </h4>
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Applying the code <code className="text-emerald-400 font-mono">visitor001</code> gives you a 100% discount on the Commercial Pass. You can activate your account immediately without entering credit card or payment details.
+              Yes. You can explore the platform with a 14-day free trial on any plan. Full optical speed-gate relays and statutory compliance radars are unlocked immediately during the evaluation period.
             </p>
           </div>
           <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">

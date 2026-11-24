@@ -144,45 +144,27 @@ function VisitorComplianceDashboardContent() {
         </div>
       )}
 
-      {/* SaaS Customer Lifecycle Funnel Progression Bar */}
+      {/* Sovereign Operations Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 shadow-md">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">SaaS Funnel:</span>
-          <Link
-            href="/visitor-compliance"
-            className="text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>1. Product Showcase</span>
-          </Link>
-          <span className="text-slate-600 font-mono">──►</span>
-          <Link
-            href="/visitor-compliance/pricing?coupon=visitor001"
-            className="text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>2. Subscription &amp; Activation</span>
-          </Link>
-          <span className="text-slate-600 font-mono">──►</span>
-          <span className="text-white font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <span>3. Live 31-Screen Command Center</span>
-          </span>
+        <div className="flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-bold text-white text-xs">OFFICEX Command Center</span>
+          <span className="text-slate-500">|</span>
+          <span className="text-slate-400 text-[11px]">Commercial Gateway · Speed-Gates &amp; Statutory Governance</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 text-[11px] hidden md:inline">Console Lenses:</span>
           <Link
             href="/operate/visitors"
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold border border-slate-700 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold border border-slate-700 transition-colors flex items-center gap-1.5"
           >
-            Front-Desk View
+            <span>Front-Desk View</span>
           </Link>
           <Link
             href="/operate/compliance"
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700 transition-colors flex items-center gap-1.5"
           >
-            Compliance View
+            <span>Compliance View</span>
           </Link>
         </div>
       </div>
@@ -235,11 +217,11 @@ function VisitorComplianceDashboardContent() {
               onClick={() => setSubGateOpen(true)}
               className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Activate License (Free with visitor001)</span>
+              <span>Activate Commercial License</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <Link
-              href="/visitor-compliance/pricing?coupon=visitor001"
+              href="/operate/pricing"
               className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors"
             >
               Pricing Details

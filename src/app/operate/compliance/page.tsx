@@ -189,42 +189,37 @@ export default function ComplianceCalendarProductPage() {
       {/* ── Breadcrumb & Top Mode Switcher Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium flex-wrap">
-            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">SaaS Flow:</span>
-            <Link href="/visitor-compliance" className="text-[#0D7B6C] font-semibold hover:underline">
-              1. Landing Page
+          {/* Breadcrumb & Tower Governance Status */}
+          <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
+            <Link href="/operate" className="text-slate-500 hover:text-slate-800 transition-colors">
+              Operate
             </Link>
-            <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/operate/pricing?mode=standalone&module=compliance" className="text-[#0D7B6C] font-semibold hover:underline">
-              2. Subscription (₹3,999/mo)
-            </Link>
-            <span className="text-slate-400 font-mono">──►</span>
-            <Link href="/vc/dashboard" className="text-slate-800 font-bold hover:underline">
-              3. Sovereign Command Center
-            </Link>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-900 font-bold">Statutory Compliance</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0D7B6C] text-[11px] font-bold border border-teal-200 ml-1.5">
+              <ShieldCheck size={12} />
+              48 Tower Filings Tracked
+            </span>
           </div>
 
           {/* Unified SaaS Mode Switcher Bar */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Switch to Visitor Flow Lens */}
+            {/* Switch to Visitor Management */}
             <Link
               href="/operate/visitors"
               className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 border border-slate-200"
             >
-              <Sparkles size={13} />
-              <span>⚡ Visitor Flow (VC-01..15)</span>
+              <Users size={13} />
+              <span>Visitor Management</span>
             </Link>
 
-            {/* Active: Compliance Lens */}
-            <Link
-              href="/operate/compliance"
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0D7B6C] text-white shadow-xs"
-            >
+            {/* Active: Statutory Compliance */}
+            <span className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0D7B6C] text-white shadow-xs">
               <ShieldCheck size={13} />
-              <span>🛡️ Statutory Compliance (CM-01..16)</span>
-            </Link>
+              <span>Statutory Compliance</span>
+            </span>
 
-            {/* Spec / Architecture Toggle */}
+            {/* Interactive Workspace Toggle */}
             <button
               type="button"
               onClick={() => {
@@ -234,34 +229,20 @@ export default function ComplianceCalendarProductPage() {
                   handleOpenWorkspace("compliance");
                 }
               }}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
             >
               <Layers size={13} />
-              <span>{viewMode === "workspace" ? "📖 Spec & Architecture" : "⚡ Back to Live Console"}</span>
+              <span>{viewMode === "workspace" ? "Overview & Filings" : "Live Compliance Center"}</span>
             </button>
 
-            {/* Launch Full Sovereign Command Center */}
-            <button
-              type="button"
-              onClick={() => {
-                if (isSubscribed) {
-                  window.location.href = "/vc/dashboard?mode=compliance";
-                } else {
-                  setSubGateOpen(true);
-                }
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-900 text-cyan-300 hover:bg-slate-800 shadow-xs border border-slate-800 cursor-pointer"
-            >
-              <ExternalLink size={12} />
-              <span>Launch 31-Screen Center</span>
-            </button>
+
 
             {/* Pricing Link */}
             <Link
               href="/operate/pricing?mode=standalone&module=compliance"
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
             >
-              <span>View Compliance Pricing →</span>
+              <span>Pricing →</span>
             </Link>
           </div>
         </div>
@@ -294,7 +275,7 @@ export default function ComplianceCalendarProductPage() {
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/25 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Sparkles size={16} />
-                  <span>Activate License (100% Free with visitor001)</span>
+                  <span>Activate Enterprise License</span>
                 </button>
                 <button
                   type="button"
@@ -307,51 +288,10 @@ export default function ComplianceCalendarProductPage() {
             </div>
           ) : (
             <>
-              {/* Architecture Clarification Callout Banner */}
-              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-slate-50 to-teal-50 border border-emerald-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5 text-slate-800">
-                  <div className="w-8 h-8 rounded-xl bg-[#0D7B6C]/10 border border-[#0D7B6C]/20 flex items-center justify-center text-[#0D7B6C] shrink-0">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 flex items-center gap-2">
-                      <span>One SaaS, Two Coordinated Lenses: Statutory Compliance &amp; Visitor Flow</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">ONE CORE PLATFORM</span>
-                    </div>
-                    <div className="text-slate-500 text-[11px] mt-0.5">
-                      48 building statutory licenses, contractor safety permits, and front-desk turnstiles operate from one canonical engine.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
-                  <Link
-                    href="/operate/visitors"
-                    className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#0D7B6C]" />
-                    <span>Switch to Visitor Lens &rarr;</span>
-                  </Link>
-                  <Link
-                    href="/vc/dashboard"
-                    className="px-3.5 py-1.5 rounded-xl bg-[#0D7B6C] text-white font-bold hover:bg-[#0A6357] transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center gap-1.5"
-                  >
-                    <span>Open All-In-One Hub</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-
-              {activeModule === "compliance" ? (
-                <ComplianceOperationsCenter
-                  portalRole="owner"
-                  defaultProperty="Devasya Gold - Commercial Tower"
-                />
-              ) : (
-                <VisitorManagementConsole
-                  portalRole="security"
-                  defaultProperty="Devasya Gold - Commercial Tower"
-                />
-              )}
+              <ComplianceOperationsCenter
+                portalRole="owner"
+                defaultProperty="Devasya Gold - Commercial Tower"
+              />
             </>
           )}
         </div>
@@ -392,16 +332,16 @@ export default function ComplianceCalendarProductPage() {
                       className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                     >
                       {isSubscribed ? <Sparkles size={16} /> : <Lock size={16} />}
-                      <span>{isSubscribed ? "Launch Compliance Center" : "Get Started · Subscribe (visitor001 Free)"}</span>
+                      <span>{isSubscribed ? "Launch Compliance Center" : "Start 14-Day Free Trial"}</span>
                       <ArrowRight size={15} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleOpenWorkspace("visitors")}
+                      onClick={() => handleOpenWorkspace("compliance")}
                       className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto hover:border-teal-300"
                     >
-                      <Users size={15} className="text-[#0D7B6C]" />
-                      <span>Open Visitor Flow Console</span>
+                      <ShieldCheck size={15} className="text-[#0D7B6C]" />
+                      <span>Interactive Audit Radar</span>
                     </button>
                     <Link
                       href="/operate/pricing?mode=standalone&module=compliance"

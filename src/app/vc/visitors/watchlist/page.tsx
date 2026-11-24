@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldAlert,
@@ -12,58 +12,125 @@ import {
   Phone,
   Mail,
   X,
+  Trash2,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 export default function SecurityWatchlistPage() {
-  const [watchlist, setWatchlist] = useState([
-    {
-      id: "wl_1",
-      name: "Harish Chandra Verma",
-      mobile: "+91 98990 01122",
-      reason: "Trespassing attempt without host approval; prior verbal misconduct with security.",
-      severity: "critical",
-      addedBy: "Chief Security Officer",
-      activeFrom: "2026-08-14",
-    },
-    {
-      id: "wl_2",
-      name: "Karan Johar Tech Vendor",
-      mobile: "+91 97112 44332",
-      reason: "Blacklisted contractor technician; forged electrical qualification certificate.",
-      severity: "high",
-      addedBy: "EHS Lead",
-      activeFrom: "2026-09-01",
-    },
-  ]);
-
+  const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [reason, setReason] = useState("");
   const [severity, setSeverity] = useState("high");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    setWatchlist([
-      {
-        id: `wl_${Date.now()}`,
-        name,
-        mobile,
-        reason,
-        severity,
-        addedBy: "Security Admin",
-        activeFrom: new Date().toISOString().split("T")[0],
-      },
-      ...watchlist,
-    ]);
-    setModalOpen(false);
-    setName("");
-    setMobile("");
-    setReason("");
+  const fetchWatchlist = async () => {
+    setLoading(true);
+    try {
+      const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+      const res = await fetch(`/api/vc/visitors/watchlist?orgId=${encodeURIComponent(org)}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setWatchlist(json.data);
+      }
+    } catch (err) {
+      console.error("Error loading watchlist:", err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchWatchlist();
+  }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      const org = typeof window !== "undefined" ? localStorage.getItem("officex_org_id") || "default_org" : "default_org";
+      const res = await fetch("/api/vc/visitors/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId: org,
+          name,
+          mobile,
+          reason,
+          severity,
+          createdBy: "Chief Security Officer",
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setErrorMsg(json.message || "Failed to add to watchlist");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setNotice(`Entity ${name} added to restricted watchlist.`);
+      setModalOpen(false);
+      setName("");
+      setMobile("");
+      setReason("");
+      fetchWatchlist();
+      setTimeout(() => setNotice(""), 4000);
+    } catch (err: any) {
+      console.error("Watchlist submit error:", err);
+      setErrorMsg("Network error adding to watchlist");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, entityName: string) => {
+    if (!confirm(`Are you sure you want to remove ${entityName} from the watchlist?`)) return;
+
+    try {
+      const res = await fetch(`/api/vc/visitors/watchlist?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setWatchlist((prev) => prev.filter((item) => item.id !== id));
+        setNotice(`Removed ${entityName} from watchlist.`);
+        setTimeout(() => setNotice(""), 4000);
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to remove entity");
+    }
+  };
+
+  const filtered = watchlist.filter((item) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !searchQuery ||
+      (item.name || "").toLowerCase().includes(q) ||
+      (item.mobile || "").includes(q) ||
+      (item.reason || "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {notice && (
+        <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2 shadow-2xl animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{notice}</span>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -77,113 +144,185 @@ export default function SecurityWatchlistPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add to Watchlist</span>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {watchlist.map((item) => (
-          <div
-            key={item.id}
-            className="p-5 rounded-2xl bg-slate-900/80 border border-rose-900/40 hover:border-rose-700/60 shadow-xl space-y-3"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={fetchWatchlist}
+            disabled={loading}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+            title="Refresh"
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30">
-                  {item.severity} Alert
-                </span>
-                <div className="text-base font-extrabold text-white mt-1.5">{item.name}</div>
-                <div className="text-xs text-slate-400">{item.mobile}</div>
-              </div>
-
-              <span className="text-xs text-slate-500 font-mono">Since {item.activeFrom}</span>
-            </div>
-
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-              <span className="text-slate-500 block mb-0.5">Enforcement Reason:</span>
-              <div className="text-rose-200/90 leading-relaxed">{item.reason}</div>
-            </div>
-
-            <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
-              <span>Added by: <strong className="text-slate-300">{item.addedBy}</strong></span>
-              <span className="text-rose-400 font-semibold">Immediate Block at SpeedGate</span>
-            </div>
-          </div>
-        ))}
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add to Watchlist</span>
+          </button>
+        </div>
       </div>
 
+      <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search restricted name, phone, or reason..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-rose-500"
+          />
+        </div>
+        <div className="text-slate-400 font-semibold">
+          Restricted Records: <span className="text-white font-mono font-bold">{filtered.length}</span>
+        </div>
+      </div>
+
+      {loading && watchlist.length === 0 ? (
+        <div className="p-12 text-center text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto text-rose-400 mb-2" />
+          <div>Querying security watchlist from database...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.length > 0 ? (
+            filtered.map((item) => (
+              <div
+                key={item.id}
+                className="p-5 rounded-2xl bg-slate-900/80 border border-rose-900/40 hover:border-rose-700/60 shadow-xl space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30">
+                      {item.severity} Alert
+                    </span>
+                    <div className="text-base font-extrabold text-white mt-1.5">{item.name}</div>
+                    <div className="text-xs text-slate-400 font-mono mt-0.5">{item.mobile || "No phone listed"}</div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id, item.name)}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 transition-colors"
+                    title="Remove from watchlist"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300">
+                  <div className="text-slate-500 text-[11px] font-semibold mb-0.5">Restriction Reason:</div>
+                  <div className="line-clamp-2">{item.reason}</div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Authorized by: {item.createdBy || "Security Admin"}</span>
+                  <span>Active since: {new Date(item.activeFrom).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-2 p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-800">
+              <ShieldAlert className="w-10 h-10 mx-auto text-slate-600 mb-2 opacity-50" />
+              <div className="font-bold text-white text-base">Watchlist is Clear</div>
+              <div className="text-xs text-slate-400 mt-1">No persons or contractors are currently flagged on the restricted entry list.</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-scaleUp">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-rose-500" />
-                <span>Add Person to Security Watchlist</span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-rose-500" />
+                <h3 className="text-base font-extrabold text-white">Add Entity to Watchlist</h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAdd} className="space-y-3">
+            {errorMsg && (
+              <div className="p-3 bg-red-950/70 border border-red-500/40 rounded-xl text-red-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdd} className="space-y-4 text-xs">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Full Name *</label>
+                <label className="font-semibold text-slate-300 block mb-1">Full Name / Entity Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Unknown Individual"
+                  placeholder="e.g. Ramesh Chandra Verma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-rose-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Mobile Number</label>
+                <label className="font-semibold text-slate-300 block mb-1">Mobile Number (Matching Key)</label>
                 <input
                   type="tel"
-                  placeholder="+91 98000 00000"
+                  placeholder="+91 98111 22334"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-rose-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Reason for Blacklisting *</label>
+                <label className="font-semibold text-slate-300 block mb-1">Restriction Severity</label>
+                <select
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-rose-500"
+                >
+                  <option value="critical">Critical (Hard Gate Block)</option>
+                  <option value="high">High (Requires Security Manager Escort)</option>
+                  <option value="medium">Medium (Enhanced Verification)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-300 block mb-1">Reason for Blacklisting *</label>
                 <textarea
                   required
                   rows={3}
-                  placeholder="Detailed security justification..."
+                  placeholder="Detailed operational incident description..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-rose-500"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  Confirm Restrict
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Add to Restricted List</span>
                 </button>
               </div>
             </form>

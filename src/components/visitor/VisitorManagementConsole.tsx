@@ -7,26 +7,23 @@ import {
   Building, Printer, Download, Eye, ArrowRight, UserCheck,
   Radio, Phone, Mail, Car, FileText, Check, AlertCircle,
   Truck, Package, Flame, Sparkles, RefreshCw, X, ArrowUpRight,
-  Smartphone, ExternalLink, Copy, Info, CheckSquare, Trash2
+  Smartphone, ExternalLink, Copy, Info, CheckSquare, Trash2, Lock
 } from "lucide-react";
-import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperationsCenter";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { getVisitorEntitlements, VisitorEntitlements } from "@/lib/vc-entitlements";
 
 interface VisitorManagementConsoleProps {
   portalRole?: "tenant" | "security" | "fm" | "admin";
   defaultProperty?: string;
   initialTab?: "dashboard" | "reception" | "preregister" | "approvals" | "inside" | "contractor_delivery" | "emergency" | "watchlist";
-  initialModule?: "visitors" | "compliance";
 }
 
 export default function VisitorManagementConsole({
   portalRole = "tenant",
   defaultProperty = "test building 1",
   initialTab,
-  initialModule = "visitors"
 }: VisitorManagementConsoleProps) {
-  const [activeModule, setActiveModule] = useState<"visitors" | "compliance">(initialModule);
   const [currentRole, setCurrentRole] = useState<"tenant" | "security" | "fm" | "admin">(portalRole);
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "reception" | "preregister" | "approvals" | "inside" | "contractor_delivery" | "emergency" | "watchlist"
@@ -39,6 +36,27 @@ export default function VisitorManagementConsole({
   const [selectedProperty, setSelectedProperty] = useState(defaultProperty);
   const [searchTerm, setSearchTerm] = useState("");
   const [availableTenants, setAvailableTenants] = useState<{ id: string; name: string }[]>([]);
+  
+  // Package Entitlements & Upgrade Modal State
+  const [entitlements, setEntitlements] = useState<VisitorEntitlements>(getVisitorEntitlements("starter"));
+  const [showUpgradeModal, setShowUpgradeModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadSub() {
+      try {
+        const res = await fetch("/api/vc/subscription/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.visitorEntitlements) {
+            setEntitlements(data.visitorEntitlements);
+          } else if (data.subscribed) {
+            setEntitlements(getVisitorEntitlements(data.planName || "pro"));
+          }
+        }
+      } catch {}
+    }
+    loadSub();
+  }, []);
 
   // Update selectedProperty whenever defaultProperty changes
   useEffect(() => {
@@ -385,48 +403,20 @@ export default function VisitorManagementConsole({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 px-2.5 py-0.5 rounded-full border border-teal-500/30">
-              OFFICEX UNIFIED SAAS CORE · {activeModule === "visitors" ? "VC-01 TO VC-15" : "CM-01 TO CM-16"}
+              OFFICEX VISITOR MANAGEMENT
             </span>
             <span className="text-xs text-slate-400 font-bold">|</span>
             <span className="text-xs font-bold text-slate-200">{selectedProperty}</span>
           </div>
           <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight mt-1">
-            {activeModule === "visitors"
-              ? "Touchless Visitor Flow & Optical Speed-Gate Console"
-              : "Statutory Compliance Operations Center & 52-Week Audit Vault"}
+            Touchless Visitor Flow &amp; Optical Speed-Gate Console
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {activeModule === "visitors"
-              ? "Gunnebo & Boon Edam optical relays, 18-second transit, WhatsApp QR passes, and live inside occupancy."
-              : "Fire NOC, Lift licenses, SPCB consent, CEIG substation, evidence verification, and CAPA workflows."}
+            Gunnebo &amp; Boon Edam optical relays, 18-second transit, WhatsApp QR passes, and live inside occupancy.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Module Switcher */}
-          <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <button
-              type="button"
-              onClick={() => setActiveModule("visitors")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeModule === "visitors" ? "bg-[#0D7B6C] text-white shadow-xs" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Users size={13} />
-              <span>Visitor Flow</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveModule("compliance")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeModule === "compliance" ? "bg-[#0D7B6C] text-white shadow-xs" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <ShieldCheck size={13} />
-              <span>Statutory Compliance</span>
-            </button>
-          </div>
-
           {/* Role Switcher */}
           <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
             <span className="text-[10px] font-bold text-slate-400 px-2 uppercase">Role:</span>
@@ -454,15 +444,6 @@ export default function VisitorManagementConsole({
           </div>
         </div>
       </div>
-
-      {activeModule === "compliance" ? (
-        <ComplianceOperationsCenter
-          portalRole={currentRole === "admin" ? "owner" : "fm"}
-          defaultProperty={selectedProperty}
-        />
-      ) : (
-        <>
-
 
       {/* Action Strip: Emergency Declare, Refresh, Pre-register */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
@@ -547,21 +528,28 @@ export default function VisitorManagementConsole({
       {/* Navigation Tabs (All 8 Core Views) */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
-          { key: "dashboard", label: "Dashboard (VC-01)", icon: Users, badge: totalExpected },
-          { key: "reception", label: "Reception Desk (VC-04/05)", icon: QrCode },
-          { key: "preregister", label: "Pre-Registration (VC-02)", icon: Plus },
-          { key: "approvals", label: "Approval Queue (VC-03)", icon: Clock, badge: pendingApprovals.length, badgeColor: "bg-amber-100 text-amber-800" },
-          { key: "inside", label: "Live Inside (VC-08/09)", icon: UserCheck, badge: insideCount, badgeColor: "bg-emerald-100 text-emerald-800" },
-          { key: "contractor_delivery", label: "Contractors & Logistics (VC-11/12)", icon: Truck, badge: contractorsCount },
-          { key: "emergency", label: "Emergency Roll Call (VC-13)", icon: Flame, badge: insideCount, badgeColor: "bg-red-100 text-red-800" },
-          { key: "watchlist", label: "Watchlist (VC-14)", icon: ShieldAlert, badge: watchlistEntries.length }
+          { key: "dashboard", label: "Dashboard", icon: Users, badge: totalExpected, proOnly: false },
+          { key: "reception", label: "Reception Desk", icon: QrCode, proOnly: false },
+          { key: "preregister", label: "Pre-Registration", icon: Plus, proOnly: false },
+          { key: "approvals", label: "Approval Queue", icon: Clock, badge: pendingApprovals.length, badgeColor: "bg-amber-100 text-amber-800", proOnly: false },
+          { key: "inside", label: "Currently Inside", icon: UserCheck, badge: insideCount, badgeColor: "bg-emerald-100 text-emerald-800", proOnly: false },
+          { key: "contractor_delivery", label: "Contractors & Logistics", icon: Truck, badge: contractorsCount, proOnly: true },
+          { key: "emergency", label: "Emergency Roll Call", icon: Flame, badge: insideCount, badgeColor: "bg-red-100 text-red-800", proOnly: true },
+          { key: "watchlist", label: "Security Watchlist", icon: ShieldAlert, badge: watchlistEntries.length, proOnly: true }
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.key;
+          const isLocked = t.proOnly && !entitlements.canAccessContractors;
           return (
             <button
               key={t.key}
-              onClick={() => setActiveTab(t.key as any)}
+              onClick={() => {
+                if (isLocked) {
+                  setShowUpgradeModal(t.label);
+                } else {
+                  setActiveTab(t.key as any);
+                }
+              }}
               className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 isActive
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-teal-50/50"
@@ -570,11 +558,15 @@ export default function VisitorManagementConsole({
             >
               <Icon size={14} />
               <span>{t.label}</span>
-              {t.badge !== undefined && t.badge > 0 && (
+              {isLocked ? (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 ml-0.5">
+                  <Lock size={9} /> Pro
+                </span>
+              ) : t.badge !== undefined && t.badge > 0 ? (
                 <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${t.badgeColor || "bg-slate-100 text-slate-700"}`}>
                   {t.badge}
                 </span>
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -1560,8 +1552,6 @@ export default function VisitorManagementConsole({
           </div>
         </div>
       )}
-      </>
-      )}
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* MODAL: ADD WATCHLIST ENTRY (VC-14)                                        */}
@@ -1787,6 +1777,67 @@ export default function VisitorManagementConsole({
               >
                 Confirm Rejection
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: FEATURE RESTRICTION / TIER UPGRADE MODAL                           */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 sm:p-7 animate-in fade-in space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center">
+              <Lock size={24} />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black uppercase tracking-wider mb-2">
+                Speed-Gate Pro Tier Required
+              </div>
+              <h4 className="text-lg font-black text-slate-900">
+                {showUpgradeModal} is Restricted
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                This operational capability is reserved for the <strong>Speed-Gate Pro Plan (₹2,999/month)</strong>. Your current Front-Desk Starter license includes lobby reception check-in, host alerts, and pre-registration passes.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Unlocked with Pro Tier:</div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>Optical Turnstile Barrier Relays (Gunnebo, Boon Edam)</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>Contractor Safety Work Permits (PTW) Gatekeeper</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>Live Emergency Evacuation Roll-Call Muster</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Check size={13} className="text-[#0D7B6C] shrink-0" />
+                <span>Immediate Turnstile Barricade Watchlist</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(null)}
+                className="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <a
+                href="/operate/pricing?mode=standalone&module=visitor"
+                className="px-5 py-2.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-black rounded-xl transition-all shadow-md shadow-[#0D7B6C]/25 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Upgrade to Pro (₹2,999/mo)</span>
+                <ArrowRight size={13} />
+              </a>
             </div>
           </div>
         </div>
