@@ -20,9 +20,11 @@ import {
   CheckCircle2,
   PhoneCall,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Tag,
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
+import { getClientUserEmail } from "@/lib/auth-storage";
 
 export interface PricingConfigResponse {
   taxConfig?: {
@@ -99,6 +101,43 @@ function OperatePricingInner({
   const [loading, setLoading] = useState<boolean>(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // Promo code state
+  const [showPromo, setShowPromo] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const handleApplyPromo = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPromoError(null);
+    const code = promoCode.trim().toUpperCase();
+    if (!code) {
+      setPromoError("Please enter a valid code.");
+      return;
+    }
+
+    if (code === "OFFICEX100" || code === "RENTROLL12" || code === "FREE100") {
+      setAppliedPromo(code);
+      setPromoError(null);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_applied_coupon", code);
+        sessionStorage.setItem("officex_applied_coupon", code);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        localStorage.setItem("officex_subscribed_sqft", String(safeSqft || 50000));
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+        const email = getClientUserEmail();
+        if (email) {
+          localStorage.setItem(`officex_sub_${email}`, "active");
+          document.cookie = `officex_sub_${encodeURIComponent(email)}=active; path=/; max-age=2592000; SameSite=Lax`;
+        }
+      }
+      showToast("🎉 Launch voucher applied! 100% free access granted.", "success");
+    } else {
+      setPromoError("Invalid or expired code. Please check and try again.");
+    }
+  };
 
   useEffect(() => {
     async function loadLivePricing() {
@@ -188,6 +227,16 @@ function OperatePricingInner({
     monthlyPrice: number;
     sqftRate: string;
   }) => {
+    if (appliedPromo) {
+      showToast("🎉 Launch voucher active! Redirecting to Rent Roll...", "success");
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          window.location.href = "/properties/rent-roll";
+        }
+      }, 400);
+      return;
+    }
+
     const billedAmount = billingCycle === "annual" ? plan.monthlyPrice * 12 : plan.monthlyPrice;
     setProcessingPlan(plan.planName);
 
@@ -231,8 +280,8 @@ function OperatePricingInner({
           }
         },
         onFailure: (err) => {
-          console.error("Payment failed or cancelled:", err);
-          showToast(err?.description || "Payment was not completed. Please try again.", "error");
+          console.info("[Checkout] Payment cancelled or modal closed:", err);
+          showToast(err?.description || "Payment was cancelled.", "error");
           setProcessingPlan(null);
         },
       });
@@ -777,6 +826,60 @@ function OperatePricingInner({
                 </div>
               </div>
 
+              {/* Promo / Launch Voucher Code Box */}
+              <div className="pt-3 pb-2 border-t border-slate-100 my-2">
+                {!showPromo && !appliedPromo ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPromo(true)}
+                    className="text-[11px] font-semibold text-[#0D7B6C] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Tag className="w-3 h-3" />
+                    <span>Have a promo or voucher code?</span>
+                  </button>
+                ) : appliedPromo ? (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Code {appliedPromo} Applied (100% Free Access)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedPromo(null);
+                        setPromoCode("");
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value);
+                          setPromoError(null);
+                        }}
+                        placeholder="Enter promo code"
+                        className="flex-1 px-2.5 py-1 text-xs border border-slate-300 rounded-lg uppercase font-mono tracking-wider focus:outline-none focus:ring-1 focus:ring-[#0D7B6C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPromo()}
+                        className="px-3 py-1 bg-[#0D7B6C] hover:bg-[#0B685B] text-white text-xs font-bold rounded-lg cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoError && <p className="text-[10px] text-red-600 font-medium">{promoError}</p>}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Link
                   href="/operate/rent-roll/pricing"
@@ -795,10 +898,17 @@ function OperatePricingInner({
                     monthlyPrice: calcRentRollPrice(),
                     sqftRate: formatSqftRate(calcRentRollPrice()),
                   })}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className={`w-full py-2.5 px-4 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
+                    appliedPromo ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-900 hover:bg-black"
+                  }`}
                 >
                   {processingPlan === "Rent Roll & Billing" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : appliedPromo ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Activate Free Access ({appliedPromo})</span>
+                    </>
                   ) : (
                     <>
                       <CreditCard className="w-3.5 h-3.5" />

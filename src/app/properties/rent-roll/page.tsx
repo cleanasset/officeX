@@ -79,16 +79,7 @@ export default function RentRollRegisterPage() {
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   });
-  const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const viewParam = params.get("view");
-      if (viewParam === "current" || viewParam === "contracted" || viewParam === "forecast") return viewParam;
-      const stored = sessionStorage.getItem("officex_rentroll_view");
-      if (stored === "current" || stored === "contracted" || stored === "forecast") return stored;
-    }
-    return "current";
-  });
+  const [currentView, setCurrentView] = useState<"current" | "contracted" | "forecast">("current");
   const [importOpen, setImportOpen] = useState(false);
   const [smartImporterOpen, setSmartImporterOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
@@ -151,15 +142,9 @@ export default function RentRollRegisterPage() {
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  // RR-14: Hydration safe capacity & subscription state (synchronous frame-zero hydration)
-  const [licensedCapacity, setLicensedCapacity] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
-      if (stored && stored > 0) return stored;
-    }
-    return 0;
-  });
-  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(() => isUserSubscribedSync());
+  // RR-14: Hydration safe capacity & subscription state
+  const [licensedCapacity, setLicensedCapacity] = useState<number>(0);
+  const [isUserSubscribed, setIsUserSubscribed] = useState<boolean>(true);
   const [mounted, setMounted] = useState<boolean>(false);
   const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
 
@@ -183,6 +168,16 @@ export default function RentRollRegisterPage() {
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get("view");
+      if (viewParam === "current" || viewParam === "contracted" || viewParam === "forecast") {
+        setCurrentView(viewParam);
+      } else {
+        const stored = sessionStorage.getItem("officex_rentroll_view");
+        if (stored === "current" || stored === "contracted" || stored === "forecast") {
+          setCurrentView(stored);
+        }
+      }
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
       if (stored && stored > 0) setLicensedCapacity(stored);
       setIsUserSubscribed(isUserSubscribedSync());
@@ -482,7 +477,7 @@ export default function RentRollRegisterPage() {
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     Rent Roll Register
                   </h1>
-                  {!isUserSubscribed && (
+                  {mounted && !isUserSubscribed && (
                     <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
                       <Lock size={11} className="text-amber-700" />
                       Rent Roll Locked · Free Property Tier Active
@@ -501,15 +496,15 @@ export default function RentRollRegisterPage() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  {isUserSubscribed
-                    ? "Institutional schedule of commercial demised spaces, active occupant agreements, escalations, and arrears."
-                    : "Manage your commercial properties, demarcated spaces, active occupants, and 39-point lease agreements. (Institutional Rent Roll calculation & CAM billing locked)."}
+                  {mounted && !isUserSubscribed
+                    ? "Manage your commercial properties, demarcated spaces, active occupants, and 39-point lease agreements. (Institutional Rent Roll calculation & CAM billing locked)."
+                    : "Institutional schedule of commercial demised spaces, active occupant agreements, escalations, and arrears."}
                 </p>
               </div>
 
               {/* Action Buttons Suite */}
               <div className="flex items-center gap-2.5 flex-wrap">
-                {!isUserSubscribed ? (
+                {mounted && !isUserSubscribed ? (
                   <Link
                     href="/operate/subscription"
                     className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -658,7 +653,7 @@ export default function RentRollRegisterPage() {
             </div>
 
             {/* Unsubscribed Account Banner */}
-            {!isUserSubscribed && (
+            {mounted && !isUserSubscribed && (
               <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-slate-50 border-2 border-teal-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="flex items-start sm:items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -687,7 +682,7 @@ export default function RentRollRegisterPage() {
             )}
 
             {/* Capacity Warning Alert (if applicable) */}
-            {isApproachingLimit && (
+            {mounted && isApproachingLimit && (
               <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 p-4 sm:p-5 shadow-xs">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-start gap-3.5">
@@ -826,7 +821,7 @@ export default function RentRollRegisterPage() {
                 <div className="flex bg-slate-200/80 p-1 rounded-xl text-xs font-semibold gap-1">
                   <button
                     onClick={() => {
-                      if (!isUserSubscribed) {
+                      if (mounted && !isUserSubscribed) {
                         router.push("/operate/subscription");
                         return;
                       }
@@ -838,8 +833,8 @@ export default function RentRollRegisterPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {!isUserSubscribed && <Lock size={12} className="text-amber-700" />}
-                    <span>{isUserSubscribed ? "Institutional Rent Roll" : "Rent Roll (Locked)"}</span>
+                    {mounted && !isUserSubscribed && <Lock size={12} className="text-amber-700" />}
+                    <span>{mounted && !isUserSubscribed ? "Rent Roll (Locked)" : "Institutional Rent Roll"}</span>
                   </button>
 
                   <button
@@ -855,7 +850,7 @@ export default function RentRollRegisterPage() {
 
                   <button
                     onClick={() => {
-                      if (!isUserSubscribed) {
+                      if (mounted && !isUserSubscribed) {
                         router.push("/operate/subscription");
                         return;
                       }
@@ -867,8 +862,8 @@ export default function RentRollRegisterPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {!isUserSubscribed && <Lock size={12} className="text-amber-700" />}
-                    <span>{isUserSubscribed ? "Forecast (+ Deals Weighted)" : "Forecast (Locked)"}</span>
+                    {mounted && !isUserSubscribed && <Lock size={12} className="text-amber-700" />}
+                    <span>{mounted && !isUserSubscribed ? "Forecast (Locked)" : "Forecast (+ Deals Weighted)"}</span>
                   </button>
                 </div>
 
