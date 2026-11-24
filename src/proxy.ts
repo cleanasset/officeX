@@ -31,6 +31,20 @@ const PUBLIC_EXACT_PATHS = new Set([
   '/fm-marketplace',
   '/calq',
   '/admin/login',
+  // Public Marketing & Solution Pillars:
+  '/operate',
+  '/operate/pricing',
+  '/operate/rent-roll',
+  '/operate/rent-roll/pricing',
+  '/operate/helpdesk',
+  '/operate/ppm',
+  '/operate/compliance',
+  '/operate/visitors',
+  '/managed-services',
+  '/intelligence',
+  '/operations',
+  '/visitor-compliance',
+  '/visitor-compliance/pricing',
 ]);
 
 const PUBLIC_PATH_PREFIXES = [
@@ -44,6 +58,8 @@ const PUBLIC_PATH_PREFIXES = [
   '/resources/',
   '/vendor/register',
   '/vendor/quote',
+  '/operate/pricing',
+  '/operate/rent-roll/pricing',
 ];
 
 // ─── Public API routes ──────────────────────────────────────────────────────
@@ -67,9 +83,10 @@ const PUBLIC_API_PREFIXES = [
 ];
 
 function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_EXACT_PATHS.has(pathname)) return true;
+  const clean = pathname.replace(/\/$/, '') || '/';
+  if (PUBLIC_EXACT_PATHS.has(clean) || PUBLIC_EXACT_PATHS.has(pathname)) return true;
   for (const prefix of PUBLIC_PATH_PREFIXES) {
-    if (pathname.startsWith(prefix)) return true;
+    if (pathname.startsWith(prefix) || clean.startsWith(prefix)) return true;
   }
   return false;
 }
