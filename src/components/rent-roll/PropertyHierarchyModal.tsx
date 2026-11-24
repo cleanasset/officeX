@@ -4959,7 +4959,7 @@ export default function PropertyHierarchyModal({
                           <p className="text-[11px] text-slate-400 font-mono mt-1">
                             {structureRule.id === "llp"
                               ? "Format: 7-8 alphanumeric LLPIN (e.g. AAA-1234)"
-                              : "Format: 21-character corporate ID (e.g. U70100KA2021PTC123456)"}
+                              : "Format: U/L + 5 digits + 2 letters (state) + 4 digits (year) + 3 letters + 6 digits (e.g. U72200MH2020PTC123456)"}
                           </p>
                         </div>
                       )}
@@ -4981,7 +4981,7 @@ export default function PropertyHierarchyModal({
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0F8B7D] outline-none uppercase"
                         />
                         <p className="text-[11px] text-slate-400 font-mono mt-1">
-                          Format: 15 alphanumeric characters (e.g. 24ABCDE1234F1Z5)
+                          Format: 2-digit state code + 10-char PAN + 1 digit + &apos;Z&apos; + 1 char (e.g. 27ABCDE1234F1Z5)
                         </p>
                       </div>
                     </div>
@@ -6636,7 +6636,7 @@ export default function PropertyHierarchyModal({
                         <p className="text-[11px] text-slate-400 font-mono mt-1">
                           {tenantForm.companyType === "llp"
                             ? "Format: 7-8 alphanumeric LLPIN (e.g. AAA-1234)"
-                            : "Format: 21-character corporate ID (e.g. U72200KA2021PTC145678)"}
+                            : "Format: U/L + 5 digits + 2 letters (state) + 4 digits (year) + 3 letters + 6 digits (e.g. U72200MH2020PTC123456)"}
                         </p>
                       )}
                     </div>
@@ -6682,7 +6682,7 @@ export default function PropertyHierarchyModal({
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase bg-white"
                       />
                       <p className="text-[11px] text-slate-400 font-mono mt-1">
-                        Format: 15 alphanumeric characters (e.g. 24ABCDE1234F1Z5)
+                        Format: 2-digit state code + 10-char PAN + 1 digit + &apos;Z&apos; + 1 char (e.g. 27ABCDE1234F1Z5)
                       </p>
                     </div>
 

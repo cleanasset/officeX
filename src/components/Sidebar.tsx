@@ -532,7 +532,7 @@ function SidebarInner() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState<number>(30);
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => isUserSubscribedSync());
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -576,6 +576,7 @@ function SidebarInner() {
   useEffect(() => {
     setIsMounted(true);
     if (typeof window !== "undefined") {
+      setIsSubscribed(isUserSubscribedSync());
       try {
         const saved = localStorage.getItem("officex_expanded_submenus");
         if (saved) setExpandedSubMenus(JSON.parse(saved));
@@ -856,6 +857,9 @@ function SidebarInner() {
               ? expandedSubMenus[item.name]
               : (isItemActive || item.name === "Rent Roll & Financials" || (item.name === "Office Marketplace" && pathname === "/admin"));
 
+            const isItemLocked = isMounted && !isAdminPortal && item.requiresSubscription && !isSubscribed;
+            const isItemActiveSub = isMounted && !isAdminPortal && item.requiresSubscription && isSubscribed;
+
             return (
               <React.Fragment key={item.name}>
                 {item.section && (
@@ -883,20 +887,20 @@ function SidebarInner() {
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
                         isItemActive
                           ? "bg-[#0F8B7D] text-white font-black shadow-xs"
-                          : item.requiresSubscription && !isSubscribed
+                          : isItemLocked
                           ? "bg-amber-50/70 border border-amber-200/80 text-slate-800 hover:bg-amber-100/70"
                           : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 bg-transparent"
                       }`}
                       style={isItemActive ? { backgroundColor: "var(--brand-color, #0F8B7D)" } : undefined}
                     >
-                      <Icon size={16} className={isItemActive ? "text-white shrink-0" : item.requiresSubscription && !isSubscribed ? "text-amber-700 shrink-0" : "text-slate-500 shrink-0"} />
+                      <Icon size={16} className={isItemActive ? "text-white shrink-0" : isItemLocked ? "text-amber-700 shrink-0" : "text-slate-500 shrink-0"} />
                       <span className="truncate flex-1 font-bold tracking-tight">{item.name}</span>
-                      {item.requiresSubscription && !isSubscribed ? (
+                      {isItemLocked ? (
                         <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
                           <Lock size={9} className="text-amber-700" />
                           <span>PRO LOCKED</span>
                         </span>
-                      ) : item.requiresSubscription && isSubscribed ? (
+                      ) : isItemActiveSub ? (
                         daysRemaining <= 5 ? (
                           <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 shrink-0 animate-pulse">
                             <AlertTriangle size={9} className="text-rose-700" />
@@ -923,7 +927,7 @@ function SidebarInner() {
                     {/* Dropdown Sub-Items List */}
                     {isExpanded && item.subItems && (
                       <div className="ml-3 pl-2.5 border-l-2 border-slate-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
-                        {!isAdminPortal && item.requiresSubscription && !isSubscribed && (
+                        {isItemLocked && (
                           <div className="p-2 mb-1.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[10px] text-amber-950 font-medium">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-extrabold text-amber-900">Requires Pro Plan:</span>
@@ -990,7 +994,7 @@ function SidebarInner() {
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
                                   Setup
                                 </span>
-                              ) : !isAdminPortal && item.requiresSubscription && !isSubscribed ? (
+                              ) : isItemLocked ? (
                                 <Lock size={10} className="text-slate-400 shrink-0" />
                               ) : null}
                             </Link>
@@ -1001,19 +1005,19 @@ function SidebarInner() {
                   </div>
                 ) : (
                   <Link
-                    href={!isAdminPortal && item.requiresSubscription && !isSubscribed ? `/properties/rent-roll?feature=${encodeURIComponent(item.name)}` : item.href}
+                    href={isItemLocked ? `/properties/rent-roll?feature=${encodeURIComponent(item.name)}` : item.href}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all relative group ${
                       isItemActive
                         ? "bg-[#0F8B7D] text-white font-bold shadow-xs"
-                        : !isAdminPortal && item.requiresSubscription && !isSubscribed
+                        : isItemLocked
                         ? "text-slate-600 hover:bg-amber-50/60 hover:text-slate-900"
                         : "text-slate-700 font-semibold hover:bg-slate-100/80 hover:text-slate-900"
                     }`}
                     style={isItemActive ? { backgroundColor: "var(--brand-color, #0F8B7D)" } : undefined}
                   >
-                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : !isAdminPortal && item.requiresSubscription && !isSubscribed ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
+                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : isItemLocked ? "text-slate-400 shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
                     <span className="truncate flex-1 tracking-tight">{item.name}</span>
-                    {!isAdminPortal && item.requiresSubscription && !isSubscribed ? (
+                    {isItemLocked ? (
                       <span suppressHydrationWarning className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
                         <Lock size={9} className="text-amber-600" />
                         <span>PRO</span>

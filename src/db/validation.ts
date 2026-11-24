@@ -668,7 +668,7 @@ export function validateCinFormat(cin: string): { isValid: boolean; message?: st
   if (!cinRegex.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid CIN format '${cin}'. Corporate Identity Number must be exactly 21 characters (e.g. U72200MH2020PTC123456).`,
+      message: `Invalid CIN format '${cin}'. Corporate Identity Number must follow: U/L + 5 digits + 2 letters + 4 digits + 3 letters + 6 digits (21 characters, e.g. U72200MH2020PTC123456).`,
     };
   }
   return { isValid: true };
@@ -681,7 +681,7 @@ export function validateGstinFormat(gstin: string, pan?: string): { isValid: boo
   if (!gstRegex.test(clean)) {
     return {
       isValid: false,
-      message: `Invalid GSTIN format '${gstin}'. Must be exactly 15 characters (e.g. 27ABCDE1234F1Z5).`,
+      message: `Invalid GSTIN format '${gstin}'. Must be 15 characters: 2-digit state code + 10-char PAN + 1 entity code + 'Z' + 1 checksum (e.g. 27ABCDE1234F1Z5).`,
     };
   }
   if (pan) {

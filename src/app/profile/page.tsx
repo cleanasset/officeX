@@ -63,7 +63,7 @@ export default function UserProfileAndSubscriptionsPage() {
   // User Identity State
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("Member");
-  const [userRole, setUserRole] = useState("Tenant Occupant");
+  const [userRole, setUserRole] = useState("Property Owner & Asset Manager");
   const [orgName, setOrgName] = useState("OfficeX Enterprise");
 
   // Multi-Module Subscription Data
@@ -117,12 +117,14 @@ export default function UserProfileAndSubscriptionsPage() {
       if (role) {
         setUserRole(
           role === "super_admin" ? "Super Administrator" :
-          role === "owner" ? "Property Owner & Asset Manager" :
+          role === "owner" || role === "landlord" ? "Property Owner & Asset Manager" :
           role === "property_manager" ? "Property Manager" :
           role === "facility_manager" ? "Facility & Maintenance Lead" :
           role === "tenant_admin" || role === "tenant" ? "Tenant Occupant" :
-          role
+          "Property Owner & Asset Manager"
         );
+      } else {
+        setUserRole("Property Owner & Asset Manager");
       }
 
       const org = localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name");
@@ -185,6 +187,17 @@ export default function UserProfileAndSubscriptionsPage() {
     await performClientLogout("/");
   };
 
+  const handleResetSession = () => {
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      window.location.href = "/login";
+    }
+  };
+
   if (!mounted) return null;
 
   // Role resolution
@@ -194,10 +207,10 @@ export default function UserProfileAndSubscriptionsPage() {
   const isGlobalSubscribed = subStatus?.subscribed || isSuperAdmin;
   const daysLeft = subStatus?.days_remaining ?? (isGlobalSubscribed ? 365 : 0);
   const activePlanName = isTenant
-    ? "Corporate Occupant Account"
+    ? (isGlobalSubscribed ? "Corporate Occupant Account" : "Unverified Tenant Account (No Active Lease)")
     : isSuperAdmin
     ? "REIT Mega-Portfolio Enterprise"
-    : subStatus?.plan_name || "Free Community Tier";
+    : subStatus?.plan_name || (isGlobalSubscribed ? "Commercial Suite" : "No Active Subscription (Free Tier)");
   const licensedSqft = subStatus?.subscribed_sqft
     ? `${Number(subStatus.subscribed_sqft).toLocaleString("en-IN")} Sq.Ft`
     : "Standard Quota";
@@ -211,11 +224,11 @@ export default function UserProfileAndSubscriptionsPage() {
       name: "Corporate Tenant & Occupant Portal",
       category: "Occupant Workspace",
       icon: Users,
-      badgeColor: "bg-emerald-50 text-emerald-800 border-emerald-200",
-      planName: "Included with Tenant Account",
-      isSubscribed: true,
-      daysRemaining: daysLeft > 0 ? daysLeft : 365,
-      capacityText: "Active Leased Workplace",
+      badgeColor: isGlobalSubscribed ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200",
+      planName: isGlobalSubscribed ? "Included with Tenant Account" : "No Active Lease",
+      isSubscribed: isGlobalSubscribed,
+      daysRemaining: isGlobalSubscribed ? (daysLeft > 0 ? daysLeft : 30) : 0,
+      capacityText: isGlobalSubscribed ? "Active Leased Workplace" : "No Demised Space",
       features: [
         "Digital Invoices & Downloadable Tax Receipts",
         "Online UPI & NetBanking Rent Payments",
@@ -230,11 +243,11 @@ export default function UserProfileAndSubscriptionsPage() {
       name: "Office Guest Passes & Campus Access",
       category: "Visitor Experience",
       icon: ShieldCheck,
-      badgeColor: "bg-indigo-50 text-indigo-800 border-indigo-200",
-      planName: "Included for Occupants",
-      isSubscribed: true,
-      daysRemaining: daysLeft > 0 ? daysLeft : 365,
-      capacityText: "Digital Guest Passes",
+      badgeColor: isGlobalSubscribed ? "bg-indigo-50 text-indigo-800 border-indigo-200" : "bg-slate-100 text-slate-600 border-slate-200",
+      planName: isGlobalSubscribed ? "Included for Occupants" : "Not Active",
+      isSubscribed: isGlobalSubscribed,
+      daysRemaining: isGlobalSubscribed ? (daysLeft > 0 ? daysLeft : 30) : 0,
+      capacityText: isGlobalSubscribed ? "Digital Guest Passes" : "0 Guest Passes",
       features: [
         "Instant WhatsApp QR Guest Invitations",
         "Turnstile & Speed Gate Fast-Track Relays",
@@ -249,11 +262,11 @@ export default function UserProfileAndSubscriptionsPage() {
       name: "Facility Helpdesk & Service Tickets",
       category: "Work Order Dispatch",
       icon: Headphones,
-      badgeColor: "bg-purple-50 text-purple-800 border-purple-200",
-      planName: "Included for Occupants",
-      isSubscribed: true,
-      daysRemaining: daysLeft > 0 ? daysLeft : 365,
-      capacityText: "Unlimited Maintenance Tickets",
+      badgeColor: isGlobalSubscribed ? "bg-purple-50 text-purple-800 border-purple-200" : "bg-slate-100 text-slate-600 border-slate-200",
+      planName: isGlobalSubscribed ? "Included for Occupants" : "Not Active",
+      isSubscribed: isGlobalSubscribed,
+      daysRemaining: isGlobalSubscribed ? (daysLeft > 0 ? daysLeft : 30) : 0,
+      capacityText: isGlobalSubscribed ? "Unlimited Maintenance Tickets" : "0 Tickets",
       features: [
         "Raise HVAC, Electrical & Cleaning Requests",
         "Strict SLA Countdown Timers",
@@ -441,7 +454,16 @@ export default function UserProfileAndSubscriptionsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleResetSession}
+              title="Wipe local browser cache, role cookies & session storage"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold transition shadow-2xs cursor-pointer"
+            >
+              <RefreshCw size={13} />
+              <span>Reset Local Cache</span>
+            </button>
             <button
               type="button"
               onClick={handleSignOut}
@@ -658,8 +680,8 @@ export default function UserProfileAndSubscriptionsPage() {
             })}
           </div>
 
-          {/* Quick link for Tenants interested in Landlord tools */}
-          {isTenant && (
+          {/* Quick role-view toggle */}
+          {isTenant ? (
             <div className="p-4 rounded-2xl bg-slate-100/80 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2 text-slate-700">
                 <Building2 size={16} className="text-[#0F8B7D] shrink-0" />
@@ -667,12 +689,37 @@ export default function UserProfileAndSubscriptionsPage() {
                   Do you also manage commercial properties, multi-tenant buildings, or leasing?
                 </span>
               </div>
-              <Link
-                href="/dashboard"
-                className="font-bold text-[#0F8B7D] hover:underline shrink-0"
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("officex_user_role", "owner");
+                  localStorage.setItem("officex_role", "owner");
+                  setUserRole("Property Owner & Asset Manager");
+                }}
+                className="font-bold text-[#0F8B7D] hover:underline shrink-0 cursor-pointer text-left"
               >
                 Switch to Property Management Suite &rarr;
-              </Link>
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-slate-100/80 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-700">
+                <Users size={16} className="text-[#0F8B7D] shrink-0" />
+                <span className="font-semibold">
+                  Are you also an occupant or corporate tenant in an OfficeX-managed building?
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("officex_user_role", "tenant");
+                  localStorage.setItem("officex_role", "tenant");
+                  setUserRole("Tenant Occupant");
+                }}
+                className="font-bold text-[#0F8B7D] hover:underline shrink-0 cursor-pointer text-left"
+              >
+                Switch to Tenant Occupant Workspace &rarr;
+              </button>
             </div>
           )}
         </section>

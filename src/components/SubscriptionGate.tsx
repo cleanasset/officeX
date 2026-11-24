@@ -63,8 +63,8 @@ export default function SubscriptionGate({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => isUserSubscribedSync());
-  const [isChecking, setIsChecking] = useState<boolean>(() => !isUserSubscribedSync());
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(true);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
@@ -84,23 +84,8 @@ export default function SubscriptionGate({
 
   const [floorNoticeDismissed, setFloorNoticeDismissed] = useState<boolean>(false);
 
-  const [minAllowedSqft, setMinAllowedSqft] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
-      if (portSqft && portSqft > 0) return portSqft;
-    }
-    return 1000;
-  });
-
-  const [customSqft, setCustomSqft] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const portSqft = Number(localStorage.getItem("officex_total_portfolio_sqft"));
-      if (portSqft && portSqft > 0) return portSqft;
-      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
-      if (stored && stored > 0) return stored;
-    }
-    return 10000;
-  });
+  const [minAllowedSqft, setMinAllowedSqft] = useState<number>(1000);
+  const [customSqft, setCustomSqft] = useState<number>(10000);
 
   // Keep minAllowedSqft synchronized with universal portfolio floor
   useEffect(() => {
