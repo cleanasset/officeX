@@ -24,7 +24,9 @@ import {
   Tag,
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
-import { getClientUserEmail } from "@/lib/auth-storage";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
+import { supabase } from "@/lib/supabase";
 
 export interface PricingConfigResponse {
   taxConfig?: {
@@ -71,7 +73,19 @@ function OperatePricingInner({
 }: OperatePricingSectionProps) {
   // Pricing tab: "bundle" (CAFM All-In-One) vs "standalone" (A-La-Carte)
   const [pricingMode, setPricingMode] = useState<"bundle" | "standalone">(activeParamMode);
-  
+  const [showAllStandalone, setShowAllStandalone] = useState<boolean>(!activeParamModule);
+
+  const cleanActiveModule = (activeParamModule || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const knownStandaloneModules = ["rentroll", "ppm", "visitor", "visitors", "compliance", "leasecrm", "crm", "helpdesk"];
+  const isFocusedSingleModule = Boolean(
+    pricingMode === "standalone" &&
+    cleanActiveModule &&
+    knownStandaloneModules.includes(cleanActiveModule) &&
+    !showAllStandalone
+  );
+  const shouldShowStandaloneCard = (aliases: string[]) =>
+    !isFocusedSingleModule || aliases.includes(cleanActiveModule);
+
   useEffect(() => {
     if (activeParamMode) {
       setPricingMode(activeParamMode);
@@ -79,6 +93,7 @@ function OperatePricingInner({
   }, [activeParamMode]);
 
   useEffect(() => {
+    setShowAllStandalone(!activeParamModule);
     if (activeParamModule && pricingMode === "standalone") {
       const cleanMod = activeParamModule.toLowerCase().replace(/[^a-z0-9]/g, "");
       const el = document.getElementById(`module-${cleanMod}`) || document.getElementById(`module-${activeParamModule.toLowerCase()}`);
@@ -93,8 +108,65 @@ function OperatePricingInner({
   // Billing cycle: "monthly" vs "annual" (15% discount)
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   
-  // Property square footage for dynamic calculations (default 50,000 sq.ft)
+  // Portfolio Floor + Property square footage
+  const { minAllowedSqft, totalPortfolioSqft } = useUniversalPortfolioSqft(1000);
   const [propertySqft, setPropertySqft] = useState<number>(50000);
+
+  useEffect(() => {
+    if (minAllowedSqft > 1000) {
+      setPropertySqft((prev) => (prev < minAllowedSqft ? minAllowedSqft : prev));
+    }
+  }, [minAllowedSqft]);
+
+  // Live subscription state for logged-in user
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [subStatus, setSubStatus] = useState<any>(null);
+  const [checkingSub, setCheckingSub] = useState<boolean>(true);
+
+  const loadUserSubscription = async () => {
+    try {
+      let email = getClientUserEmail();
+      if (!email) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+        } catch {}
+      }
+      setUserEmail(email);
+      if (email) {
+        const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+          headers: { ...getClientAuthHeaders(), "x-user-email": email },
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSubStatus(data);
+        }
+      }
+    } catch {
+      // Non-blocking
+    } finally {
+      setCheckingSub(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUserSubscription();
+  }, []);
+
+  const isGlobalSubscribed = Boolean(
+    subStatus?.subscribed &&
+    subStatus.plan !== "none" &&
+    subStatus.plan !== "free"
+  );
+  const isAllInOneSubscribed = Boolean(
+    isGlobalSubscribed && (subStatus?.modules?.allInOne || subStatus?.isAdmin)
+  );
+  const isModuleSubscribed = (modKey: "rentRoll" | "visitors" | "ppm" | "compliance" | "helpdesk" | "leaseCrm") => {
+    if (!isGlobalSubscribed) return false;
+    if (isAllInOneSubscribed) return true;
+    return Boolean(subStatus?.modules?.[modKey]);
+  };
 
   // Live admin pricing loaded from API
   const [pricing, setPricing] = useState<PricingConfigResponse | null>(null);
@@ -123,17 +195,8 @@ function OperatePricingInner({
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_applied_coupon", code);
         sessionStorage.setItem("officex_applied_coupon", code);
-        localStorage.setItem("officex_subscription", "active");
-        sessionStorage.setItem("officex_subscription", "active");
-        localStorage.setItem("officex_subscribed_sqft", String(safeSqft || 50000));
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-        const email = getClientUserEmail();
-        if (email) {
-          localStorage.setItem(`officex_sub_${email}`, "active");
-          document.cookie = `officex_sub_${encodeURIComponent(email)}=active; path=/; max-age=2592000; SameSite=Lax`;
-        }
       }
-      showToast("🎉 Launch voucher applied! 100% free access granted.", "success");
+      showToast("🎉 Launch voucher applied! Click Activate to enable access.", "success");
     } else {
       setPromoError("Invalid or expired code. Please check and try again.");
     }
@@ -227,11 +290,46 @@ function OperatePricingInner({
     monthlyPrice: number;
     sqftRate: string;
   }) => {
+    const targetRedirect = (() => {
+      const code = plan.productCode.toUpperCase();
+      if (code === "RR" || code === "RENTROLL") return "/properties/rent-roll";
+      if (code === "PPM") return "/ops/ppm";
+      if (code === "VISITOR") return "/vc/dashboard";
+      if (code === "COMPLIANCE") return "/vc/dashboard";
+      if (code === "CRM") return "/operate/lease-crm";
+      if (code === "HELPDESK") return "/ops/helpdesk";
+      return "/dashboard/owner";
+    })();
+
     if (appliedPromo) {
-      showToast("🎉 Launch voucher active! Redirecting to Rent Roll...", "success");
+      try {
+        setProcessingPlan(plan.planName);
+        await fetch("/api/pricing/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
+          body: JSON.stringify({
+            productCode: plan.productCode,
+            planName: plan.planName,
+            edition: plan.edition,
+            amount: 0,
+            coupon: appliedPromo,
+            userEmail,
+            billingCycle,
+            subscribed_sqft: safeSqft,
+          }),
+        });
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_subscription", "active");
+          localStorage.setItem("officex_subscription_type", plan.edition);
+        }
+        await loadUserSubscription();
+      } catch {
+        // non-blocking
+      }
+      showToast(`🎉 Launch voucher active! Redirecting to ${plan.planName}...`, "success");
       setTimeout(() => {
         if (typeof window !== "undefined") {
-          window.location.href = "/properties/rent-roll";
+          window.location.href = targetRedirect;
         }
       }, 400);
       return;
@@ -257,7 +355,7 @@ function OperatePricingInner({
           try {
             const subRes = await fetch("/api/pricing/subscribe", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
               body: JSON.stringify({
                 productCode: plan.productCode,
                 planName: plan.planName,
@@ -265,11 +363,25 @@ function OperatePricingInner({
                 amount: billedAmount,
                 razorpay_payment_id: paymentRes.razorpay_payment_id,
                 razorpay_order_id: paymentRes.razorpay_order_id,
+                userEmail,
+                billingCycle,
+                subscribed_sqft: safeSqft,
+                coupon: appliedPromo || undefined,
               }),
             });
             const subData = await subRes.json();
+            if (typeof window !== "undefined") {
+              localStorage.setItem("officex_subscription", "active");
+              localStorage.setItem("officex_subscription_type", plan.edition);
+            }
+            await loadUserSubscription();
             if (subData.success) {
-              showToast(`🎉 Subscription activated! Welcome to ${plan.planName}.`, "success");
+              showToast(`🎉 Subscription activated! Redirecting to ${plan.planName}...`, "success");
+              setTimeout(() => {
+                if (typeof window !== "undefined") {
+                  window.location.href = targetRedirect;
+                }
+              }, 600);
             } else {
               showToast("Payment received. Subscription activation queued.", "success");
             }
@@ -310,6 +422,48 @@ function OperatePricingInner({
         </div>
       )}
 
+      {/* Active Subscription Status Banner */}
+      {!checkingSub && isGlobalSubscribed && (
+        <div className="max-w-5xl mx-auto mb-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-900 via-[#0D7B6C] to-teal-900 text-white shadow-xl border border-emerald-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-100 text-[11px] font-black uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                Active Subscription
+              </span>
+              {subStatus?.days_remaining !== undefined && (
+                <span className="text-[11px] font-bold text-teal-100 bg-white/10 px-2.5 py-0.5 rounded-full">
+                  {subStatus.days_remaining} days remaining
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg sm:text-xl font-black tracking-tight">
+              {subStatus?.plan_name || "OfficeX Subscription"} is Active on Your Account
+            </h3>
+            <p className="text-xs text-teal-100 font-medium">
+              Signed in as <strong className="text-white">{userEmail}</strong>
+              {subStatus?.subscribed_sqft ? ` · Licensed Quota: ${Number(subStatus.subscribed_sqft).toLocaleString("en-IN")} sq.ft` : ""}
+              {totalPortfolioSqft > 0 ? ` · Registered Properties: ${totalPortfolioSqft.toLocaleString("en-IN")} sq.ft` : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              href={isModuleSubscribed("rentRoll") ? "/properties/rent-roll" : "/dashboard?context=operate"}
+              className="px-5 py-3 rounded-xl bg-white text-[#0D7B6C] hover:bg-teal-50 font-black text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+            >
+              <span>Enter Dashboard</span>
+              <ArrowRight size={15} />
+            </Link>
+            <Link
+              href="/operate/subscription"
+              className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 font-bold text-xs transition"
+            >
+              Manage Plan
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       {!hideHeader && (
         <div className="text-center max-w-3xl mx-auto mb-10">
@@ -329,43 +483,58 @@ function OperatePricingInner({
       {/* Controls Bar: Mode Toggle + Billing Cadence */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-slate-50 border border-slate-200 rounded-3xl p-3 sm:p-4 shadow-2xs">
         {/* Primary Mode: Bundle vs Standalone */}
-        <div className="bg-white p-1 rounded-2xl inline-flex items-center border border-slate-200 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setPricingMode("bundle")}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              pricingMode === "bundle"
-                ? "bg-[#0D7B6C] text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>All-In-One CAFM Suite</span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-              pricingMode === "bundle" ? "bg-white/20 text-white" : "bg-teal-100 text-[#0D7B6C]"
-            }`}>
-              Save 45%
+        {pricingMode === "standalone" && activeParamModule && !showAllStandalone ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+              Direct Module Focus: <span className="text-[#0D7B6C] capitalize">{activeParamModule}</span>
             </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowAllStandalone(true)}
+              className="text-xs font-bold text-[#0D7B6C] hover:underline cursor-pointer px-2 py-1"
+            >
+              Show all modules &amp; suite &rarr;
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white p-1 rounded-2xl inline-flex items-center border border-slate-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setPricingMode("bundle")}
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                pricingMode === "bundle"
+                  ? "bg-[#0D7B6C] text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>All-In-One CAFM Suite</span>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                pricingMode === "bundle" ? "bg-white/20 text-white" : "bg-teal-100 text-[#0D7B6C]"
+              }`}>
+                Save 45%
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setPricingMode("standalone")}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              pricingMode === "standalone"
-                ? "bg-slate-900 text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Individual Modules</span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-              pricingMode === "standalone" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
-            }`}>
-              A-la-Carte
-            </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setPricingMode("standalone")}
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                pricingMode === "standalone"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Individual Modules</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                pricingMode === "standalone" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
+              }`}>
+                A-la-Carte
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Billing Cadence Toggle */}
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1 shadow-2xs text-xs">
@@ -538,30 +707,40 @@ function OperatePricingInner({
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={processingPlan === "CAFM Essentials"}
-              onClick={() => handleCheckout({
-                productCode: "CAFM",
-                planName: "CAFM Essentials",
-                edition: "essentials",
-                monthlyPrice: Math.round(cafm.essentialsMonthly * annualMultiplier),
-                sqftRate: formatSqftRate(Math.round(cafm.essentialsMonthly * annualMultiplier), Math.min(safeSqft, 25000)),
-              })}
-              className="w-full py-3.5 px-4 rounded-xl border border-slate-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {processingPlan === "CAFM Essentials" ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connecting Gateway...</span>
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Subscribe to Essentials</span>
-                </>
-              )}
-            </button>
+            {isAllInOneSubscribed ? (
+              <Link
+                href="/dashboard/owner"
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>✓ Active CAFM Suite · Open Dashboard</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={processingPlan === "CAFM Essentials"}
+                onClick={() => handleCheckout({
+                  productCode: "CAFM",
+                  planName: "CAFM Essentials",
+                  edition: "essentials",
+                  monthlyPrice: Math.round(cafm.essentialsMonthly * annualMultiplier),
+                  sqftRate: formatSqftRate(Math.round(cafm.essentialsMonthly * annualMultiplier), Math.min(safeSqft, 25000)),
+                })}
+                className="w-full py-3.5 px-4 rounded-xl border border-slate-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {processingPlan === "CAFM Essentials" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Connecting Gateway...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Subscribe to Essentials</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* 2. CAFM Pro Suite — MOST POPULAR */}
@@ -628,31 +807,42 @@ function OperatePricingInner({
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={processingPlan === "CAFM Pro Suite"}
-              onClick={() => handleCheckout({
-                productCode: "CAFM",
-                planName: "CAFM Pro Suite",
-                edition: "professional",
-                monthlyPrice: calcProPrice(),
-                sqftRate: formatSqftRate(calcProPrice()),
-              })}
-              className="w-full py-4 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {processingPlan === "CAFM Pro Suite" ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connecting Gateway...</span>
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Subscribe to Pro Suite (₹{formatSqftRate(calcProPrice())}/sq.ft)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
+            {isAllInOneSubscribed ? (
+              <Link
+                href="/dashboard/owner"
+                className="w-full py-4 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>✓ Active CAFM Suite · Open Pro Dashboard</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={processingPlan === "CAFM Pro Suite"}
+                onClick={() => handleCheckout({
+                  productCode: "CAFM",
+                  planName: "CAFM Pro Suite",
+                  edition: "professional",
+                  monthlyPrice: calcProPrice(),
+                  sqftRate: formatSqftRate(calcProPrice()),
+                })}
+                className="w-full py-4 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {processingPlan === "CAFM Pro Suite" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Connecting Gateway...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Subscribe to Pro Suite (₹{formatSqftRate(calcProPrice())}/sq.ft)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* 3. Enterprise IWMS */}
@@ -711,30 +901,40 @@ function OperatePricingInner({
             </div>
 
             <div className="space-y-2">
-              <button
-                type="button"
-                disabled={processingPlan === "CAFM Enterprise IWMS"}
-                onClick={() => handleCheckout({
-                  productCode: "CAFM",
-                  planName: "CAFM Enterprise IWMS",
-                  edition: "enterprise",
-                  monthlyPrice: calcEnterprisePrice(),
-                  sqftRate: formatSqftRate(calcEnterprisePrice()),
-                })}
-                className="w-full py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "CAFM Enterprise IWMS" ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Connecting Gateway...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Instant Online Activation</span>
-                  </>
-                )}
-              </button>
+              {isAllInOneSubscribed ? (
+                <Link
+                  href="/dashboard/owner"
+                  className="w-full py-3.5 px-4 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Enterprise CAFM · Open Console</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "CAFM Enterprise IWMS"}
+                  onClick={() => handleCheckout({
+                    productCode: "CAFM",
+                    planName: "CAFM Enterprise IWMS",
+                    edition: "enterprise",
+                    monthlyPrice: calcEnterprisePrice(),
+                    sqftRate: formatSqftRate(calcEnterprisePrice()),
+                  })}
+                  className="w-full py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "CAFM Enterprise IWMS" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting Gateway...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Instant Online Activation</span>
+                    </>
+                  )}
+                </button>
+              )}
               <Link
                 href="/operate/rent-roll#contact"
                 className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
@@ -752,16 +952,19 @@ function OperatePricingInner({
           ───────────────────────────────────────────────────────────── */}
       {pricingMode === "standalone" && (
         <div className="space-y-6">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-600 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-teal-600" />
-              <span>Purchase only the specific capability your commercial property needs today. Every module displays both monthly fee and effective <strong>₹ / sq.ft</strong> rate.</span>
+          {!isFocusedSingleModule && (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-600 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-teal-600" />
+                <span>Purchase only the specific capability your commercial property needs today. Every module displays both monthly fee and effective <strong>₹ / sq.ft</strong> rate.</span>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">Instant Razorpay Activation</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">Instant Razorpay Activation</span>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={isFocusedSingleModule ? "max-w-md mx-auto" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
             {/* 1. Rent Roll */}
+            {shouldShowStandaloneCard(["rentroll"]) && (
             <div
               id="module-rentroll"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -888,38 +1091,50 @@ function OperatePricingInner({
                   <span>Open Dedicated Rent Roll Pricing Table</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
-                <button
-                  type="button"
-                  disabled={processingPlan === "Rent Roll & Billing"}
-                  onClick={() => handleCheckout({
-                    productCode: "RR",
-                    planName: "Rent Roll & Billing",
-                    edition: "standalone",
-                    monthlyPrice: calcRentRollPrice(),
-                    sqftRate: formatSqftRate(calcRentRollPrice()),
-                  })}
-                  className={`w-full py-2.5 px-4 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
-                    appliedPromo ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-900 hover:bg-black"
-                  }`}
-                >
-                  {processingPlan === "Rent Roll & Billing" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : appliedPromo ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Activate Free Access ({appliedPromo})</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Instant Subscribe (₹{calcRentRollPrice().toLocaleString("en-IN")}/mo)</span>
-                    </>
-                  )}
-                </button>
+                {isModuleSubscribed("rentRoll") ? (
+                  <Link
+                    href="/properties/rent-roll"
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>✓ Active Subscription · Open Rent Roll</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={processingPlan === "Rent Roll & Billing"}
+                    onClick={() => handleCheckout({
+                      productCode: "RR",
+                      planName: "Rent Roll & Billing",
+                      edition: "standalone",
+                      monthlyPrice: calcRentRollPrice(),
+                      sqftRate: formatSqftRate(calcRentRollPrice()),
+                    })}
+                    className={`w-full py-2.5 px-4 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
+                      appliedPromo ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-900 hover:bg-black"
+                    }`}
+                  >
+                    {processingPlan === "Rent Roll & Billing" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : appliedPromo ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Activate Free Access ({appliedPromo})</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>Instant Subscribe (₹{calcRentRollPrice().toLocaleString("en-IN")}/mo)</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
+            )}
 
             {/* 2. 52-Week PPM */}
+            {shouldShowStandaloneCard(["ppm"]) && (
             <div
               id="module-ppm"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -984,30 +1199,42 @@ function OperatePricingInner({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={processingPlan === "52-Week PPM"}
-                onClick={() => handleCheckout({
-                  productCode: "PPM",
-                  planName: "52-Week PPM",
-                  edition: "standalone",
-                  monthlyPrice: Math.round(standalone.ppm.monthly * annualMultiplier),
-                  sqftRate: formatSqftRate(Math.round(standalone.ppm.monthly * annualMultiplier)),
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "52-Week PPM" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to 52-Week PPM</span>
-                  </>
-                )}
-              </button>
+              {isModuleSubscribed("ppm") ? (
+                <Link
+                  href="/ops/ppm"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Subscription · Open PPM Console</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "52-Week PPM"}
+                  onClick={() => handleCheckout({
+                    productCode: "PPM",
+                    planName: "52-Week PPM",
+                    edition: "standalone",
+                    monthlyPrice: Math.round(standalone.ppm.monthly * annualMultiplier),
+                    sqftRate: formatSqftRate(Math.round(standalone.ppm.monthly * annualMultiplier)),
+                  })}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "52-Week PPM" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Subscribe to 52-Week PPM</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+            )}
 
             {/* 3. Visitor Flow */}
+            {shouldShowStandaloneCard(["visitor", "visitors"]) && (
             <div
               id="module-visitor"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -1071,30 +1298,42 @@ function OperatePricingInner({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={processingPlan === "Visitor Flow & Speed-Gates"}
-                onClick={() => handleCheckout({
-                  productCode: "VISITOR",
-                  planName: "Visitor Flow & Speed-Gates",
-                  edition: "standalone",
-                  monthlyPrice: Math.round(standalone.visitor.monthly * annualMultiplier),
-                  sqftRate: "Per Gate",
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "Visitor Flow & Speed-Gates" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to Visitor Flow</span>
-                  </>
-                )}
-              </button>
+              {isModuleSubscribed("visitors") ? (
+                <Link
+                  href="/vc/dashboard"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Subscription · Open Visitor Console</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "Visitor Flow & Speed-Gates"}
+                  onClick={() => handleCheckout({
+                    productCode: "VISITOR",
+                    planName: "Visitor Flow & Speed-Gates",
+                    edition: "standalone",
+                    monthlyPrice: Math.round(standalone.visitor.monthly * annualMultiplier),
+                    sqftRate: "Per Gate",
+                  })}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "Visitor Flow & Speed-Gates" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Subscribe to Visitor Flow</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+            )}
 
             {/* 4. Statutory Compliance */}
+            {shouldShowStandaloneCard(["compliance"]) && (
             <div
               id="module-compliance"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -1158,30 +1397,42 @@ function OperatePricingInner({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={processingPlan === "Statutory Compliance Calendar"}
-                onClick={() => handleCheckout({
-                  productCode: "COMPLIANCE",
-                  planName: "Statutory Compliance Calendar",
-                  edition: "standalone",
-                  monthlyPrice: Math.round(standalone.compliance.monthly * annualMultiplier),
-                  sqftRate: formatSqftRate(Math.round(standalone.compliance.monthly * annualMultiplier)),
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "Statutory Compliance Calendar" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to Compliance</span>
-                  </>
-                )}
-              </button>
+              {isModuleSubscribed("compliance") ? (
+                <Link
+                  href="/vc/dashboard"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Subscription · Open Compliance Vault</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "Statutory Compliance Calendar"}
+                  onClick={() => handleCheckout({
+                    productCode: "COMPLIANCE",
+                    planName: "Statutory Compliance Calendar",
+                    edition: "standalone",
+                    monthlyPrice: Math.round(standalone.compliance.monthly * annualMultiplier),
+                    sqftRate: formatSqftRate(Math.round(standalone.compliance.monthly * annualMultiplier)),
+                  })}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "Statutory Compliance Calendar" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Subscribe to Compliance</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+            )}
 
             {/* 5. Lease CRM */}
+            {shouldShowStandaloneCard(["leasecrm", "crm"]) && (
             <div
               id="module-leasecrm"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -1246,30 +1497,42 @@ function OperatePricingInner({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={processingPlan === "Commercial Lease CRM"}
-                onClick={() => handleCheckout({
-                  productCode: "CRM",
-                  planName: "Commercial Lease CRM",
-                  edition: "standalone",
-                  monthlyPrice: Math.round(standalone.leaseCrm.monthly * annualMultiplier),
-                  sqftRate: formatSqftRate(Math.round(standalone.leaseCrm.monthly * annualMultiplier)),
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {processingPlan === "Commercial Lease CRM" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to Lease CRM</span>
-                  </>
-                )}
-              </button>
+              {isModuleSubscribed("leaseCrm") ? (
+                <Link
+                  href="/operate/lease-crm"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Subscription · Open Lease CRM</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "Commercial Lease CRM"}
+                  onClick={() => handleCheckout({
+                    productCode: "CRM",
+                    planName: "Commercial Lease CRM",
+                    edition: "standalone",
+                    monthlyPrice: Math.round(standalone.leaseCrm.monthly * annualMultiplier),
+                    sqftRate: formatSqftRate(Math.round(standalone.leaseCrm.monthly * annualMultiplier)),
+                  })}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "Commercial Lease CRM" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Subscribe to Lease CRM</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+            )}
 
             {/* 6. Tenant Helpdesk */}
+            {shouldShowStandaloneCard(["helpdesk"]) && (
             <div
               id="module-helpdesk"
               className={`bg-white border rounded-3xl p-6 flex flex-col justify-between transition-all ${
@@ -1334,29 +1597,53 @@ function OperatePricingInner({
                 </div>
               </div>
 
+              {isModuleSubscribed("helpdesk") ? (
+                <Link
+                  href="/ops/helpdesk"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ Active Subscription · Open Helpdesk Console</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={processingPlan === "Tenant Helpdesk & Rooms"}
+                  onClick={() => handleCheckout({
+                    productCode: "HELPDESK",
+                    planName: "Tenant Helpdesk & Rooms",
+                    edition: "standalone",
+                    monthlyPrice: Math.round(standalone.helpdesk.monthly * annualMultiplier),
+                    sqftRate: formatSqftRate(Math.round(standalone.helpdesk.monthly * annualMultiplier)),
+                  })}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {processingPlan === "Tenant Helpdesk & Rooms" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Subscribe to Helpdesk</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            )}
+          </div>
+
+          {isFocusedSingleModule && (
+            <div className="text-center pt-4">
               <button
                 type="button"
-                disabled={processingPlan === "Tenant Helpdesk & Rooms"}
-                onClick={() => handleCheckout({
-                  productCode: "HELPDESK",
-                  planName: "Tenant Helpdesk & Rooms",
-                  edition: "standalone",
-                  monthlyPrice: Math.round(standalone.helpdesk.monthly * annualMultiplier),
-                  sqftRate: formatSqftRate(Math.round(standalone.helpdesk.monthly * annualMultiplier)),
-                })}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                onClick={() => setShowAllStandalone(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-2xs"
               >
-                {processingPlan === "Tenant Helpdesk & Rooms" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Subscribe to Helpdesk</span>
-                  </>
-                )}
+                <Layers className="w-3.5 h-3.5 text-[#0D7B6C]" />
+                <span>View Full OfficeX CAFM Suite &amp; Other Standalone Modules</span>
               </button>
             </div>
-          </div>
+          )}
         </div>
       )}
 

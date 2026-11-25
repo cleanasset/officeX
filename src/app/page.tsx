@@ -333,7 +333,7 @@ export default function LandingPage() {
       quote: "Standardized property metrics, audited compliance trails, and verified lease cash flows for institutional diligence.",
       badge: "Institutional Governance",
       landingHref: "/audiences/investors",
-      portalHref: "/leasing",
+      portalHref: "/dashboard/leasing",
       portalName: "Leasing & Investor CRM",
       metrics: [
         { label: "WALE Visibility", val: "4.8 yrs" },
@@ -353,7 +353,7 @@ export default function LandingPage() {
       quote: "Self-service service requests, instant touchless visitor registration, and real-time billing clarity across multi-city campuses.",
       badge: "Workplace & Tenant Experience",
       landingHref: "/audiences/occupiers",
-      portalHref: "/tenant",
+      portalHref: "/portal",
       portalName: "Tenant Workplace",
       metrics: [
         { label: "Avg Request Resolution", val: "2.4 hrs" },

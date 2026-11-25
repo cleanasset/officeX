@@ -1412,13 +1412,13 @@ export default function PropertyMarketplacePage() {
             </div>
             <div className="flex items-center gap-3 pt-6 mt-4 border-t border-amber-200/60">
               <Link
-                href="/signup?context=marketplace&role=broker&redirect=/leasing"
+                href="/signup?context=marketplace&role=broker&redirect=/dashboard/leasing"
                 className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all"
               >
                 Join as Broker Partner
               </Link>
               <Link
-                href="/leasing"
+                href="/dashboard/leasing"
                 className="px-4 py-2.5 rounded-xl border border-amber-300 hover:bg-amber-100/50 text-amber-900 font-bold text-xs transition-all"
               >
                 Open Broker CRM →

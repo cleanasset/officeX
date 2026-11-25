@@ -27,6 +27,8 @@ const PUBLIC_EXACT_PATHS = new Set([
   '/invite',
   '/onboarding',
   '/discover',
+  '/manage',
+  '/resources',
   '/list-space',
   '/fm-marketplace',
   '/calq',

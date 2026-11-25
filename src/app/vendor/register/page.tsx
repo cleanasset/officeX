@@ -53,11 +53,11 @@ export default function VendorRegistrationWizard() {
         </Link>
 
         <div className="flex items-center gap-6 text-xs font-semibold text-gray-600">
-          <Link href="/tenant" className="hover:text-gray-900">Contact Support</Link>
-          <Link href="/tenant" className="hover:text-gray-900">Help Center</Link>
-          <button className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md">
+          <Link href="/support" className="hover:text-gray-900">Contact Support</Link>
+          <Link href="/faq" className="hover:text-gray-900">Help Center</Link>
+          <Link href="/contact" className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md transition-colors">
             Get Help
-          </button>
+          </Link>
         </div>
       </div>
 

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { db } from "@/db";
+import { entitlements } from "@/db/schema";
+import { vcSubscriptions } from "@/db/visitor-compliance-schema";
+import { eq, and, gt, desc } from "drizzle-orm";
+import { getDeterministicOrgId } from "@/lib/rent-roll/ensure-org";
 import fs from "fs";
 import path from "path";
 
@@ -33,16 +38,40 @@ function savePersistentSubscribed(email: string) {
   }
 }
 
-function resolveModules(planId: string, isAdmin: boolean) {
-  const p = (planId || "").toLowerCase();
-  const isAllInOne = isAdmin || p.includes("cafm") || p.includes("suite") || p.includes("commercial-suite") || p.includes("reit") || p.includes("enterprise");
-  
-  const isRentRoll = isAllInOne || p.includes("rentroll") || p.includes("rent-roll") || p.includes("starter") || p.includes("growth") || p.includes("campus") || p.includes("techpark");
-  const isVisitors = isAllInOne || p.includes("visitor");
-  const isPpm = isAllInOne || p.includes("ppm") || p.includes("maintenance");
-  const isCompliance = isAllInOne || p.includes("compliance");
+type ModuleEntitlements = {
+  allInOne: boolean;
+  rentRoll: boolean;
+  visitors: boolean;
+  ppm: boolean;
+  compliance: boolean;
+  helpdesk: boolean;
+  leaseCrm: boolean;
+};
+
+function resolveModules(planId: string, isAdmin: boolean): ModuleEntitlements {
+  const p = (planId || "").toLowerCase().trim();
+  const isAllInOne =
+    isAdmin ||
+    p.includes("cafm") ||
+    p.includes("suite") ||
+    p.includes("commercial-suite") ||
+    p.includes("reit") ||
+    p.includes("enterprise");
+
+  const isRentRoll =
+    isAllInOne ||
+    p === "rr" ||
+    p.includes("rentroll") ||
+    p.includes("rent-roll") ||
+    p.includes("starter") ||
+    p.includes("growth") ||
+    p.includes("campus") ||
+    p.includes("techpark");
+  const isVisitors = isAllInOne || p.includes("visitor") || p === "vc";
+  const isPpm = isAllInOne || p === "ppm" || p.includes("ppm") || p.includes("maintenance");
+  const isCompliance = isAllInOne || p.includes("compliance") || p === "vc";
   const isHelpdesk = isAllInOne || p.includes("helpdesk");
-  const isLeaseCrm = isAllInOne || p.includes("crm") || p.includes("lease");
+  const isLeaseCrm = isAllInOne || p === "crm" || p.includes("crm") || p.includes("lease");
 
   return {
     allInOne: isAllInOne,
@@ -52,6 +81,19 @@ function resolveModules(planId: string, isAdmin: boolean) {
     compliance: isCompliance,
     helpdesk: isHelpdesk,
     leaseCrm: isLeaseCrm,
+  };
+}
+
+function mergeModules(a: ModuleEntitlements, b: ModuleEntitlements): ModuleEntitlements {
+  const allInOne = a.allInOne || b.allInOne;
+  return {
+    allInOne,
+    rentRoll: allInOne || a.rentRoll || b.rentRoll,
+    visitors: allInOne || a.visitors || b.visitors,
+    ppm: allInOne || a.ppm || b.ppm,
+    compliance: allInOne || a.compliance || b.compliance,
+    helpdesk: allInOne || a.helpdesk || b.helpdesk,
+    leaseCrm: allInOne || a.leaseCrm || b.leaseCrm,
   };
 }
 
@@ -150,12 +192,15 @@ export async function GET(request: Request) {
       }, { status: 200 });
     }
 
-    // Calculate current portfolio sqft for the user/organization
+    const userOrgId = getDeterministicOrgId(email);
+
+    // Calculate current portfolio sqft strictly for the user's organization
     let totalPortfolioSqft = 0;
     try {
       const { data: propRows } = await supabase
         .from("property")
         .select("total_leasable_area_sqft")
+        .eq("org_id", userOrgId)
         .is("deleted_at", null);
       if (Array.isArray(propRows)) {
         totalPortfolioSqft = propRows.reduce((sum, p) => sum + (Number(p.total_leasable_area_sqft) || 0), 0);
@@ -184,6 +229,9 @@ export async function GET(request: Request) {
           isAdmin: true,
           role: "super_admin",
           days_remaining: 365,
+          subscribed_sqft: 500000000,
+          totalPortfolioSqft,
+          remaining_sqft: 500000000,
           modules: adminModules,
           activeModuleKeys: Object.keys(adminModules).filter(k => k !== "allInOne"),
           activeModulesCount: 6,
@@ -195,55 +243,60 @@ export async function GET(request: Request) {
       // Non-blocking
     }
 
-    // 3. Query PostgreSQL user_subscriptions table for active unexpired subscription
+    // Collect unified active subscriptions across user_subscriptions, system_kv_store, entitlements & vc_subscriptions
+    let isSubscribedAny = false;
+    let mergedModules: ModuleEntitlements = { ...EMPTY_MODULES };
+    let primaryPlan = "none";
+    let primaryPlanName = "";
+    let primaryBillingCycle = "monthly";
+    let primaryDurationMonths = 1;
+    let primaryStartsAt = "";
+    let primaryEndsAt = "";
+    let primaryPaymentId: string | null = null;
+    let primaryCoupon: string | null = null;
+    let maxEndsAtMs = 0;
+    let bestSubscribedSqft: number | null = null;
+
+    // 3. Query PostgreSQL user_subscriptions table for all active unexpired subscriptions
     try {
       const nowIso = new Date().toISOString();
-      const { data: dbSub, error: dbErr } = await supabase
+      const { data: dbSubs, error: dbErr } = await supabase
         .from("user_subscriptions")
         .select("*")
         .eq("email", email)
         .eq("status", "active")
         .gt("ends_at", nowIso)
         .order("ends_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
-      if (!dbErr && dbSub) {
-        const endsAtMs = new Date(dbSub.ends_at).getTime();
-        const daysRemaining = Math.max(0, Math.ceil((endsAtMs - Date.now()) / (1000 * 60 * 60 * 24)));
-        const planKey = dbSub.plan_id || "techpark";
-        const userModules = resolveModules(planKey, false);
-        const activeKeys = Object.entries(userModules).filter(([k, v]) => v && k !== "allInOne").map(([k]) => k);
-
-        const res = NextResponse.json({
-          subscribed: true,
-          email,
-          plan: planKey,
-          plan_name: dbSub.plan_name || "Tech Park Campus",
-          billing_cycle: dbSub.billing_cycle || "monthly",
-          duration_months: dbSub.duration_months || 1,
-          starts_at: dbSub.starts_at,
-          ends_at: dbSub.ends_at,
-          days_remaining: daysRemaining,
-          payment_id: dbSub.payment_id,
-          coupon: dbSub.coupon_code,
-          subscribed_sqft: dbSub.metadata?.subscribed_sqft || null,
-          totalPortfolioSqft,
-          remaining_sqft: dbSub.metadata?.subscribed_sqft ? Math.max(0, Number(dbSub.metadata.subscribed_sqft) - totalPortfolioSqft) : null,
-          modules: userModules,
-          activeModuleKeys: activeKeys,
-          activeModulesCount: activeKeys.length,
-        }, { status: 200 });
-        res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
-        res.cookies.set("officex_owner_subscribed", "true", { path: "/", maxAge: 2592000, sameSite: "lax" });
-        res.cookies.set("officex_subscription_status", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
-        return res;
+      if (!dbErr && Array.isArray(dbSubs) && dbSubs.length > 0) {
+        for (const dbSub of dbSubs) {
+          isSubscribedAny = true;
+          const planKey = dbSub.plan_id || "commercial-suite";
+          mergedModules = mergeModules(mergedModules, resolveModules(planKey, false));
+          const endsAtMs = new Date(dbSub.ends_at).getTime();
+          if (endsAtMs >= maxEndsAtMs) {
+            maxEndsAtMs = endsAtMs;
+            primaryPlan = planKey;
+            primaryPlanName = dbSub.plan_name || "OfficeX Commercial Suite";
+            primaryBillingCycle = dbSub.billing_cycle || "monthly";
+            primaryDurationMonths = dbSub.duration_months || 1;
+            primaryStartsAt = dbSub.starts_at;
+            primaryEndsAt = dbSub.ends_at;
+            primaryPaymentId = dbSub.payment_id;
+            primaryCoupon = dbSub.coupon_code;
+          }
+          const subSqft = Number(dbSub.metadata?.subscribed_sqft || 0);
+          if (subSqft > 0) {
+            bestSubscribedSqft = Math.max(bestSubscribedSqft || 0, subSqft);
+          }
+        }
       }
     } catch (e) {
       console.warn("user_subscriptions lookup error:", e);
     }
 
-    // 4. Secondary fallback: check system_kv_store for unexpired active subscription
+    // 4. Secondary lookup: check system_kv_store for unexpired active subscription
     try {
       const { data: kvData } = await supabase
         .from("system_kv_store")
@@ -257,39 +310,127 @@ export async function GET(request: Request) {
       if (userSub && userSub.status === "active") {
         const endsAtStr = userSub.endsAt || userSub.ends_at;
         const endsAtMs = endsAtStr ? new Date(endsAtStr).getTime() : Date.now() + 30 * 86400000;
-        
-        // Check if not expired
-        if (endsAtMs > Date.now()) {
-          const daysRemaining = Math.max(0, Math.ceil((endsAtMs - Date.now()) / (1000 * 60 * 60 * 24)));
-          const planKey = userSub.plan || "techpark";
-          const userModules = resolveModules(planKey, false);
-          const activeKeys = Object.entries(userModules).filter(([k, v]) => v && k !== "allInOne").map(([k]) => k);
 
-          const res = NextResponse.json({
-            subscribed: true,
-            email,
-            plan: planKey,
-            plan_name: userSub.plan_name || "Tech Park Campus",
-            billing_cycle: userSub.billing_cycle || "monthly",
-            duration_months: userSub.duration_months || 1,
-            starts_at: userSub.startsAt || userSub.starts_at,
-            ends_at: endsAtStr,
-            days_remaining: daysRemaining,
-            paymentId: userSub.paymentId,
-            coupon: userSub.coupon,
-            subscribed_sqft: userSub.subscribed_sqft || null,
-            totalPortfolioSqft,
-            remaining_sqft: userSub.subscribed_sqft ? Math.max(0, Number(userSub.subscribed_sqft) - totalPortfolioSqft) : null,
-            modules: userModules,
-            activeModuleKeys: activeKeys,
-            activeModulesCount: activeKeys.length,
-          }, { status: 200 });
-          res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
-          return res;
+        if (endsAtMs > Date.now()) {
+          isSubscribedAny = true;
+          const planKey = userSub.plan || "commercial-suite";
+          mergedModules = mergeModules(mergedModules, resolveModules(planKey, false));
+          if (endsAtMs >= maxEndsAtMs) {
+            maxEndsAtMs = endsAtMs;
+            primaryPlan = planKey;
+            primaryPlanName = userSub.plan_name || primaryPlanName || "OfficeX Commercial Suite";
+            primaryBillingCycle = userSub.billing_cycle || "monthly";
+            primaryDurationMonths = userSub.duration_months || 1;
+            primaryStartsAt = userSub.startsAt || userSub.starts_at || new Date().toISOString();
+            primaryEndsAt = endsAtStr || new Date(endsAtMs).toISOString();
+            primaryPaymentId = userSub.paymentId || primaryPaymentId;
+            primaryCoupon = userSub.coupon || primaryCoupon;
+          }
+          const subSqft = Number(userSub.subscribed_sqft || 0);
+          if (subSqft > 0) {
+            bestSubscribedSqft = Math.max(bestSubscribedSqft || 0, subSqft);
+          }
         }
       }
     } catch {
       // Non-blocking
+    }
+
+    // 5. Tertiary lookup: check modular entitlements table (written by /api/pricing/subscribe)
+    try {
+      const now = new Date();
+      const orgEnts = await db
+        .select()
+        .from(entitlements)
+        .where(and(eq(entitlements.orgId, userOrgId), eq(entitlements.status, "active")));
+
+      for (const ent of orgEnts) {
+        if (ent.validUntil && new Date(ent.validUntil).getTime() <= now.getTime()) continue;
+        isSubscribedAny = true;
+        const code = (ent.productCode || "").toLowerCase().trim();
+        const modPlanKey =
+          code === "cafm" ? `cafm-${ent.edition || "pro"}` :
+          code === "rr" ? "rent-roll" :
+          code === "ppm" ? "ppm" :
+          code === "visitor" ? "visitor" :
+          code === "compliance" ? "compliance" :
+          code === "crm" ? "crm" :
+          code === "helpdesk" ? "helpdesk" : code;
+        mergedModules = mergeModules(mergedModules, resolveModules(modPlanKey, false));
+        const endsAtMs = ent.validUntil ? new Date(ent.validUntil).getTime() : Date.now() + 30 * 86400000;
+        if (endsAtMs >= maxEndsAtMs) {
+          maxEndsAtMs = endsAtMs;
+          if (primaryPlan === "none") {
+            primaryPlan = modPlanKey;
+            primaryPlanName = code === "cafm" ? `CAFM ${ent.edition || "Pro"}` : modPlanKey.toUpperCase();
+            primaryEndsAt = new Date(endsAtMs).toISOString();
+            primaryStartsAt = ent.updatedAt ? new Date(ent.updatedAt).toISOString() : new Date().toISOString();
+          }
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+
+    // 6. Check Visitor & Compliance standalone subscription table
+    try {
+      const vcSubs = await db
+        .select()
+        .from(vcSubscriptions)
+        .where(and(eq(vcSubscriptions.orgId, userOrgId), eq(vcSubscriptions.status, "active")))
+        .orderBy(desc(vcSubscriptions.createdAt))
+        .limit(1);
+
+      if (vcSubs.length > 0) {
+        const sub = vcSubs[0];
+        const endsAtMs = sub.endsAt ? new Date(sub.endsAt).getTime() : Date.now() + 30 * 86400000;
+        if (endsAtMs > Date.now()) {
+          isSubscribedAny = true;
+          mergedModules = mergeModules(mergedModules, resolveModules("vc", false));
+          if (primaryPlan === "none") {
+            maxEndsAtMs = Math.max(maxEndsAtMs, endsAtMs);
+            primaryPlan = "vc-commercial-pass";
+            primaryPlanName = sub.planName || "Visitor & Compliance Pass";
+            primaryEndsAt = new Date(endsAtMs).toISOString();
+          }
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+
+    if (isSubscribedAny) {
+      const daysRemaining = maxEndsAtMs > 0
+        ? Math.max(1, Math.ceil((maxEndsAtMs - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 30;
+      const activeKeys = Object.entries(mergedModules).filter(([k, v]) => v && k !== "allInOne").map(([k]) => k);
+      const effectiveSqftCap = bestSubscribedSqft && bestSubscribedSqft > 0
+        ? bestSubscribedSqft
+        : (totalPortfolioSqft > 0 ? totalPortfolioSqft : null);
+
+      const res = NextResponse.json({
+        subscribed: true,
+        email,
+        plan: primaryPlan,
+        plan_name: primaryPlanName || "OfficeX Commercial Suite",
+        billing_cycle: primaryBillingCycle,
+        duration_months: primaryDurationMonths,
+        starts_at: primaryStartsAt || new Date().toISOString(),
+        ends_at: primaryEndsAt || new Date(Date.now() + daysRemaining * 86400000).toISOString(),
+        days_remaining: daysRemaining,
+        payment_id: primaryPaymentId,
+        coupon: primaryCoupon,
+        subscribed_sqft: effectiveSqftCap,
+        totalPortfolioSqft,
+        remaining_sqft: effectiveSqftCap ? Math.max(0, effectiveSqftCap - totalPortfolioSqft) : null,
+        modules: mergedModules,
+        activeModuleKeys: activeKeys,
+        activeModulesCount: activeKeys.length,
+      }, { status: 200 });
+      res.cookies.set("officex_subscription", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
+      res.cookies.set("officex_owner_subscribed", "true", { path: "/", maxAge: 2592000, sameSite: "lax" });
+      res.cookies.set("officex_subscription_status", "active", { path: "/", maxAge: 2592000, sameSite: "lax" });
+      return res;
     }
 
     // 5. Default: User has no active paid subscription

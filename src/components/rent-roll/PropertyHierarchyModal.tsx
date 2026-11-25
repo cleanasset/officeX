@@ -76,6 +76,37 @@ import {
   getDelegatedEntityLabel,
 } from "./RentRollOnboardingWizard";
 import { downloadLeaseContractPdf, LeaseContractPdfData } from "@/lib/pdf/lease-contract-pdf";
+import {
+  addDaysYmd,
+  addMonthsYmd,
+  buildEscalationSchedule,
+  calculateLeaseTenure,
+  computeContractFinancialSummary,
+  diffDaysInclusiveYmd,
+  formatDisplayDateInr,
+  getCycleMonthsFromFrequency,
+  normalizeTdsPolicy,
+  parseLocalYmd,
+  roundInr,
+  TdsPresetMode,
+} from "@/lib/rent-roll/billing/lease-financial-engine";
+import { checkOwnerTenantIdentityOverlap } from "@/lib/rent-roll/counterparty-guard";
+
+const getTodayLocalYmd = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+const normalizeDisplayPropertyType = (rawType?: string): string => {
+  if (!rawType) return "Commercial Office Tower";
+  const cleaned = rawType.toLowerCase().replace(/[\s_-]+/g, "");
+  const matched = COMMERCIAL_ASSET_TYPES.find(
+    (t) =>
+      t.id.toLowerCase().replace(/[\s_-]+/g, "") === cleaned ||
+      t.label.toLowerCase().replace(/[\s_-]+/g, "") === cleaned
+  );
+  return matched ? matched.label : "Commercial Office Tower";
+};
 
 export const checkIsOwnerSubscribed = (): boolean => {
   if (typeof window !== "undefined") {
@@ -317,6 +348,7 @@ export default function PropertyHierarchyModal({
 
   // Billing SPV Entities
   const [billingEntities, setBillingEntities] = useState<string[]>([]);
+  const [showPremisesEditor, setShowPremisesEditor] = useState(false);
 
   // Dropdown Master Collections
   const [propertiesList, setPropertiesList] = useState<Array<{ id: string; name: string; area?: number }>>([]);
@@ -557,6 +589,7 @@ export default function PropertyHierarchyModal({
     securityDeposit: "",
     depositMonths: "6",
     fitoutDays: "0",
+    camPayableDuringFitout: false,
     lockInMonths: "12",
     lockInCommencement: "handover" as "handover" | "rcd",
     lockInEndDate: "",
@@ -564,7 +597,15 @@ export default function PropertyHierarchyModal({
     // Escalation
     escalationPct: "5",
     escalationStartDate: "",
+    escalationAnchor: "start" as "start" | "rcd",
     escalationFrequency: "Annual", // "Annual" | "Biannual" | "Triennial" | "Quarterly"
+    // Statutory TDS Rules (Owner-Configurable Per Component)
+    tdsEnabled: true,
+    tdsPreset: "rent_only_194i" as TdsPresetMode,
+    tdsRentPct: "10",
+    tdsCamPct: "0",
+    tdsParkingPct: "0",
+    tdsUtilityPct: "0",
     // Legal & Statutory
     billingEntity: "",
     paymentTerms: "Due on 5th of month",
@@ -692,11 +733,21 @@ export default function PropertyHierarchyModal({
     if (isOpen) {
       loadHierarchyDropdowns();
       setFeedback(null);
+      setShowPremisesEditor(false);
 
-      // Check if there is an active wizard draft saved in localStorage
+      // Check if there is an active wizard draft saved in localStorage matching this property/context
       const draft = getWizardDraft();
+      const draftMatchesTarget =
+        !initialPropertyId && !initialSpaceId
+          ? true
+          : Boolean(
+              draft &&
+                ((initialPropertyId && draft.initialPropertyId === initialPropertyId) ||
+                  (initialSpaceId && draft.preloadSpaceId === initialSpaceId))
+            );
       const hasDraftData = Boolean(
         draft &&
+        draftMatchesTarget &&
         (draft.activeTab !== "property" ||
           draft.propForm?.propertyName?.trim() ||
           draft.tenantForm?.companyName?.trim() ||
@@ -727,7 +778,12 @@ export default function PropertyHierarchyModal({
         setIsDraftRestored(true);
       } else {
         setActiveTabState(initialTab);
-        if (initialTab === "property") {
+        setLatestTenantInvite(null);
+        setSelectedTenantFloor("");
+        setSelectedContractFloor("");
+        setSelectedTenantFloors([]);
+        setSelectedTenantSuites([]);
+        if (initialTab === "property" && !initialPropertyId && !initialSpaceId) {
           resetPropertyForm();
         }
         setIsDraftRestored(false);
@@ -974,13 +1030,21 @@ export default function PropertyHierarchyModal({
       securityDeposit: "",
       depositMonths: "6",
       fitoutDays: "0",
+      camPayableDuringFitout: false,
       lockInMonths: "12",
       lockInCommencement: "handover" as "handover" | "rcd",
       lockInEndDate: "",
       noticeDays: "90",
       escalationPct: "5",
       escalationStartDate: "",
+      escalationAnchor: "start" as "start" | "rcd",
       escalationFrequency: "Annual",
+      tdsEnabled: true,
+      tdsPreset: "rent_only_194i" as TdsPresetMode,
+      tdsRentPct: "10",
+      tdsCamPct: "0",
+      tdsParkingPct: "0",
+      tdsUtilityPct: "0",
       billingEntity: "",
       paymentTerms: "Due on 5th of month",
       stampDutySharing: "50:50 Shared",
@@ -999,37 +1063,30 @@ export default function PropertyHierarchyModal({
     try {
       const authHeaders = getClientAuthHeaders();
 
-      // 1. Fetch properties
-      const pRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
+      // 1. Fetch properties, buildings, and spaces together to resolve property + full Step 1 hydration
+      const [pRes, bRes, sRes] = await Promise.all([
+        fetch("/api/rent-roll/properties", { headers: authHeaders }),
+        fetch("/api/buildings", { headers: authHeaders }),
+        fetch("/api/spaces", { headers: authHeaders }),
+      ]);
+
+      let rawProps: any[] = [];
+      let pArr: Array<{ id: string; name: string; area: number }> = [];
       if (pRes.ok) {
         const pData = await pRes.json();
-        const pArr = (Array.isArray(pData.data) ? pData.data : []).map((p: any) => ({
+        rawProps = Array.isArray(pData.data) ? pData.data : [];
+        pArr = rawProps.map((p: any) => ({
           id: p.id,
           name: p.property_name,
           area: Number(p.total_leasable_area_sqft || p.area_sqft || 0),
         }));
         setPropertiesList(pArr);
-        const targetPropId = initialPropertyId || "";
-        if (targetPropId) {
-          const matchedProp = pArr.find((p: any) => p.id === targetPropId);
-          if (matchedProp) {
-            setPropForm((prev) => ({
-              ...prev,
-              existingPropId: matchedProp.id,
-              propertyName: matchedProp.name,
-              areaSqft: String(matchedProp.area || ""),
-            }));
-            setBldgForm((prev) => ({ ...prev, propertyId: matchedProp.id }));
-            setContractForm((prev) => ({ ...prev, propertyId: matchedProp.id }));
-          }
-        }
       }
 
-      // 2. Fetch buildings
-      const bRes = await fetch("/api/buildings", { headers: authHeaders });
+      let bArr: Array<{ id: string; name: string; propertyId?: string; floors?: number; totalAreaSqft?: number }> = [];
       if (bRes.ok) {
         const bData = await bRes.json();
-        const bArr = (Array.isArray(bData.data) ? bData.data : []).map((b: any) => ({
+        bArr = (Array.isArray(bData.data) ? bData.data : []).map((b: any) => ({
           id: b.id,
           name: b.building_name,
           propertyId: b.property_id,
@@ -1037,20 +1094,12 @@ export default function PropertyHierarchyModal({
           totalAreaSqft: b.total_area_sqft ? Number(b.total_area_sqft) : 0,
         }));
         setBuildingsList(bArr);
-        if (bArr.length > 0 && !spaceForm.buildingId) {
-          setSpaceForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
-          setContractForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
-        }
-        if (bArr.length > 0 && !selectedTenantBuilding) {
-          setSelectedTenantBuilding(bArr[0].id);
-        }
       }
 
-      // 3. Fetch spaces
-      const sRes = await fetch("/api/spaces", { headers: authHeaders });
+      let sArr: any[] = [];
       if (sRes.ok) {
         const sData = await sRes.json();
-        const sArr = (Array.isArray(sData.data) ? sData.data : []).map((s: any) => ({
+        sArr = (Array.isArray(sData.data) ? sData.data : []).map((s: any) => ({
           id: s.id,
           name: s.space_name || s.space_code,
           area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
@@ -1064,36 +1113,171 @@ export default function PropertyHierarchyModal({
           meetingRoomsCount: s.meeting_rooms_count !== undefined && s.meeting_rooms_count !== null ? Number(s.meeting_rooms_count) : null,
         }));
         setSpacesList(sArr);
-        if (initialSpaceId) {
-          const matched = sArr.find((s: any) => s.id === initialSpaceId);
-          if (matched) {
-            setContractForm((prev) => ({
-              ...prev,
-              spaceId: matched.id,
-              areaSqft: String(matched.area || ""),
-              buildingId: matched.buildingId || prev.buildingId,
-            }));
-            setSelectedTenantSuites([matched.id]);
-            if (matched.floorName) {
-              const flNum = matched.floorName.match(/\d+/);
-              const fl = flNum ? flNum[0] : (/ground|g/i.test(matched.floorName) ? "0" : "");
-              if (fl) {
-                setSelectedTenantFloor(fl);
-                setSelectedContractFloor(fl);
-                setSelectedTenantFloors([fl]);
-              }
-            }
-            if (matched.buildingId) {
-              setSelectedTenantBuilding(matched.buildingId);
+      }
+
+      const matchedSpace = initialSpaceId ? sArr.find((s) => s.id === initialSpaceId) : null;
+      const matchedSpaceBldg = matchedSpace ? bArr.find((b) => b.id === matchedSpace.buildingId) : null;
+      const targetPropId =
+        initialPropertyId ||
+        matchedSpaceBldg?.propertyId ||
+        propForm.existingPropId ||
+        (pArr.length === 1 ? pArr[0].id : "");
+
+      const matchedRawProp = targetPropId ? rawProps.find((p: any) => p.id === targetPropId) : null;
+      if (matchedRawProp) {
+        const propBldgs = bArr.filter((b) => b.propertyId === matchedRawProp.id);
+        const propBldgIds = new Set(propBldgs.map((b) => b.id));
+        const propSpaces = sArr.filter((s) => s.buildingId && propBldgIds.has(s.buildingId));
+
+        const hasEntireSpace = propSpaces.some(
+          (s) =>
+            s.unitType === "entire_building" ||
+            /entire|all\s*floors|whole/i.test(s.floorName || "") ||
+            /entire\s*(building|facility)/i.test(s.name || "")
+        );
+        const inferredLeasingModel: "single_tenant" | "multi_tenant" = hasEntireSpace
+          ? "single_tenant"
+          : propSpaces.length > 1
+          ? "multi_tenant"
+          : "single_tenant";
+
+        const inferredFloors = propBldgs.length > 0
+          ? Math.max(...propBldgs.map((b) => Number(b.floors) || 1))
+          : 1;
+
+        const hydratedCity = matchedRawProp.city || "";
+        const hydratedState = matchCanonicalIndianState(matchedRawProp.state) || matchedRawProp.state || "";
+        if (hydratedState && INDIAN_STATES_CITIES[hydratedState]) {
+          setAvailableCities(INDIAN_STATES_CITIES[hydratedState]);
+        }
+
+        const spvVal = matchedRawProp.spv_name || "";
+        if (spvVal) {
+          setBillingEntities((prev) => Array.from(new Set([spvVal, ...prev])));
+        }
+
+        setPropForm((prev) => ({
+          ...prev,
+          existingPropId: matchedRawProp.id,
+          propertyName: matchedRawProp.property_name || prev.propertyName,
+          propertyCode: matchedRawProp.property_code || prev.propertyCode,
+          address: matchedRawProp.address || matchedRawProp.address_line1 || prev.address,
+          city: hydratedCity || prev.city,
+          state: hydratedState || prev.state,
+          pincode: matchedRawProp.postal_code || matchedRawProp.pincode || prev.pincode,
+          areaSqft: String(Number(matchedRawProp.total_leasable_area_sqft || matchedRawProp.area_sqft || 0) || prev.areaSqft || ""),
+          totalSeats: matchedRawProp.total_leasable_seats ? String(matchedRawProp.total_leasable_seats) : prev.totalSeats,
+          propertyType: normalizeDisplayPropertyType(matchedRawProp.property_type) || prev.propertyType,
+          leasingModel: inferredLeasingModel,
+          hasMultipleBuildings: propBldgs.length > 1,
+          buildingsCount: String(Math.max(1, propBldgs.length)),
+          floorsCount: String(inferredFloors),
+          ownershipStructure: matchedRawProp.ownership_type || prev.ownershipStructure,
+          spvName: spvVal || prev.spvName,
+          panNumber: matchedRawProp.pan || prev.panNumber,
+          cinNumber: matchedRawProp.cin || prev.cinNumber,
+          gstin: matchedRawProp.gstin || prev.gstin,
+          contactName: matchedRawProp.primary_contact_name || matchedRawProp.contact_name || prev.contactName,
+          contactPhone: matchedRawProp.primary_contact_phone || matchedRawProp.contact_phone || prev.contactPhone,
+          fitoutCondition: matchedRawProp.fitout_condition || prev.fitoutCondition,
+          defaultFitoutDays: matchedRawProp.default_fitout_days ? String(matchedRawProp.default_fitout_days) : prev.defaultFitoutDays,
+          workstationsCount: matchedRawProp.workstations_count !== undefined && matchedRawProp.workstations_count !== null ? String(matchedRawProp.workstations_count) : prev.workstationsCount,
+          cabinsCount: matchedRawProp.cabins_count !== undefined && matchedRawProp.cabins_count !== null ? String(matchedRawProp.cabins_count) : prev.cabinsCount,
+        }));
+
+        if (propBldgs.length > 1) {
+          setTowersBreakdown(
+            propBldgs.map((b, idx) => ({
+              id: b.id || String(idx + 1),
+              name: b.name,
+              floorsCount: String(b.floors || 1),
+              areaSqft: String(b.totalAreaSqft || ""),
+              gateOrAddress: "",
+            }))
+          );
+        }
+
+        if (propSpaces.length > 0 && !hasEntireSpace) {
+          const flMap = new Map<number, { floorNumber: number; spaceName: string; areaSqft: string }>();
+          for (const sp of propSpaces) {
+            const flNum = extractFloorNumberFromSpace(sp);
+            if (!flMap.has(flNum)) {
+              flMap.set(flNum, {
+                floorNumber: flNum,
+                spaceName: sp.floorName || formatFloorName(flNum),
+                areaSqft: String(sp.area || 0),
+              });
+            } else {
+              const cur = flMap.get(flNum)!;
+              cur.areaSqft = String((Number(cur.areaSqft) || 0) + (sp.area || 0));
             }
           }
-        } else if (sArr.length > 0 && !contractForm.spaceId) {
-          setContractForm((prev) => ({
-            ...prev,
-            spaceId: sArr[0].id,
-            areaSqft: String(sArr[0].area || ""),
-          }));
+          setFloorBreakdown(Array.from(flMap.values()).sort((a, b) => a.floorNumber - b.floorNumber));
         }
+
+        const primaryBldgId = matchedSpace?.buildingId || propBldgs[0]?.id || bArr[0]?.id || "";
+        if (primaryBldgId) {
+          setSpaceForm((prev) => ({ ...prev, buildingId: prev.buildingId || primaryBldgId }));
+          setSelectedTenantBuilding((prev) => prev || primaryBldgId);
+        }
+        setBldgForm((prev) => ({ ...prev, propertyId: matchedRawProp.id }));
+        setContractForm((prev) => ({
+          ...prev,
+          propertyId: matchedRawProp.id,
+          buildingId: primaryBldgId || prev.buildingId,
+          billingEntity: prev.billingEntity || spvVal || matchedRawProp.primary_contact_name || "",
+          fitoutDays:
+            prev.fitoutDays && prev.fitoutDays !== "0"
+              ? prev.fitoutDays
+              : String(matchedRawProp.default_fitout_days || prev.fitoutDays || "0"),
+        }));
+      } else if (bArr.length > 0) {
+        if (!spaceForm.buildingId) {
+          setSpaceForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
+          setContractForm((prev) => ({ ...prev, buildingId: bArr[0].id }));
+        }
+        if (!selectedTenantBuilding) {
+          setSelectedTenantBuilding(bArr[0].id);
+        }
+      }
+
+      if (matchedSpace) {
+        setContractForm((prev) => ({
+          ...prev,
+          spaceId: matchedSpace.id,
+          areaSqft: String(matchedSpace.area || ""),
+          buildingId: matchedSpace.buildingId || prev.buildingId,
+        }));
+        setSelectedTenantSuites([matchedSpace.id]);
+        const flRaw = (matchedSpace.floorName || "").trim();
+        const spNameRaw = (matchedSpace.name || "").trim();
+        const isEntireBuilding =
+          matchedSpace.unitType === "entire_building" ||
+          /entire|all\s*floors|whole/i.test(flRaw) ||
+          /entire\s*(building|facility)/i.test(spNameRaw);
+
+        if (isEntireBuilding) {
+          setSelectedTenantFloor("all");
+          setSelectedContractFloor("all");
+          setSelectedTenantFloors([]);
+        } else if (flRaw) {
+          const flNum = flRaw.match(/\d+/);
+          const fl = flNum ? flNum[0] : (/\bground\b|\bbay\b|\bshed\b|^g$/i.test(flRaw) ? "0" : "");
+          if (fl) {
+            setSelectedTenantFloor(fl);
+            setSelectedContractFloor(fl);
+            setSelectedTenantFloors([fl]);
+          }
+        }
+        if (matchedSpace.buildingId) {
+          setSelectedTenantBuilding(matchedSpace.buildingId);
+        }
+      } else if (sArr.length > 0 && !contractForm.spaceId) {
+        setContractForm((prev) => ({
+          ...prev,
+          spaceId: sArr[0].id,
+          areaSqft: String(sArr[0].area || ""),
+        }));
       }
 
       // 4. Fetch tenants
@@ -1763,7 +1947,7 @@ export default function PropertyHierarchyModal({
 
                   // Only auto-create space if skipping the space step completely (e.g. single-level asset)
                   const shouldSkipForTower = Boolean(
-                    (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+                    propForm.floorsCount === "0" &&
                     towerFloors <= 1
                   );
                   if (targetBldgId && towerFloors > 0 && shouldSkipForTower) {
@@ -1820,7 +2004,7 @@ export default function PropertyHierarchyModal({
                   // Only auto-create space if skipping the space step completely (e.g. single-level asset).
                   // For multi-floor properties, Step 2 is where the user custom configures units.
                   const shouldAutoCreateSpaces = Boolean(
-                    (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+                    propForm.floorsCount === "0" &&
                     !propForm.hasMultipleBuildings &&
                     floorBreakdown.length <= 1
                   );
@@ -1961,31 +2145,38 @@ export default function PropertyHierarchyModal({
             const bldgId = existingBldgs[0]?.id;
 
             if (bldgId) {
-              const entireSpaceRes = await fetch("/api/spaces", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", ...authHeaders },
-                body: JSON.stringify({
-                  space_name: `${propForm.propertyName.trim()} - Entire Building`,
-                  space_code: `SP-${uniqueCodeToUse}-ALL`,
-                  building_id: bldgId,
-                  chargeable_area_sqft: enteredArea,
-                  floor_name: "Entire Facility",
-                  space_type: "entire_building",
-                  occupancy_status: "vacant",
-                  fitout_condition: propForm.fitoutCondition || "Fully Furnished",
-                  default_fitout_days: propForm.defaultFitoutDays || "60",
-                }),
-              });
-              if (entireSpaceRes.ok) {
-                const spData = await entireSpaceRes.json();
-                if (spData?.data?.id) {
-                  setContractForm((prev) => ({
-                    ...prev,
-                    propertyId: effectivePropId,
-                    buildingId: bldgId,
-                    spaceId: spData.data.id,
-                    areaSqft: String(enteredArea),
-                  }));
+              const alreadyHasEntire = spacesList.some(
+                (s) =>
+                  s.buildingId === bldgId &&
+                  (s.unitType === "entire_building" || /entire\s*(building|facility)/i.test(s.name || ""))
+              );
+              if (!alreadyHasEntire) {
+                const entireSpaceRes = await fetch("/api/spaces", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...authHeaders },
+                  body: JSON.stringify({
+                    space_name: `${propForm.propertyName.trim()} - Entire Building`,
+                    space_code: `SP-${uniqueCodeToUse}-ALL`,
+                    building_id: bldgId,
+                    chargeable_area_sqft: enteredArea,
+                    floor_name: "Entire Facility",
+                    space_type: "entire_building",
+                    occupancy_status: "vacant",
+                    fitout_condition: propForm.fitoutCondition || "Fully Furnished",
+                    default_fitout_days: propForm.defaultFitoutDays || "60",
+                  }),
+                });
+                if (entireSpaceRes.ok) {
+                  const spData = await entireSpaceRes.json();
+                  if (spData?.data?.id) {
+                    setContractForm((prev) => ({
+                      ...prev,
+                      propertyId: effectivePropId,
+                      buildingId: bldgId,
+                      spaceId: spData.data.id,
+                      areaSqft: String(enteredArea),
+                    }));
+                  }
                 }
               }
             }
@@ -2016,7 +2207,7 @@ export default function PropertyHierarchyModal({
 
         await loadHierarchyDropdowns();
         const skipSpace = Boolean(
-          (propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0) &&
+          propForm.floorsCount === "0" &&
           !propForm.hasMultipleBuildings &&
           floorBreakdown.length <= 1
         );
@@ -2498,14 +2689,19 @@ export default function PropertyHierarchyModal({
     });
   }, [selectedTenantFloor, selectedTenantFloors, selectedTenantBuilding, displayBuildings, buildingsList, spacesList, buildingFloorNumbersForTenant]);
 
-  // Auto-select Ground Level for Tenant when property has no upper floors (0 floors)
+  // Auto-select Entire Building ("all") for single-tenant leases or Ground Floor ONLY when floorsCount === "0" explicitly
   React.useEffect(() => {
-    const hasZeroFloors = propForm.floorsCount === "0" || Number(propForm.floorsCount) === 0;
-    if (hasZeroFloors && activeTab === "tenant" && !selectedTenantFloor) {
+    if (activeTab !== "tenant" || selectedTenantFloor) return;
+    if (propForm.leasingModel === "single_tenant") {
+      setSelectedTenantFloor("all");
+      setSelectedContractFloor("all");
+      return;
+    }
+    if (propForm.floorsCount === "0") {
       setSelectedTenantFloor("0");
       setSelectedContractFloor("0");
     }
-  }, [propForm.floorsCount, activeTab, selectedTenantFloor]);
+  }, [propForm.floorsCount, propForm.leasingModel, activeTab, selectedTenantFloor]);
 
   // Auto-select unit when only 1 unit exists for the floor
   React.useEffect(() => {
@@ -2558,6 +2754,29 @@ export default function PropertyHierarchyModal({
     }
     if (!tenantForm.phone.trim()) {
       showToast("Phone is required", "error");
+      return;
+    }
+
+    // Strict Client-Side Counterparty Isolation Check: Owner/SPV vs Tenant Email, Phone, PAN, GSTIN
+    const ownerAccountEmail =
+      typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
+    const identityCheck = checkOwnerTenantIdentityOverlap(
+      {
+        emails: [ownerAccountEmail],
+        phones: [propForm.contactPhone],
+        pans: [propForm.panNumber],
+        gstins: [propForm.gstin],
+      },
+      {
+        email: tenantForm.email,
+        phone: tenantForm.phone,
+        altPhone: tenantForm.altContactPhone,
+        pan: tenantForm.pan,
+        gstin: tenantForm.gst,
+      }
+    );
+    if (identityCheck.hasConflict) {
+      showToast(identityCheck.message || "Tenant details cannot match property owner / SPV", "error");
       return;
     }
     setLoading(true);
@@ -2690,7 +2909,7 @@ export default function PropertyHierarchyModal({
             spaceId: selectedTenantSuites[0] || prev.spaceId,
             areaSqft: effectiveArea > 0 ? String(effectiveArea) : (propForm.areaSqft || prev.areaSqft),
             fitoutDays: propForm.defaultFitoutDays || prev.fitoutDays || "60",
-            billingEntity: propForm.spvName || propForm.propertyName || prev.billingEntity,
+            billingEntity: propForm.spvName || billingEntities[0] || propForm.contactName || prev.billingEntity,
           }));
         }
 
@@ -3577,28 +3796,45 @@ export default function PropertyHierarchyModal({
         .filter(Boolean)
         .join(" | ");
 
-      // RR-04: Calculate Rent Commencement Date (Fitout days rent-free offset)
-      const fitoutDaysNum = Number(contractForm.fitoutDays) || 0;
-      let commencementDate: string | null = null;
-      if (fitoutDaysNum > 0 && contractForm.startDate) {
-        const d = new Date(contractForm.startDate);
-        d.setDate(d.getDate() + fitoutDaysNum);
-        commencementDate = d.toISOString().split("T")[0];
-      }
+      // RR-04: Calculate Rent Commencement Date (Fitout days rent-free offset) using local calendar math
+      const fitoutDaysNum = Math.max(0, Math.trunc(Number(contractForm.fitoutDays) || 0));
+      const commencementDate: string | null =
+        fitoutDaysNum > 0 && contractForm.startDate && parseLocalYmd(contractForm.startDate)
+          ? addDaysYmd(contractForm.startDate, fitoutDaysNum)
+          : null;
 
-      // RR-37: Calculate Lock-in End Date
-      const lockInMonthsNum = Number(contractForm.lockInMonths) || 0;
+      // RR-37: Calculate Lock-in End Date & enforce Lock-in <= Tenure
+      const lockInMonthsNum = Math.max(0, Number(contractForm.lockInMonths) || 0);
+      const tenureInfo = calculateLeaseTenure(contractForm.startDate, contractForm.endDate);
       let lockInEndDate: string | null = null;
-      if (lockInMonthsNum > 0 && contractForm.startDate) {
-        const d = new Date(contractForm.startDate);
-        if (contractForm.lockInCommencement === "rcd" && fitoutDaysNum > 0) {
-          d.setDate(d.getDate() + fitoutDaysNum);
-        }
-        d.setMonth(d.getMonth() + lockInMonthsNum);
-        lockInEndDate = d.toISOString().split("T")[0];
+      if (lockInMonthsNum > 0 && contractForm.startDate && parseLocalYmd(contractForm.startDate)) {
+        const lockBase =
+          contractForm.lockInCommencement === "rcd" && commencementDate
+            ? commencementDate
+            : contractForm.startDate;
+        lockInEndDate = contractForm.lockInEndDate || addMonthsYmd(lockBase, lockInMonthsNum);
       }
 
-      // RR-05 & RR-06: Structured Charges Payload (Base Rent, CAM, Parking)
+      if (tenureInfo.valid && lockInEndDate && contractForm.endDate && lockInEndDate > contractForm.endDate) {
+        showToast(
+          `Lock-in period (${formatDisplayDateInr(lockInEndDate)}) cannot extend beyond Contract End Date (${formatDisplayDateInr(contractForm.endDate)}).`,
+          "error"
+        );
+        setLoading(false);
+        return;
+      }
+
+      const escalationAnchor: "start" | "rcd" = contractForm.escalationAnchor === "rcd" ? "rcd" : "start";
+      const tdsPolicy = normalizeTdsPolicy({
+        enabled: contractForm.tdsEnabled,
+        presetMode: contractForm.tdsPreset,
+        rentRatePercent: Number(contractForm.tdsRentPct) || 0,
+        camRatePercent: Number(contractForm.tdsCamPct) || 0,
+        parkingRatePercent: Number(contractForm.tdsParkingPct) || 0,
+        utilityRatePercent: Number(contractForm.tdsUtilityPct) || 0,
+      });
+
+      // RR-05 & RR-06: Structured Charges Payload (Base Rent uses contract start_date + fitout_period concession for rent-free period)
       const initialChargeRate = contractForm.billingModel === "Seat-based"
         ? (contractForm.ratePerSeat || enteredRent)
         : (contractForm.ratePerSqft || Math.round(enteredRent / (Number(contractForm.areaSqft) || 1)));
@@ -3611,28 +3847,24 @@ export default function PropertyHierarchyModal({
           rate: initialChargeRate,
           quantity_basis: contractForm.billingModel === "Seat-based" ? contractForm.seatCount : contractForm.areaSqft,
           rate_period: "month",
-          start_date: commencementDate || contractForm.startDate,
+          start_date: contractForm.startDate,
           end_date: contractForm.endDate,
           hsn_sac: "997212",
         },
       ];
 
-      // RR-01: Calculate complete rent_steps schedule if escalation enabled
+      // RR-01: Calculate complete rent_steps schedule if escalation enabled (local calendar math)
       const escPctNum = Number(contractForm.escalationPct) || 0;
       if (escPctNum > 0) {
         const numRate = Number(initialChargeRate) || 0;
-        const cycleMonths =
-          contractForm.escalationFrequency === "Quarterly" ? 3 :
-          contractForm.escalationFrequency === "Biannual" ? 24 :
-          contractForm.escalationFrequency === "Triennial" ? 36 : 12;
-
+        const cycleMonths = getCycleMonthsFromFrequency(contractForm.escalationFrequency);
         const stepsArr: any[] = [];
         let sNo = 1;
-        const cStart = commencementDate || contractForm.startDate;
+        const cStart = contractForm.startDate;
+        const escAnchorBase = escalationAnchor === "rcd" && commencementDate ? commencementDate : contractForm.startDate;
         const cEnd = contractForm.endDate;
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = getTodayLocalYmd();
 
-        // Step 1: Base initial rate
         stepsArr.push({
           step_no: sNo++,
           effective_date: cStart,
@@ -3643,35 +3875,33 @@ export default function PropertyHierarchyModal({
           status: cStart <= todayStr ? "applied" : "scheduled",
         });
 
-        // Step 2+: Future stepped rates
-        let nextD: Date;
-        if (contractForm.escalationStartDate) {
-          nextD = new Date(contractForm.escalationStartDate);
-        } else {
-          nextD = new Date(cStart);
-          nextD.setMonth(nextD.getMonth() + cycleMonths);
-        }
-
+        let nextDateStr =
+          contractForm.escalationStartDate && parseLocalYmd(contractForm.escalationStartDate)
+            ? contractForm.escalationStartDate.slice(0, 10)
+            : addMonthsYmd(escAnchorBase, cycleMonths);
         let currR = numRate;
-        const endD = new Date(cEnd);
 
-        while (nextD <= endD && sNo <= 20) {
-          const dStr = nextD.toISOString().split("T")[0];
-          currR = Math.round(currR * (1 + escPctNum / 100) * 100) / 100;
+        while (nextDateStr && nextDateStr <= cEnd && sNo <= 20) {
+          currR = roundInr(currR * (1 + escPctNum / 100));
           stepsArr.push({
             step_no: sNo++,
-            effective_date: dStr,
+            effective_date: nextDateStr,
             escalation_type: "percentage",
             rate: String(currR),
             escalation_value: String(escPctNum),
             cycle_months: cycleMonths,
-            status: dStr <= todayStr ? "due" : "scheduled",
+            status: nextDateStr <= todayStr ? "due" : "scheduled",
           });
-          nextD.setMonth(nextD.getMonth() + cycleMonths);
+          nextDateStr = addMonthsYmd(nextDateStr, cycleMonths);
         }
 
         structuredCharges[0].rent_steps = stepsArr;
       }
+
+      const fitoutChargeStart =
+        fitoutDaysNum > 0 && !contractForm.camPayableDuringFitout && commencementDate && commencementDate <= contractForm.endDate
+          ? commencementDate
+          : contractForm.startDate;
 
       if (camAmount > 0) {
         structuredCharges.push({
@@ -3681,7 +3911,7 @@ export default function PropertyHierarchyModal({
           rate: contractForm.camType === "Per Sq.Ft" ? contractForm.camRate : camAmount,
           quantity_basis: contractForm.camType === "Per Sq.Ft" ? contractForm.areaSqft : "1",
           rate_period: "month",
-          start_date: contractForm.startDate,
+          start_date: fitoutChargeStart,
           end_date: contractForm.endDate,
           hsn_sac: "997221",
         });
@@ -3695,7 +3925,7 @@ export default function PropertyHierarchyModal({
           rate: String(parkingAmount),
           quantity_basis: "1",
           rate_period: "month",
-          start_date: contractForm.startDate,
+          start_date: fitoutChargeStart,
           end_date: contractForm.endDate,
           hsn_sac: "9967",
         });
@@ -3714,8 +3944,13 @@ export default function PropertyHierarchyModal({
           contract_code: `LEAS-${Date.now().toString().slice(-5)}`,
           start_date: contractForm.startDate,
           end_date: contractForm.endDate,
-          commencement_date: commencementDate,
+          commencement_date: commencementDate || contractForm.startDate,
           lock_in_end_date: lockInEndDate,
+          fitout_days: fitoutDaysNum,
+          cam_payable_during_fitout: contractForm.camPayableDuringFitout,
+          escalation_anchor: escalationAnchor,
+          tds_applicable: tdsPolicy.enabled,
+          tds_policy: tdsPolicy,
           contract_type: "lease",
           base_rent_rate: enteredRent,
           billing_model: dbBillingModel,
@@ -3730,6 +3965,7 @@ export default function PropertyHierarchyModal({
           notice_period_days: Number(contractForm.noticeDays) || 90,
           billing_entity: contractForm.billingEntity.trim(),
           payment_terms: contractForm.paymentTerms.trim(),
+          stamp_duty_sharing: contractForm.stampDutySharing,
           charges: structuredCharges,
           remarks: notesSummary,
         }),
@@ -6412,31 +6648,9 @@ export default function PropertyHierarchyModal({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      {propForm.propertyName && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTenantForm((prev) => ({
-                              ...prev,
-                              companyName: propForm.spvName || propForm.propertyName,
-                              tradeName: propForm.propertyName,
-                              companyType: (propForm.ownershipStructure as any) || "pvt_ltd",
-                              pan: propForm.panNumber || prev.pan,
-                              cinNumber: propForm.cinNumber || prev.cinNumber,
-                              gst: propForm.gstin || prev.gst,
-                              billingAddress: propForm.address || prev.billingAddress,
-                              occupantName: propForm.contactName || prev.occupantName,
-                              signatoryName: propForm.contactName || prev.signatoryName,
-                              phone: propForm.contactPhone || prev.phone,
-                            }));
-                            showToast("✓ Auto-filled tenant info from Step 1 Property & SPV details!");
-                          }}
-                          className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
-                        >
-                          <Sparkles size={12} />
-                          <span>Same as Property Owner / SPV</span>
-                        </button>
-                      )}
+                      <span className="text-[10px] font-bold text-slate-500 bg-white px-2.5 py-1 rounded-xl border border-slate-200">
+                        Independent Lessee Required (Owner phone/email/PAN blocked)
+                      </span>
 
                       {/* Existing Registered Tenant Auto-Fill (Only shown in Existing Tenant mode) */}
                       {tenantOnboardingMode === "existing" && tenantsList.length > 0 && (
@@ -6830,6 +7044,13 @@ export default function PropertyHierarchyModal({
                         onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                       />
+                      {(() => {
+                        const ownerEmail = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
+                        const c = checkOwnerTenantIdentityOverlap({ emails: [ownerEmail] }, { email: tenantForm.email });
+                        return c.hasConflict ? (
+                          <p className="text-[10px] font-bold text-rose-600 mt-1">{c.message}</p>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Primary Phone */}
@@ -6851,6 +7072,12 @@ export default function PropertyHierarchyModal({
                         onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                       />
+                      {(() => {
+                        const c = checkOwnerTenantIdentityOverlap({ phones: [propForm.contactPhone] }, { phone: tenantForm.phone });
+                        return c.hasConflict ? (
+                          <p className="text-[10px] font-bold text-rose-600 mt-1">{c.message}</p>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Alternate Contact Name */}
@@ -7558,8 +7785,77 @@ export default function PropertyHierarchyModal({
                 </div>
               )}
 
-              {/* ──── SECTION 1: HIERARCHY MAPPING (ORGANIZED 2-TIER DEMISED ALLOCATION) ──── */}
+              {/* ──── SECTION 1: COMPACT PREMISES & TENANT SUMMARY (DECLUTTERED) ──── */}
+              {(() => {
+                const selectedBldg = displayBuildings.find((b) => b.id === contractForm.buildingId) || displayBuildings[0];
+                const selectedSp = spacesList.find((s) => s.id === contractForm.spaceId);
+                const selectedOcc = tenantsList.find((t) => t.id === contractForm.occupantId);
+                const isAllFloor = !selectedContractFloor || selectedContractFloor === "all" || selectedContractFloor === "multiple";
+                const floorSummary = isAllFloor
+                  ? "Entire Building (All Floors)"
+                  : selectedContractFloor === "0"
+                  ? "Ground Floor"
+                  : formatFloorName(Number(selectedContractFloor));
+                const canCollapseSummary = Boolean(activePropertyObj && selectedOcc && (selectedSp || selectedTenantSuites.length > 0));
+
+                if (canCollapseSummary && !showPremisesEditor) {
+                  return (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                            Demised Lease Context
+                          </span>
+                          <span className="font-bold text-slate-900">
+                            {activePropertyObj?.name || propForm.propertyName}
+                          </span>
+                          {selectedBldg && (
+                            <span className="text-slate-500">• {selectedBldg.name}</span>
+                          )}
+                          <span className="text-slate-500">• {floorSummary}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap text-slate-700">
+                          <span>
+                            <strong>Unit:</strong>{" "}
+                            {selectedTenantSuites.length > 1
+                              ? `${selectedTenantSuites.length} Suites Selected`
+                              : selectedSp?.name || "Entire Premises"}{" "}
+                            <span className="font-mono text-teal-700 font-bold">
+                              ({Number(contractForm.areaSqft || selectedSp?.area || propForm.areaSqft || 0).toLocaleString("en-IN")} Sq.Ft)
+                            </span>
+                          </span>
+                          <span className="text-slate-300">|</span>
+                          <span>
+                            <strong>Tenant:</strong> {selectedOcc?.name}
+                            {selectedOcc?.company && selectedOcc.company !== selectedOcc.name ? ` (${selectedOcc.company})` : ""}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPremisesEditor(true)}
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition cursor-pointer shrink-0 self-start sm:self-center"
+                      >
+                        Change Premises / Tenant
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
               <div className="space-y-3.5">
+                {canCollapseSummary && (
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-teal-800">Editing Premises &amp; Tenant Selection</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPremisesEditor(false)}
+                      className="text-[11px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                    >
+                      ✓ Collapse Summary
+                    </button>
+                  </div>
+                )}
                 {/* Tier 1: Property, Building & Floor Location */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
@@ -7620,11 +7916,11 @@ export default function PropertyHierarchyModal({
                         </span>
                       </div>
                       <select
-                        value={selectedContractFloor}
+                        value={selectedContractFloor || "all"}
                         onChange={(e) => {
                           const fl = e.target.value;
                           setSelectedContractFloor(fl);
-                          if (fl) {
+                          if (fl && fl !== "all") {
                             const curBId = contractForm.buildingId || displayBuildings[0]?.id;
                             const isG = fl === "0";
                             const match = spacesList.find(
@@ -7646,7 +7942,7 @@ export default function PropertyHierarchyModal({
                         }}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shadow-2xs"
                       >
-                        <option value="">All Floors</option>
+                        <option value="all">All Floors (Entire Building)</option>
                         {buildingFloorNumbersForContract.map((flNum) => {
                           const curBName = displayBuildings.find((b) => b.id === (contractForm.buildingId || displayBuildings[0]?.id))?.name;
                           const flLabel = flNum === 0 ? "Ground Floor" : formatFloorName(flNum);
@@ -7835,6 +8131,8 @@ export default function PropertyHierarchyModal({
                   )}
                 </div>
               </div>
+                );
+              })()}
 
               {/* ──── SECTION 2: RENT CALCULATION BASIS & BILLING MODEL ──── */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
@@ -8517,59 +8815,6 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-              {/* ──── LIVE GROSS MONTHLY PAYOUT SUMMARY CARD ──── */}
-              {Number(contractForm.monthlyRent) > 0 && (
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white shadow-md text-xs space-y-2">
-                  <div className="flex items-center justify-between border-b border-teal-800/80 pb-2">
-                    <span className="font-bold tracking-wide uppercase text-[11px] text-teal-300">
-                      Live Invoicing Breakdown &amp; Monthly Cashflow
-                    </span>
-                    <span className="text-[10px] text-teal-400 font-mono">
-                      SAC Code 997212 (Leasing)
-                    </span>
-                  </div>
-
-                  {(() => {
-                    const baseRent = Number(contractForm.monthlyRent) || 0;
-                    const cam =
-                      contractForm.camType === "Included"
-                        ? 0
-                        : contractForm.camType === "Per Sq.Ft"
-                          ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
-                          : Number(contractForm.camMonthly) || 0;
-                    const carPaidCount = Number(contractForm.carParkingPaidSlots) || 0;
-                    const bikePaidCount = Number(contractForm.twoWheelerPaidSlots) || 0;
-                    const parking =
-                      carPaidCount * (Number(contractForm.carParkingRate) || 0) +
-                      bikePaidCount * (Number(contractForm.twoWheelerRate) || 0);
-                    const grossExclGst = baseRent + cam + parking;
-                    const gst = Math.round(grossExclGst * 0.18);
-                    const totalGross = grossExclGst + gst;
-
-                    return (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
-                        <div>
-                          <div className="text-[10px] text-slate-400 uppercase">Base Rent</div>
-                          <div className="font-bold text-sm text-white">₹{baseRent.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-slate-400 uppercase">CAM + Parking</div>
-                          <div className="font-bold text-sm text-teal-300">₹{(cam + parking).toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-slate-400 uppercase">Gross (Excl. GST)</div>
-                          <div className="font-bold text-sm text-white">₹{grossExclGst.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-emerald-400 uppercase font-sans font-bold">Total Invoiced (GST 18%)</div>
-                          <div className="font-black text-sm text-emerald-300">₹{totalGross.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
               {/* ──── SECTION 4: SECURITY DEPOSIT & FIT-OUT PERIOD ──── */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-1.5">
@@ -8641,9 +8886,16 @@ export default function PropertyHierarchyModal({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1.5">
-                      Rent-Free Fit-out Period (Days)
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
+                      <label className="font-bold text-slate-700">
+                        Rent-Free Fit-out Period (Days)
+                      </label>
+                      {Number(contractForm.fitoutDays) > 0 && contractForm.startDate && parseLocalYmd(contractForm.startDate) && (
+                        <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                          RCD: {formatDisplayDateInr(addDaysYmd(contractForm.startDate, Number(contractForm.fitoutDays) || 0))}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       min="0"
@@ -8652,12 +8904,41 @@ export default function PropertyHierarchyModal({
                       onChange={(e) => setContractForm({ ...contractForm, fitoutDays: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white"
                     />
+                    {Number(contractForm.fitoutDays) > 0 && (
+                      <div className="mt-2 flex items-center justify-between gap-2 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-semibold text-slate-700">CAM Charges during Fit-out:</span>
+                        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setContractForm({ ...contractForm, camPayableDuringFitout: false })}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition ${
+                              !contractForm.camPayableDuringFitout
+                                ? "bg-teal-700 text-white shadow-2xs"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            Waived (₹0)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setContractForm({ ...contractForm, camPayableDuringFitout: true })}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition ${
+                              contractForm.camPayableDuringFitout
+                                ? "bg-teal-700 text-white shadow-2xs"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            Bill CAM from Start
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* ──── SECTION 5: DATES & LEGAL PERIODS ──── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              {/* ──── SECTION 5: DATES & LEGAL PERIODS (LOCAL DATE ARITHMETIC, NO CLIPPING) ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
                 {/* Contract Start Date */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -8681,24 +8962,20 @@ export default function PropertyHierarchyModal({
                       const nextStart = e.target.value;
                       setContractForm((prev) => {
                         const updated = { ...prev, startDate: nextStart };
-                        if (prev.endDate && nextStart && prev.endDate <= nextStart) {
+                        if (prev.endDate && nextStart && prev.endDate < nextStart) {
                           updated.endDate = "";
                         }
-                        // Recalculate lock-in end date if set
-                        if (nextStart && Number(prev.lockInMonths) > 0) {
-                          const baseD = new Date(nextStart);
-                          if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                            baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                          }
-                          baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
-                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                        if (nextStart && parseLocalYmd(nextStart) && Number(prev.lockInMonths) > 0) {
+                          const fit = Math.max(0, Number(prev.fitoutDays) || 0);
+                          const baseStr = prev.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(nextStart, fit) : nextStart;
+                          updated.lockInEndDate = addMonthsYmd(baseStr, Number(prev.lockInMonths));
                         }
                         return updated;
                       });
                     }}
                     className={getHighlightClass(
                       "startDate",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
+                      "w-full px-2.5 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
                     )}
                   />
                 </div>
@@ -8728,63 +9005,76 @@ export default function PropertyHierarchyModal({
                     onChange={(e) => {
                       clearFieldHighlight("endDate");
                       const nextEnd = e.target.value;
-                      if (contractForm.startDate && nextEnd && nextEnd <= contractForm.startDate) {
+                      if (contractForm.startDate && nextEnd && nextEnd < contractForm.startDate) {
                         showToast("Contract End Date must be after Start Date (" + contractForm.startDate + ")", "error");
                         return;
                       }
                       setContractForm((prev) => {
                         const updated = { ...prev, endDate: nextEnd };
-                        if (prev.startDate && nextEnd) {
-                          const diffDays = Math.round((new Date(nextEnd).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24));
-                          const totalMonths = Math.max(1, Math.round(diffDays / 30.4375));
+                        const t = calculateLeaseTenure(prev.startDate, nextEnd);
+                        if (t.valid) {
+                          const maxM = Math.max(1, t.approxTotalMonths);
                           const curLock = Number(prev.lockInMonths) || 0;
-                          const effectiveLock = curLock > 0 ? Math.min(curLock, totalMonths) : Math.min(12, totalMonths);
+                          const effectiveLock = curLock > 0 ? Math.min(curLock, maxM) : Math.min(12, maxM);
                           updated.lockInMonths = String(effectiveLock);
-                          const baseD = new Date(prev.startDate);
-                          baseD.setMonth(baseD.getMonth() + effectiveLock);
-                          updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                          const fit = Math.max(0, Number(prev.fitoutDays) || 0);
+                          const baseStr = prev.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(prev.startDate, fit) : prev.startDate;
+                          updated.lockInEndDate = effectiveLock > 0 ? addMonthsYmd(baseStr, effectiveLock) : "";
                         }
                         return updated;
                       });
                     }}
                     className={getHighlightClass(
                       "endDate",
-                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
+                      "w-full px-2.5 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white"
                     )}
                   />
-                  {contractForm.startDate && contractForm.endDate && (() => {
-                    const diffDays = Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (diffDays > 0) {
-                      const months = Math.round(diffDays / 30.4375);
-                      const years = (months / 12).toFixed(1).replace(".0", "");
-                      return (
-                        <span className="text-[10px] text-teal-700 font-bold block mt-1">
-                          Tenure: {months} Months ({years} {Number(years) === 1 ? "Year" : "Years"})
+                  {(() => {
+                    const tenure = calculateLeaseTenure(contractForm.startDate, contractForm.endDate);
+                    if (!tenure.valid) return null;
+                    return (
+                      <div className="mt-1 space-y-1">
+                        <span className="text-[10px] text-teal-700 font-bold block">
+                          Tenure: {tenure.label}
                         </span>
-                      );
-                    }
-                    return null;
+                        {tenure.suggestedFullPeriodEndDate && tenure.shortNote && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const snappedEnd = tenure.suggestedFullPeriodEndDate!;
+                              setContractForm((prev) => ({
+                                ...prev,
+                                endDate: snappedEnd,
+                              }));
+                              showToast(`✓ Snapped End Date to exact ${tenure.suggestedFullYears}-year anniversary (${formatDisplayDateInr(snappedEnd)})`);
+                            }}
+                            className="text-[10px] text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-md px-1.5 py-0.5 font-semibold text-left cursor-pointer transition block"
+                          >
+                            ⚠ {tenure.shortNote} • Snap to {formatDisplayDateInr(tenure.suggestedFullPeriodEndDate)}
+                          </button>
+                        )}
+                      </div>
+                    );
                   })()}
                 </div>
 
-                {/* Lock-in Period (Two-way Auto Calculation: Months <-> End Date) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
+                {/* Lock-in Period (Wide 2-col span so Year NEVER clips) */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                     <label className="font-bold text-slate-700">Lock-in Period</label>
-                    {/* Clean Month Quick Selectors */}
                     <div className="flex items-center gap-1">
                       {(() => {
+                        const tenure = calculateLeaseTenure(contractForm.startDate, contractForm.endDate);
+                        const tenureM = tenure.valid ? tenure.approxTotalMonths : 0;
                         const dynamicPills = [0, 6, 12];
-                        if (contractForm.startDate && contractForm.endDate) {
-                          const diffDays = Math.round((new Date(contractForm.endDate).getTime() - new Date(contractForm.startDate).getTime()) / (1000 * 60 * 60 * 24));
-                          const tenureM = Math.round(diffDays / 30.4375);
-                          if (tenureM > 0 && !dynamicPills.includes(tenureM)) {
-                            dynamicPills.push(tenureM);
-                          }
+                        if (tenureM > 0) {
+                          if (!dynamicPills.includes(tenureM)) dynamicPills.push(tenureM);
                         } else {
                           dynamicPills.push(24, 36);
                         }
-                        const pills = Array.from(new Set(dynamicPills)).sort((a, b) => a - b);
+                        const pills = Array.from(new Set(dynamicPills))
+                          .filter((m) => tenureM <= 0 || m <= tenureM)
+                          .sort((a, b) => a - b);
                         return pills.map((m) => {
                           const isSel = Number(contractForm.lockInMonths) === m;
                           return (
@@ -8793,16 +9083,12 @@ export default function PropertyHierarchyModal({
                               type="button"
                               onClick={() => {
                                 clearFieldHighlight("lockInMonths");
-                                const mStr = String(m);
                                 setContractForm((prev) => {
-                                  const updated = { ...prev, lockInMonths: mStr };
-                                  if (prev.startDate && m > 0) {
-                                    const baseD = new Date(prev.startDate);
-                                    if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                                      baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                                    }
-                                    baseD.setMonth(baseD.getMonth() + m);
-                                    updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                                  const updated = { ...prev, lockInMonths: String(m) };
+                                  if (prev.startDate && parseLocalYmd(prev.startDate) && m > 0) {
+                                    const fit = Math.max(0, Number(prev.fitoutDays) || 0);
+                                    const baseStr = prev.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(prev.startDate, fit) : prev.startDate;
+                                    updated.lockInEndDate = addMonthsYmd(baseStr, m);
                                   } else {
                                     updated.lockInEndDate = "";
                                   }
@@ -8815,7 +9101,7 @@ export default function PropertyHierarchyModal({
                                   : "bg-white hover:bg-slate-200/70 text-slate-600 border border-slate-200"
                               }`}
                             >
-                              {m === 0 ? "0" : `${m}M`}
+                              {m === 0 ? "0" : tenureM > 0 && m === tenureM ? `Full (${m}M)` : `${m}M`}
                             </button>
                           );
                         });
@@ -8823,27 +9109,27 @@ export default function PropertyHierarchyModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-4">
                       <input
                         type="number"
                         min="0"
-                        placeholder="Months (e.g. 12)"
+                        placeholder="Months"
                         value={contractForm.lockInMonths}
                         onClick={() => clearFieldHighlight("lockInMonths")}
                         onFocus={() => clearFieldHighlight("lockInMonths")}
                         onChange={(e) => {
                           clearFieldHighlight("lockInMonths");
-                          const m = e.target.value;
+                          const rawVal = Math.max(0, Number(e.target.value) || 0);
+                          const t = calculateLeaseTenure(contractForm.startDate, contractForm.endDate);
+                          const clamped = t.valid && t.approxTotalMonths > 0 ? Math.min(rawVal, t.approxTotalMonths) : rawVal;
+                          const mStr = e.target.value === "" ? "" : String(clamped);
                           setContractForm((prev) => {
-                            const updated = { ...prev, lockInMonths: m };
-                            if (prev.startDate && Number(m) > 0) {
-                              const baseD = new Date(prev.startDate);
-                              if (prev.lockInCommencement === "rcd" && (Number(prev.fitoutDays) || 0) > 0) {
-                                baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                              }
-                              baseD.setMonth(baseD.getMonth() + Number(m));
-                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            const updated = { ...prev, lockInMonths: mStr };
+                            if (prev.startDate && parseLocalYmd(prev.startDate) && clamped > 0) {
+                              const fit = Math.max(0, Number(prev.fitoutDays) || 0);
+                              const baseStr = prev.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(prev.startDate, fit) : prev.startDate;
+                              updated.lockInEndDate = addMonthsYmd(baseStr, clamped);
                             } else {
                               updated.lockInEndDate = "";
                             }
@@ -8852,26 +9138,23 @@ export default function PropertyHierarchyModal({
                         }}
                         className={getHighlightClass(
                           "lockInMonths",
-                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white text-xs"
+                          "w-full px-2.5 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none font-bold bg-white text-xs"
                         )}
-                        title="Lock-in duration in months"
+                        title="Lock-in duration in months (capped at contract tenure)"
                       />
                     </div>
 
-                    <div>
+                    <div className="col-span-8">
                       <input
                         type="date"
                         min={contractForm.startDate || undefined}
                         max={contractForm.endDate || undefined}
                         value={(() => {
                           if (contractForm.lockInEndDate) return contractForm.lockInEndDate;
-                          if (contractForm.startDate && Number(contractForm.lockInMonths) > 0) {
-                            const baseD = new Date(contractForm.startDate);
-                            if (contractForm.lockInCommencement === "rcd" && (Number(contractForm.fitoutDays) || 0) > 0) {
-                              baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
-                            }
-                            baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
-                            return baseD.toISOString().slice(0, 10);
+                          if (contractForm.startDate && parseLocalYmd(contractForm.startDate) && Number(contractForm.lockInMonths) > 0) {
+                            const fit = Math.max(0, Number(contractForm.fitoutDays) || 0);
+                            const baseStr = contractForm.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(contractForm.startDate, fit) : contractForm.startDate;
+                            return addMonthsYmd(baseStr, Number(contractForm.lockInMonths));
                           }
                           return "";
                         })()}
@@ -8881,9 +9164,9 @@ export default function PropertyHierarchyModal({
                             setContractForm((prev) => ({ ...prev, lockInEndDate: selectedD, lockInMonths: "0" }));
                             return;
                           }
-                          const sD = new Date(contractForm.startDate);
-                          const lD = new Date(selectedD);
-                          const diffDays = Math.round((lD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24));
+                          const fit = Math.max(0, Number(contractForm.fitoutDays) || 0);
+                          const baseStr = contractForm.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(contractForm.startDate, fit) : contractForm.startDate;
+                          const diffDays = diffDaysInclusiveYmd(baseStr, selectedD);
                           const calculatedMonths = Math.max(0, Math.round(diffDays / 30.4375));
                           setContractForm((prev) => ({
                             ...prev,
@@ -8891,7 +9174,7 @@ export default function PropertyHierarchyModal({
                             lockInMonths: String(calculatedMonths),
                           }));
                         }}
-                        className="w-full px-2.5 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white text-xs text-slate-800"
+                        className="w-full min-w-[140px] px-2.5 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none bg-white text-xs text-slate-800"
                         title="Lock-in End Date (Auto-calculates Months)"
                       />
                     </div>
@@ -8899,15 +9182,13 @@ export default function PropertyHierarchyModal({
 
                   {/* Clean Auto-detected Lock-in Date & Anchor Toggle */}
                   <div className="mt-1 flex items-center justify-between gap-1 flex-wrap">
-                    {contractForm.startDate && Number(contractForm.lockInMonths) > 0 ? (() => {
-                      const baseD = new Date(contractForm.startDate);
-                      if (contractForm.lockInCommencement === "rcd" && (Number(contractForm.fitoutDays) || 0) > 0) {
-                        baseD.setDate(baseD.getDate() + (Number(contractForm.fitoutDays) || 0));
-                      }
-                      baseD.setMonth(baseD.getMonth() + Number(contractForm.lockInMonths));
+                    {contractForm.startDate && parseLocalYmd(contractForm.startDate) && Number(contractForm.lockInMonths) > 0 ? (() => {
+                      const fit = Math.max(0, Number(contractForm.fitoutDays) || 0);
+                      const baseStr = contractForm.lockInCommencement === "rcd" && fit > 0 ? addDaysYmd(contractForm.startDate, fit) : contractForm.startDate;
+                      const untilStr = contractForm.lockInEndDate || addMonthsYmd(baseStr, Number(contractForm.lockInMonths));
                       return (
                         <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
-                          🔒 Until {baseD.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          🔒 Until {formatDisplayDateInr(untilStr)}
                         </span>
                       );
                     })() : (
@@ -8920,15 +9201,13 @@ export default function PropertyHierarchyModal({
                         onClick={() => {
                           setContractForm((prev) => {
                             const updated = { ...prev, lockInCommencement: "handover" as const };
-                            if (prev.startDate && Number(prev.lockInMonths) > 0) {
-                              const baseD = new Date(prev.startDate);
-                              baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
-                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            if (prev.startDate && parseLocalYmd(prev.startDate) && Number(prev.lockInMonths) > 0) {
+                              updated.lockInEndDate = addMonthsYmd(prev.startDate, Number(prev.lockInMonths));
                             }
                             return updated;
                           });
                         }}
-                        className={`px-1 py-0.5 rounded font-bold cursor-pointer transition ${
+                        className={`px-1.5 py-0.5 rounded font-bold cursor-pointer transition ${
                           contractForm.lockInCommencement !== "rcd"
                             ? "bg-teal-700 text-white shadow-2xs"
                             : "text-slate-600 hover:text-slate-900"
@@ -8941,16 +9220,15 @@ export default function PropertyHierarchyModal({
                         onClick={() => {
                           setContractForm((prev) => {
                             const updated = { ...prev, lockInCommencement: "rcd" as const };
-                            if (prev.startDate && Number(prev.lockInMonths) > 0) {
-                              const baseD = new Date(prev.startDate);
-                              baseD.setDate(baseD.getDate() + (Number(prev.fitoutDays) || 0));
-                              baseD.setMonth(baseD.getMonth() + Number(prev.lockInMonths));
-                              updated.lockInEndDate = baseD.toISOString().slice(0, 10);
+                            if (prev.startDate && parseLocalYmd(prev.startDate) && Number(prev.lockInMonths) > 0) {
+                              const fit = Math.max(0, Number(prev.fitoutDays) || 0);
+                              const baseStr = fit > 0 ? addDaysYmd(prev.startDate, fit) : prev.startDate;
+                              updated.lockInEndDate = addMonthsYmd(baseStr, Number(prev.lockInMonths));
                             }
                             return updated;
                           });
                         }}
-                        className={`px-1 py-0.5 rounded font-bold cursor-pointer transition ${
+                        className={`px-1.5 py-0.5 rounded font-bold cursor-pointer transition ${
                           contractForm.lockInCommencement === "rcd"
                             ? "bg-teal-700 text-white shadow-2xs"
                             : "text-slate-600 hover:text-slate-900"
@@ -8980,9 +9258,35 @@ export default function PropertyHierarchyModal({
 
               {/* ──── SECTION 6: ESCALATION TERMS (Point 13) ──── */}
               <div className="p-3.5 rounded-2xl bg-teal-50/50 border border-teal-200/80 space-y-2.5 text-xs">
-                <div className="flex items-center justify-between border-b border-teal-200 pb-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-teal-200 pb-1.5">
                   <span className="font-bold text-teal-950">📈 Rent Step Escalation Schedule</span>
-                  <span className="text-[10px] text-teal-800 font-medium">Auto-applied in batch billing runs</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-600 font-semibold">Cycle Anchor:</span>
+                    <div className="flex items-center gap-0.5 text-[10px] bg-white p-0.5 rounded-md border border-teal-200">
+                      <button
+                        type="button"
+                        onClick={() => setContractForm({ ...contractForm, escalationAnchor: "start", escalationStartDate: "" })}
+                        className={`px-2 py-0.5 rounded font-bold cursor-pointer transition ${
+                          contractForm.escalationAnchor !== "rcd"
+                            ? "bg-teal-700 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        From Start
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContractForm({ ...contractForm, escalationAnchor: "rcd", escalationStartDate: "" })}
+                        className={`px-2 py-0.5 rounded font-bold cursor-pointer transition ${
+                          contractForm.escalationAnchor === "rcd"
+                            ? "bg-teal-700 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        From RCD
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -9036,15 +9340,14 @@ export default function PropertyHierarchyModal({
                       type="date"
                       value={(() => {
                         if (contractForm.escalationStartDate) return contractForm.escalationStartDate;
-                        if (contractForm.startDate) {
-                          const base = new Date(contractForm.startDate);
-                          base.setDate(base.getDate() + (Number(contractForm.fitoutDays) || 0));
-                          const stepMonths =
-                            contractForm.escalationFrequency === "Quarterly" ? 3 :
-                            contractForm.escalationFrequency === "Biannual" ? 24 :
-                            contractForm.escalationFrequency === "Triennial" ? 36 : 12;
-                          base.setMonth(base.getMonth() + stepMonths);
-                          return base.toISOString().slice(0, 10);
+                        if (contractForm.startDate && parseLocalYmd(contractForm.startDate)) {
+                          const fit = Math.max(0, Number(contractForm.fitoutDays) || 0);
+                          const anchorDate =
+                            contractForm.escalationAnchor === "rcd" && fit > 0
+                              ? addDaysYmd(contractForm.startDate, fit)
+                              : contractForm.startDate;
+                          const stepMonths = getCycleMonthsFromFrequency(contractForm.escalationFrequency);
+                          return addMonthsYmd(anchorDate, stepMonths);
                         }
                         return "";
                       })()}
@@ -9054,20 +9357,32 @@ export default function PropertyHierarchyModal({
                   </div>
                 </div>
 
-                {/* Escalation Schedule Preview Callout */}
-                {contractForm.startDate && Number(contractForm.escalationPct) > 0 && (() => {
-                  const base = new Date(contractForm.startDate);
-                  base.setDate(base.getDate() + (Number(contractForm.fitoutDays) || 0));
-                  const stepMonths =
-                    contractForm.escalationFrequency === "Quarterly" ? 3 :
-                    contractForm.escalationFrequency === "Biannual" ? 24 :
-                    contractForm.escalationFrequency === "Triennial" ? 36 : 12;
-                  base.setMonth(base.getMonth() + stepMonths);
-                  const firstEscStr = base.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+                {/* Escalation Schedule Multi-Year Preview Callout */}
+                {contractForm.startDate && parseLocalYmd(contractForm.startDate) && Number(contractForm.escalationPct) > 0 && (() => {
+                  const fit = Math.max(0, Number(contractForm.fitoutDays) || 0);
+                  const anchorDate =
+                    contractForm.escalationAnchor === "rcd" && fit > 0
+                      ? addDaysYmd(contractForm.startDate, fit)
+                      : contractForm.startDate;
+                  const stepMonths = getCycleMonthsFromFrequency(contractForm.escalationFrequency);
+                  const computedFirstDate =
+                    contractForm.escalationStartDate && parseLocalYmd(contractForm.escalationStartDate)
+                      ? contractForm.escalationStartDate.slice(0, 10)
+                      : addMonthsYmd(anchorDate, stepMonths);
                   const curRent = Number(contractForm.monthlyRent) || 0;
                   const escPct = Number(contractForm.escalationPct) || 5;
-                  const steppedRent = curRent > 0 ? Math.round(curRent * (1 + escPct / 100)) : 0;
-                  const isPostExpiry = contractForm.endDate && base >= new Date(contractForm.endDate);
+                  const steps = contractForm.endDate
+                    ? buildEscalationSchedule({
+                        startDate: anchorDate,
+                        endDate: contractForm.endDate,
+                        baseMonthlyRent: curRent,
+                        escalationPct: escPct,
+                        escalationFrequency: contractForm.escalationFrequency,
+                        explicitFirstEscalationDate: contractForm.escalationStartDate || undefined,
+                      })
+                    : [];
+
+                  const isPostExpiry = Boolean(contractForm.endDate && computedFirstDate >= contractForm.endDate);
 
                   if (isPostExpiry) {
                     return (
@@ -9077,21 +9392,38 @@ export default function PropertyHierarchyModal({
                           <span>Escalation Milestone Beyond Lease Duration</span>
                         </div>
                         <p className="text-amber-800 leading-snug">
-                          Calculated escalation date (<strong>{firstEscStr}</strong>) occurs on or after lease end date ({contractForm.endDate}). Rent escalations only activate on multi-year agreements that extend beyond the first escalation cycle.
+                          Calculated escalation date (<strong>{formatDisplayDateInr(computedFirstDate)}</strong>) occurs on or after lease end date ({formatDisplayDateInr(contractForm.endDate)}).
                         </p>
                       </div>
                     );
                   }
 
+                  const nextStepRent = steps[0]?.monthlyRent || (curRent > 0 ? roundInr(curRent * (1 + escPct / 100)) : 0);
+
                   return (
-                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 text-teal-950 text-[11px] space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span>📅 <strong>First Escalation Milestone:</strong></span>
-                        <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{firstEscStr}</span>
+                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 text-teal-950 text-[11px] space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <span>📅 <strong>Escalation Milestones ({contractForm.escalationAnchor === "rcd" ? "Anchored to RCD" : "Anchored to Start Date"}):</strong></span>
+                        <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                          First Step: {formatDisplayDateInr(computedFirstDate)}
+                        </span>
                       </div>
                       <p className="text-slate-600">
-                        <strong>Billing Impact:</strong> On <strong>{firstEscStr}</strong>, base rent will automatically step up by <strong>{escPct}%</strong>{steppedRent > 0 ? ` (from ₹${curRent.toLocaleString()} to ₹${steppedRent.toLocaleString()}/month)` : ""}. OfficeX batch billing will automatically apply this stepped rate.
+                        On <strong>{formatDisplayDateInr(computedFirstDate)}</strong>, base rent steps up by <strong>{escPct}%</strong>
+                        {nextStepRent > 0 ? ` (₹${curRent.toLocaleString("en-IN")} → ₹${nextStepRent.toLocaleString("en-IN")}/mo)` : ""}.
                       </p>
+                      {steps.length > 1 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {steps.slice(0, 6).map((st) => (
+                            <span
+                              key={st.stepNo}
+                              className="text-[10px] font-mono bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5 text-slate-700"
+                            >
+                              Step {st.stepNo} ({formatDisplayDateInr(st.effectiveDate)}): <strong>₹{st.monthlyRent.toLocaleString("en-IN")}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -9169,7 +9501,7 @@ export default function PropertyHierarchyModal({
                 />
               </div>
 
-              {/* ──── REAL-TIME COMMERCIAL FINANCIAL OVERVIEW CARD ──── */}
+              {/* ──── SECTION 8: OWNER-CONFIGURABLE TDS RULES & UNIFIED FINANCIAL SUMMARY ──── */}
               {(() => {
                 const area = Number(contractForm.areaSqft) || 0;
                 const rent = Number(contractForm.monthlyRent) || 0;
@@ -9183,1045 +9515,95 @@ export default function PropertyHierarchyModal({
                 const bikePaidCount = Number(contractForm.twoWheelerPaidSlots) || 0;
                 const carParkMonthly = carPaidCount * (Number(contractForm.carParkingRate) || 0);
                 const twoWheelParkMonthly = bikePaidCount * (Number(contractForm.twoWheelerRate) || 0);
-                const totalParking = carParkMonthly + twoWheelParkMonthly;
                 const fixedUtil =
                   contractForm.electricityBillingType === "fixed_monthly"
                     ? Number(contractForm.fixedMonthlyUtility) || 0
                     : 0;
-                const subtotal = rent + camMonthly + totalParking + fixedUtil;
-                const gst18 = Math.round(subtotal * 0.18);
+                const deposit = Number(contractForm.securityDeposit) || (Number(contractForm.depositMonths) || 6) * rent;
 
-                // Requirement 10: Sole Proprietorship / Individual Statutory TDS Rules
                 const selectedOccupant = tenantsList.find((t) => t.id === contractForm.occupantId);
                 const currentEntity = (selectedOccupant as any)?.companyType || tenantForm.companyType || "pvt_ltd";
                 const isProprietor = currentEntity === "sole_proprietorship";
 
-                let tdsPct = 10;
-                let tdsSection = "TDS u/s 194-I (10%)";
-                let tdsAmount = Math.round(rent * 0.10);
+                const summary = computeContractFinancialSummary({
+                  startDate: contractForm.startDate,
+                  endDate: contractForm.endDate,
+                  fitoutDays: Number(contractForm.fitoutDays) || 0,
+                  camPayableDuringFitout: contractForm.camPayableDuringFitout,
+                  monthlyRent: rent,
+                  camMonthly,
+                  carParkingMonthly: carParkMonthly,
+                  twoWheelerMonthly: twoWheelParkMonthly,
+                  fixedUtilityMonthly: fixedUtil,
+                  securityDeposit: deposit,
+                  gstRatePercent: 18,
+                  tdsPolicy: {
+                    enabled: contractForm.tdsEnabled,
+                    presetMode: contractForm.tdsPreset,
+                    rentRatePercent: Number(contractForm.tdsRentPct) || 0,
+                    camRatePercent: Number(contractForm.tdsCamPct) || 0,
+                    parkingRatePercent: Number(contractForm.tdsParkingPct) || 0,
+                    utilityRatePercent: Number(contractForm.tdsUtilityPct) || 0,
+                  },
+                  escalationPct: Number(contractForm.escalationPct) || 0,
+                  escalationFrequency: contractForm.escalationFrequency,
+                  escalationStartDate: contractForm.escalationStartDate || undefined,
+                });
 
-                if (isProprietor) {
-                  if (rent > 50000) {
-                    tdsPct = 5;
-                    tdsSection = "TDS u/s 194-IB (5% - Rent > ₹50k, Form 26QC)";
-                    tdsAmount = Math.round(rent * 0.05);
+                const applyTdsPreset = (mode: TdsPresetMode) => {
+                  if (mode === "no_tds_exempt") {
+                    setContractForm((prev) => ({
+                      ...prev,
+                      tdsEnabled: false,
+                      tdsPreset: mode,
+                      tdsRentPct: "0",
+                      tdsCamPct: "0",
+                      tdsParkingPct: "0",
+                      tdsUtilityPct: "0",
+                    }));
+                  } else if (mode === "rent_only_194i") {
+                    setContractForm((prev) => ({
+                      ...prev,
+                      tdsEnabled: true,
+                      tdsPreset: mode,
+                      tdsRentPct: "10",
+                      tdsCamPct: "0",
+                      tdsParkingPct: "0",
+                      tdsUtilityPct: "0",
+                    }));
+                  } else if (mode === "standard_194i_194c") {
+                    setContractForm((prev) => ({
+                      ...prev,
+                      tdsEnabled: true,
+                      tdsPreset: mode,
+                      tdsRentPct: "10",
+                      tdsCamPct: "2",
+                      tdsParkingPct: "2",
+                      tdsUtilityPct: "0",
+                    }));
+                  } else if (mode === "individual_194ib") {
+                    const rate = rent > 50000 ? "5" : "0";
+                    setContractForm((prev) => ({
+                      ...prev,
+                      tdsEnabled: rate !== "0",
+                      tdsPreset: mode,
+                      tdsRentPct: rate,
+                      tdsCamPct: "0",
+                      tdsParkingPct: "0",
+                      tdsUtilityPct: "0",
+                    }));
                   } else {
-                    tdsPct = 0;
-                    tdsSection = "Exempt u/s 194-IB (0% - Rent ≤ ₹50k, No TDS)";
-                    tdsAmount = 0;
+                    setContractForm((prev) => ({
+                      ...prev,
+                      tdsEnabled: true,
+                      tdsPreset: "custom",
+                    }));
                   }
-                }
+                };
 
-                const netMonthly = subtotal + gst18 - tdsAmount;
-                const deposit = Number(contractForm.securityDeposit) || (Number(contractForm.depositMonths) || 6) * rent;
+                const tdsHeaderBadge = !summary.tdsPolicy.enabled || summary.steadyState.tdsTotal === 0
+                  ? "No TDS / Exempt (0%)"
+                  : `TDS Active (Rent ${summary.tdsPolicy.rentRatePercent}%${summary.tdsPolicy.camRatePercent > 0 ? ` • CAM ${summary.tdsPolicy.camRatePercent}%` : ""}${summary.tdsPolicy.parkingRatePercent > 0 ? ` • Parking ${summary.tdsPolicy.parkingRatePercent}%` : ""})`;
 
                 return (
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-700/80 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Calculator size={15} className="text-teal-400" />
-                        <span className="text-xs font-black uppercase tracking-wider text-teal-300">
-                          Real-Time Commercial Financial Summary
-                        </span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                        isProprietor
-                          ? rent > 50000
-                            ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          : "bg-teal-500/20 text-teal-300 border-teal-500/30"
-                      }`}>
-                        Statutory GST 18% • {tdsSection}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Monthly Base Rent</span>
-                        <span className="text-sm font-mono font-black text-white">₹{rent.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">
-                          Monthly CAM {contractForm.camType === "Included" ? "(Included)" : ""}
-                        </span>
-                        <span className="text-sm font-mono font-black text-white">₹{camMonthly.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Parking ({carPaidCount} Car, {bikePaidCount} Bike)</span>
-                        <span className="text-sm font-mono font-black text-white">₹{totalParking.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Subtotal Before Tax</span>
-                        <span className="text-sm font-mono font-black text-teal-300">₹{subtotal.toLocaleString("en-IN")}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-700/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">+ GST (18%)</span>
-                        <span className="text-xs font-mono font-bold text-amber-300">+₹{gst18.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">- {tdsSection}</span>
-                        <span className={`text-xs font-mono font-bold ${tdsAmount === 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                          {tdsAmount === 0 ? "₹0 (Exempt)" : `-₹${tdsAmount.toLocaleString("en-IN")}`}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-teal-400 font-bold block">Net Monthly Receivable</span>
-                        <span className="text-sm font-mono font-black text-emerald-400">₹{netMonthly.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Security Deposit (IFRSD)</span>
-                        <span className="text-sm font-mono font-black text-white">₹{deposit.toLocaleString("en-IN")}</span>
-                      </div>
-                    </div>
-
-                    {contractForm.electricityBillingType === "sub_metered" && (
-                      <div className="pt-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between text-[11px] text-amber-300">
-                        <span className="flex items-center gap-1 font-semibold">
-                          <Zap size={12} className="text-amber-400" />
-                          <span>Electricity: Sub-Metered on Actuals</span>
-                        </span>
-                        <span className="font-mono text-[10px] text-slate-300">
-                          Grid: ₹{contractForm.gridRatePerKwh || "11"}/kWh • DG Backup: ₹{contractForm.dgBackupRatePerKwh || "22"}/kWh
-                        </span>
-                      </div>
-                    )}
-                    {contractForm.electricityBillingType === "fixed_monthly" && fixedUtil > 0 && (
-                      <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[11px] text-amber-300">
-                        <span className="flex items-center gap-1 font-semibold">
-                          <Zap size={12} className="text-amber-400" />
-                          <span>Fixed Monthly Utility</span>
-                        </span>
-                        <span className="font-mono text-xs text-emerald-300">₹{fixedUtil.toLocaleString()}/mo</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Contract Action Buttons & PDF Download & Next Step (§17, §20) */}
-              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("tenant")}
-                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs self-start sm:self-auto"
-                >
-                  <span>← Back to Tenants</span>
-                </button>
-
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {/* Download Contract PDF Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isOwnerSubscribed && !checkIsOwnerSubscribed()) {
-                        setSubscriptionGateReason("Download Official Formatted Lease Contract PDF");
-                        setSubscriptionGateModalOpen(true);
-                        return;
-                      }
-                      // Generate and download full commercial deed
-                      const activeBldg = buildingsList.find((b) => b.id === contractForm.buildingId);
-                      const activeSpc = displaySpaces.find((s) => s.id === contractForm.spaceId);
-                      downloadLeaseContractPdf({
-                        landlordName: propForm.spvName || propForm.contactName || "Commercial Property Owner",
-                        landlordAddress: propForm.address || propForm.city || "",
-                        landlordPan: (propForm as any).spvPan || "",
-                        landlordGstin: (propForm as any).spvGst || "",
-                        tenantName: tenantForm.companyName || "Lessee Organization",
-                        tenantTradeName: tenantForm.tradeName || "",
-                        tenantCompanyType: tenantForm.companyType,
-                        tenantCin: tenantForm.cinNumber || "",
-                        tenantPan: tenantForm.pan || "",
-                        tenantGstin: tenantForm.gst || "",
-                        tenantAddress: tenantForm.billingAddress || "",
-                        signatoryName: tenantForm.signatoryName || "Authorized Signatory",
-                        signatoryDesignation: tenantForm.signatoryDesignation || "Director",
-                        propertyName: propForm.propertyName || "Commercial Property",
-                        buildingName: activeBldg?.name,
-                        floorName: selectedTenantFloor === "0" ? "Ground Floor" : formatFloorName(Number(selectedTenantFloor)),
-                        spaceName: activeSpc?.name || "Demised Commercial Suite",
-                        chargeableAreaSqft: Number(contractForm.areaSqft) || 5000,
-                        monthlyRent: Number(contractForm.monthlyRent) || 0,
-                        ratePerSqft: Number(contractForm.ratePerSqft) || undefined,
-                        camMonthly: Number(contractForm.camMonthly) || undefined,
-                        camRatePerSqft: Number(contractForm.camRate) || undefined,
-                        securityDeposit: Number(contractForm.securityDeposit) || 0,
-                        securityDepositMonths: undefined,
-                        startDate: contractForm.startDate || new Date().toISOString().split("T")[0],
-                        endDate: contractForm.endDate || new Date(Date.now() + 365*24*3600*1000).toISOString().split("T")[0],
-                        lockInMonths: Number(contractForm.lockInMonths) || undefined,
-                        noticePeriodDays: Number(contractForm.noticeDays) || 90,
-                        escalationPct: Number(contractForm.escalationPct) || 5,
-                        escalationFrequency: contractForm.escalationFrequency,
-                      }, isOwnerSubscribed && checkIsOwnerSubscribed());
-                      showToast("✓ Commercial Lease Deed generated & opened for printing/PDF!");
-                    }}
-                    className="px-4 py-2.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FileText size={14} className="text-[#0F8B7D]" />
-                    <span>Download Contract PDF</span>
-                    {!isOwnerSubscribed && (
-                      <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded border border-amber-300">
-                        PRO
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Option A: Assign 3rd Party Manager */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleSaveContract(e, "delegate")}
-                    disabled={loading}
-                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
-                  >
-                    <span>Assign 3rd Party Manager →</span>
-                  </button>
-
-                  {/* Option B: Self-Managed / Complete Onboarding */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleSaveContract(e, "finish")}
-                    disabled={loading}
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                  >
-                    {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
-                    <span>Save Contract &amp; Finish ✓</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-
-          {/* ════════════════ TAB 5: THIRD-PARTY MANAGEMENT ASSIGNMENT ════════════════ */}
-          {activeTab === "delegation" && (
-            <form onSubmit={handleSaveDelegation} className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                      {shouldSkipSpaceStep
-                        ? "Step 4: Assign Property Management to Third Party"
-                        : "Step 5: Assign Property Management to Third Party"}
-                    </span>
-                    <span className="text-[10px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
-                      Post-Contract Delegation
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Assign daily commercial operations, tenant relations, and billing oversight to an external agency or facility manager with granular controls.
-                  </p>
-                </div>
-                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 self-start sm:self-auto">
-                  Step {shouldSkipSpaceStep ? 4 : 5} of {shouldSkipSpaceStep ? 4 : 5}
-                </span>
-              </div>
-
-              {/* Latest Generated Manager Invite Banner (§20 Subscription Gated) */}
-              {latestManagerInvite && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 text-xs animate-in fade-in space-y-3">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
-                        <UserCheck size={16} />
-                      </div>
-                      <div>
-                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
-                          <span>Management Delegated: {latestManagerInvite.name}</span>
-                          <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
-                            {latestManagerInvite.email}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-teal-800 mt-0.5">
-                          Assigned for <span className="font-bold">{latestManagerInvite.propertyName}</span>.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Subscription Check for Sharable Link */}
-                  {isOwnerSubscribed || checkIsOwnerSubscribed() ? (
-                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={latestManagerInvite.link}
-                        className="text-[11px] font-mono text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 flex-1 truncate"
-                      />
-                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(latestManagerInvite.link);
-                            setCopiedManagerInvite(true);
-                            showToast("✓ Management invitation link copied to clipboard!");
-                            setTimeout(() => setCopiedManagerInvite(false), 2500);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                        >
-                          {copiedManagerInvite ? <Check size={13} /> : <Copy size={13} />}
-                          <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
-                        </button>
-                        <a
-                          href={(() => {
-                            const cleanPhone = formatPhoneForWhatsApp(latestManagerInvite.phone);
-                            const msg = `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`;
-                            return `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ""}text=${encodeURIComponent(msg)}`;
-                          })()}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                        >
-                          <MessageCircle size={13} />
-                          <span>WhatsApp</span>
-                        </a>
-                        <a
-                          href={`mailto:${latestManagerInvite.email}?subject=${encodeURIComponent(
-                            `Property Management Access - ${latestManagerInvite.propertyName}`
-                          )}&body=${encodeURIComponent(
-                            `Hi ${latestManagerInvite.name},\n\nYou have been assigned as property manager for ${latestManagerInvite.propertyName}.\n\nPlease activate your access using the link below:\n${latestManagerInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
-                          )}`}
-                          className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
-                        >
-                          <Mail size={13} />
-                          <span>Email</span>
-                        </a>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative p-3 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden">
-                      <div className="filter blur-xs select-none opacity-40">
-                        <span className="font-mono text-xs text-slate-800">https://officex.ai/invite?role=pm_company&mgr=Authorized&access=••••••••••••••••</span>
-                      </div>
-                      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-between px-4 py-2">
-                        <div className="flex items-center gap-2 text-white">
-                          <Lock size={15} className="text-amber-400 shrink-0" />
-                          <span className="text-xs font-bold">Pro Subscription required to share manager invite links</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSubscriptionGateReason("Share Manager Activation Link via WhatsApp/Email");
-                            setSubscriptionGateModalOpen(true);
-                          }}
-                          className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black shadow cursor-pointer transition"
-                        >
-                          Subscribe Now
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Form Fields Container */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-xs">
-                {/* 1. Property to Assign */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Select Commercial Asset <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={delegationForm.propertyId || contractForm.propertyId || propForm.existingPropId || ""}
-                    onChange={(e) => {
-                      const selId = e.target.value;
-                      const selProp = propertiesList.find((p) => p.id === selId);
-                      setDelegationForm((prev) => ({
-                        ...prev,
-                        propertyId: selId,
-                        propertyName: selProp?.name || (selId === propForm.existingPropId ? propForm.propertyName : prev.propertyName),
-                      }));
-                    }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    {propForm.propertyName && !propertiesList.some(p => p.id === propForm.existingPropId || p.name === propForm.propertyName) && (
-                      <option value={propForm.existingPropId || "current_asset"}>
-                        {propForm.propertyName} (Current Asset)
-                      </option>
-                    )}
-                    {propertiesList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                    {!propForm.propertyName && propertiesList.length === 0 && <option value="">No properties registered</option>}
-                  </select>
-                </div>
-
-                {/* 2. Management Model / Entity Type */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Management Model / Entity Type <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={delegationForm.managerType}
-                    onChange={(e) => setDelegationForm({ ...delegationForm, managerType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="pm_company">Third-Party Property Management Company (Colliers / CBRE / JLL / Cushman / Local PM)</option>
-                    <option value="facility_mgmt">Facilities Management Firm (Sodexo / BVG / ISS / In-house Facility Lead)</option>
-                    <option value="msp">Managed Space Provider / Coworking Operator</option>
-                    <option value="individual_manager">Designated Property Manager / Operations Lead</option>
-                  </select>
-                </div>
-
-                {/* 3. Contact Details */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">
-                      Assignee / Manager / Company Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Knight Frank PM Services"
-                      value={delegationForm.managerName}
-                      onChange={(e) => setDelegationForm({ ...delegationForm, managerName: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">
-                      Manager Work Email <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="operations@pmcompany.com"
-                      value={delegationForm.managerEmail}
-                      onChange={(e) => setDelegationForm({ ...delegationForm, managerEmail: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">
-                      Phone Number <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="+91 98450 11223"
-                      value={delegationForm.managerPhone}
-                      onChange={(e) => setDelegationForm({ ...delegationForm, managerPhone: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Role Authorization Level */}
-                <div className="pt-2 border-t border-slate-200">
-                  <label className="font-bold text-slate-700 block mb-2">Role Authorization Level</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label
-                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
-                        delegationForm.managerUserRole === "property_manager"
-                          ? "bg-teal-50 border-[#0F8B7D]"
-                          : "bg-white border-slate-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="managerUserRole"
-                        value="property_manager"
-                        checked={delegationForm.managerUserRole === "property_manager"}
-                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "property_manager" })}
-                        className="mt-0.5 accent-[#0F8B7D]"
-                      />
-                      <div>
-                        <span className="font-bold text-slate-900 block">Property Operations Lead</span>
-                        <span className="text-[11px] text-slate-500">Day-to-day operations, maintenance logging, tenant service requests.</span>
-                      </div>
-                    </label>
-                    <label
-                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
-                        delegationForm.managerUserRole === "org_admin"
-                          ? "bg-teal-50 border-[#0F8B7D]"
-                          : "bg-white border-slate-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="managerUserRole"
-                        value="org_admin"
-                        checked={delegationForm.managerUserRole === "org_admin"}
-                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "org_admin" })}
-                        className="mt-0.5 accent-[#0F8B7D]"
-                      />
-                      <div>
-                        <span className="font-bold text-slate-900 block">Asset Executive / Co-Admin</span>
-                        <span className="text-[11px] text-slate-500">Full commercial authority across billing, contracts, and audit runs.</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                {/* 5. Granular Permissions & Rights Matrix */}
-                <div className="pt-3 border-t border-slate-200 space-y-3">
-                  <div>
-                    <label className="font-black text-slate-800 text-xs uppercase tracking-wider block">
-                      Enforceable Delegation Rights &amp; Operational Guardrails
-                    </label>
-                    <p className="text-[11px] text-slate-500">
-                      Authorise specific commercial rights. Actions not checked here are strictly locked and prohibited in the manager console.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {/* Category A: Lease & Tenant Authority */}
-                    <div>
-                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
-                        Lease &amp; Tenant Authority
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canEnrollTenants)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canEnrollTenants: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Onboard &amp; Register Corporate Tenants</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canDraftContracts)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canDraftContracts: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Draft Lease Agreements &amp; Proposals</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={delegationForm.managerRights.contractExecution}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Execute &amp; Modify Binding Leases</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canTerminateLeases)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canTerminateLeases: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Issue Lease Eviction / Termination Notices</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Category B: Commercial Billing & Financial Rights */}
-                    <div>
-                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
-                        Billing &amp; Financial Operations
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={delegationForm.managerRights.billingRuns}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={delegationForm.managerRights.concessions}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers / Credit Notes</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canRecordOfflinePayments)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canRecordOfflinePayments: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Record Manual Offline Payments (NEFT / RTGS)</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={delegationForm.managerRights.depositRefunds}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Approve Security Deposit Refunds &amp; Deductions</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Category C: Facility Operations & Asset Layout */}
-                    <div>
-                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
-                        Facility Operations &amp; Space Layout
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canDemarcateSpaces)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canDemarcateSpaces: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Demarcate, Merge &amp; Split Suites</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canLogCAM)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canLogCAM: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Log CAM Meters &amp; Utility Expenses</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canManageTickets)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canManageTickets: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Resolve Tenant Helpdesk &amp; Work Orders</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={Boolean((delegationForm.managerRights as any).canExportRentRoll)}
-                            onChange={(e) =>
-                              setDelegationForm({
-                                ...delegationForm,
-                                managerRights: { ...delegationForm.managerRights, canExportRentRoll: e.target.checked } as any,
-                              })
-                            }
-                            className="rounded accent-[#0F8B7D]"
-                          />
-                          <span className="text-slate-800 font-medium">Export Rent Roll &amp; Tax Registers</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("contract")}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-                >
-                  ← Back to Lease Contract
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {!isOwnerSubscribed && !checkIsOwnerSubscribed() ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSubscriptionGateReason("Assign Property Management to External Agency");
-                        setSubscriptionGateModalOpen(true);
-                      }}
-                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Lock size={13} />
-                      <span>Subscribe to Assign Management</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <UserCheck size={13} />
-                      <span>Assign Management &amp; Generate Link</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("officex_rentroll_onboarded", "true");
-                        localStorage.setItem("officex_onboarding_completed", "1");
-                        sessionStorage.setItem("officex_onboarding_completed", "1");
-                        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
-                      }
-                      clearWizardDraft();
-                      onClose();
-                      onSuccess?.();
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Check size={13} />
-                    <span>Finish &amp; Complete Setup ✓</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-        </div>
-
-        {/* ──── AGREEMENT VARIANCE REVIEW MODAL (POPUP) ──── */}
-        <AgreementVarianceModal
-          isOpen={varianceModalOpen}
-          onClose={() => setVarianceModalOpen(false)}
-          fileName={pendingAgreementFile}
-          differences={agreementDifferences}
-          onKeepCurrent={() => {
-            setVarianceModalOpen(false);
-            showToast("Kept user-entered details unchanged without modifying form.");
-          }}
-          onApplyAgreement={(selectedKeys) => {
-            setVarianceModalOpen(false);
-            if (pendingAgreementData) {
-              applyAgreementTerms(pendingAgreementData, agreementDifferences, selectedKeys);
-            }
-          }}
-        />
-
-        {/* ──── BULK EXCEL IMPORTER MODAL ──── */}
-        <RentRollExcelImporterModal
-          isOpen={excelImporterOpen}
-          onClose={() => setExcelImporterOpen(false)}
-          onSuccess={() => {
-            setExcelImporterOpen(false);
-            showToast("✓ Excel portfolio data imported successfully!");
-            onClose(); // Close the hierarchy/property setup wizard so the user sees the Property Registry
-            onSuccess?.();
-          }}
-        />
-
-        {/* ──── SUBSCRIPTION REQUIRED MODAL (§20 & Portfolio Area Floor Rule) ──── */}
-        {subscriptionGateModalOpen && (() => {
-          const effectivePortfolioSqft = Math.max(totalPortfolioSqft, 1000);
-          const userEnteredSqft = subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft;
-          const isBelowPortfolio = userEnteredSqft < effectivePortfolioSqft;
-          const currentChosenSqft = Math.max(userEnteredSqft, effectivePortfolioSqft);
-          const ratePerSqft = 1.0;
-          const discountPct = subscribeBillingMonths === 12 ? 20 : subscribeBillingMonths === 6 ? 10 : subscribeBillingMonths === 4 ? 7 : subscribeBillingMonths === 2 ? 3 : 0;
-          const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
-          const minCyclePayable = Math.round(minMonthlyPayable * subscribeBillingMonths * (1 - discountPct / 100));
-          const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
-          const chosenCyclePayable = Math.round(monthlyEst * subscribeBillingMonths * (1 - discountPct / 100));
-
-          return (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-              <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center my-8">
-                <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
-                  <Lock size={26} />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-black text-lg text-slate-900">Commercial Pro Subscription Required</h3>
-                  <p className="text-xs text-slate-600 font-medium">
-                    {subscriptionGateReason || "This action requires an active Commercial Pro Subscription."}
-                  </p>
-                </div>
-
-                {/* ──── HIGH-VISIBILITY MINIMUM AMOUNT PAYABLE CARD ──── */}
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 border-2 border-[#0F8B7D] text-left space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
-                    <div className="flex items-center gap-1.5 text-[#0F8B7D] font-black text-xs uppercase tracking-wider">
-                      <Building2 size={15} />
-                      <span>Minimum Payable (Based on Added Sq.Ft)</span>
-                    </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-700 text-white uppercase tracking-wider">
-                      Scale Floor
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
-                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Added Property Area</span>
-                      <span className="text-sm font-black text-slate-900 font-mono">
-                        {effectivePortfolioSqft.toLocaleString()} Sq.Ft
-                      </span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
-                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
-                      <span className="text-sm font-black text-teal-800 font-mono">
-                        ₹1.00 / sqft / mo
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-700">Minimum Monthly Equivalent:</span>
-                      <span className="font-black text-slate-900 font-mono text-sm">
-                        ₹{minMonthlyPayable.toLocaleString("en-IN")} / mo
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
-                      <span className="font-black text-teal-950">
-                        Minimum Total Payable ({subscribeBillingMonths === 12 ? "1 Year (365 Days)" : `${subscribeBillingMonths} Month${subscribeBillingMonths > 1 ? "s" : ""} (${subscribeBillingMonths * 30} Days)`}):
-                      </span>
-                      <span className="font-black text-[#0F8B7D] font-mono text-base">
-                        ₹{minCyclePayable.toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 pt-0.5">
-                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft × {subscribeBillingMonths} month{subscribeBillingMonths > 1 ? "s" : ""} {discountPct > 0 ? `(${discountPct}% discount applied)` : ""}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Interactive Sq.Ft Capacity Selection */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-800 block">
-                      Choose Subscription Capacity (Sq.Ft) *
-                    </label>
-                    <span className="text-[10px] font-bold text-teal-700">
-                      Min: {effectivePortfolioSqft.toLocaleString()} Sq.Ft
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min={effectivePortfolioSqft}
-                      step={1000}
-                      value={userEnteredSqft}
-                      onChange={(e) => setSubscribeSqftInput(Number(e.target.value) || 0)}
-                      className={`w-full px-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none ${
-                        isBelowPortfolio
-                          ? "border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600"
-                          : "border-slate-300 focus:border-[#0F8B7D] text-slate-900"
-                      }`}
-                      placeholder={`Min ${effectivePortfolioSqft.toLocaleString()}`}
-                    />
-                    <span className="absolute right-3 top-2.5 font-bold text-slate-400 text-xs">
-                      Sq.Ft
-                    </span>
-                  </div>
-
-                  {isBelowPortfolio && (
-                    <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                      <span>⚠️ Compulsory Minimum: You cannot subscribe below your total added property area ({effectivePortfolioSqft.toLocaleString("en-IN")} Sq.Ft).</span>
-                    </p>
-                  )}
-
-                  {/* Quick Capacity Chips */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Capacity:</span>
-                    {[effectivePortfolioSqft, Math.round(effectivePortfolioSqft * 1.25), Math.round(effectivePortfolioSqft * 1.5), Math.round(effectivePortfolioSqft * 2)]
-                      .filter((val, idx, arr) => arr.indexOf(val) === idx)
-                      .slice(0, 4)
-                      .map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setSubscribeSqftInput(preset)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                            userEnteredSqft === preset
-                              ? "bg-[#0F8B7D] text-white shadow-2xs"
-                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-                          }`}
-                        >
-                          {preset === effectivePortfolioSqft ? `Min: ${preset.toLocaleString("en-IN")}` : preset.toLocaleString("en-IN")} Sq.Ft
-                        </button>
-                      ))}
-                  </div>
-
-                  {/* Duration Selector */}
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-bold text-slate-800 text-[11px]">Select Subscription Duration:</span>
-                      {discountPct > 0 && (
-                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                          Save {discountPct}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                      {[
-                        { months: 1, days: "30 Days", label: "1 Month", discount: 0 },
-                        { months: 2, days: "60 Days", label: "2 Months", discount: 3 },
-                        { months: 4, days: "120 Days", label: "4 Months", discount: 7 },
-                        { months: 6, days: "180 Days", label: "6 Months", discount: 10 },
-                        { months: 12, days: "365 Days", label: "1 Year", discount: 20 },
-                      ].map((d) => (
-                        <button
-                          key={d.months}
-                          type="button"
-                          onClick={() => {
-                            setSubscribeBillingMonths(d.months);
-                            setSubscribeBillingCycle(d.months === 12 ? "annual" : "monthly");
-                          }}
-                          className={`p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center justify-center ${
-                            subscribeBillingMonths === d.months
-                              ? "border-[#0F8B7D] bg-teal-50 text-slate-900 ring-1 ring-teal-500 font-black"
-                              : "border-slate-200 hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <span className="text-[11px] font-bold">{d.label}</span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full mt-0.5 ${
-                            subscribeBillingMonths === d.months ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
-                          }`}>
-                            {d.days}
-                          </span>
-                          <span className={`text-[8.5px] mt-0.5 ${d.discount > 0 ? "text-emerald-700 font-extrabold" : "text-slate-400 font-medium"}`}>
-                            {d.discount > 0 ? `${d.discount}% OFF` : "Standard"}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600">Total for Selected Capacity:</span>
-                    <span className="font-black text-slate-900 font-mono text-sm">
-                      ₹{chosenCyclePayable.toLocaleString("en-IN")} ({subscribeBillingMonths === 12 ? "365 Days" : `${subscribeBillingMonths * 30} Days`})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setSubscriptionGateModalOpen(false)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-                  >
-                    Close
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isBelowPortfolio || subscribeLoading}
-                    onClick={async () => {
-                      setSubscribeLoading(true);
-                      try {
-                        const email =
-                          (typeof window !== "undefined" &&
-                            (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) ||
-                          "owner@commercial.com";
-
-                        await fetch("/api/subscription/status", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            email,
-                            plan: "pro",
-                            plan_name: "Rent Roll & Financial Pro Suite",
-                            billing_cycle: subscribeBillingMonths === 12 ? "annual" : subscribeBillingMonths === 6 ? "half_yearly" : subscribeBillingMonths === 4 ? "4_months" : subscribeBillingMonths === 2 ? "bimonthly" : "monthly",
-                            duration_months: subscribeBillingMonths,
-                            amount: chosenCyclePayable,
-                          }),
-                        }).catch(() => {});
-
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("officex_subscription", "active");
-                          localStorage.setItem("officex_owner_subscribed", "true");
-                          localStorage.setItem("officex_rentroll_subscribed", "true");
-                          localStorage.setItem("officex_subscription_status", "active");
-                          localStorage.setItem("officex_subscribed_sqft", String(currentChosenSqft));
-                          localStorage.setItem("officex_rentroll_onboarded", "true");
-                          localStorage.setItem("officex_onboarding_completed", "1");
-                          sessionStorage.setItem("officex_onboarding_completed", "1");
-                          document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
-                        }
-                        setIsOwnerSubscribed(true);
-                        setSubscribedCapacity(currentChosenSqft);
-                        setSubscriptionGateModalOpen(false);
-                        showToast(`✓ Subscribed successfully! Paid ₹${chosenCyclePayable.toLocaleString("en-IN")} (Min ₹${minCyclePayable.toLocaleString("en-IN")} on ${effectivePortfolioSqft.toLocaleString()} Sq.Ft). Pro features unlocked.`);
-                      } catch {
-                        showToast("Subscription activation encountered an issue", "error");
-                      } finally {
-                        setSubscribeLoading(false);
-                      }
-                    }}
-                    className="w-full sm:flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  >
-                    {subscribeLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={14} />}
-                    <span>Pay Minimum ₹{chosenCyclePayable.toLocaleString("en-IN")} ({currentChosenSqft.toLocaleString()} Sq.Ft) →</span>
-                  </button>
-                </div>
-
-                <div className="pt-1 text-center">
-                  <a
-                    href={`/pricing?min_sqft=${totalPortfolioSqft}`}
-                    onClick={() => setSubscriptionGateModalOpen(false)}
-                    className="text-[11px] font-bold text-teal-800 hover:text-teal-950 underline cursor-pointer"
-                  >
-                    Need enterprise procurement or multi-asset pilot? View Pricing &amp; Custom Proposals →
-                  </a>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-      </div>
-    </div>
-  );
-}
+... [truncated for diff preview]

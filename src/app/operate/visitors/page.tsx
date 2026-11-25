@@ -31,6 +31,8 @@ import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import VisitorManagementConsole from "@/components/visitor/VisitorManagementConsole";
 import SubscriptionGateModal from "@/components/visitor/SubscriptionGateModal";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 
 const DEFAULT_VISITS = [
   {
@@ -99,14 +101,31 @@ export default function VisitorsProductPage() {
     // 2. Sync with server database status
     async function checkServerSub() {
       try {
-        const subRes = await fetch("/api/vc/subscription/status");
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          if (subData?.subscribed) {
-            setIsSubscribed(true);
-            if (typeof window !== "undefined") {
+        let email = getClientUserEmail();
+        if (!email) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+          } catch {}
+        }
+        if (email) {
+          const genRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+            headers: { ...getClientAuthHeaders(), "x-user-email": email },
+            cache: "no-store",
+          });
+          if (genRes.ok) {
+            const genData = await genRes.json();
+            const allowed = Boolean(
+              genData?.subscribed &&
+              genData.plan !== "none" &&
+              genData.plan !== "free" &&
+              (genData.modules?.visitors || genData.modules?.allInOne || genData.isAdmin)
+            );
+            setIsSubscribed(allowed);
+            if (typeof window !== "undefined" && allowed) {
               localStorage.setItem("officex_vc_sub_active", "active");
             }
+            return;
           }
         }
       } catch {}
@@ -199,7 +218,7 @@ export default function VisitorsProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      <MarketingHeader activePath="/operate" />
+      <MarketingHeader activePath="/operate/visitors" />
 
       {/* ── Top Navigation & Enterprise Module Switcher Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30 shadow-2xs">
@@ -449,7 +468,7 @@ export default function VisitorsProductPage() {
           </section>
 
           {/* 2. FEATURE DEEP DIVE */}
-          <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
+          <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
             <div className="max-w-7xl mx-auto">
               <div className="text-center max-w-3xl mx-auto mb-12">
                 <span className="text-xs font-black uppercase tracking-widest text-[#0D7B6C]">

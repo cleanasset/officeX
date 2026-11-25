@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Building2,
   Check,
@@ -24,9 +25,36 @@ import Footer from "@/components/Footer";
 import OperatePricingSection from "@/components/operate/OperatePricingSection";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 
-export default function OperateComprehensivePricingPage() {
+function OperatePricingContent() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const searchParams = useSearchParams();
+  const rawMod = searchParams?.get("module") || searchParams?.get("from") || "";
+  const cleanMod = rawMod.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const moduleTitles: Record<string, string> = {
+    rentroll: "OfficeX Rent Roll & Lease Administration",
+    ppm: "52-Week Preventive Maintenance CAFM",
+    visitor: "Visitor Flow & Speed-Gate Access Control",
+    visitors: "Visitor Flow & Speed-Gate Access Control",
+    compliance: "Statutory Compliance Calendar & Vault",
+    leasecrm: "Commercial Lease Dealflow CRM",
+    crm: "Commercial Lease Dealflow CRM",
+    helpdesk: "Tenant Helpdesk & Boardroom Booking",
+  };
+
+  const focusedTitle = moduleTitles[cleanMod];
+  const focusedHeaderPaths: Record<string, string> = {
+    rentroll: "/operate/rent-roll",
+    ppm: "/operate/ppm",
+    visitor: "/operate/visitors",
+    visitors: "/operate/visitors",
+    compliance: "/operate/compliance",
+    leasecrm: "/operate/lease-crm",
+    crm: "/operate/lease-crm",
+    helpdesk: "/operate/helpdesk",
+  };
+  const headerActivePath = (focusedTitle && focusedHeaderPaths[cleanMod]) || "/operate/pricing";
 
   const toggleFaq = (idx: number) => {
     setActiveFaq(activeFaq === idx ? null : idx);
@@ -111,26 +139,39 @@ export default function OperateComprehensivePricingPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-900">
-      <MarketingHeader activePath="/operate/pricing" />
+      <MarketingHeader activePath={headerActivePath} />
 
       {/* Hero Header */}
       <section className="pt-16 pb-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full text-center">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-xs font-bold text-[#0D7B6C] mb-4">
           <Sparkles className="w-3.5 h-3.5 text-[#0D7B6C]" />
-          OFFICEX OPERATE PRICING MATRIX
+          {focusedTitle ? `${focusedTitle.toUpperCase()} · PRICING` : "OFFICEX OPERATE PRICING MATRIX"}
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight max-w-4xl mx-auto leading-tight mb-4">
-          Flexible Pricing for Independent Towers and Institutional Portfolios
+          {focusedTitle ? (
+            <>Pricing &amp; Plans for <span className="text-[#0D7B6C]">{focusedTitle}</span></>
+          ) : (
+            "Flexible Pricing for Independent Towers and Institutional Portfolios"
+          )}
         </h1>
         <p className="text-slate-600 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          Choose the all-in-one <strong>CAFM Operations Suite</strong> or activate individual SaaS modules on-demand. Powered by instant online Razorpay activation.
+          {focusedTitle ? (
+            `Activate standalone access for ${focusedTitle} with clear per-building/per-sq.ft rates, or unlock the complete CAFM bundle.`
+          ) : (
+            <>Choose the all-in-one <strong>CAFM Operations Suite</strong> or activate individual SaaS modules on-demand. Powered by instant online Razorpay activation.</>
+          )}
         </p>
       </section>
 
       {/* Main Interactive Pricing Section (Toggle + Area Estimator + Live Cards) */}
-      <OperatePricingSection hideHeader={true} />
+      <OperatePricingSection
+        hideHeader={true}
+        defaultMode={focusedTitle ? "standalone" : "bundle"}
+        defaultModule={focusedTitle ? cleanMod : ""}
+      />
 
-      {/* Comprehensive Feature Comparison Matrix */}
+      {/* Comprehensive Feature Comparison Matrix (Only when not pinned to single module) */}
+      {!focusedTitle && (
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <div className="text-xs font-bold uppercase tracking-wider text-[#0D7B6C] mb-2">
@@ -203,6 +244,7 @@ export default function OperateComprehensivePricingPage() {
           </table>
         </div>
       </section>
+      )}
 
       {/* Frequently Asked Questions */}
       <section id="faq" className="py-14 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
@@ -281,6 +323,14 @@ export default function OperateComprehensivePricingPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function OperateComprehensivePricingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <OperatePricingContent />
+    </Suspense>
   );
 }
 

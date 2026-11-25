@@ -257,7 +257,8 @@ export default function SubscriptionGate({
           plan_name: selectedPlan.name,
           duration_months: durationMonths,
           billing_cycle: durationMonths === 12 ? "annual" : durationMonths === 6 ? "half_yearly" : durationMonths === 4 ? "4_months" : durationMonths === 2 ? "bimonthly" : "monthly",
-          amount: finalPriceInRupees
+          amount: finalPriceInRupees,
+          subscribed_sqft: effectiveSqft,
         })
       });
     } catch {

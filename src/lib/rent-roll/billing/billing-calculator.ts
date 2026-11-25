@@ -13,6 +13,11 @@
  * - F-25: Net Receivable Settlement
  */
 
+import {
+  normalizeTdsPolicy,
+  TdsPolicyConfig,
+} from "./lease-financial-engine";
+
 export interface TaxProfileInput {
   id?: string;
   tax_name: string;
@@ -81,7 +86,8 @@ export interface BillingCalculationParams {
   rent_steps?: RentStepInput[];
   concessions?: ConcessionInput[];
   deposit_adjustment_inr?: number;
-  tds_rate_percent?: number; // Standard 10% TDS Sec 194-I for rent, 2% for CAM/maintenance
+  tds_rate_percent?: number; // Legacy flat TDS rate across subtotal
+  tds_policy?: Partial<TdsPolicyConfig>; // Per-component TDS policy (Rent 194-I, CAM 194-C, Exempt, Sec 197 LDC)
   default_tax_rate_percent?: number; // fallback GST rate e.g. 18.00
   override_charges?: Array<{
     contract_charge_id?: string;
@@ -130,6 +136,13 @@ export interface BillingCalculationResult {
   
   deposit_adjustment: number;
   tds_deducted: number;
+  tds_breakdown?: {
+    rent_tds: number;
+    cam_tds: number;
+    parking_tds: number;
+    utility_tds: number;
+    other_tds: number;
+  };
   net_receivable: number;
   
   breakdown: BillingLineItemBreakdown[];
@@ -406,12 +419,41 @@ export function calculateBilling(params: BillingCalculationParams): BillingCalcu
   const requestedDepositAdj = params.deposit_adjustment_inr || 0;
   const depositAdjustment = Math.min(grossTotal, Math.max(0, requestedDepositAdj));
 
-  // TDS Deduction (Typically 10% under Section 194-I on rent, or specified TDS rate)
-  const tdsRate = params.tds_rate_percent || 0;
-  const tdsDeducted = round2((netSubtotalAfterConcession * tdsRate) / 100);
+  // TDS Deduction: Supports per-component policy (Sec 194-I Rent, Sec 194-C CAM, Exempt, Sec 197 LDC) or legacy flat rate
+  let tdsRent = 0;
+  let tdsCam = 0;
+  let tdsParking = 0;
+  let tdsUtility = 0;
+  const tdsOther = 0;
+  let tdsDeducted = 0;
+
+  if (params.tds_policy !== undefined) {
+    const policy = normalizeTdsPolicy(params.tds_policy);
+    if (policy.enabled) {
+      for (const item of breakdown) {
+        const taxableBase = Math.max(0, round2(item.amount_inr - item.concession_amount_inr));
+        if (taxableBase <= 0) continue;
+        const desc = (item.description || "").toLowerCase();
+        const grp = (item.invoice_group || "").toLowerCase();
+        if (desc.includes("park")) {
+          tdsParking = round2(tdsParking + round2((taxableBase * policy.parkingRatePercent) / 100));
+        } else if (grp === "rent" || desc.includes("rent")) {
+          tdsRent = round2(tdsRent + round2((taxableBase * policy.rentRatePercent) / 100));
+        } else if (grp === "cam" || desc.includes("cam")) {
+          tdsCam = round2(tdsCam + round2((taxableBase * policy.camRatePercent) / 100));
+        } else if (grp === "utility" || desc.includes("util") || desc.includes("elec")) {
+          tdsUtility = round2(tdsUtility + round2((taxableBase * policy.utilityRatePercent) / 100));
+        }
+      }
+      tdsDeducted = round2(tdsRent + tdsCam + tdsParking + tdsUtility + tdsOther);
+    }
+  } else {
+    const tdsRate = params.tds_rate_percent || 0;
+    tdsDeducted = round2((netSubtotalAfterConcession * tdsRate) / 100);
+  }
 
   // Formula F-25: Net Receivable Settlement
-  // net_receivable = total_rent + tax_amount - deposit_adjustment - concession_amount
+  // net_receivable = total_rent + tax_amount - deposit_adjustment - tds_deducted
   const netReceivable = Math.max(0, round2(grossTotal - depositAdjustment - tdsDeducted));
 
   return {
@@ -435,6 +477,17 @@ export function calculateBilling(params: BillingCalculationParams): BillingCalcu
 
     deposit_adjustment: round2(depositAdjustment),
     tds_deducted: round2(tdsDeducted),
+    ...(params.tds_policy !== undefined
+      ? {
+          tds_breakdown: {
+            rent_tds: tdsRent,
+            cam_tds: tdsCam,
+            parking_tds: tdsParking,
+            utility_tds: tdsUtility,
+            other_tds: tdsOther,
+          },
+        }
+      : {}),
     net_receivable: netReceivable,
 
     breakdown,

@@ -35,6 +35,10 @@ import {
   RentStepInput,
   ConcessionInput,
 } from "@/lib/rent-roll/billing/billing-calculator";
+import {
+  computeInvoiceDueDateYmd,
+  parseContractFinancialMeta,
+} from "@/lib/rent-roll/billing/lease-financial-engine";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 
 export interface GenerateInvoicesOptions {
@@ -295,7 +299,9 @@ export async function generateInvoicesBatch(
         description: cn.description || undefined,
       }));
 
-      // Calculate Billing using Formulas F-01 to F-25
+      const contractMeta = parseContractFinancialMeta(c.source_row_id);
+
+      // Calculate Billing using Formulas F-01 to F-25 with persisted per-component TDS policy
       const calcResult = calculateBilling({
         billing_month: billingMonth,
         period_start: periodStart,
@@ -307,14 +313,16 @@ export async function generateInvoicesBatch(
         rent_steps: stepInputs,
         concessions: concessionInputs,
         override_charges: options.overrideCharges,
+        tds_policy: contractMeta.tds_policy,
         default_tax_rate_percent: 18.00,
       });
 
-      // Calculate due date (standard 15 days or contract notice period)
-      const dueDays = c.notice_period_days ? Math.min(30, Math.max(7, c.notice_period_days)) : 15;
-      const dueDateObj = new Date(periodStart);
-      dueDateObj.setDate(dueDateObj.getDate() + dueDays);
-      const dueDateStr = formatDate(dueDateObj);
+      // Calculate due date from persisted Payment Terms (e.g. "Due on 5th of month") or fallback days
+      const dueDateStr = computeInvoiceDueDateYmd(
+        periodStart,
+        contractMeta.payment_terms,
+        c.notice_period_days
+      );
 
       // Generate Invoice Number
       const invoiceNumber = await generateInvoiceNumber(c.org_id);

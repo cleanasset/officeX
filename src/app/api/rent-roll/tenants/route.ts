@@ -4,6 +4,7 @@ import { occupant, contract, space, building, property, contractCharge, organiza
 import { validatePanFormat, validateGstinFormat, validateCinFormat, validatePincodeFormat, validatePhoneFormat } from "@/db/validation";
 import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
+import { checkOwnerTenantIdentityOverlap } from "@/lib/rent-roll/counterparty-guard";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -109,7 +110,7 @@ export async function GET(req: Request) {
         try {
           occMeta = JSON.parse(occ.source_row_id);
           propLookupKey = occMeta.property_id || null;
-        } catch {}
+        } catch { }
       }
 
       if (!associatedPropName && propLookupKey) {
@@ -141,7 +142,7 @@ export async function GET(req: Request) {
       if (item.contract?.source_row_id && item.contract.source_row_id.startsWith("{")) {
         try {
           contractMeta = JSON.parse(item.contract.source_row_id);
-        } catch {}
+        } catch { }
       }
 
       const rentRate = item.contract
@@ -242,16 +243,6 @@ export async function POST(req: Request) {
     const tenantEmail = (body.email || "").trim().toLowerCase();
     const userEmail = (auth.userEmail || "").trim().toLowerCase();
 
-    // 1. Anti-Self-Leasing Safeguards (Point 5: Landlord cannot lease to themselves)
-    if (tenantEmail && userEmail && tenantEmail === userEmail) {
-      return NextResponse.json(
-        {
-          error: `Self-Leasing Restriction: Tenant contact email (${tenantEmail}) cannot match the landlord account email. Commercial leases require an independent counterparty tenant.`
-        },
-        { status: 422 }
-      );
-    }
-
     if (panToTest) {
       const panRes = validatePanFormat(panToTest);
       if (!panRes.isValid) {
@@ -290,68 +281,82 @@ export async function POST(req: Request) {
       }
     }
 
-    if (panToTest || gstToTest) {
-      // Check landlord organization's registered tax credentials
-      try {
-        const [landlordOrg] = await db
-          .select()
-          .from(organization)
-          .where(eq(organization.id, orgId))
-          .limit(1);
+    // 1. Strict Counterparty Isolation: Property Owner / Landlord / SPV cannot overlap Tenant on Email, Phone, PAN, or GSTIN
+    try {
+      const ownerEmails: string[] = [];
+      const ownerPhones: string[] = [];
+      const ownerPans: string[] = [];
+      const ownerGstins: string[] = [];
 
-        if (landlordOrg) {
-          let landlordMeta: any = {};
-          if (landlordOrg.source_row_id && typeof landlordOrg.source_row_id === "string" && landlordOrg.source_row_id.startsWith("{")) {
-            try { landlordMeta = JSON.parse(landlordOrg.source_row_id); } catch {}
-          }
-          const landlordPan = (landlordMeta.pan || "").trim().toUpperCase();
-          const landlordGst = (landlordMeta.gstin || "").trim().toUpperCase();
+      if (userEmail) ownerEmails.push(userEmail);
 
-          if (panToTest && landlordPan && panToTest === landlordPan) {
-            return NextResponse.json(
-              {
-                error: `Self-Leasing Restriction: Tenant PAN (${panToTest}) matches the landlord organization's registered PAN. A property owner cannot execute a lease with their own tax entity.`
-              },
-              { status: 422 }
-            );
-          }
+      const [landlordOrg] = await db
+        .select()
+        .from(organization)
+        .where(eq(organization.id, orgId))
+        .limit(1);
 
-          if (gstToTest && landlordGst && gstToTest === landlordGst) {
-            return NextResponse.json(
-              {
-                error: `Self-Leasing Restriction: Tenant GSTIN (${gstToTest}) matches the landlord organization's registered GSTIN. Commercial leases require an independent legal counterparty.`
-              },
-              { status: 422 }
-            );
-          }
+      if (landlordOrg) {
+        let landlordMeta: any = {};
+        if (landlordOrg.source_row_id && typeof landlordOrg.source_row_id === "string" && landlordOrg.source_row_id.startsWith("{")) {
+          try { landlordMeta = JSON.parse(landlordOrg.source_row_id); } catch {}
         }
-
-        // Check landlord billing entities
-        if (gstToTest) {
-          const [ownBillingGst] = await db
-            .select({ id: billingEntity.id, name: billingEntity.entity_name })
-            .from(billingEntity)
-            .where(
-              and(
-                eq(billingEntity.org_id, orgId),
-                eq(billingEntity.gst_number, gstToTest),
-                sql`${billingEntity.deleted_at} IS NULL`
-              )
-            )
-            .limit(1);
-
-          if (ownBillingGst) {
-            return NextResponse.json(
-              {
-                error: `Self-Leasing Restriction: Tenant GSTIN (${gstToTest}) matches landlord billing entity '${ownBillingGst.name}'. A landlord cannot execute a commercial lease with their own billing entity.`
-              },
-              { status: 422 }
-            );
-          }
-        }
-      } catch (err) {
-        console.warn("Landlord self-lease check notice:", err);
+        if (landlordMeta.pan) ownerPans.push(landlordMeta.pan);
+        if (landlordMeta.gstin) ownerGstins.push(landlordMeta.gstin);
+        if (landlordMeta.email) ownerEmails.push(landlordMeta.email);
+        if (landlordMeta.contact_email) ownerEmails.push(landlordMeta.contact_email);
+        if (landlordMeta.phone) ownerPhones.push(landlordMeta.phone);
+        if (landlordMeta.contact_phone) ownerPhones.push(landlordMeta.contact_phone);
+        if (landlordMeta.primary_contact_phone) ownerPhones.push(landlordMeta.primary_contact_phone);
       }
+
+      const orgProperties = await db
+        .select({ source_row_id: property.source_row_id })
+        .from(property)
+        .where(and(eq(property.org_id, orgId), sql`${property.deleted_at} IS NULL`));
+
+      for (const propRow of orgProperties) {
+        if (propRow.source_row_id && typeof propRow.source_row_id === "string" && propRow.source_row_id.startsWith("{")) {
+          try {
+            const pMeta = JSON.parse(propRow.source_row_id);
+            if (pMeta.contact_phone) ownerPhones.push(pMeta.contact_phone);
+            if (pMeta.primary_contact_phone) ownerPhones.push(pMeta.primary_contact_phone);
+            if (pMeta.contact_email) ownerEmails.push(pMeta.contact_email);
+            if (pMeta.email) ownerEmails.push(pMeta.email);
+            if (pMeta.pan) ownerPans.push(pMeta.pan);
+            if (pMeta.gstin) ownerGstins.push(pMeta.gstin);
+          } catch {}
+        }
+      }
+
+      const orgBillingEntities = await db
+        .select({ gst_number: billingEntity.gst_number })
+        .from(billingEntity)
+        .where(and(eq(billingEntity.org_id, orgId), sql`${billingEntity.deleted_at} IS NULL`));
+
+      for (const be of orgBillingEntities) {
+        if (be.gst_number) ownerGstins.push(be.gst_number);
+      }
+
+      const overlap = checkOwnerTenantIdentityOverlap(
+        { emails: ownerEmails, phones: ownerPhones, pans: ownerPans, gstins: ownerGstins },
+        {
+          email: tenantEmail,
+          phone: phoneToTest,
+          altPhone: body.alt_contact_phone,
+          pan: panToTest,
+          gstin: gstToTest,
+        }
+      );
+
+      if (overlap.hasConflict) {
+        return NextResponse.json({ error: overlap.message }, { status: 422 });
+      }
+    } catch (err) {
+      console.warn("Landlord self-lease check notice:", err);
+    }
+
+    if (panToTest || gstToTest) {
 
       // 2. Format validation for PAN and GSTIN independently (no cross-field blocking)
       // Entities, branch offices, and group companies can have differing PAN and GST numbers.
@@ -386,8 +391,8 @@ export async function POST(req: Request) {
           collidedOnGst && collidedOnPan
             ? `PAN (${panToTest}) & GSTIN (${gstToTest})`
             : collidedOnGst
-            ? `GSTIN (${gstToTest})`
-            : `PAN (${panToTest})`;
+              ? `GSTIN (${gstToTest})`
+              : `PAN (${panToTest})`;
 
         return NextResponse.json(
           {

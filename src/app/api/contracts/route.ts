@@ -22,6 +22,13 @@ import {
 } from "@/db/validation";
 import { getAuthContext, isAuthenticated } from "@/lib/rent-roll/auth-context";
 import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
+import {
+  addDaysYmd,
+  addMonthsYmd,
+  normalizeTdsPolicy,
+  parseLocalYmd,
+  roundInr,
+} from "@/lib/rent-roll/billing/lease-financial-engine";
 import { eq, and, sql, desc, or, ilike, ne } from "drizzle-orm";
 
 /**
@@ -378,11 +385,45 @@ export async function POST(req: Request) {
       }
     }
 
+    // Normalize statutory TDS, fit-out, escalation anchor, and billing metadata
+    const normalizedTdsPolicy = body.tds_policy
+      ? normalizeTdsPolicy(body.tds_policy)
+      : body.tds_applicable === false
+      ? normalizeTdsPolicy({ enabled: false })
+      : normalizeTdsPolicy({ enabled: true });
+
+    const fitoutDays = Math.max(0, Math.trunc(Number(body.fitout_days) || 0));
+    const camPayableDuringFitout = body.cam_payable_during_fitout === true;
+    const escalationAnchor: "start" | "rcd" = body.escalation_anchor === "rcd" ? "rcd" : "start";
+    const rcdDate =
+      body.commencement_date ||
+      (fitoutDays > 0 && parseLocalYmd(payload.start_date)
+        ? addDaysYmd(payload.start_date, fitoutDays)
+        : payload.start_date);
+
+    const financialMeta = {
+      tds_policy: normalizedTdsPolicy,
+      fitout_days: fitoutDays,
+      cam_payable_during_fitout: camPayableDuringFitout,
+      rcd_date: rcdDate,
+      billing_entity: body.billing_entity || null,
+      payment_terms: body.payment_terms || null,
+      stamp_duty_sharing: body.stamp_duty_sharing || null,
+      escalation_anchor: escalationAnchor,
+      lock_in_months: body.lock_in_months ?? null,
+      lock_in_end_date: body.lock_in_end_date || null,
+    };
+
     // Build statutory metadata remarks if provided
+    const tdsLabel = normalizedTdsPolicy.enabled
+      ? normalizedTdsPolicy.sectionNote ||
+        `Applicable (Rent ${normalizedTdsPolicy.rentRatePercent}%, CAM ${normalizedTdsPolicy.camRatePercent}%)`
+      : "No TDS / Exempt (0%)";
     const statutoryNotes = [
       body.registration_status ? `Registration: ${body.registration_status}` : null,
       body.stamp_duty_amount ? `Stamp Duty: ₹${body.stamp_duty_amount} (Borne by: ${body.stamp_duty_borne_by || "Shared"})` : null,
-      body.tds_applicable !== undefined ? `TDS Sec 194-I: ${body.tds_applicable ? "Applicable (10%)" : "Exempt"}` : null,
+      `TDS: ${tdsLabel}`,
+      fitoutDays > 0 ? `Fit-out: ${fitoutDays}d (CAM during fit-out: ${camPayableDuringFitout ? "Billed" : "Waived"})` : null,
     ].filter(Boolean).join(" | ");
 
     const combinedRemarks = [
@@ -406,7 +447,7 @@ export async function POST(req: Request) {
         space_id: payload.space_id,
         start_date: payload.start_date,
         end_date: payload.end_date,
-        commencement_date: payload.commencement_date || null,
+        commencement_date: rcdDate || payload.commencement_date || null,
         lock_in_period_days: payload.lock_in_period_days || (payload.lock_in_months ? payload.lock_in_months * 30 : 0),
         notice_period_days: payload.notice_period_days || 0,
         is_evergreen: payload.is_evergreen,
@@ -414,6 +455,7 @@ export async function POST(req: Request) {
         deposit_amount_inr: payload.deposit_amount_inr ? String(payload.deposit_amount_inr) : null,
         deposit_status: payload.deposit_status || "pending",
         remarks: combinedRemarks || null,
+        source_row_id: JSON.stringify(financialMeta),
         created_by: auth.userId,
         updated_by: auth.userId,
         version: 1,
@@ -537,29 +579,24 @@ export async function POST(req: Request) {
             updated_by: auth.userId,
           });
 
-          // Subsequent stepped escalations
-          let nextDate: Date;
-          if (body.escalation_start_date) {
-            nextDate = new Date(body.escalation_start_date);
-          } else {
-            nextDate = new Date(contractStart);
-            nextDate.setMonth(nextDate.getMonth() + cycleMonths);
-          }
+          // Subsequent stepped escalations (local YYYY-MM-DD arithmetic, anchor-aware)
+          const escAnchorBase = escalationAnchor === "rcd" ? rcdDate : contractStart;
+          let nextDateStr = body.escalation_start_date
+            ? String(body.escalation_start_date).slice(0, 10)
+            : addMonthsYmd(escAnchorBase, cycleMonths);
 
           let currentRate = initialRate;
-          const endDateObj = new Date(contractEnd);
 
-          while (nextDate <= endDateObj && stepNo <= 20) {
-            const dateStr = nextDate.toISOString().split("T")[0];
-            currentRate = Math.round(currentRate * (1 + escPct / 100) * 100) / 100;
-            const isDueOrPast = dateStr <= todayStr;
+          while (nextDateStr && nextDateStr <= contractEnd && stepNo <= 20) {
+            currentRate = roundInr(currentRate * (1 + escPct / 100));
+            const isDueOrPast = nextDateStr <= todayStr;
 
             await db.insert(rentStep).values({
               org_id: orgId,
               client_account_id: clientAccountId,
               contract_charge_id: insertedCharge.id,
               step_no: stepNo++,
-              effective_date: dateStr,
+              effective_date: nextDateStr,
               escalation_type: "percentage",
               rate: String(currentRate),
               escalation_value: String(escPct),
@@ -569,7 +606,7 @@ export async function POST(req: Request) {
               updated_by: auth.userId,
             });
 
-            nextDate.setMonth(nextDate.getMonth() + cycleMonths);
+            nextDateStr = addMonthsYmd(nextDateStr, cycleMonths);
           }
         }
       }
@@ -626,29 +663,24 @@ export async function POST(req: Request) {
           updated_by: auth.userId,
         });
 
-        // Subsequent stepped escalations
-        let nextDate: Date;
-        if (body.escalation_start_date) {
-          nextDate = new Date(body.escalation_start_date);
-        } else {
-          nextDate = new Date(contractStart);
-          nextDate.setMonth(nextDate.getMonth() + cycleMonths);
-        }
+        // Subsequent stepped escalations (local YYYY-MM-DD arithmetic, anchor-aware)
+        const escAnchorBase = escalationAnchor === "rcd" ? rcdDate : contractStart;
+        let nextDateStr = body.escalation_start_date
+          ? String(body.escalation_start_date).slice(0, 10)
+          : addMonthsYmd(escAnchorBase, cycleMonths);
 
         let currentRate = rentRate;
-        const endDateObj = new Date(contractEnd);
 
-        while (nextDate <= endDateObj && stepNo <= 20) {
-          const dateStr = nextDate.toISOString().split("T")[0];
-          currentRate = Math.round(currentRate * (1 + escPct / 100) * 100) / 100;
-          const isDueOrPast = dateStr <= todayStr;
+        while (nextDateStr && nextDateStr <= contractEnd && stepNo <= 20) {
+          currentRate = roundInr(currentRate * (1 + escPct / 100));
+          const isDueOrPast = nextDateStr <= todayStr;
 
           await db.insert(rentStep).values({
             org_id: orgId,
             client_account_id: clientAccountId,
             contract_charge_id: insertedCharge.id,
             step_no: stepNo++,
-            effective_date: dateStr,
+            effective_date: nextDateStr,
             escalation_type: "percentage",
             rate: String(currentRate),
             escalation_value: String(escPct),
@@ -657,13 +689,13 @@ export async function POST(req: Request) {
             updated_by: auth.userId,
           });
 
-          nextDate.setMonth(nextDate.getMonth() + cycleMonths);
+          nextDateStr = addMonthsYmd(nextDateStr, cycleMonths);
         }
       }
     }
 
-    // Insert Concessions
-    if (Array.isArray(body.concessions)) {
+    // Insert Concessions (and auto-provision Rent-Free Fit-out concession when fitout_days > 0)
+    if (Array.isArray(body.concessions) && body.concessions.length > 0) {
       for (const conc of body.concessions) {
         await db.insert(concession).values({
           org_id: orgId,
@@ -678,6 +710,21 @@ export async function POST(req: Request) {
           updated_by: auth.userId,
         });
       }
+    } else if (fitoutDays > 0 && parseLocalYmd(payload.start_date)) {
+      const fitEndRaw = addDaysYmd(payload.start_date, fitoutDays - 1);
+      const fitEndClamped = fitEndRaw > payload.end_date ? payload.end_date : fitEndRaw;
+      await db.insert(concession).values({
+        org_id: orgId,
+        client_account_id: clientAccountId,
+        contract_id: insertedContract.id,
+        concession_type: "rent_free",
+        start_date: payload.start_date,
+        end_date: fitEndClamped,
+        concession_value: "100",
+        description: `Rent-free Fit-out Period (${fitoutDays} days)`,
+        created_by: auth.userId,
+        updated_by: auth.userId,
+      });
     }
 
     // Insert Clauses

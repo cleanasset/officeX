@@ -21,15 +21,43 @@ import {
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 
 export default function PpmProductPage() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_active_operate_module", "ppm");
     }
+
+    async function checkSub() {
+      try {
+        let email = getClientUserEmail();
+        if (!email) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+          } catch {}
+        }
+        if (email) {
+          const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+            headers: { ...getClientAuthHeaders(), "x-user-email": email },
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.subscribed && (data?.modules?.ppm || data?.modules?.allInOne || data?.isAdmin)) {
+              setIsSubscribed(true);
+            }
+          }
+        }
+      } catch {}
+    }
+    checkSub();
   }, []);
 
   const toggleFaq = (index: number) => {
@@ -123,7 +151,7 @@ export default function PpmProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      <MarketingHeader activePath="/operate" />
+      <MarketingHeader activePath="/operate/ppm" />
 
       {/* ── Breadcrumb Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
@@ -167,13 +195,24 @@ export default function PpmProductPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
-                <Link
-                  href="/operate/pricing?mode=standalone&module=ppm"
-                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>View PPM Pricing (₹6,999/mo)</span>
-                  <ArrowRight size={15} />
-                </Link>
+                {isSubscribed ? (
+                  <Link
+                    href="/ops/ppm"
+                    className="px-6 py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>✓ Active Subscription · Open PPM Console</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/operate/pricing?mode=standalone&module=ppm"
+                    className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <span>View PPM Pricing (₹6,999/mo)</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                )}
                 <Link
                   href="/ops/ppm"
                   className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
@@ -257,7 +296,7 @@ export default function PpmProductPage() {
       {/* ═══════════════════════════════════════════════════════════════
           2. FEATURE DEEP DIVE
           ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
+      <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="text-xs font-black uppercase tracking-widest text-[#0D7B6C]">
@@ -336,12 +375,22 @@ export default function PpmProductPage() {
             Eliminate equipment failures and track all vendor AMCs in real time. Schedule a 52-Week PPM walkthrough today.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
-            <Link
-              href="/operate/pricing?mode=standalone&module=ppm"
-              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
-            >
-              <span>View PPM Pricing (₹6,999/mo) →</span>
-            </Link>
+            {isSubscribed ? (
+              <Link
+                href="/ops/ppm"
+                className="px-7 py-3.5 bg-white text-emerald-700 hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
+              >
+                <CheckCircle2 size={15} />
+                <span>✓ Active Subscription · Open Live PPM Console →</span>
+              </Link>
+            ) : (
+              <Link
+                href="/operate/pricing?mode=standalone&module=ppm"
+                className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span>View PPM Pricing (₹6,999/mo) →</span>
+              </Link>
+            )}
             <Link
               href="/ops/ppm"
               className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all"

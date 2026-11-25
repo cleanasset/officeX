@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
-import { getClientAuthHeaders, setAuthCookie, isUserSubscribedSync } from "@/lib/auth-storage";
+import { getClientUserEmail, getClientAuthHeaders, setAuthCookie, isUserSubscribedSync } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 
 export default function RentRollProductPage() {
@@ -49,10 +50,12 @@ export default function RentRollProductPage() {
       sessionStorage.setItem("officex_oauth_redirect", "/operate/rent-roll");
       sessionStorage.setItem("officex_active_operate_module", "rentroll");
 
-      const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const email = getClientUserEmail() || (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
       if (email) {
-        fetch('/api/subscription/status', { headers: { 'x-user-email': email } })
+        fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+          headers: { ...getClientAuthHeaders(), "x-user-email": email },
+        })
           .then((r) => r.json())
           .then((d) => {
             const active = Boolean(d?.subscribed && d.plan !== "none" && d.plan !== "free");
@@ -63,7 +66,24 @@ export default function RentRollProductPage() {
           })
           .catch(() => setIsSubscribed(false));
       } else {
-        setIsSubscribed(false);
+        supabase.auth.getSession().then((resp: any) => {
+          const session = resp?.data?.session;
+          if (session?.user?.email) {
+            const sessEmail = session.user.email.toLowerCase().trim();
+            setIsLoggedIn(true);
+            fetch(`/api/subscription/status?email=${encodeURIComponent(sessEmail)}`, {
+              headers: { ...getClientAuthHeaders(), "x-user-email": sessEmail },
+            })
+              .then((r) => r.json())
+              .then((d) => {
+                const active = Boolean(d?.subscribed && d.plan !== "none" && d.plan !== "free");
+                setIsSubscribed(active);
+              })
+              .catch(() => setIsSubscribed(false));
+          } else {
+            setIsSubscribed(false);
+          }
+        });
       }
     }
   }, []);
@@ -395,7 +415,7 @@ export default function RentRollProductPage() {
       {/* ═══════════════════════════════════════════════════════════════
           3. FEATURE DEEP DIVE GRID
           ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
+      <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="text-xs font-black uppercase tracking-widest text-[#0D7B6C]">

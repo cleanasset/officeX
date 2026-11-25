@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
-import { getClientUserEmail } from "@/lib/auth-storage";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 
 declare global {
   interface Window {
@@ -51,6 +52,55 @@ function VisitorCompliancePricingContent() {
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subStatus, setSubStatus] = useState<any>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkExistingSubscription() {
+      try {
+        let email = getClientUserEmail();
+        if (!email) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+          } catch {}
+        }
+        if (email) {
+          const genRes = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+            headers: { ...getClientAuthHeaders(), "x-user-email": email },
+            cache: "no-store",
+          });
+          if (genRes.ok) {
+            const genData = await genRes.json();
+            const vcAllowed = Boolean(
+              genData?.subscribed &&
+              genData.plan !== "none" &&
+              genData.plan !== "free" &&
+              (genData.modules?.visitors || genData.modules?.compliance || genData.modules?.allInOne || genData.isAdmin)
+            );
+            if (!cancelled && vcAllowed) {
+              setIsSubscribed(true);
+              setSubStatus(genData);
+            }
+            return;
+          }
+        }
+        const vcRes = await fetch("/api/vc/subscription/status", { cache: "no-store" });
+        if (vcRes.ok) {
+          const vcData = await vcRes.json();
+          if (!cancelled && vcData?.subscribed) {
+            setIsSubscribed(true);
+            setSubStatus(vcData);
+          }
+        }
+      } catch {}
+    }
+    checkExistingSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const basePrice = billingCycle === "monthly" ? 999 : 849;
   const currentPrice = appliedCoupon ? appliedCoupon.finalPrice : basePrice;
@@ -232,7 +282,7 @@ function VisitorCompliancePricingContent() {
   return (
     <div className="min-h-screen bg-[#0A0D14] text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
       {/* Sticky Top Header */}
-      <MarketingHeader activePath="/pricing" />
+      <MarketingHeader activePath="/visitor-compliance/pricing" />
 
       {/* Hero Section */}
       <section className="relative pt-16 pb-12 md:pt-24 md:pb-16 px-4 sm:px-6 overflow-hidden">
@@ -240,6 +290,30 @@ function VisitorCompliancePricingContent() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-blue-600/20 via-emerald-500/10 to-transparent blur-3xl pointer-events-none rounded-full" />
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
+          {isSubscribed && (
+            <div className="mb-8 max-w-3xl mx-auto p-4 sm:p-5 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Active Subscription
+                </div>
+                <div className="text-base sm:text-lg font-extrabold text-white">
+                  {subStatus?.plan_name || subStatus?.planName || "Commercial Pass"} is active on your account
+                </div>
+                <p className="text-xs text-emerald-200/90">
+                  Both Visitor Management speed-gates and Statutory Compliance alerts are unlocked.
+                </p>
+              </div>
+              <Link
+                href="/vc/dashboard"
+                className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0"
+              >
+                <span>Open Visitor &amp; Compliance Console</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
           {/* SaaS Customer Journey: 3-Step Flow Indicator */}
           <div className="inline-flex items-center gap-2 sm:gap-4 py-2 px-4 rounded-full bg-slate-900/90 border border-slate-800 text-xs text-slate-400 font-semibold max-w-xl mx-auto shadow-xl mb-6">
             <Link
@@ -498,33 +572,44 @@ function VisitorCompliancePricingContent() {
                 )}
 
                 {/* Primary CTA */}
-                <button
-                  type="button"
-                  onClick={handleCheckout}
-                  disabled={isLoadingCheckout}
-                  className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-xl ${
-                    appliedCoupon && appliedCoupon.finalPrice === 0
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25"
-                      : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/30"
-                  }`}
-                >
-                  {isLoadingCheckout ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      <span>Configuring Workspace...</span>
-                    </div>
-                  ) : appliedCoupon && appliedCoupon.finalPrice === 0 ? (
-                    <>
-                      <span>Activate Free Access with visitor001</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  ) : (
-                    <>
-                      <span>Proceed with Razorpay (₹{currentPrice})</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                {isSubscribed ? (
+                  <Link
+                    href="/vc/dashboard"
+                    className="w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>✓ Active Subscription · Open Visitor &amp; Compliance Console</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    disabled={isLoadingCheckout}
+                    className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-xl ${
+                      appliedCoupon && appliedCoupon.finalPrice === 0
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25"
+                        : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/30"
+                    }`}
+                  >
+                    {isLoadingCheckout ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Configuring Workspace...</span>
+                      </div>
+                    ) : appliedCoupon && appliedCoupon.finalPrice === 0 ? (
+                      <>
+                        <span>Activate Free Access with visitor001</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    ) : (
+                      <>
+                        <span>Proceed with Razorpay (₹{currentPrice})</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500 pt-1">
                   <span className="flex items-center gap-1">

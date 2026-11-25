@@ -24,6 +24,8 @@ import EnquiryForm from "@/components/marketing/EnquiryForm";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import { fetchUniversalPortfolioSqft } from "@/lib/portfolio-area";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 
 function PricingPageContent() {
   const router = useRouter();
@@ -32,6 +34,34 @@ function PricingPageContent() {
   const [selectedAudience, setSelectedAudience] = useState<string>("Commercial Property Portfolio");
   const [minPortfolioSqft, setMinPortfolioSqft] = useState<number>(0);
   const [adminRate, setAdminRate] = useState<number>(1);
+  const [subStatus, setSubStatus] = useState<any>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  useEffect(() => {
+    async function checkActiveSubscription() {
+      try {
+        let email = getClientUserEmail();
+        if (!email) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+        }
+        if (email) {
+          const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+            headers: { ...getClientAuthHeaders(), "x-user-email": email },
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setSubStatus(data);
+            if (data?.subscribed && data.plan !== "none" && data.plan !== "free") {
+              setIsSubscribed(true);
+            }
+          }
+        }
+      } catch {}
+    }
+    checkActiveSubscription();
+  }, []);
 
   useEffect(() => {
     fetch("/api/pricing")
@@ -122,7 +152,35 @@ function PricingPageContent() {
           </div>
 
           {/* Portfolio Scale Banner (When user has registered properties) */}
-          {minPortfolioSqft > 0 && (() => {
+          {isSubscribed ? (
+            <div className="mb-10 max-w-4xl mx-auto p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-300 text-emerald-950 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white text-emerald-700 flex items-center justify-center font-bold shrink-0 border border-emerald-200 shadow-2xs">
+                  <CheckCircle2 size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-base text-slate-900">
+                      Active OfficeX Subscription
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900 px-2.5 py-0.5 rounded-full">
+                      Plan: {subStatus?.plan || "Commercial Active"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-900 mt-1 font-semibold">
+                    Your institutional workspace is fully licensed and active.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/properties/rent-roll")}
+                className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Enter Rent Roll Dashboard →</span>
+              </button>
+            </div>
+          ) : minPortfolioSqft > 0 && (() => {
             const minMonthly = Math.round(minPortfolioSqft * adminRate);
             const minAnnualTotal = minMonthly * 12;
 
@@ -213,7 +271,25 @@ function PricingPageContent() {
                 </ul>
               </div>
 
-              {minPortfolioSqft > 0 ? (
+              {isSubscribed ? (
+                <div className="space-y-2 mt-8">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/properties/rent-roll")}
+                    className="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>✓ Active Subscription · Open Dashboard</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/operate/rent-roll/pricing")}
+                    className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    View Rent Roll Pricing Table
+                  </button>
+                </div>
+              ) : minPortfolioSqft > 0 ? (
                 <div className="space-y-2 mt-8">
                   <button
                     type="button"
@@ -290,13 +366,24 @@ function PricingPageContent() {
               </div>
 
               <div className="flex flex-col gap-2 mt-8">
-                <button 
-                  onClick={() => openAudienceEnquiry("Facility Operations & CAFM Teams")}
-                  className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
-                >
-                  <span>Request Operator Pilot</span>
-                  <ArrowRight size={14} />
-                </button>
+                {isSubscribed && (subStatus?.modules?.allInOne || subStatus?.isAdmin) ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard/owner")}
+                    className="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>✓ Active CAFM Suite · Open Console</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => openAudienceEnquiry("Facility Operations & CAFM Teams")}
+                    className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>Request Operator Pilot</span>
+                    <ArrowRight size={14} />
+                  </button>
+                )}
               </div>
             </div>
 

@@ -28,16 +28,44 @@ import {
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import { getClientUserEmail, getClientAuthHeaders } from "@/lib/auth-storage";
+import { supabase } from "@/lib/supabase";
 
 export default function HelpdeskProductPage() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [selectedTab, setSelectedTab] = useState<"tickets" | "amenities" | "broadcasts">("tickets");
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_active_operate_module", "helpdesk");
     }
+
+    async function checkSub() {
+      try {
+        let email = getClientUserEmail();
+        if (!email) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.email) email = session.user.email.toLowerCase().trim();
+          } catch {}
+        }
+        if (email) {
+          const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`, {
+            headers: { ...getClientAuthHeaders(), "x-user-email": email },
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.subscribed && (data?.modules?.helpdesk || data?.modules?.allInOne || data?.isAdmin)) {
+              setIsSubscribed(true);
+            }
+          }
+        }
+      } catch {}
+    }
+    checkSub();
   }, []);
 
   const toggleFaq = (index: number) => {
@@ -202,7 +230,7 @@ export default function HelpdeskProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      <MarketingHeader activePath="/operate" />
+      <MarketingHeader activePath="/operate/helpdesk" />
 
       {/* ── Breadcrumb Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
@@ -244,15 +272,26 @@ export default function HelpdeskProductPage() {
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3.5 mb-10">
+              {isSubscribed ? (
+                <Link
+                  href="/ops/helpdesk"
+                  className="px-6 py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle2 size={15} />
+                  <span>✓ Active Subscription · Open Helpdesk Console</span>
+                  <ArrowRight size={15} />
+                </Link>
+              ) : (
+                <Link
+                  href="/operate/pricing?mode=standalone&module=helpdesk"
+                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>View Helpdesk Pricing (₹3,499/mo)</span>
+                  <ArrowRight size={15} />
+                </Link>
+              )}
               <Link
-                href="/operate/pricing?mode=standalone&module=helpdesk"
-                className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>View Helpdesk Pricing (₹3,499/mo)</span>
-                <ArrowRight size={15} />
-              </Link>
-              <Link
-                href="/tenant/tickets"
+                href="/ops/helpdesk"
                 className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Launch Live Helpdesk Portal</span>
@@ -453,7 +492,7 @@ export default function HelpdeskProductPage() {
       {/* ═══════════════════════════════════════════════════════════════
           3. CORE CAPABILITIES (6 Deep Pillars)
           ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
+      <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] mb-3">

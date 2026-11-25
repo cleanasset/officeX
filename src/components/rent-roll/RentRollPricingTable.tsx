@@ -25,6 +25,7 @@ import {
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { useUniversalPortfolioSqft } from "@/lib/portfolio-area";
 import { supabase } from "@/lib/supabase";
+import { getClientAuthHeaders, getClientUserEmail } from "@/lib/auth-storage";
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -53,16 +54,19 @@ export default function RentRollPricingTable({
 }: RentRollPricingTableProps) {
   const router = useRouter();
 
-  // User Auth State
+  // User Auth & Subscription State
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("owner");
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  const [subStatus, setSubStatus] = useState<any>(null);
+  const [checkingSub, setCheckingSub] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
       if (typeof window !== "undefined") {
         let storedEmail =
+          getClientUserEmail() ||
           localStorage.getItem("officex_user_email") ||
           sessionStorage.getItem("officex_user_email") ||
           getCookie("officex_user_email") ||
@@ -72,7 +76,7 @@ export default function RentRollPricingTable({
           sessionStorage.getItem("officex_user_name") ||
           getCookie("officex_user_name") ||
           "";
-        let storedRole =
+        const storedRole =
           localStorage.getItem("officex_user_role") ||
           sessionStorage.getItem("officex_user_role") ||
           getCookie("officex_user_role") ||
@@ -81,7 +85,7 @@ export default function RentRollPricingTable({
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user?.email) {
-            storedEmail = session.user.email;
+            storedEmail = session.user.email.toLowerCase().trim();
             storedName =
               session.user.user_metadata?.full_name ||
               session.user.email.split("@")[0] ||
@@ -94,10 +98,8 @@ export default function RentRollPricingTable({
         // Never prefill generic or dummy values
         if (!storedName || storedName.toLowerCase().includes("commercial account") || storedName.toLowerCase().includes("subscriber")) {
           storedName = "";
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("officex_user_name");
-            sessionStorage.removeItem("officex_user_name");
-          }
+          localStorage.removeItem("officex_user_name");
+          sessionStorage.removeItem("officex_user_name");
         }
         if (!storedEmail) {
           storedName = "";
@@ -107,6 +109,45 @@ export default function RentRollPricingTable({
         setUserName(storedName);
         if (storedRole) setUserRole(storedRole);
         setIsAuthLoaded(true);
+
+        if (storedEmail) {
+          try {
+            const headers = { ...getClientAuthHeaders(), "x-user-email": storedEmail };
+            const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(storedEmail)}`, {
+              headers,
+              cache: "no-store",
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setSubStatus(data);
+              const active = Boolean(
+                data?.subscribed &&
+                data.plan !== "none" &&
+                data.plan !== "free" &&
+                (data.modules ? (data.modules.rentRoll || data.modules.allInOne) : true)
+              );
+              if (active) {
+                localStorage.setItem("officex_subscription", "active");
+                localStorage.setItem("officex_owner_subscribed", "true");
+                localStorage.setItem("officex_subscription_status", "active");
+                localStorage.setItem("officex_rentroll_subscribed", "true");
+                localStorage.setItem(`officex_sub_${storedEmail}`, "active");
+                if (data.subscribed_sqft) {
+                  localStorage.setItem("officex_subscribed_sqft", String(data.subscribed_sqft));
+                }
+              } else if (data && data.subscribed === false) {
+                localStorage.setItem(`officex_sub_${storedEmail}`, "inactive");
+                localStorage.removeItem("officex_subscription");
+                localStorage.removeItem("officex_owner_subscribed");
+                localStorage.removeItem("officex_subscription_status");
+                localStorage.removeItem("officex_rentroll_subscribed");
+              }
+            }
+          } catch {
+            // Non-blocking
+          }
+        }
+        setCheckingSub(false);
       }
     };
     initAuth();
@@ -217,16 +258,24 @@ export default function RentRollPricingTable({
     handleSqftChange(val);
   };
 
-  // Unified Commercial Operating License: Single Fixed Rate of ₹1 per sq.ft
+  const isRentRollSubscribed = Boolean(
+    subStatus?.subscribed &&
+    subStatus.plan !== "none" &&
+    subStatus.plan !== "free" &&
+    (subStatus.modules ? (subStatus.modules.rentRoll || subStatus.modules.allInOne) : true)
+  );
+  const activeLicensedSqft = Number(subStatus?.subscribed_sqft || 0);
+
+  // Unified Rent Roll SaaS License: Single Fixed Rate of ₹1 per sq.ft
   const SLABS = [
     {
       id: "commercial-suite",
-      name: "OfficeX Commercial Suite",
+      name: "OfficeX Rent Roll & Billing Suite",
       badge: "Fixed ₹1 / Sq.Ft",
       ratePerSqft: 1,
       target: "Commercial Real Estate Assets & Towers",
       popular: true,
-      ctaText: "Select Commercial Suite",
+      ctaText: "Select Rent Roll Suite",
       features: [
         "39-Point canonical lease contract master & live register",
         "Automated step escalations with 90-day anniversary alerts",
@@ -285,14 +334,6 @@ export default function RentRollPricingTable({
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_applied_coupon", code);
         sessionStorage.setItem("officex_applied_coupon", code);
-        localStorage.setItem("officex_subscription", "active");
-        sessionStorage.setItem("officex_subscription", "active");
-        localStorage.setItem("officex_subscribed_sqft", String(customSqft || 0));
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
-        if (userEmail) {
-          localStorage.setItem(`officex_sub_${userEmail}`, "active");
-          document.cookie = `officex_sub_${encodeURIComponent(userEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
-        }
       }
     } else {
       setCouponError("Invalid or expired promo code. Please check and try again.");
@@ -352,6 +393,11 @@ export default function RentRollPricingTable({
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_subscription", "active");
             sessionStorage.setItem("officex_subscription", "active");
+            localStorage.setItem("officex_owner_subscribed", "true");
+            localStorage.setItem("officex_subscription_status", "active");
+            localStorage.setItem("officex_rentroll_subscribed", "true");
+            localStorage.setItem("officex_subscribed_sqft", String(plan.sqftNumber));
+            sessionStorage.setItem("officex_subscribed_sqft", String(plan.sqftNumber));
             localStorage.setItem("officex_user_email", finalEmail);
             localStorage.setItem("officex_user_name", finalName);
             localStorage.setItem("officex_user_role", "owner");
@@ -361,6 +407,7 @@ export default function RentRollPricingTable({
             sessionStorage.setItem(`officex_sub_${finalEmail}`, "active");
             document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
             document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+            document.cookie = "officex_owner_subscribed=true; path=/; max-age=2592000; SameSite=Lax";
             document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
           }
@@ -374,6 +421,9 @@ export default function RentRollPricingTable({
                 coupon: appliedCoupon || "none",
                 paymentId: response.razorpay_payment_id,
                 plan: plan.id,
+                plan_name: plan.name,
+                subscribed_sqft: plan.sqftNumber,
+                amount: priceInRupees,
               }),
             });
           } catch {
@@ -422,12 +472,18 @@ export default function RentRollPricingTable({
     );
 
     const finalRole = "owner";
-    const planId = checkoutPlan?.id || "techpark";
+    const planId = checkoutPlan?.id || "commercial-suite";
+    const activeSqft = checkoutPlan?.sqftNumber || customSqft || 50000;
 
     setProcessingActivation(true);
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_subscription", "active");
       sessionStorage.setItem("officex_subscription", "active");
+      localStorage.setItem("officex_owner_subscribed", "true");
+      localStorage.setItem("officex_subscription_status", "active");
+      localStorage.setItem("officex_rentroll_subscribed", "true");
+      localStorage.setItem("officex_subscribed_sqft", String(activeSqft));
+      sessionStorage.setItem("officex_subscribed_sqft", String(activeSqft));
       localStorage.setItem("officex_user_email", finalEmail);
       localStorage.setItem("officex_user_name", finalName);
       localStorage.setItem("officex_user_role", finalRole);
@@ -438,6 +494,7 @@ export default function RentRollPricingTable({
       sessionStorage.setItem(`officex_sub_${finalEmail}`, "active");
       document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
       document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+      document.cookie = "officex_owner_subscribed=true; path=/; max-age=2592000; SameSite=Lax";
       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
     }
@@ -451,6 +508,9 @@ export default function RentRollPricingTable({
           coupon: appliedCoupon || "RENTROLL12",
           paymentId: `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`,
           plan: planId,
+          plan_name: checkoutPlan?.name || "OfficeX Rent Roll & Billing Suite",
+          subscribed_sqft: activeSqft,
+          amount: 0,
         }),
       });
     } catch {
@@ -482,6 +542,48 @@ export default function RentRollPricingTable({
 
   return (
     <div className="w-full">
+      {/* Active Subscription Banner (if logged-in user already holds an active Rent Roll license) */}
+      {!checkingSub && isRentRollSubscribed && (
+        <div className="max-w-4xl mx-auto mb-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-900 via-[#0D7B6C] to-teal-900 text-white shadow-xl border border-emerald-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-100 text-[11px] font-black uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                Active Subscription
+              </span>
+              {subStatus?.days_remaining !== undefined && (
+                <span className="text-[11px] font-bold text-teal-100 bg-white/10 px-2.5 py-0.5 rounded-full">
+                  {subStatus.days_remaining} days remaining
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg sm:text-xl font-black tracking-tight">
+              You Already Have an Active {subStatus?.plan_name || "Rent Roll"} Subscription
+            </h3>
+            <p className="text-xs text-teal-100 font-medium">
+              Signed in as <strong className="text-white">{userEmail}</strong>
+              {activeLicensedSqft > 0 ? ` · Licensed Capacity: ${activeLicensedSqft.toLocaleString("en-IN")} sq.ft` : ""}
+              {totalPortfolioSqft > 0 ? ` · Registered Properties: ${totalPortfolioSqft.toLocaleString("en-IN")} sq.ft` : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              href="/properties/rent-roll"
+              className="px-5 py-3 rounded-xl bg-white text-[#0D7B6C] hover:bg-teal-50 font-black text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+            >
+              <span>Enter Rent Roll Dashboard</span>
+              <ArrowRight size={15} />
+            </Link>
+            <Link
+              href="/operate/subscription"
+              className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 font-bold text-xs transition"
+            >
+              Manage Quota
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Universal Minimum Floor Notice if properties registered */}
       {minAllowedSqft > 10000 && (
         <div className="max-w-4xl mx-auto mb-4 p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
@@ -665,28 +767,52 @@ export default function RentRollPricingTable({
               </div>
 
               {/* Action Button */}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => handleChoosePlan(slab)}
-                  disabled={processingActivation}
-                  className="w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/25 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                >
-                  {processingActivation && checkoutPlan?.id === slab.id ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Opening Payment Gateway...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard size={16} />
-                      <span>
-                        Subscribe to Rent Roll · ₹{totalTierPrice.toLocaleString("en-IN")} / month
-                      </span>
+              <div className="space-y-2.5">
+                {isRentRollSubscribed ? (
+                  <>
+                    <Link
+                      href="/properties/rent-roll"
+                      className="w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle2 size={17} />
+                      <span>Active Subscription · Enter Rent Roll Dashboard</span>
                       <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
+                    </Link>
+                    {customSqft > activeLicensedSqft && activeLicensedSqft > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleChoosePlan(slab)}
+                        disabled={processingActivation}
+                        className="w-full py-2.5 px-5 rounded-xl font-bold text-xs bg-teal-50 hover:bg-teal-100 text-[#0D7B6C] border border-teal-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Sparkles size={14} />
+                        <span>Expand Quota to {customSqft.toLocaleString("en-IN")} sq.ft (₹{totalTierPrice.toLocaleString("en-IN")}/mo)</span>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleChoosePlan(slab)}
+                    disabled={processingActivation}
+                    className="w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/25 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {processingActivation && checkoutPlan?.id === slab.id ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Opening Payment Gateway...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={16} />
+                        <span>
+                          Subscribe to Rent Roll · ₹{totalTierPrice.toLocaleString("en-IN")} / month
+                        </span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                )}
                 <div className="flex items-center justify-center gap-3 mt-3 text-[11px] text-slate-500 font-medium">
                   <span className="flex items-center gap-1 text-emerald-700 font-bold">
                     <Check size={12} className="stroke-[3]" /> Instant Activation
@@ -743,7 +869,7 @@ export default function RentRollPricingTable({
             </div>
 
             {/* User Details Step */}
-            {userEmail && isAuthLoaded && typeof window !== "undefined" && (localStorage.getItem("officex_session_active") === "1" || localStorage.getItem("officex_auth") === "1") ? (
+            {userEmail && isAuthLoaded ? (
               <div className="mb-4 p-3 bg-teal-50/80 rounded-xl border border-teal-200 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-[#0D7B6C] text-white flex items-center justify-center font-bold text-xs shrink-0">

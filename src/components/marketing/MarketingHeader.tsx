@@ -24,11 +24,107 @@ export default function MarketingHeader({
   const isFmMarketplace = pathname === "/fm-marketplace" || activePath === "/fm-marketplace";
   const isOfficeMarketplace = pathname === "/marketplace" || activePath === "/marketplace" || pathname === "/" || activePath === "/";
 
+  const isOperate = pathname?.startsWith("/operate") || activePath?.startsWith("/operate");
+  const isVisitorCompliance = pathname?.startsWith("/visitor-compliance") || activePath?.startsWith("/visitor-compliance");
+  const currentPath = pathname || activePath || "";
+  const productScopePath =
+    (pathname === "/operate/pricing" && activePath && activePath !== "/operate/pricing")
+      ? activePath
+      : currentPath;
+
+  const STANDALONE_PRODUCT_MENUS: Array<{
+    prefix: string;
+    label: string;
+    overviewHref: string;
+    featuresHref: string;
+    pricingHref: string;
+    consoleLabel: string;
+    consoleHref: string;
+  }> = [
+    {
+      prefix: "/operate/rent-roll",
+      label: "Rent Roll & Billing",
+      overviewHref: "/operate/rent-roll",
+      featuresHref: "/operate/rent-roll#features",
+      pricingHref: "/operate/rent-roll/pricing",
+      consoleLabel: "Rent Roll Workspace",
+      consoleHref: "/properties/rent-roll",
+    },
+    {
+      prefix: "/operate/visitors",
+      label: "Visitor Flow",
+      overviewHref: "/operate/visitors",
+      featuresHref: "/operate/visitors#features",
+      pricingHref: "/operate/pricing?mode=standalone&module=visitor",
+      consoleLabel: "Speed-Gate Console",
+      consoleHref: "/vc/dashboard",
+    },
+    {
+      prefix: "/operate/compliance",
+      label: "Statutory Compliance",
+      overviewHref: "/operate/compliance",
+      featuresHref: "/operate/compliance#features",
+      pricingHref: "/operate/pricing?mode=standalone&module=compliance",
+      consoleLabel: "Compliance Vault",
+      consoleHref: "/vc/dashboard",
+    },
+    {
+      prefix: "/operate/ppm",
+      label: "52-Week PPM",
+      overviewHref: "/operate/ppm",
+      featuresHref: "/operate/ppm#features",
+      pricingHref: "/operate/pricing?mode=standalone&module=ppm",
+      consoleLabel: "PPM Console",
+      consoleHref: "/ops/ppm",
+    },
+    {
+      prefix: "/operate/helpdesk",
+      label: "Tenant Helpdesk",
+      overviewHref: "/operate/helpdesk",
+      featuresHref: "/operate/helpdesk#features",
+      pricingHref: "/operate/pricing?mode=standalone&module=helpdesk",
+      consoleLabel: "Helpdesk Console",
+      consoleHref: "/ops/helpdesk",
+    },
+    {
+      prefix: "/operate/lease-crm",
+      label: "Lease CRM",
+      overviewHref: "/operate/lease-crm",
+      featuresHref: "/operate/lease-crm",
+      pricingHref: "/operate/pricing?mode=standalone&module=leasecrm",
+      consoleLabel: "Lease CRM",
+      consoleHref: "/operate/lease-crm",
+    },
+    {
+      prefix: "/visitor-compliance",
+      label: "Visitor & Compliance",
+      overviewHref: "/visitor-compliance",
+      featuresHref: "/visitor-compliance",
+      pricingHref: "/visitor-compliance/pricing",
+      consoleLabel: "Operations Console",
+      consoleHref: "/vc/dashboard",
+    },
+  ];
+
+  const standaloneProduct = STANDALONE_PRODUCT_MENUS.find((item) =>
+    productScopePath.startsWith(item.prefix)
+  );
+
+  const isPricingActive =
+    pathname === "/operate/pricing" ||
+    pathname === "/operate/rent-roll/pricing" ||
+    pathname === "/visitor-compliance/pricing";
+
+  const getPricingHref = () => {
+    if (standaloneProduct) return standaloneProduct.pricingHref;
+    return "/operate/pricing";
+  };
+
   // Derive login context for contextual portal filtering
   const loginContext: "marketplace" | "fm" | "operate" | "properties" | "rent-roll" =
     isFmMarketplace ? "fm" :
-    (pathname === "/operate/rent-roll" || activePath === "/operate/rent-roll") ? "rent-roll" :
-    pathname?.startsWith("/operate") ? "operate" :
+    productScopePath.startsWith("/operate/rent-roll") ? "rent-roll" :
+    (isOperate || isVisitorCompliance) ? "operate" :
     pathname?.startsWith("/properties") ? "properties" : "marketplace";
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -44,31 +140,6 @@ export default function MarketingHeader({
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, [transparentAtTop]);
-
-  const isOperate = pathname?.startsWith("/operate") || activePath?.startsWith("/operate");
-  const currentPath = pathname || activePath || "";
-
-  const getPricingHref = () => {
-    if (currentPath.includes("/rent-roll") || currentPath.includes("/rentroll")) {
-      return "/operate/rent-roll/pricing";
-    }
-    if (currentPath.includes("/visitor")) {
-      return "/operate/pricing?mode=standalone&module=visitor";
-    }
-    if (currentPath.includes("/ppm")) {
-      return "/operate/pricing?mode=standalone&module=ppm";
-    }
-    if (currentPath.includes("/compliance")) {
-      return "/operate/pricing?mode=standalone&module=compliance";
-    }
-    if (currentPath.includes("/helpdesk")) {
-      return "/operate/pricing?mode=standalone&module=helpdesk";
-    }
-    if (currentPath.includes("/lease-crm")) {
-      return "/operate/pricing?mode=standalone&module=leasecrm";
-    }
-    return "/operate/pricing";
-  };
 
   return (
     <>
@@ -105,9 +176,51 @@ export default function MarketingHeader({
 
         {/* Center: Context-Aware Main Navigation */}
         <nav className="hidden lg:flex items-center justify-center gap-6 xl:gap-8 text-xs xl:text-[13px] font-semibold text-slate-600 mx-auto">
-          {isOperate ? (
+          {standaloneProduct ? (
             /* ========================================================================= */
-            /* 1. DEDICATED SAAS PLATFORM (OFFICEX.PRO) NAVIGATION                        */
+            /* 1A. SCOPED SINGLE-SAAS PRODUCT NAVIGATION (NO UNRELATED MODULES)         */
+            /* ========================================================================= */
+            <>
+              <span className="px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-[11px] font-extrabold text-[#0D7B6C] whitespace-nowrap">
+                {standaloneProduct.label}
+              </span>
+
+              <Link
+                href={standaloneProduct.overviewHref}
+                className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap ${
+                  pathname === standaloneProduct.overviewHref ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
+                }`}
+              >
+                Overview
+              </Link>
+
+              <Link
+                href={standaloneProduct.featuresHref}
+                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap text-slate-700"
+              >
+                Features
+              </Link>
+
+              <Link
+                href={standaloneProduct.pricingHref}
+                className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap font-semibold ${
+                  isPricingActive ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
+                }`}
+              >
+                Pricing &amp; Plans
+              </Link>
+
+              <Link
+                href={standaloneProduct.consoleHref}
+                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap flex items-center gap-1.5 font-bold text-[#0D7B6C]"
+              >
+                <span>{standaloneProduct.consoleLabel}</span>
+                <ArrowRight size={13} />
+              </Link>
+            </>
+          ) : isOperate ? (
+            /* ========================================================================= */
+            /* 1B. OPERATE HUB MULTI-SAAS SUITE NAVIGATION                              */
             /* ========================================================================= */
             <>
               {/* Operating Modules Dropdown */}
@@ -176,20 +289,20 @@ export default function MarketingHeader({
               <Link
                 href={getPricingHref()}
                 className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap font-semibold ${
-                  pathname === "/operate/pricing" ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
+                  isPricingActive ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
                 }`}
               >
                 Pricing
               </Link>
 
-              {/* Live Portal Demo */}
-              <button
-                type="button"
-                onClick={onSignInClick}
-                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap flex items-center gap-1 cursor-pointer"
+              {/* Live Portal */}
+              <Link
+                href="/operate#saas-modules"
+                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap flex items-center gap-1 font-bold text-[#0D7B6C]"
               >
-                <span>Live Portal Demo</span>
-              </button>
+                <span>Live Consoles</span>
+                <ArrowRight size={13} />
+              </Link>
             </>
           ) : isFmMarketplace ? (
             /* ========================================================================= */
@@ -249,7 +362,7 @@ export default function MarketingHeader({
               </Link>
 
               <Link
-                href="/vendor"
+                href="/vendor/register"
                 className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap font-bold text-[#0F8B7D]"
               >
                 Join as Vendor
@@ -300,10 +413,10 @@ export default function MarketingHeader({
                       <div className="text-[11px] text-slate-500">Large floor plates (25,000+ sq.ft.)</div>
                     </Link>
                     <hr className="border-slate-100 my-1.5" />
-                    <Link href="/properties/add" className="block p-2 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold text-[#0F8B7D]">
+                    <Link href="/marketplace/list-space" className="block p-2 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold text-[#0F8B7D]">
                       + List Your Commercial Space
                     </Link>
-                    <Link href="/leasing" className="block p-2 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold text-amber-800">
+                    <Link href="/dashboard/leasing" className="block p-2 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold text-amber-800">
                       Join as Broker (45d Commission)
                     </Link>
                   </div>
@@ -331,7 +444,7 @@ export default function MarketingHeader({
                       <div className="text-[11px] text-slate-500">HVAC, MEP, Security, Cleaning AMCs</div>
                     </Link>
                     <hr className="border-slate-100 my-1.5" />
-                    <Link href="/vendor" className="block p-2 rounded-xl hover:bg-teal-50 transition-colors text-xs font-bold text-[#0F8B7D] flex items-center justify-between">
+                    <Link href="/vendor/register" className="block p-2 rounded-xl hover:bg-teal-50 transition-colors text-xs font-bold text-[#0F8B7D] flex items-center justify-between">
                       <span>Register as Vendor</span>
                       <span className="text-[9.5px] bg-teal-100 text-[#0F8B7D] px-1.5 py-0.5 rounded font-black">Escrow</span>
                     </Link>
@@ -424,7 +537,7 @@ export default function MarketingHeader({
 
         {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
-          <HeaderAuthButton loginContext={loginContext} redirectUrl={activePath || pathname || "/"} onSignInClick={onSignInClick} />
+          <HeaderAuthButton loginContext={loginContext} redirectUrl={pathname || activePath || "/"} onSignInClick={onSignInClick} />
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
@@ -466,7 +579,25 @@ export default function MarketingHeader({
             />
           </div>
 
-          {isOperate ? (
+          {standaloneProduct ? (
+            <>
+              <div className="text-[11px] font-black uppercase tracking-wider text-[#0D7B6C] bg-teal-50 px-3 py-1.5 rounded-lg self-start">
+                {standaloneProduct.label}
+              </div>
+              <Link href={standaloneProduct.overviewHref} onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-slate-900 hover:text-[#0D7B6C]">
+                Overview
+              </Link>
+              <Link href={standaloneProduct.featuresHref} onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-slate-700 hover:text-[#0D7B6C]">
+                Features
+              </Link>
+              <Link href={standaloneProduct.pricingHref} onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
+                Pricing &amp; Plans
+              </Link>
+              <Link href={standaloneProduct.consoleHref} onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-slate-800 hover:text-[#0D7B6C]">
+                {standaloneProduct.consoleLabel} &rarr;
+              </Link>
+            </>
+          ) : isOperate ? (
             <>
               <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
                 Platform Overview
@@ -476,6 +607,7 @@ export default function MarketingHeader({
                 onClick={() => {
                   setMobileMenuOpen(false);
                   if (onSignInClick) onSignInClick();
+                  else router.push("/login?context=operate&redirect=/operate");
                 }}
                 className="text-left text-base font-bold text-[#0D7B6C] cursor-pointer"
               >
@@ -510,8 +642,8 @@ export default function MarketingHeader({
             <>
               <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Commercial Space</Link>
               <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Vendor Marketplace</Link>
-              <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">List Your Space</Link>
-              <Link href="/vendor" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
+              <Link href="/marketplace/list-space" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">List Your Space</Link>
+              <Link href="/vendor/register" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
                 <span>Register as Vendor</span>
                 <span className="text-xs bg-teal-100 px-2 py-0.5 rounded text-[#0F8B7D] font-bold">Escrow Hub</span>
               </Link>
@@ -554,10 +686,10 @@ export default function MarketingHeader({
                   · Tenant Helpdesk &amp; Rooms
                 </Link>
               </div>
-              <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
+              <Link href="/marketplace/list-space" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
                 List Your Space
               </Link>
-              <Link href="/leasing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-amber-700 flex items-center justify-between">
+              <Link href="/dashboard/leasing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-amber-700 flex items-center justify-between">
                 <span>Join as Broker</span>
                 <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">45d Payout</span>
               </Link>
@@ -571,7 +703,7 @@ export default function MarketingHeader({
           <div className="py-1">
             <HeaderAuthButton
               loginContext={loginContext}
-              redirectUrl={activePath || pathname || "/"}
+              redirectUrl={pathname || activePath || "/"}
               onSignInClick={() => {
                 setMobileMenuOpen(false);
                 if (onSignInClick) onSignInClick();

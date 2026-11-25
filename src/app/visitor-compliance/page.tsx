@@ -192,7 +192,7 @@ export default function VisitorComplianceLandingPage() {
           {/* Action CTAs */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/operate/pricing"
+              href="/visitor-compliance/pricing?coupon=visitor001"
               className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-cyan-600/30 transition-all flex items-center gap-2.5 group hover:scale-[1.02]"
             >
               <span>Start 14-Day Free Trial</span>
@@ -990,7 +990,7 @@ export default function VisitorComplianceLandingPage() {
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
-              href="/operate/pricing"
+              href="/visitor-compliance/pricing?coupon=visitor001"
               className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/30 flex items-center gap-2"
             >
               <span>Get Started with Free Trial</span>

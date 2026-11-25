@@ -916,7 +916,7 @@ export default function SubscriptionAndQuotaPage() {
                   </div>
                 </div>
                 <span className="font-mono font-bold text-slate-800">
-                  {Number(prop.area || prop.sqft || 0).toLocaleString("en-IN")} sq.ft
+                  {Number(prop.areaSqft ?? prop.area ?? prop.sqft ?? 0).toLocaleString("en-IN")} sq.ft
                 </span>
               </div>
             ))}

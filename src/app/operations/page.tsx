@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
+import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 import { Search, MapPin, Building, ArrowRight, CheckCircle2, Menu, X, Activity, BarChart3, Database } from "lucide-react";
 
 export default function OperationsPage() {
@@ -47,10 +48,8 @@ export default function OperationsPage() {
           <Link href="/intelligence" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Intelligence</Link>
         </nav>
 
-        <div className="hidden md:flex items-center justify-end gap-4 shrink-0 lg:w-[250px]">
-          <a href="/login" className="text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-2">
-            Sign In
-          </a>
+        <div className="hidden md:flex items-center justify-end gap-3 shrink-0 lg:w-[250px]">
+          <HeaderAuthButton loginContext="operate" redirectUrl="/operations" />
           <button 
             onClick={() => router.push('/public/wizard')}
             className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer"
@@ -73,6 +72,7 @@ export default function OperationsPage() {
           <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Managed Services</Link>
           <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
           <hr className="border-slate-200" />
+          <HeaderAuthButton loginContext="operate" redirectUrl="/operations" />
           <button 
             onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
             className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"

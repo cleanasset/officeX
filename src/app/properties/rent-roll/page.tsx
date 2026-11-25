@@ -129,6 +129,7 @@ export default function RentRollRegisterPage() {
 
   // Modals
   const [preloadSpaceId, setPreloadSpaceId] = useState<string | undefined>(undefined);
+  const [preloadPropertyId, setPreloadPropertyId] = useState<string | undefined>(undefined);
   const [dealsOpen, setDealsOpen] = useState(false);
   const [expiryOpen, setExpiryOpen] = useState(false);
   const [escalationOpen, setEscalationOpen] = useState(false);
@@ -1613,6 +1614,7 @@ export default function RentRollRegisterPage() {
                     type="button"
                     onClick={() => {
                       setVacantModalOpen(false);
+                      setPreloadPropertyId(selectedVacantSpace.property_id || undefined);
                       setPreloadSpaceId(selectedVacantSpace.space_id);
                       setHierarchyTab("tenant");
                       setMasterDataOpen(true);
@@ -1627,6 +1629,7 @@ export default function RentRollRegisterPage() {
                     type="button"
                     onClick={() => {
                       setVacantModalOpen(false);
+                      setPreloadPropertyId(selectedVacantSpace.property_id || undefined);
                       setPreloadSpaceId(selectedVacantSpace.space_id);
                       setHierarchyTab("contract");
                       setMasterDataOpen(true);
@@ -1712,10 +1715,11 @@ export default function RentRollRegisterPage() {
             onClose={() => {
               setMasterDataOpen(false);
               setPreloadSpaceId(undefined);
+              setPreloadPropertyId(undefined);
             }}
             initialTab={hierarchyTab}
             initialSpaceId={preloadSpaceId}
-            initialPropertyId={propertyFilter !== "all" ? propertyFilter : undefined}
+            initialPropertyId={preloadPropertyId || (propertyFilter !== "all" ? propertyFilter : undefined)}
             onSuccess={fetchRegisterData}
           />
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import { ChevronDown, HelpCircle, ArrowRight, MessageSquare } from "lucide-react";
 
@@ -92,41 +92,7 @@ export default function FAQDirectoryPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans flex flex-col justify-between">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX Logo"
-            width={40}
-            height={40}
-            className="object-contain"
-            style={{ width: "auto", height: "29px" }}
-          />
-          <Image
-            src="/name-removebg-preview.png"
-            alt="OfficeX"
-            width={130}
-            height={30}
-            className="object-contain"
-            style={{ width: "auto", height: "25px" }}
-          />
-        </Link>
-        <div className="flex items-center gap-4 text-xs font-bold">
-          <Link href="/marketplace" className="text-gray-600 hover:text-[#0F8B7D]">
-            Solutions
-          </Link>
-          <Link href="/contact" className="text-gray-700 hover:text-[#0F8B7D]">
-            Contact
-          </Link>
-          <Link
-            href="/contact"
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all"
-          >
-            Talk to Sales
-          </Link>
-        </div>
-      </header>
+      <MarketingHeader activePath="/faq" />
 
       {/* Main Content */}
       <main className="flex-1 py-16 px-4 sm:px-6">
