@@ -9606,4 +9606,1230 @@ export default function PropertyHierarchyModal({
                   : `TDS Active (Rent ${summary.tdsPolicy.rentRatePercent}%${summary.tdsPolicy.camRatePercent > 0 ? ` • CAM ${summary.tdsPolicy.camRatePercent}%` : ""}${summary.tdsPolicy.parkingRatePercent > 0 ? ` • Parking ${summary.tdsPolicy.parkingRatePercent}%` : ""})`;
 
                 return (
-... [truncated for diff preview]
+                  <div className="space-y-3">
+                    {/* Interactive Per-Component TDS Configuration Card */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
+                        <div>
+                          <span className="font-bold text-slate-800 block">
+                            🏛️ Statutory TDS Applicability (Owner-Configured per Component)
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Toggle Exempt (₹0) or select section rates (e.g. 194-I Rent 10%, 194-C CAM 2%, or Sec 197 Custom %)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => applyTdsPreset(contractForm.tdsPreset === "no_tds_exempt" ? "rent_only_194i" : contractForm.tdsPreset)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition ${
+                              contractForm.tdsEnabled
+                                ? "bg-teal-700 text-white shadow-2xs"
+                                : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            TDS Applicable
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyTdsPreset("no_tds_exempt")}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition ${
+                              !contractForm.tdsEnabled
+                                ? "bg-emerald-700 text-white shadow-2xs"
+                                : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            No TDS / Exempt (₹0)
+                          </button>
+                        </div>
+                      </div>
+
+                      {contractForm.tdsEnabled && (
+                        <>
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+                            {(
+                              [
+                                { id: "rent_only_194i", label: "Rent 10% (194-I Only)" },
+                                { id: "standard_194i_194c", label: "Rent 10% + CAM 2% (194-C)" },
+                                { id: "individual_194ib", label: "Individual Sec 194-IB (5% / 0%)" },
+                                { id: "custom", label: "Custom / Sec 197 LDC" },
+                              ] as const
+                            ).map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => applyTdsPreset(p.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                  contractForm.tdsPreset === p.id
+                                    ? "bg-teal-50 border-teal-500 text-teal-900"
+                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                            {isProprietor && (
+                              <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                                Proprietor Lessee detected: {rent <= 50000 ? "Rent ≤ ₹50k (0% under 194-IB)" : "Sec 194-IB 5% applies"}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                                Base Rent TDS Rate (%)
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={["0", "5", "10"].includes(contractForm.tdsRentPct) ? contractForm.tdsRentPct : "custom"}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    if (v !== "custom") {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom", tdsRentPct: v });
+                                    } else {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom" });
+                                    }
+                                  }}
+                                  className="flex-1 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-semibold text-slate-800 text-xs outline-none focus:border-teal-600"
+                                >
+                                  <option value="10">10% (Sec 194-I)</option>
+                                  <option value="5">5% (Sec 194-IB)</option>
+                                  <option value="0">0% (Exempt)</option>
+                                  <option value="custom">Custom %</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={contractForm.tdsRentPct}
+                                  onChange={(e) => setContractForm({ ...contractForm, tdsPreset: "custom", tdsRentPct: e.target.value })}
+                                  className="w-16 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-mono font-bold text-xs outline-none focus:border-teal-600"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                                CAM / Maintenance TDS (%)
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={["0", "2", "10"].includes(contractForm.tdsCamPct) ? contractForm.tdsCamPct : "custom"}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    if (v !== "custom") {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom", tdsCamPct: v });
+                                    } else {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom" });
+                                    }
+                                  }}
+                                  className="flex-1 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-semibold text-slate-800 text-xs outline-none focus:border-teal-600"
+                                >
+                                  <option value="0">0% (Exempt / No TDS)</option>
+                                  <option value="2">2% (Sec 194-C Contractor)</option>
+                                  <option value="10">10% (Sec 194-I Bundled)</option>
+                                  <option value="custom">Custom %</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={contractForm.tdsCamPct}
+                                  onChange={(e) => setContractForm({ ...contractForm, tdsPreset: "custom", tdsCamPct: e.target.value })}
+                                  className="w-16 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-mono font-bold text-xs outline-none focus:border-teal-600"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                                Parking TDS Rate (%)
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={["0", "2", "10"].includes(contractForm.tdsParkingPct) ? contractForm.tdsParkingPct : "custom"}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    if (v !== "custom") {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom", tdsParkingPct: v });
+                                    } else {
+                                      setContractForm({ ...contractForm, tdsPreset: "custom" });
+                                    }
+                                  }}
+                                  className="flex-1 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-semibold text-slate-800 text-xs outline-none focus:border-teal-600"
+                                >
+                                  <option value="0">0% (Exempt)</option>
+                                  <option value="2">2% (Sec 194-C)</option>
+                                  <option value="10">10% (Sec 194-I)</option>
+                                  <option value="custom">Custom %</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={contractForm.tdsParkingPct}
+                                  onChange={(e) => setContractForm({ ...contractForm, tdsPreset: "custom", tdsParkingPct: e.target.value })}
+                                  className="w-16 px-2 py-1.5 rounded-lg border border-slate-300 bg-white font-mono font-bold text-xs outline-none focus:border-teal-600"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Single Unified Real-Time Commercial Financial Summary (Fit-out + Steady-State) */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-700/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Calculator size={15} className="text-teal-400" />
+                          <span className="text-xs font-black uppercase tracking-wider text-teal-300">
+                            Unified Real-Time Commercial Financial Summary
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          !summary.tdsPolicy.enabled || summary.steadyState.tdsTotal === 0
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                            : "bg-teal-500/20 text-teal-300 border-teal-500/30"
+                        }`}>
+                          GST 18% • {tdsHeaderBadge}
+                        </span>
+                      </div>
+
+                      {summary.fitoutPhase.active && (
+                        <div className="p-2.5 rounded-xl bg-teal-950/60 border border-teal-700/60 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-black uppercase text-teal-300 block">
+                              Fit-out Phase ({summary.fitoutDays} Days{summary.fitoutPhase.fitoutEndDate ? `: ${formatDisplayDateInr(contractForm.startDate)} → ${formatDisplayDateInr(summary.fitoutPhase.fitoutEndDate)}` : ""})
+                            </span>
+                            <span className="text-[11px] text-slate-300">
+                              Base Rent: <strong>₹0 (Waived)</strong> • CAM:{" "}
+                              <strong>
+                                {summary.camPayableDuringFitout
+                                  ? `₹${summary.fitoutPhase.monthlyCam.toLocaleString("en-IN")}/mo (+18% GST)`
+                                  : "Waived (₹0)"}
+                              </strong>
+                              {summary.rcdDate && ` • Rent starts (RCD): ${formatDisplayDateInr(summary.rcdDate)}`}
+                            </span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] text-slate-400 block">Fit-out Net Payable</span>
+                            <span className="text-sm font-mono font-black text-teal-300">
+                              ₹{summary.fitoutPhase.monthlyNetReceivable.toLocaleString("en-IN")}/mo
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                          <span className="text-[10px] text-slate-400 font-semibold block">Monthly Base Rent</span>
+                          <span className="text-sm font-mono font-black text-white">₹{summary.steadyState.baseRent.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                          <span className="text-[10px] text-slate-400 font-semibold block">
+                            Monthly CAM {contractForm.camType === "Included" ? "(Included)" : ""}
+                          </span>
+                          <span className="text-sm font-mono font-black text-white">₹{summary.steadyState.cam.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                          <span className="text-[10px] text-slate-400 font-semibold block">Parking ({carPaidCount} Car, {bikePaidCount} Bike)</span>
+                          <span className="text-sm font-mono font-black text-white">₹{summary.steadyState.parking.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                          <span className="text-[10px] text-slate-400 font-semibold block">Subtotal (Excl. GST)</span>
+                          <span className="text-sm font-mono font-black text-teal-300">₹{summary.steadyState.subtotalExclGst.toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-700/80 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">+ GST (18%)</span>
+                          <span className="text-xs font-mono font-bold text-amber-300">+₹{summary.steadyState.gstAmount.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Gross Invoice Total</span>
+                          <span className="text-xs font-mono font-bold text-white">₹{summary.steadyState.grossInclGst.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">- TDS Deducted</span>
+                          <span className={`text-xs font-mono font-bold ${summary.steadyState.tdsTotal === 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                            {summary.steadyState.tdsTotal === 0 ? "₹0 (Exempt)" : `-₹${summary.steadyState.tdsTotal.toLocaleString("en-IN")}`}
+                          </span>
+                          {summary.steadyState.tdsTotal > 0 && (
+                            <span className="text-[9px] text-slate-400 block">
+                              {[
+                                summary.steadyState.tdsRent > 0 ? `Rent ₹${summary.steadyState.tdsRent.toLocaleString("en-IN")}` : null,
+                                summary.steadyState.tdsCam > 0 ? `CAM ₹${summary.steadyState.tdsCam.toLocaleString("en-IN")}` : null,
+                                summary.steadyState.tdsParking > 0 ? `Park ₹${summary.steadyState.tdsParking.toLocaleString("en-IN")}` : null,
+                              ].filter(Boolean).join(" + ")}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-teal-400 font-bold block">Net Monthly Receivable</span>
+                          <span className="text-sm font-mono font-black text-emerald-400">₹{summary.steadyState.netReceivable.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Security Deposit (IFRSD)</span>
+                          <span className="text-sm font-mono font-black text-white">₹{summary.securityDeposit.toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+                    {contractForm.electricityBillingType === "sub_metered" && (
+                      <div className="pt-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between text-[11px] text-amber-300">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Zap size={12} className="text-amber-400" />
+                          <span>Electricity: Sub-Metered on Actuals</span>
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-300">
+                          Grid: ₹{contractForm.gridRatePerKwh || "11"}/kWh • DG Backup: ₹{contractForm.dgBackupRatePerKwh || "22"}/kWh
+                        </span>
+                      </div>
+                    )}
+                    {contractForm.electricityBillingType === "fixed_monthly" && fixedUtil > 0 && (
+                      <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[11px] text-amber-300">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Zap size={12} className="text-amber-400" />
+                          <span>Fixed Monthly Utility</span>
+                        </span>
+                        <span className="font-mono text-xs text-emerald-300">₹{fixedUtil.toLocaleString()}/mo</span>
+                      </div>
+                    )}
+                  </div>
+                  </div>
+                );
+              })()}
+
+              {/* Contract Action Buttons & PDF Download & Next Step (§17, §20) */}
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("tenant")}
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs self-start sm:self-auto"
+                >
+                  <span>← Back to Tenants</span>
+                </button>
+
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {/* Download Contract PDF Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isOwnerSubscribed && !checkIsOwnerSubscribed()) {
+                        setSubscriptionGateReason("Download Official Formatted Lease Contract PDF");
+                        setSubscriptionGateModalOpen(true);
+                        return;
+                      }
+                      // Generate and download full commercial deed
+                      const activeBldg = buildingsList.find((b) => b.id === contractForm.buildingId);
+                      const activeSpc = displaySpaces.find((s) => s.id === contractForm.spaceId);
+                      downloadLeaseContractPdf({
+                        landlordName: propForm.spvName || propForm.contactName || "Commercial Property Owner",
+                        landlordAddress: propForm.address || propForm.city || "",
+                        landlordPan: propForm.panNumber || "",
+                        landlordGstin: propForm.gstin || "",
+                        tenantName: tenantForm.companyName || "Lessee Organization",
+                        tenantTradeName: tenantForm.tradeName || "",
+                        tenantCompanyType: tenantForm.companyType,
+                        tenantCin: tenantForm.cinNumber || "",
+                        tenantPan: tenantForm.pan || "",
+                        tenantGstin: tenantForm.gst || "",
+                        tenantAddress: tenantForm.billingAddress || "",
+                        signatoryName: tenantForm.signatoryName || "Authorized Signatory",
+                        signatoryDesignation: tenantForm.signatoryDesignation || "Director",
+                        propertyName: propForm.propertyName || "Commercial Property",
+                        buildingName: activeBldg?.name,
+                        floorName: selectedTenantFloor === "all" ? "Entire Building (All Floors)" : selectedTenantFloor === "0" ? "Ground Floor" : formatFloorName(Number(selectedTenantFloor)),
+                        spaceName: activeSpc?.name || "Demised Commercial Suite",
+                        chargeableAreaSqft: Number(contractForm.areaSqft) || 5000,
+                        monthlyRent: Number(contractForm.monthlyRent) || 0,
+                        ratePerSqft: Number(contractForm.ratePerSqft) || undefined,
+                        camMonthly: Number(contractForm.camMonthly) || undefined,
+                        camRatePerSqft: Number(contractForm.camRate) || undefined,
+                        securityDeposit: Number(contractForm.securityDeposit) || 0,
+                        securityDepositMonths: undefined,
+                        startDate: contractForm.startDate || getTodayLocalYmd(),
+                        endDate: contractForm.endDate || addMonthsYmd(getTodayLocalYmd(), 36),
+                        lockInMonths: Number(contractForm.lockInMonths) || undefined,
+                        noticePeriodDays: Number(contractForm.noticeDays) || 90,
+                        fitoutPeriodDays: Number(contractForm.fitoutDays) || undefined,
+                        escalationPct: Number(contractForm.escalationPct) || 5,
+                        escalationFrequency: contractForm.escalationFrequency,
+                        billingEntity: contractForm.billingEntity || undefined,
+                        paymentDueDate: contractForm.paymentTerms || undefined,
+                        stampDutySharing: contractForm.stampDutySharing || undefined,
+                      }, isOwnerSubscribed && checkIsOwnerSubscribed());
+                      showToast("✓ Commercial Lease Deed generated & opened for printing/PDF!");
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-teal-300 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText size={14} className="text-[#0F8B7D]" />
+                    <span>Download Contract PDF</span>
+                    {!isOwnerSubscribed && (
+                      <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded border border-amber-300">
+                        PRO
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Option A: Assign 3rd Party Manager */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleSaveContract(e, "delegate")}
+                    disabled={loading}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Assign 3rd Party Manager →</span>
+                  </button>
+
+                  {/* Option B: Self-Managed / Complete Onboarding */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleSaveContract(e, "finish")}
+                    disabled={loading}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
+                    <span>Save Contract &amp; Finish ✓</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* ════════════════ TAB 5: THIRD-PARTY MANAGEMENT ASSIGNMENT ════════════════ */}
+          {activeTab === "delegation" && (
+            <form onSubmit={handleSaveDelegation} className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      {shouldSkipSpaceStep
+                        ? "Step 4: Assign Property Management to Third Party"
+                        : "Step 5: Assign Property Management to Third Party"}
+                    </span>
+                    <span className="text-[10px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                      Post-Contract Delegation
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Assign daily commercial operations, tenant relations, and billing oversight to an external agency or facility manager with granular controls.
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 self-start sm:self-auto">
+                  Step {shouldSkipSpaceStep ? 4 : 5} of {shouldSkipSpaceStep ? 4 : 5}
+                </span>
+              </div>
+
+              {/* Latest Generated Manager Invite Banner (§20 Subscription Gated) */}
+              {latestManagerInvite && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 text-xs animate-in fade-in space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 mt-0.5">
+                        <UserCheck size={16} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
+                          <span>Management Delegated: {latestManagerInvite.name}</span>
+                          <span className="text-[10px] font-bold text-teal-700 bg-white/90 px-1.5 py-0.5 rounded border border-teal-200">
+                            {latestManagerInvite.email}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-teal-800 mt-0.5">
+                          Assigned for <span className="font-bold">{latestManagerInvite.propertyName}</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subscription Check for Sharable Link */}
+                  {isOwnerSubscribed || checkIsOwnerSubscribed() ? (
+                    <div className="p-2.5 rounded-xl bg-white border border-teal-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={latestManagerInvite.link}
+                        className="text-[11px] font-mono text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 flex-1 truncate"
+                      />
+                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(latestManagerInvite.link);
+                            setCopiedManagerInvite(true);
+                            showToast("✓ Management invitation link copied to clipboard!");
+                            setTimeout(() => setCopiedManagerInvite(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          {copiedManagerInvite ? <Check size={13} /> : <Copy size={13} />}
+                          <span>{copiedManagerInvite ? "Copied!" : "Copy Link"}</span>
+                        </button>
+                        <a
+                          href={(() => {
+                            const cleanPhone = formatPhoneForWhatsApp(latestManagerInvite.phone);
+                            const msg = `Hi ${latestManagerInvite.name}, you have been assigned to manage ${latestManagerInvite.propertyName} on OfficeX. Access your management console here: ${latestManagerInvite.link}`;
+                            return `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ""}text=${encodeURIComponent(msg)}`;
+                          })()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          <MessageCircle size={13} />
+                          <span>WhatsApp</span>
+                        </a>
+                        <a
+                          href={`mailto:${latestManagerInvite.email}?subject=${encodeURIComponent(
+                            `Property Management Access - ${latestManagerInvite.propertyName}`
+                          )}&body=${encodeURIComponent(
+                            `Hi ${latestManagerInvite.name},\n\nYou have been assigned as property manager for ${latestManagerInvite.propertyName}.\n\nPlease activate your access using the link below:\n${latestManagerInvite.link}\n\nBest regards,\nOfficeX Commercial Asset Management`
+                          )}`}
+                          className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                        >
+                          <Mail size={13} />
+                          <span>Email</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative p-3 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden">
+                      <div className="filter blur-xs select-none opacity-40">
+                        <span className="font-mono text-xs text-slate-800">https://officex.ai/invite?role=pm_company&mgr=Authorized&access=••••••••••••••••</span>
+                      </div>
+                      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-between px-4 py-2">
+                        <div className="flex items-center gap-2 text-white">
+                          <Lock size={15} className="text-amber-400 shrink-0" />
+                          <span className="text-xs font-bold">Pro Subscription required to share manager invite links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubscriptionGateReason("Share Manager Activation Link via WhatsApp/Email");
+                            setSubscriptionGateModalOpen(true);
+                          }}
+                          className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black shadow cursor-pointer transition"
+                        >
+                          Subscribe Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Form Fields Container */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-xs">
+                {/* 1. Property to Assign */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Select Commercial Asset <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={delegationForm.propertyId || contractForm.propertyId || propForm.existingPropId || ""}
+                    onChange={(e) => {
+                      const selId = e.target.value;
+                      const selProp = propertiesList.find((p) => p.id === selId);
+                      setDelegationForm((prev) => ({
+                        ...prev,
+                        propertyId: selId,
+                        propertyName: selProp?.name || (selId === propForm.existingPropId ? propForm.propertyName : prev.propertyName),
+                      }));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    {propForm.propertyName && !propertiesList.some(p => p.id === propForm.existingPropId || p.name === propForm.propertyName) && (
+                      <option value={propForm.existingPropId || "current_asset"}>
+                        {propForm.propertyName} (Current Asset)
+                      </option>
+                    )}
+                    {propertiesList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                    {!propForm.propertyName && propertiesList.length === 0 && <option value="">No properties registered</option>}
+                  </select>
+                </div>
+
+                {/* 2. Management Model / Entity Type */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Management Model / Entity Type <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={delegationForm.managerType}
+                    onChange={(e) => setDelegationForm({ ...delegationForm, managerType: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="pm_company">Third-Party Property Management Company (Colliers / CBRE / JLL / Cushman / Local PM)</option>
+                    <option value="facility_mgmt">Facilities Management Firm (Sodexo / BVG / ISS / In-house Facility Lead)</option>
+                    <option value="msp">Managed Space Provider / Coworking Operator</option>
+                    <option value="individual_manager">Designated Property Manager / Operations Lead</option>
+                  </select>
+                </div>
+
+                {/* 3. Contact Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Assignee / Manager / Company Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Knight Frank PM Services"
+                      value={delegationForm.managerName}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Manager Work Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="operations@pmcompany.com"
+                      value={delegationForm.managerEmail}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerEmail: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Phone Number <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98450 11223"
+                      value={delegationForm.managerPhone}
+                      onChange={(e) => setDelegationForm({ ...delegationForm, managerPhone: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Role Authorization Level */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="font-bold text-slate-700 block mb-2">Role Authorization Level</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label
+                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                        delegationForm.managerUserRole === "property_manager"
+                          ? "bg-teal-50 border-[#0F8B7D]"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="managerUserRole"
+                        value="property_manager"
+                        checked={delegationForm.managerUserRole === "property_manager"}
+                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "property_manager" })}
+                        className="mt-0.5 accent-[#0F8B7D]"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">Property Operations Lead</span>
+                        <span className="text-[11px] text-slate-500">Day-to-day operations, maintenance logging, tenant service requests.</span>
+                      </div>
+                    </label>
+                    <label
+                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                        delegationForm.managerUserRole === "org_admin"
+                          ? "bg-teal-50 border-[#0F8B7D]"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="managerUserRole"
+                        value="org_admin"
+                        checked={delegationForm.managerUserRole === "org_admin"}
+                        onChange={() => setDelegationForm({ ...delegationForm, managerUserRole: "org_admin" })}
+                        className="mt-0.5 accent-[#0F8B7D]"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">Asset Executive / Co-Admin</span>
+                        <span className="text-[11px] text-slate-500">Full commercial authority across billing, contracts, and audit runs.</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5. Granular Permissions & Rights Matrix */}
+                <div className="pt-3 border-t border-slate-200 space-y-3">
+                  <div>
+                    <label className="font-black text-slate-800 text-xs uppercase tracking-wider block">
+                      Enforceable Delegation Rights &amp; Operational Guardrails
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Authorise specific commercial rights. Actions not checked here are strictly locked and prohibited in the manager console.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {/* Category A: Lease & Tenant Authority */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Lease &amp; Tenant Authority
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canEnrollTenants)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canEnrollTenants: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Onboard &amp; Register Corporate Tenants</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDraftContracts)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDraftContracts: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Draft Lease Agreements &amp; Proposals</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.contractExecution}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, contractExecution: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Execute &amp; Modify Binding Leases</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canTerminateLeases)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canTerminateLeases: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Issue Lease Eviction / Termination Notices</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category B: Commercial Billing & Financial Rights */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Billing &amp; Financial Operations
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.billingRuns}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, billingRuns: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Generate Monthly Invoices &amp; Billing Runs</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.concessions}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, concessions: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Grant Rent Concessions / Waivers / Credit Notes</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canRecordOfflinePayments)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canRecordOfflinePayments: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Record Manual Offline Payments (NEFT / RTGS)</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={delegationForm.managerRights.depositRefunds}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, depositRefunds: e.target.checked },
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Approve Security Deposit Refunds &amp; Deductions</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Category C: Facility Operations & Asset Layout */}
+                    <div>
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1.5">
+                        Facility Operations &amp; Space Layout
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canDemarcateSpaces)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canDemarcateSpaces: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Demarcate, Merge &amp; Split Suites</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canLogCAM)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canLogCAM: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Log CAM Meters &amp; Utility Expenses</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canManageTickets)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canManageTickets: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Resolve Tenant Helpdesk &amp; Work Orders</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((delegationForm.managerRights as any).canExportRentRoll)}
+                            onChange={(e) =>
+                              setDelegationForm({
+                                ...delegationForm,
+                                managerRights: { ...delegationForm.managerRights, canExportRentRoll: e.target.checked } as any,
+                              })
+                            }
+                            className="rounded accent-[#0F8B7D]"
+                          />
+                          <span className="text-slate-800 font-medium">Export Rent Roll &amp; Tax Registers</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("contract")}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  ← Back to Lease Contract
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {!isOwnerSubscribed && !checkIsOwnerSubscribed() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubscriptionGateReason("Assign Property Management to External Agency");
+                        setSubscriptionGateModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock size={13} />
+                      <span>Subscribe to Assign Management</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <UserCheck size={13} />
+                      <span>Assign Management &amp; Generate Link</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_rentroll_onboarded", "true");
+                        localStorage.setItem("officex_onboarding_completed", "1");
+                        sessionStorage.setItem("officex_onboarding_completed", "1");
+                        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                      }
+                      clearWizardDraft();
+                      onClose();
+                      onSuccess?.();
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check size={13} />
+                    <span>Finish &amp; Complete Setup ✓</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
+
+        {/* ──── AGREEMENT VARIANCE REVIEW MODAL (POPUP) ──── */}
+        <AgreementVarianceModal
+          isOpen={varianceModalOpen}
+          onClose={() => setVarianceModalOpen(false)}
+          fileName={pendingAgreementFile}
+          differences={agreementDifferences}
+          onKeepCurrent={() => {
+            setVarianceModalOpen(false);
+            showToast("Kept user-entered details unchanged without modifying form.");
+          }}
+          onApplyAgreement={(selectedKeys) => {
+            setVarianceModalOpen(false);
+            if (pendingAgreementData) {
+              applyAgreementTerms(pendingAgreementData, agreementDifferences, selectedKeys);
+            }
+          }}
+        />
+
+        {/* ──── BULK EXCEL IMPORTER MODAL ──── */}
+        <RentRollExcelImporterModal
+          isOpen={excelImporterOpen}
+          onClose={() => setExcelImporterOpen(false)}
+          onSuccess={() => {
+            setExcelImporterOpen(false);
+            showToast("✓ Excel portfolio data imported successfully!");
+            onClose(); // Close the hierarchy/property setup wizard so the user sees the Property Registry
+            onSuccess?.();
+          }}
+        />
+
+        {/* ──── SUBSCRIPTION REQUIRED MODAL (§20 & Portfolio Area Floor Rule) ──── */}
+        {subscriptionGateModalOpen && (() => {
+          const effectivePortfolioSqft = Math.max(totalPortfolioSqft, 1000);
+          const userEnteredSqft = subscribeSqftInput > 0 ? subscribeSqftInput : effectivePortfolioSqft;
+          const isBelowPortfolio = userEnteredSqft < effectivePortfolioSqft;
+          const currentChosenSqft = Math.max(userEnteredSqft, effectivePortfolioSqft);
+          const ratePerSqft = 1.0;
+          const discountPct = subscribeBillingMonths === 12 ? 20 : subscribeBillingMonths === 6 ? 10 : subscribeBillingMonths === 4 ? 7 : subscribeBillingMonths === 2 ? 3 : 0;
+          const minMonthlyPayable = Math.round(effectivePortfolioSqft * ratePerSqft);
+          const minCyclePayable = Math.round(minMonthlyPayable * subscribeBillingMonths * (1 - discountPct / 100));
+          const monthlyEst = Math.round(currentChosenSqft * ratePerSqft);
+          const chosenCyclePayable = Math.round(monthlyEst * subscribeBillingMonths * (1 - discountPct / 100));
+
+          return (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center my-8">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
+                  <Lock size={26} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-black text-lg text-slate-900">Commercial Pro Subscription Required</h3>
+                  <p className="text-xs text-slate-600 font-medium">
+                    {subscriptionGateReason || "This action requires an active Commercial Pro Subscription."}
+                  </p>
+                </div>
+
+                {/* ──── HIGH-VISIBILITY MINIMUM AMOUNT PAYABLE CARD ──── */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 border-2 border-[#0F8B7D] text-left space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                    <div className="flex items-center gap-1.5 text-[#0F8B7D] font-black text-xs uppercase tracking-wider">
+                      <Building2 size={15} />
+                      <span>Minimum Payable (Based on Added Sq.Ft)</span>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-700 text-white uppercase tracking-wider">
+                      Scale Floor
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Added Property Area</span>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {effectivePortfolioSqft.toLocaleString()} Sq.Ft
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase">Billing Rate</span>
+                      <span className="text-sm font-black text-teal-800 font-mono">
+                        ₹1.00 / sqft / mo
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700">Minimum Monthly Equivalent:</span>
+                      <span className="font-black text-slate-900 font-mono text-sm">
+                        ₹{minMonthlyPayable.toLocaleString("en-IN")} / mo
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                      <span className="font-black text-teal-950">
+                        Minimum Total Payable ({subscribeBillingMonths === 12 ? "1 Year (365 Days)" : `${subscribeBillingMonths} Month${subscribeBillingMonths > 1 ? "s" : ""} (${subscribeBillingMonths * 30} Days)`}):
+                      </span>
+                      <span className="font-black text-[#0F8B7D] font-mono text-base">
+                        ₹{minCyclePayable.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 pt-0.5">
+                      Calculation: {effectivePortfolioSqft.toLocaleString()} Sq.Ft × ₹1.00/sq.ft × {subscribeBillingMonths} month{subscribeBillingMonths > 1 ? "s" : ""} {discountPct > 0 ? `(${discountPct}% discount applied)` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Interactive Sq.Ft Capacity Selection */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-800 block">
+                      Choose Subscription Capacity (Sq.Ft) *
+                    </label>
+                    <span className="text-[10px] font-bold text-teal-700">
+                      Min: {effectivePortfolioSqft.toLocaleString()} Sq.Ft
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={effectivePortfolioSqft}
+                      step={1000}
+                      value={userEnteredSqft}
+                      onChange={(e) => setSubscribeSqftInput(Number(e.target.value) || 0)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none ${
+                        isBelowPortfolio
+                          ? "border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600"
+                          : "border-slate-300 focus:border-[#0F8B7D] text-slate-900"
+                      }`}
+                      placeholder={`Min ${effectivePortfolioSqft.toLocaleString()}`}
+                    />
+                    <span className="absolute right-3 top-2.5 font-bold text-slate-400 text-xs">
+                      Sq.Ft
+                    </span>
+                  </div>
+
+                  {isBelowPortfolio && (
+                    <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                      <span>⚠️ Compulsory Minimum: You cannot subscribe below your total added property area ({effectivePortfolioSqft.toLocaleString("en-IN")} Sq.Ft).</span>
+                    </p>
+                  )}
+
+                  {/* Quick Capacity Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Capacity:</span>
+                    {[effectivePortfolioSqft, Math.round(effectivePortfolioSqft * 1.25), Math.round(effectivePortfolioSqft * 1.5), Math.round(effectivePortfolioSqft * 2)]
+                      .filter((val, idx, arr) => arr.indexOf(val) === idx)
+                      .slice(0, 4)
+                      .map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setSubscribeSqftInput(preset)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            userEnteredSqft === preset
+                              ? "bg-[#0F8B7D] text-white shadow-2xs"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {preset === effectivePortfolioSqft ? `Min: ${preset.toLocaleString("en-IN")}` : preset.toLocaleString("en-IN")} Sq.Ft
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Duration Selector */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-slate-800 text-[11px]">Select Subscription Duration:</span>
+                      {discountPct > 0 && (
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                          Save {discountPct}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                      {[
+                        { months: 1, days: "30 Days", label: "1 Month", discount: 0 },
+                        { months: 2, days: "60 Days", label: "2 Months", discount: 3 },
+                        { months: 4, days: "120 Days", label: "4 Months", discount: 7 },
+                        { months: 6, days: "180 Days", label: "6 Months", discount: 10 },
+                        { months: 12, days: "365 Days", label: "1 Year", discount: 20 },
+                      ].map((d) => (
+                        <button
+                          key={d.months}
+                          type="button"
+                          onClick={() => {
+                            setSubscribeBillingMonths(d.months);
+                            setSubscribeBillingCycle(d.months === 12 ? "annual" : "monthly");
+                          }}
+                          className={`p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                            subscribeBillingMonths === d.months
+                              ? "border-[#0F8B7D] bg-teal-50 text-slate-900 ring-1 ring-teal-500 font-black"
+                              : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold">{d.label}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full mt-0.5 ${
+                            subscribeBillingMonths === d.months ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {d.days}
+                          </span>
+                          <span className={`text-[8.5px] mt-0.5 ${d.discount > 0 ? "text-emerald-700 font-extrabold" : "text-slate-400 font-medium"}`}>
+                            {d.discount > 0 ? `${d.discount}% OFF` : "Standard"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-600">Total for Selected Capacity:</span>
+                    <span className="font-black text-slate-900 font-mono text-sm">
+                      ₹{chosenCyclePayable.toLocaleString("en-IN")} ({subscribeBillingMonths === 12 ? "365 Days" : `${subscribeBillingMonths * 30} Days`})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionGateModalOpen(false)}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isBelowPortfolio || subscribeLoading}
+                    onClick={async () => {
+                      setSubscribeLoading(true);
+                      try {
+                        const email =
+                          (typeof window !== "undefined" &&
+                            (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) ||
+                          "owner@commercial.com";
+
+                        await fetch("/api/subscription/status", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            email,
+                            plan: "pro",
+                            plan_name: "Rent Roll & Financial Pro Suite",
+                            billing_cycle: subscribeBillingMonths === 12 ? "annual" : subscribeBillingMonths === 6 ? "half_yearly" : subscribeBillingMonths === 4 ? "4_months" : subscribeBillingMonths === 2 ? "bimonthly" : "monthly",
+                            duration_months: subscribeBillingMonths,
+                            amount: chosenCyclePayable,
+                          }),
+                        }).catch(() => {});
+
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("officex_subscription", "active");
+                          localStorage.setItem("officex_owner_subscribed", "true");
+                          localStorage.setItem("officex_rentroll_subscribed", "true");
+                          localStorage.setItem("officex_subscription_status", "active");
+                          localStorage.setItem("officex_subscribed_sqft", String(currentChosenSqft));
+                          localStorage.setItem("officex_rentroll_onboarded", "true");
+                          localStorage.setItem("officex_onboarding_completed", "1");
+                          sessionStorage.setItem("officex_onboarding_completed", "1");
+                          document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+                        }
+                        setIsOwnerSubscribed(true);
+                        setSubscribedCapacity(currentChosenSqft);
+                        setSubscriptionGateModalOpen(false);
+                        showToast(`✓ Subscribed successfully! Paid ₹${chosenCyclePayable.toLocaleString("en-IN")} (Min ₹${minCyclePayable.toLocaleString("en-IN")} on ${effectivePortfolioSqft.toLocaleString()} Sq.Ft). Pro features unlocked.`);
+                      } catch {
+                        showToast("Subscription activation encountered an issue", "error");
+                      } finally {
+                        setSubscribeLoading(false);
+                      }
+                    }}
+                    className="w-full sm:flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {subscribeLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={14} />}
+                    <span>Pay Minimum ₹{chosenCyclePayable.toLocaleString("en-IN")} ({currentChosenSqft.toLocaleString()} Sq.Ft) →</span>
+                  </button>
+                </div>
+
+                <div className="pt-1 text-center">
+                  <a
+                    href={`/pricing?min_sqft=${totalPortfolioSqft}`}
+                    onClick={() => setSubscriptionGateModalOpen(false)}
+                    className="text-[11px] font-bold text-teal-800 hover:text-teal-950 underline cursor-pointer"
+                  >
+                    Need enterprise procurement or multi-asset pilot? View Pricing &amp; Custom Proposals →
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
